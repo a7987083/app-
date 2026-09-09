@@ -1,0 +1,9 @@
+---------------------------------------------------------------
+[ 2022-05-14T02:08:41+08:00 ] 185.207.154.83 GET old.nuosike.com/
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user 'test123'@'localhost' (using password: YES)
+---------------------------------------------------------------
+[ 2022-05-14T02:56:26+08:00 ] 42.157.129.131 GET old.nuosike.com/
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user 'test123'@'localhost' (using password: YES)
+---------------------------------------------------------------
+[ 2022-05-14T05:55:07+08:00 ] 111.21.175.34 GET old.nuosike.com/
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user 'test123'@'localhost' (using password: YES)

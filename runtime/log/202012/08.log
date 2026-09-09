@@ -1,0 +1,2255 @@
+---------------------------------------------------------------
+[ 2020-12-08T00:08:10+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs
+[运行时间：0.055367s] [吞吐率：18.06req/s] [内存消耗：3,477.07kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001517s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'category',
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php%2Fgeneral%2Fattachment%3Fref%3Daddtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'ref' => 'addtabs',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001870s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000135s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:08:14+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/index/index
+[运行时间：0.098215s] [吞吐率：10.18req/s] [内存消耗：4,162.07kb] [文件加载：146]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000023s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001435s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'index',
+    2 => 'index',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php%2Fgeneral%2Fattachment%3Fref%3Daddtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001842s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ RUN ] app\admin\controller\Index->index[ /home/qnq.nuosike.cn/application/admin/controller/Index.php ]
+[ info ] [ VIEW ] /home/qnq.nuosike.cn/public/../application/admin/view/index/index.html [ array (
+  0 => 'breadcrumb',
+  1 => 'site',
+  2 => 'config',
+  3 => 'auth',
+  4 => 'admin',
+  5 => 'menulist',
+  6 => 'navlist',
+  7 => 'fixedmenu',
+  8 => 'referermenu',
+  9 => 'title',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000112s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:08:14+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/general/config?addtabs=1
+[运行时间：0.068279s] [吞吐率：14.65req/s] [内存消耗：4,019.86kb] [文件加载：133]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001479s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'general.config',
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/index/index',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'addtabs' => '1',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001800s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/general/config.php
+[ info ] [ RUN ] app\admin\controller\general\Config->index[ /home/qnq.nuosike.cn/application/admin/controller/general/Config.php ]
+[ info ] [ VIEW ] /home/qnq.nuosike.cn/public/../application/admin/view/general/config/index.html [ array (
+  0 => 'breadcrumb',
+  1 => 'site',
+  2 => 'config',
+  3 => 'auth',
+  4 => 'admin',
+  5 => 'siteList',
+  6 => 'typeList',
+  7 => 'ruleList',
+  8 => 'groupList',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000123s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:08:14+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/category?addtabs=1
+[运行时间：0.112815s] [吞吐率：8.86req/s] [内存消耗：4,114.23kb] [文件加载：137]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000021s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001416s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'category',
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/index/index',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'addtabs' => '1',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001795s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/category.php
+[ info ] [ RUN ] app\admin\controller\Category->index[ /home/qnq.nuosike.cn/application/admin/controller/Category.php ]
+[ info ] [ VIEW ] /home/qnq.nuosike.cn/public/../application/admin/view/category/index.html [ array (
+  0 => 'breadcrumb',
+  1 => 'site',
+  2 => 'config',
+  3 => 'auth',
+  4 => 'admin',
+  5 => 'flagList',
+  6 => 'typeList',
+  7 => 'parentList',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000126s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:08:14+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/ajax/lang?callback=define&controllername=index&v=1607357294
+[运行时间：0.051777s] [吞吐率：19.31req/s] [内存消耗：3,830.07kb] [文件加载：132]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000024s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001349s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'ajax',
+    2 => 'lang',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/index/index',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => '*/*',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'callback' => 'define',
+  'controllername' => 'index',
+  'v' => '1607357294',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001577s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/ajax.php
+[ info ] [ RUN ] app\admin\controller\Ajax->lang[ /home/qnq.nuosike.cn/application/admin/controller/Ajax.php ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000117s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:08:14+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/ajax/lang?callback=define&controllername=general.config&v=1607357294
+[运行时间：0.067063s] [吞吐率：14.91req/s] [内存消耗：3,829.03kb] [文件加载：132]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000020s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001279s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'ajax',
+    2 => 'lang',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/general/config?addtabs=1',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => '*/*',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'callback' => 'define',
+  'controllername' => 'general.config',
+  'v' => '1607357294',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001566s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/ajax.php
+[ info ] [ RUN ] app\admin\controller\Ajax->lang[ /home/qnq.nuosike.cn/application/admin/controller/Ajax.php ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/general/config.php
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000111s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:08:14+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/ajax/lang?callback=define&controllername=category&v=1607357294
+[运行时间：0.066423s] [吞吐率：15.05req/s] [内存消耗：3,825.99kb] [文件加载：132]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000019s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001193s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'ajax',
+    2 => 'lang',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?addtabs=1',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => '*/*',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'callback' => 'define',
+  'controllername' => 'category',
+  'v' => '1607357294',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001510s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/ajax.php
+[ info ] [ RUN ] app\admin\controller\Ajax->lang[ /home/qnq.nuosike.cn/application/admin/controller/Ajax.php ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/category.php
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000113s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:08:15+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/category/index?sort=weigh&order=desc&_=1607357285938
+[运行时间：0.064339s] [吞吐率：15.54req/s] [内存消耗：3,931.33kb] [文件加载：135]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001535s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'category',
+    2 => 'index',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'accept-encoding' => 'gzip, deflate, br',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?addtabs=1',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'x-requested-with' => 'XMLHttpRequest',
+  'accept-language' => 'zh-cn',
+  'content-type' => 'application/json',
+  'accept' => 'application/json, text/javascript, */*; q=0.01',
+  'host' => 'qnq.nuosike.cn',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'sort' => 'weigh',
+  'order' => 'desc',
+  '_' => '1607357285938',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001881s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/category.php
+[ info ] [ RUN ] app\admin\controller\Category->index[ /home/qnq.nuosike.cn/application/admin/controller/Category.php ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000126s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:08:15+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/category/index?sort=weigh&order=desc&_=1607357285939
+[运行时间：0.067702s] [吞吐率：14.77req/s] [内存消耗：3,931.33kb] [文件加载：135]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000022s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001389s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'category',
+    2 => 'index',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'accept-encoding' => 'gzip, deflate, br',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?addtabs=1',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'x-requested-with' => 'XMLHttpRequest',
+  'accept-language' => 'zh-cn',
+  'content-type' => 'application/json',
+  'accept' => 'application/json, text/javascript, */*; q=0.01',
+  'host' => 'qnq.nuosike.cn',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'sort' => 'weigh',
+  'order' => 'desc',
+  '_' => '1607357285939',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001796s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/category.php
+[ info ] [ RUN ] app\admin\controller\Category->index[ /home/qnq.nuosike.cn/application/admin/controller/Category.php ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000133s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:08:19+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.065764s] [吞吐率：15.21req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000029s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001456s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001871s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:20+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067365s] [吞吐率：14.84req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001605s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001973s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:21+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.064548s] [吞吐率：15.49req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001532s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001943s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:21+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.066584s] [吞吐率：15.02req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000027s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001554s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001922s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:22+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067122s] [吞吐率：14.90req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000031s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001523s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001916s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:22+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.070998s] [吞吐率：14.08req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000027s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001610s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001973s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:22+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.066128s] [吞吐率：15.12req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000024s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001524s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001909s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:23+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.065287s] [吞吐率：15.32req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000031s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001521s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001924s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:23+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.066299s] [吞吐率：15.08req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001541s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001892s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:24+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.071509s] [吞吐率：13.98req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001614s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001964s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:24+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067612s] [吞吐率：14.79req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000033s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001615s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001966s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:25+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.072142s] [吞吐率：13.86req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001617s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001966s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:25+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067497s] [吞吐率：14.82req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001533s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001923s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:26+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.066543s] [吞吐率：15.03req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001613s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001964s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:27+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.071327s] [吞吐率：14.02req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000027s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001622s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001972s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:27+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.070370s] [吞吐率：14.21req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001608s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001959s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:28+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.068176s] [吞吐率：14.67req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000024s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001540s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001909s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:28+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.069501s] [吞吐率：14.39req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000027s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001605s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001962s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:29+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067284s] [吞吐率：14.86req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001533s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001918s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:29+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.069241s] [吞吐率：14.44req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000024s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.003083s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.002002s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:30+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067212s] [吞吐率：14.88req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000024s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001527s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001986s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:30+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.065975s] [吞吐率：15.16req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001531s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001960s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:31+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.068023s] [吞吐率：14.70req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001604s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001965s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:31+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.064915s] [吞吐率：15.40req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000022s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001496s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001900s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:31+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.069443s] [吞吐率：14.40req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001627s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001962s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:32+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067862s] [吞吐率：14.74req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001615s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001962s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:32+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.068264s] [吞吐率：14.65req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000024s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001538s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001895s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:33+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.065339s] [吞吐率：15.30req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001515s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001910s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:33+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067496s] [吞吐率：14.82req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000024s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001540s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001919s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:34+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.068111s] [吞吐率：14.68req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001531s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001965s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:35+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.068376s] [吞吐率：14.63req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001486s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001918s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:36+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.066368s] [吞吐率：15.07req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001539s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001947s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:37+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.069403s] [吞吐率：14.41req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001550s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001963s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:38+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.064712s] [吞吐率：15.45req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000027s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001533s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001906s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:39+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.068861s] [吞吐率：14.52req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000027s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001511s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001967s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:39+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.066774s] [吞吐率：14.98req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000024s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001524s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001918s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:40+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.057562s] [吞吐率：17.37req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000023s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001350s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001704s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:40+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.065625s] [吞吐率：15.24req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001533s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001891s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:41+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067760s] [吞吐率：14.76req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000027s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001610s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001959s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:42+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.065056s] [吞吐率：15.37req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001451s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001922s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:08:51+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.068014s] [吞吐率：14.70req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001609s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001963s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:09:08+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.068347s] [吞吐率：14.63req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001601s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001963s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:09:10+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067995s] [吞吐率：14.71req/s] [内存消耗：3,594.47kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001605s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001962s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [0]模板文件不存在:/home/qnq.nuosike.cn/public/../application/index/view/index/index.html[/home/qnq.nuosike.cn/thinkphp/library/think/view/driver/Think.php:82]
+---------------------------------------------------------------
+[ 2020-12-08T00:09:13+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/category/edit/ids/120?dialog=1
+[运行时间：0.073329s] [吞吐率：13.64req/s] [内存消耗：4,147.85kb] [文件加载：137]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001621s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'category',
+    2 => 'edit',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?addtabs=1',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'dialog' => '1',
+  'ids' => '120',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001968s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/category.php
+[ info ] [ RUN ] app\admin\controller\Category->edit[ /home/qnq.nuosike.cn/application/admin/controller/Category.php ]
+[ info ] [ VIEW ] /home/qnq.nuosike.cn/public/../application/admin/view/category/edit.html [ array (
+  0 => 'breadcrumb',
+  1 => 'site',
+  2 => 'config',
+  3 => 'auth',
+  4 => 'admin',
+  5 => 'flagList',
+  6 => 'typeList',
+  7 => 'parentList',
+  8 => 'row',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000143s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:09:13+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/FRKToHDckx.php/ajax/lang?callback=define&controllername=category&v=1607357353
+[运行时间：0.062182s] [吞吐率：16.08req/s] [内存消耗：3,826.12kb] [文件加载：132]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000026s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001644s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'ajax',
+    2 => 'lang',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category/edit/ids/120?dialog=1',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => '*/*',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'callback' => 'define',
+  'controllername' => 'category',
+  'v' => '1607357353',
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001968s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/ajax.php
+[ info ] [ RUN ] app\admin\controller\Ajax->lang[ /home/qnq.nuosike.cn/application/admin/controller/Ajax.php ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/admin/lang/zh-cn/category.php
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000135s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:11:08+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.072410s] [吞吐率：13.81req/s] [内存消耗：3,699.13kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000033s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001587s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001969s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ VIEW ] /home/qnq.nuosike.cn/public/../application/index/view/index/index.html [ array (
+  0 => 'user',
+  1 => 'site',
+  2 => 'config',
+  3 => 'img',
+  4 => 'category',
+  5 => 'xm',
+) ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:15:14+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.071228s] [吞吐率：14.04req/s] [内存消耗：3,700.32kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000036s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001516s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/FRKToHDckx.php/category?ref=addtabs',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001962s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ VIEW ] /home/qnq.nuosike.cn/public/../application/index/view/index/index.html [ array (
+  0 => 'user',
+  1 => 'site',
+  2 => 'config',
+  3 => 'img',
+  4 => 'category',
+  5 => 'xm',
+) ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:16:45+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/
+[运行时间：0.067828s] [吞吐率：14.74req/s] [内存消耗：3,698.84kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000027s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001604s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001959s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /home/qnq.nuosike.cn/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ VIEW ] /home/qnq.nuosike.cn/public/../application/index/view/index/index.html [ array (
+  0 => 'user',
+  1 => 'site',
+  2 => 'config',
+  3 => 'img',
+  4 => 'category',
+  5 => 'xm',
+) ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2020-12-08T00:16:48+08:00 ] 49.66.61.114 GET qnq.nuosike.cn/appstore
+[运行时间：0.050343s] [吞吐率：19.86req/s] [内存消耗：2,838.56kb] [文件加载：113]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000025s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001614s ]
+[ info ] [ LANG ] /home/qnq.nuosike.cn/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'index',
+    1 => 'App',
+    2 => 'list',
+  ),
+  'convert' => false,
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=1r5jq4mn8s2m690p3hvde9p7vu',
+  'referer' => 'https://qnq.nuosike.cn/',
+  'accept-language' => 'zh-cn',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'host' => 'qnq.nuosike.cn',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /home/qnq.nuosike.cn/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.002056s ]
+[ info ] [ RUN ] app\index\controller\App->list[ /home/qnq.nuosike.cn/application/index/controller/App.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File

@@ -1,0 +1,20 @@
+一键搭建使用教程
+
+1.建立一个数据库。记录好数据库账号密码。
+2.设置运行目录
+  public
+3.设置伪静态
+location / {
+	if (!-e $request_filename){
+		rewrite  ^(.*)$  /index.php?s=$1  last;   break;
+	}
+}
+
+4.访问
+http://域名/install/
+按照引导安装即可
+
+后台地址：
+http://xxxx.域名/FRKToHDckx.php
+账号admin
+密码123456
