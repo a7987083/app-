@@ -1,15 +1,15 @@
 name: Unpack app source
 
 on:
-  push:
-    paths:
-      - '.github/workflows/unpack-app-source.yml'
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
 
 jobs:
   unpack:
+    if: github.event.issue.title == 'RUN_UNPACK_APP_SOURCE_ONCE'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
