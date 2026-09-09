@@ -1,0 +1,81 @@
+name: Import source archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/import-source.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reassemble and verify archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat sd_com_aPndb_23m.part-00 \
+              sd_com_aPndb_23m.part-01 \
+              sd_com_aPndb_23m.part-02 \
+              sd_com_aPndb_23m.part-03 \
+              sd_com_aPndb_23m.part-04 \
+              sd_com_aPndb_23m.part-05 \
+              sd_com_aPndb_23m.part-06 \
+              sd_com_aPndb_23m.part-07 > /tmp/sd_com_aPndb.tar.gz
+          echo '0166981fffa407e8269b97d5e30b9b95e2a4f02375b62f8baa6304be1a7b7ccb  /tmp/sd_com_aPndb.tar.gz' | sha256sum -c -
+
+      - name: Validate archive contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import tarfile, sys
+          p='/tmp/sd_com_aPndb.tar.gz'
+          with tarfile.open(p,'r:gz') as t:
+              members=t.getmembers()
+              files=[m for m in members if m.isfile()]
+              dirs=[m for m in members if m.isdir()]
+              bad=[]
+              for m in members:
+                  n=m.name
+                  if n.startswith('/') or n == '..' or n.startswith('../') or '/..' in n.split('/'):
+                      bad.append(n)
+              print(f'entries={len(members)} files={len(files)} dirs={len(dirs)}')
+              if len(files) != 9399 or len(dirs) != 1248:
+                  raise SystemExit('archive entry count mismatch')
+              if bad:
+                  raise SystemExit(f'unsafe archive paths: {bad[:5]}')
+          PY
+
+      - name: Replace repository contents with source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/imported-src
+          tar -xzf /tmp/sd_com_aPndb.tar.gz -C /tmp/imported-src
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/imported-src/. .
+          actual=$(find . -type f ! -path './.git/*' | wc -l | tr -d ' ')
+          echo "extracted_files=$actual"
+          test "$actual" = '9399'
+
+      - name: Commit imported source to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          tracked=$(git ls-files | wc -l | tr -d ' ')
+          echo "tracked_files=$tracked"
+          test "$tracked" = '9399'
+          git commit -m 'import: replace main with new app source'
+          git push origin HEAD:main
