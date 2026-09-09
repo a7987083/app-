@@ -3,20 +3,27 @@
   "stable_branch": "main",
   "stable_commit": "5c50a5dfb7f5eb725527f080ec5e850d8bbe0dfd",
   "working_branch": "refactor/app-source-phase1",
+  "phase1_implementation_commit": "198d10030108ee5081b035c9d99480267154648f",
+  "validated_ci_commit": "ebc121bc02949bd1baf23f184c8b0a75c8a2ccd2",
+  "validated_ci_run": 34296168358,
   "goal": "Refactor /appstore internals while preserving legacy external behavior",
   "phase": "phase1",
   "completed": [
     "architecture review",
     "AppSourceBuilder extraction",
     "duplicate licensed/unlicensed payload construction removed",
-    "legacy-equivalence pure regression test added"
+    "legacy-equivalence pure regression test added",
+    "PHP 5.6/7.4/8.2 CI validation of extracted builder",
+    "PHP 7.4/8.2 controller syntax validation",
+    "pre-existing PHP 5.6 App::list parser conflict proven against stable baseline"
   ],
   "validation": {
-    "php_syntax_local": "passed on PHP 8.4.23",
     "pure_regression_local": "passed",
-    "github_actions": "pending",
+    "github_actions": "passed",
+    "github_actions_run": 34296168358,
     "database_endpoint": "not_run",
     "remote_encryption": "not_run"
   },
-  "next_task": "Run branch CI, then implement phase2 query/index improvements separately"
+  "known_runtime_contract_issue": "composer.json declares PHP >=5.6 but stable App::list is a PHP 5.6 reserved-word parser error",
+  "next_task": "Phase2: add measured query indexes and remove front-page N+1 in separate commits"
 }

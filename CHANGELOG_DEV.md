@@ -7,4 +7,6 @@
 - Preserved all three historical download-lock semantics: no license, active license, expired license.
 - Added `tests/AppSourceBuilderRegressionTest.php` to compare the new pure builder against the pre-refactor transformation logic.
 - Added GitHub Actions regression checks for PHP 5.6, 7.4, and 8.2.
-- Added architecture/refactor/build/known-issues documentation.
+- CI run `34296168358` passed all jobs after distinguishing the pre-existing PHP 5.6 `App::list()` reserved-word parser conflict from the new extracted code.
+- Added architecture/refactor/build/known-issues/handoff documentation.
+- No database schema, card expiry rule, blacklist rule, route, encryption request format, or public JSON field was intentionally changed in Phase 1.
