@@ -1,0 +1,23 @@
+{
+    "php_ext": "opcache,fileinfo,redis",
+    "chmod": [
+        {
+            "mode": 755,
+            "path": "/storage/AppleSignV2"
+        }
+    ],
+    "success_url": "/install",
+    "php_versions": "82",
+    "run_path": "/public",
+    "remove_file": [
+        "/index.html",
+        "/404.html",
+        "/.user.ini"
+    ],
+    "enable_functions": [
+        "proc_open",
+        "pcntl_signal",
+        "pcntl_alarm",
+        "symlink"
+    ]
+}
