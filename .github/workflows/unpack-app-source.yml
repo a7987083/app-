@@ -1,0 +1,37 @@
+name: Unpack app source
+
+on:
+  push:
+    paths:
+      - '.github/workflows/unpack-app-source.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract historical source ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show 'a7013290e2702e902d7aa680da9c6679fb6c3782:软件源源码 (1).zip' > /tmp/app-source.zip
+          unzip -q -o /tmp/app-source.zip -d .
+          rm -f .github/workflows/unpack-app-source.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+
+      - name: Commit extracted source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m '解压并导入软件源源码'
+          git push origin HEAD:main
