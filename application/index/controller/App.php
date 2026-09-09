@@ -3,6 +3,7 @@
 namespace app\index\controller;
 
 use app\common\controller\Frontend;
+use app\index\service\AppSourceBuilder;
 use think\Db;
 class App 
 {
@@ -124,152 +125,14 @@ class App
 
 		if($kcode == ''){
 			$chkif = Db::table('fa_kami')->where('udid',$udid)->order('id desc')->select();
+			$licenseState = AppSourceBuilder::LICENSE_NONE;
 			if($chkif){
-			    //var_dump('<pre>',$chkif);die;
-				$ifend = time() > $chkif[0]['endtime']?true:false;
-				$config = Db::table('fa_config')->select();
-				if(empty($config)) return json(['code'=>0,'msg'=>'暂无站点数据']);
-				$list = Db::table('fa_category')->where('status','normal')->order('weigh desc')->select();
-				if(empty($list)) return json(['code'=>0,'msg'=>'暂无app数据']);
-				$data = [];
-				foreach ($list as $key=>$val)
-				{
-				    $lock = $val['bt2b'];
-				    if($lock != '1'){
-				        $downloadURL = $val['bt1a'];
-				    }else{
-				        if($ifend){
-				            $downloadURL = '';
-				        }else{
-				            $downloadURL = $val['bt1a'];
-				        }
-				        
-				    }
-				    if($val['type'] == 'default'){
-				        $val['type'] = 0;
-				    }
-					$data[$key]['name'] = $val['name'];
-					$data[$key]['type'] = $val['type'];
-					$data[$key]['version'] = $val['nickname'];
-					$data[$key]['versionDate'] = date('Y-m-d\TH:i:s\+08:00',$val['updatetime']);
-					$data[$key]['versionDescription'] = str_replace('\\n','@@@',$val['keywords']);
-					$data[$key]['lock'] = $val['bt2b'];
-					$data[$key]['downloadURL'] = $downloadURL;
-					$data[$key]['isLanZouCloud'] = $val['flag'];
-					$data[$key]['iconURL'] = $val['image'];
-					$data[$key]['tintColor'] = $val['bt1b'];
-					$data[$key]['size'] = $val['bt2a'];
-				}
-				foreach ($config as $key=>$val)
-				{
-					if($val['name'] == 'name') $info['name'] = $val['value'];
-					if($val['name'] == 'message') $info['message'] = $val['value'];
-					if($val['name'] == 'identifier') $info['identifier'] = $val['value'];
-					if($val['name'] == 'sourceURL') $info['sourceURL'] = $val['value'];
-					if($val['name'] == 'sourceicon') $info['sourceicon'] = $val['value'];
-					if($val['name'] == 'payURL') $info['payURL'] = $val['value'];
-					if($val['name'] == 'unlockURL') $info['unlockURL'] = $val['value'];
-				}
-				$arr = [
-					'name'=>$info['name'],
-					'message'=>$info['message'],
-					'identifier'=>$info['identifier'],
-					'sourceURL'=>$info['sourceURL'],
-					'sourceicon'=>$info['sourceicon'],
-					'payURL'=>$info['payURL'],
-					'unlockURL'=>$info['unlockURL'],
-					"UDID" => $udid,
-                    "Time" => $nowtime,
-					'apps'=>$data
-					];
-            
-					if($opencry=='1'){//开启接口
-                        $content = json_encode($arr,320);
-                        $content = base64_encode($content);
-                        $native['content'] = $content;
-                        $res = $this->curl('https://api.nuosike.com/api.php',$native);
-                        $return["appstore"] = $res;
-                        $json = json_encode($return);
-                        $jsonStr  = str_replace('@@@', '\n', $json);
-                        echo $jsonStr;die;
-                    }else{
-                        unset($arr['UDID']);
-                        unset($arr['Time']);
-                        $json = json_encode($arr,320);
-                        $jsonStr  = str_replace('@@@', '\n', $json);
-				        //$jsonStr  = str_replace('N', '\n', $json);
-                        echo $jsonStr;die;
-                    }
-				$json = json_encode($arr,320);
-				//halt($json);
-				$jsonStr  = str_replace('N', '\n', $json);
-				return $json;
-			}else{
-				$config = Db::table('fa_config')->select();
-				if(empty($config)) return json(['code'=>0,'msg'=>'暂无站点数据']);
-				$list = Db::table('fa_category')->where('status','normal')->order('weigh desc')->select();
-				if(empty($list)) return json(['code'=>0,'msg'=>'暂无app数据']);
-				$data = [];
-				foreach ($list as $key=>$val)
-				{
-				    if($val['type'] == 'default'){
-				        $val['type'] = 0;
-				    }
-					$data[$key]['name'] = $val['name'];
-					$data[$key]['type'] = $val['type'];
-					$data[$key]['version'] = $val['nickname'];
-					$data[$key]['versionDate'] = date('Y-m-d\TH:i:s\+08:00',$val['updatetime']);
-					$data[$key]['versionDescription'] = str_replace('\\n','@@@',$val['keywords']);
-					$data[$key]['lock'] = $val['bt2b'];
-					$data[$key]['downloadURL'] = $val['bt2b']?'':$val['bt1a'];
-					$data[$key]['isLanZouCloud'] = $val['flag'];
-					$data[$key]['iconURL'] = $val['image'];
-					$data[$key]['tintColor'] = $val['bt1b'];
-					$data[$key]['size'] = $val['bt2a'];
-				}
-				foreach ($config as $key=>$val)
-				{
-					if($val['name'] == 'name') $info['name'] = $val['value'];
-					if($val['name'] == 'message') $info['message'] = $val['value'];
-					if($val['name'] == 'identifier') $info['identifier'] = $val['value'];
-					if($val['name'] == 'sourceURL') $info['sourceURL'] = $val['value'];
-					if($val['name'] == 'sourceicon') $info['sourceicon'] = $val['value'];
-					if($val['name'] == 'payURL') $info['payURL'] = $val['value'];
-					if($val['name'] == 'unlockURL') $info['unlockURL'] = $val['value'];
-				}
-				$arr = [
-					'name'=>$info['name'],
-					'message'=>$info['message'],
-					'identifier'=>$info['identifier'],
-					'sourceURL'=>$info['sourceURL'],
-					'sourceicon'=>$info['sourceicon'],
-					'payURL'=>$info['payURL'],
-					'unlockURL'=>$info['unlockURL'],
-					"UDID" => $udid,
-                    "Time" => $nowtime,
-					'apps'=>$data
-					];
-					if($opencry=='1'){//开启接口
-                        $content = json_encode($arr,320);
-                        $content = base64_encode($content);
-                        $native['content'] = $content;
-                        $res = $this->curl('https://api.nuosike.com/api.php',$native);
-                        $return["appstore"] = $res;
-                        $json = json_encode($return);
-                        $jsonStr  = str_replace('@@@', '\n', $json);
-                        echo $jsonStr;die;
-                    }else{
-                        unset($arr['UDID']);
-                        unset($arr['Time']);
-                        $json = json_encode($arr,320);
-				        $jsonStr  = str_replace('@@@', '\n', $json);
-                        echo $jsonStr;die;
-                    }
-				$json = json_encode($arr,320);
-				//halt($json);
-				$jsonStr  = str_replace('N', '\n', $json);
-				return $json;
+				$licenseState = time() > $chkif[0]['endtime']
+					? AppSourceBuilder::LICENSE_EXPIRED
+					: AppSourceBuilder::LICENSE_ACTIVE;
 			}
+
+			return $this->renderAppStore($udid, $nowtime, $opencry, $licenseState);
 		}else{
 			$chkis = Db::table('fa_kami')->where('kami',$kcode)->order('id desc')->select();
 			if($chkis){
@@ -289,6 +152,36 @@ class App
 				return json(['code'=>0,'msg'=>'解锁码不存在']);
 			}
 		}
+    }
+
+    private function renderAppStore($udid, $nowtime, $opencry, $licenseState)
+    {
+        $config = Db::table('fa_config')->select();
+        if(empty($config)) return json(['code'=>0,'msg'=>'暂无站点数据']);
+
+        $list = Db::table('fa_category')->where('status','normal')->order('weigh desc')->select();
+        if(empty($list)) return json(['code'=>0,'msg'=>'暂无app数据']);
+
+        $data = AppSourceBuilder::buildApps($list, $licenseState);
+        $info = AppSourceBuilder::buildSiteInfo($config);
+        $arr = AppSourceBuilder::buildPayload($info, $data, $udid, $nowtime);
+
+        if($opencry=='1'){
+            $content = json_encode($arr,320);
+            $content = base64_encode($content);
+            $native['content'] = $content;
+            $res = $this->curl('https://api.nuosike.com/api.php',$native);
+            $return["appstore"] = $res;
+            $json = json_encode($return);
+            $jsonStr = str_replace('@@@', '\n', $json);
+            echo $jsonStr;die;
+        }else{
+            unset($arr['UDID']);
+            unset($arr['Time']);
+            $json = json_encode($arr,320);
+            $jsonStr = str_replace('@@@', '\n', $json);
+            echo $jsonStr;die;
+        }
     }
     public function curl($url,$native){
 		$postData = http_build_query($native);
