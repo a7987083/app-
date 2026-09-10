@@ -27,6 +27,7 @@ jobs:
           php -l application/common/library/AppStorePayload.php
           php -l application/common/library/SourceConfigRepository.php
           php -l application/common/library/BlacklistPolicy.php
+          php -l application/common/library/TraceMonitorPolicy.php
           php -l application/common/model/Config.php
           php -l application/index/controller/App.php
           php -l application/index/controller/Index.php
@@ -38,13 +39,18 @@ jobs:
           php -l tests/source_config_repository_test.php
           php -l tests/blacklist_policy_test.php
           php -l tests/blacklist_persistence_contract_test.php
+          php -l tests/trace_monitor_policy_test.php
+          php -l tests/trace_monitor_contract_test.php
           php -l tests/deployment_contract_test.php
+          bash -n tools/trace_monitor_probe.sh
 
-      - name: Run appstore, blacklist and deployment regression tests
+      - name: Run appstore, trace-monitor, blacklist and deployment regression tests
         run: |
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
           php tests/source_config_repository_test.php
           php tests/blacklist_policy_test.php
           php tests/blacklist_persistence_contract_test.php
+          php tests/trace_monitor_policy_test.php
+          php tests/trace_monitor_contract_test.php
           php tests/deployment_contract_test.php
