@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_VERSION="1.2.1-source-flow-ext-auto"
+DEPLOY_VERSION="1.2.2-source-flow-ext-auto"
 REPO_URL="https://github.com/a7987083/app-.git"
 BRANCH="main"
 DEFAULT_DOMAIN="app3.zonoeios.xyz"
@@ -73,7 +73,12 @@ cd "$APP_DIR"
 [ -d public ] || die "缺少 public 目录"
 
 php_ext_loaded() {
-    "$PHP_BIN" -r 'exit(extension_loaded($argv[1]) ? 0 : 1);' "$1" >/dev/null 2>&1
+    local ext="$1"
+    if [ "$ext" = "opcache" ]; then
+        "$PHP_BIN" -r 'exit((extension_loaded("Zend OPcache") || extension_loaded("opcache")) ? 0 : 1);' >/dev/null 2>&1
+    else
+        "$PHP_BIN" -r 'exit(extension_loaded($argv[1]) ? 0 : 1);' "$ext" >/dev/null 2>&1
+    fi
 }
 
 reload_php_fpm() {
@@ -103,6 +108,7 @@ enable_existing_extension() {
         {
             printf '\n; zonoe deploy: enable %s\n' "$ext"
             printf '%s\n' "$directive"
+            if [ "$ext" = "opcache" ]; then printf 'opcache.enable_cli=1\n'; fi
         } >> "$PHP_INI"
     fi
     reload_php_fpm || true
@@ -121,21 +127,70 @@ bt_install_extension() {
     return 1
 }
 
+compile_opcache_exact_version() {
+    local phpize="${PHP_PREFIX}/bin/phpize"
+    local phpconfig="${PHP_PREFIX}/bin/php-config"
+    local tmp="/tmp/zonoe-opcache-${PHP_VER}-$$"
+    local tarball="php-${PHP_VER}.tar.gz"
+    local srcurl="https://www.php.net/distributions/${tarball}"
+
+    [ -x "$phpize" ] || { warn "缺少 ${phpize}，无法编译 OPcache"; return 1; }
+    [ -x "$phpconfig" ] || { warn "缺少 ${phpconfig}，无法编译 OPcache"; return 1; }
+    command -v make >/dev/null 2>&1 || { warn "缺少 make，无法编译 OPcache"; return 1; }
+    command -v curl >/dev/null 2>&1 || { warn "缺少 curl，无法下载 PHP 源码"; return 1; }
+    command -v tar >/dev/null 2>&1 || { warn "缺少 tar，无法解压 PHP 源码"; return 1; }
+
+    info "宝塔扩展安装器无法处理 OPcache，改用 PHP ${PHP_VER} 同版本源码编译 ext/opcache"
+    rm -rf "$tmp"
+    mkdir -p "$tmp"
+    (
+        cd "$tmp"
+        curl -fL --retry 2 --connect-timeout 15 "$srcurl" -o "$tarball"
+        tar -xzf "$tarball"
+        cd "php-${PHP_VER}/ext/opcache"
+        "$phpize"
+        ./configure --with-php-config="$phpconfig" --enable-opcache
+        make -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+        make install
+    ) || { rm -rf "$tmp"; return 1; }
+    rm -rf "$tmp"
+
+    EXT_DIR="$($PHP_BIN -r 'echo ini_get("extension_dir");' 2>/dev/null || true)"
+    if [ -z "$EXT_DIR" ] || [ ! -d "$EXT_DIR" ]; then
+        EXT_DIR="$(find "$PHP_PREFIX" -type d -path '*/lib/php/extensions/*' 2>/dev/null | head -n1 || true)"
+    fi
+    enable_existing_extension opcache
+}
+
 ensure_auto_extension() {
     local ext="$1"
     if php_ext_loaded "$ext"; then
         info "PHP 扩展 ${ext}: OK"
         return 0
     fi
+
     warn "PHP 扩展 ${ext} 缺失，开始自动处理"
+
     if enable_existing_extension "$ext"; then
         info "PHP 扩展 ${ext}: 已启用现有模块"
         return 0
     fi
+
+    if [ "$ext" = "opcache" ]; then
+        # OPcache 是 PHP 自带 Zend 扩展。宝塔对某些 PHP 版本会提示已安装/请选择其它版本，
+        # 因此先修正 Zend OPcache 检测；确实没有 opcache.so 时才使用同版本 PHP 源码编译。
+        if compile_opcache_exact_version; then
+            info "PHP 扩展 opcache: 同版本源码编译并启用成功"
+            return 0
+        fi
+        die "PHP 扩展 opcache 自动处理失败。请检查 phpize/php-config/编译工具输出。"
+    fi
+
     if bt_install_extension "$ext"; then
         info "PHP 扩展 ${ext}: 自动安装成功"
         return 0
     fi
+
     die "PHP 扩展 ${ext} 自动安装失败。未改用系统 PHP 包，避免装到错误 PHP 版本。"
 }
 
