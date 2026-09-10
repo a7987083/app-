@@ -1,4 +1,4 @@
-name: Export pre-replace source
+name: One-shot replace with latest ceshi1 source
 
 on:
   push:
@@ -8,26 +8,87 @@ on:
       - '.github/workflows/import-ceshi1.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export:
+  replace:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout backup source
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: backup/pre-20260904-replace
-          fetch-depth: 1
-      - name: Pack source
+          ref: main
+          fetch-depth: 0
+
+      - name: Download latest source
         run: |
           set -euo pipefail
-          tar --exclude=.git -czf /tmp/pre-replace-source.tar.gz .
-          sha256sum /tmp/pre-replace-source.tar.gz
-      - name: Upload source snapshot
-        uses: actions/upload-artifact@v4
-        with:
-          name: pre-replace-source
-          path: /tmp/pre-replace-source.tar.gz
-          if-no-files-found: error
-          retention-days: 1
+          rm -rf /tmp/ceshi1-import
+          mkdir -p /tmp/ceshi1-import/extract /tmp/ceshi1-import/source
+          curl -fL --retry 3 --retry-delay 2 \
+            'https://ios.zonoeios.xyz/ceshi1_com_YFEfj.tar.gz' \
+            -o /tmp/ceshi1-import/source.tar.gz
+          test -s /tmp/ceshi1-import/source.tar.gz
+          tar -tzf /tmp/ceshi1-import/source.tar.gz >/dev/null
+          sha256sum /tmp/ceshi1-import/source.tar.gz
+
+      - name: Extract and validate 20260904 source
+        run: |
+          set -euo pipefail
+          tar -xzf /tmp/ceshi1-import/source.tar.gz -C /tmp/ceshi1-import/extract
+          shopt -s dotglob nullglob
+          entries=(/tmp/ceshi1-import/extract/*)
+          if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
+            cp -a "${entries[0]}/." /tmp/ceshi1-import/source/
+          else
+            cp -a /tmp/ceshi1-import/extract/. /tmp/ceshi1-import/source/
+          fi
+          rm -rf /tmp/ceshi1-import/source/.git /tmp/ceshi1-import/source/.github
+          test -f /tmp/ceshi1-import/source/auto_install.json
+          test -f /tmp/ceshi1-import/source/application/database.php
+          test -f /tmp/ceshi1-import/source/public/index.php
+          test -f /tmp/ceshi1-import/source/ver.json
+          grep -q '20260904' /tmp/ceshi1-import/source/ver.json
+          echo 'ver.json:'
+          cat /tmp/ceshi1-import/source/ver.json
+          echo
+          echo "source_files=$(find /tmp/ceshi1-import/source -type f | wc -l)"
+          sha256sum \
+            /tmp/ceshi1-import/source/ver.json \
+            /tmp/ceshi1-import/source/application/admin/controller/general/Config.php \
+            /tmp/ceshi1-import/source/application/common/behavior/Common.php \
+            /tmp/ceshi1-import/source/public/assets/js/backend/category.js
+
+      - name: Delete old repository tree and copy latest source
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/ceshi1-import/source/. ./
+
+      - name: Verify replacement tree
+        run: |
+          set -euo pipefail
+          test -d .git
+          test -f ver.json
+          test -f auto_install.json
+          test -f application/database.php
+          test -f application/config.php
+          test -f public/index.php
+          test -f vendor/autoload.php
+          test ! -e .github
+          test ! -e deploy.sh
+          test ! -e install.sh
+          test ! -e import.sql
+          grep -q '20260904' ver.json
+          echo "repo_files=$(find . -type f ! -path './.git/*' | wc -l)"
+          du -sh .
+
+      - name: Commit exact replacement to main
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git status --short
+          git commit -m 'import: replace repository with ceshi1 20260904 source'
+          git push origin HEAD:main
