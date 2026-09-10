@@ -1,0 +1,34 @@
+{
+  "repository": "a7987083/app-",
+  "development_branch": "dev/software-source-v1",
+  "stable_branch": "main",
+  "stable_baseline_commit": "598235962ea328c6558fe4935fe19ba552c1490d",
+  "current_goal": "Develop the software-source backend from the current working baseline without regressions.",
+  "status": "baseline_locked",
+  "runtime_changes": false,
+  "key_files": [
+    "application/index/controller/App.php",
+    "application/index/controller/App-mb.php",
+    "application/admin/controller/Category.php",
+    "application/admin/view/category/add.html",
+    "application/admin/view/category/edit.html",
+    "application/extra/site.php"
+  ],
+  "confirmed_capabilities": [
+    "appstore",
+    "appstore_v2",
+    "source_message",
+    "source_encryption",
+    "unlock_kami",
+    "blacklist",
+    "category_types",
+    "dylib_udid_remote_config"
+  ],
+  "validation": {
+    "source_inspection": "done",
+    "php_syntax": "not_run_no_runtime_change",
+    "runtime_test": "not_run_no_runtime_change",
+    "regression_test": "not_run_no_runtime_change"
+  },
+  "next_task": "First backward-compatible functional enhancement"
+}
