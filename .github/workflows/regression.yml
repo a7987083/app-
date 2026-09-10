@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: ['8.2', '8.4']
+        php-version: ['7.0', '8.2', '8.4']
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,13 +25,17 @@ jobs:
       - name: Lint changed application PHP
         run: |
           php -l application/common/library/AppStorePayload.php
+          php -l application/common/library/SourceConfigRepository.php
+          php -l application/common/model/Config.php
           php -l application/index/controller/App.php
           php -l application/index/controller/Index.php
           php -l application/admin/controller/Category.php
           php -l application/admin/controller/Monitor.php
           php -l application/admin/controller/Kami.php
+          php -l tests/source_config_repository_test.php
 
       - name: Run appstore payload regression tests
         run: |
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
+          php tests/source_config_repository_test.php
