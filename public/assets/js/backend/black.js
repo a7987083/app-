@@ -49,10 +49,15 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     return Table.api.formatter.datetime.apply(this, arguments);
                 },
                 endTime: function (value, row, index) {
-                    if (!value || parseInt(value, 10) === 0) {
+                    var endtime = parseInt(value, 10) || 0;
+                    if (endtime === 0) {
                         return '<span class="text-success">永久</span>';
                     }
-                    return Table.api.formatter.datetime.apply(this, arguments);
+                    var formatted = Table.api.formatter.datetime.apply(this, arguments);
+                    if (endtime <= Math.floor(Date.now() / 1000)) {
+                        return '<span class="text-muted">已过期</span> ' + formatted;
+                    }
+                    return formatted;
                 }
             },
             bindevent: function () {
