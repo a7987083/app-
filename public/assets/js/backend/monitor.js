@@ -25,8 +25,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {checkbox: true},
                         {field: 'id', title: __('Id')},
                         {field: 'udid', title: __('UDID设备码')},
-                        {field: 'identity', title:'身份'},
-                        {field: 'count', title:'异常请求次数'},
+                        {field: 'identity', title:'来源身份'},
+                        {field: 'count', title:'来源记录次数'},
                         {field: 'addtime', title: __('首次记录时间'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
                         {field: 'operate', title: __('Operate'), table: table, events: Table.api.events.operate, buttons: [{
                             name: 'offline',
