@@ -57,6 +57,8 @@ jobs:
             cp -a /tmp/ceshi1-import/extract/. /tmp/ceshi1-import/source/
           fi
 
+          rm -rf /tmp/ceshi1-import/source/.git /tmp/ceshi1-import/source/.github
+
           test -f /tmp/ceshi1-import/source/auto_install.json
           test -f /tmp/ceshi1-import/source/import.sql
           test -f /tmp/ceshi1-import/source/application/database.php
@@ -79,11 +81,6 @@ jobs:
 
           cp -a /tmp/ceshi1-import/source/. ./
 
-          # Do not import nested GitHub/Git metadata from the archive.
-          rm -rf .git .github
-          mkdir -p .github/workflows
-          git show HEAD:.github/workflows/import-ceshi1.yml > .github/workflows/import-ceshi1.yml
-
           if [ "$PRESERVE_DEPLOY" = "true" ] && [ -f /tmp/ceshi1-preserve/deploy.sh ]; then
             cp -a /tmp/ceshi1-preserve/deploy.sh deploy.sh
           fi
@@ -91,6 +88,8 @@ jobs:
       - name: Validate imported tree
         run: |
           set -euo pipefail
+          test -d .git
+          test -f .github/workflows/import-ceshi1.yml
           test -f auto_install.json
           test -f import.sql
           test -f application/database.php
