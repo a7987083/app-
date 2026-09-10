@@ -47,14 +47,6 @@ class Category extends Backend
      */
     public function index()
     {
-        // 保留历史行为：打开后台列表时将非当日统计归零。
-        // 该设计后续应迁移到独立统计逻辑，但当前阶段不改变其可见行为。
-        $time = (int)date('d', time());
-        Db::name('category')->where('cstime', '<>', $time)->update([
-            'cs' => 0,
-            'cstime' => $time
-        ]);
-
         $this->request->filter(['strip_tags']);
         if ($this->request->isAjax()) {
             // 快速搜索只匹配应用名称；分页、排序由 BootstrapTable 的 server 模式传入。
