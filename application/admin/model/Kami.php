@@ -11,7 +11,6 @@ class Kami extends Model
     
 
     
-
     // 表名
     protected $name = 'kami';
     
@@ -57,17 +56,17 @@ class Kami extends Model
 
     protected function setAddtimeAttr($value)
     {
-        return $value === '' ? null : ($value && !is_numeric($value) ? strtotime($value) : $value);
+        return $value === '' ? 0 : ($value && !is_numeric($value) ? strtotime($value) : $value);
     }
 
     protected function setUsetimeAttr($value)
     {
-        return $value === '' ? null : ($value && !is_numeric($value) ? strtotime($value) : $value);
+        return $value === '' ? 0 : ($value && !is_numeric($value) ? strtotime($value) : $value);
     }
 
     protected function setEndtimeAttr($value)
     {
-        return $value === '' ? null : ($value && !is_numeric($value) ? strtotime($value) : $value);
+        return $value === '' ? 0 : ($value && !is_numeric($value) ? strtotime($value) : $value);
     }
 
 
