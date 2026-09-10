@@ -32,7 +32,7 @@ class Category extends Backend
         $tree->init(collection($this->model->order('weigh desc,id desc')->select())->toArray(), 'pid');
         $this->categorylist = $tree->getTreeList($tree->getTreeArray(0), 'name');
         $categorydata = [0 => ['type' => 'all', 'name' => __('None')]];
-        foreach ($this->categorylist as $k => $v) {
+        foreach ($this->categorylist as $v) {
             $categorydata[$v['id']] = $v;
         }
         $typeList = CategoryModel::getTypeList();
@@ -47,40 +47,33 @@ class Category extends Backend
      */
     public function index()
     {
-		$time = (int)date('d',time());
-		DB::name('category')->where('cstime','<>',$time)->update([
-			'cs' => 0,
-			'cstime' => $time
-		]);
-        //设置过滤方法
+        // 保留历史行为：打开后台列表时将非当日统计归零。
+        // 该设计后续应迁移到独立统计逻辑，但当前阶段不改变其可见行为。
+        $time = (int)date('d', time());
+        Db::name('category')->where('cstime', '<>', $time)->update([
+            'cs' => 0,
+            'cstime' => $time
+        ]);
+
         $this->request->filter(['strip_tags']);
         if ($this->request->isAjax()) {
             $type = $this->request->request("type");
-
-            //构造父类select列表选项数据
+            $typeList = CategoryModel::getTypeList();
             $list = [];
-            foreach ($this->categorylist as $k => $v) {
+
+            foreach ($this->categorylist as $v) {
                 if ($type == "all" || $type == null || $type === '' || (string)$v['type'] === (string)$type) {
+                    if (isset($typeList[$v['type']])) {
+                        $v['type'] = $typeList[$v['type']];
+                    }
                     $list[] = $v;
                 }
             }
-            foreach ($list as $k => $v){
-                 if($v['type'] == '1'){
-                     $list[$k]['type'] = '应用';
-                 }elseif($v['type'] == '2'){
-                     $list[$k]['type'] = '游戏';
-                 }elseif($v['type'] == '3'){
-                     $list[$k]['type'] = '影音';
-                 }elseif($v['type'] == '4'){
-                     $list[$k]['type'] = '工具';
-                 }elseif($v['type'] == '5'){
-                     $list[$k]['type'] = '插件';
-                 }
-            }
-            $total = count($list);
-            $result = array("total" => $total, "rows" => $list);
 
-            return json($result);
+            return json([
+                'total' => count($list),
+                'rows' => $list,
+            ]);
         }
         return $this->view->fetch();
     }
@@ -95,44 +88,39 @@ class Category extends Backend
             $this->error(__('No Results were found'));
         }
         $adminIds = $this->getDataLimitAdminIds();
-        if (is_array($adminIds)) {
-            if (!in_array($row[$this->dataLimitField], $adminIds)) {
-                $this->error(__('You have no permission'));
-            }
+        if (is_array($adminIds) && !in_array($row[$this->dataLimitField], $adminIds)) {
+            $this->error(__('You have no permission'));
         }
+
         if ($this->request->isPost()) {
             $params = $this->request->post("row/a");
             if ($params) {
                 $params = $this->preExcludeFields($params);
-                if (isset($params['bt1b'])) {
-                    $params['bt1b'] = ltrim($params['bt1b'], '#');
-                }
-                if (isset($params['keywords'])) {
-                    $params['keywords'] = $this->encodeKeywordsNewlines($params['keywords']);
-                }
-                $modify = $params['modify'];
+                $modify = isset($params['modify']) ? $params['modify'] : null;
                 unset($params['modify']);
-                if ($params['pid'] != $row['pid']) {
-                    $childrenIds = Tree::instance()->init(collection(\app\common\model\Category::select())->toArray())->getChildrenIds($row['id'], true);
+                $params = $this->normalizeWriteParams($params, true);
+
+                if (isset($params['pid']) && $params['pid'] != $row['pid']) {
+                    $childrenIds = Tree::instance()
+                        ->init(collection(\app\common\model\Category::select())->toArray())
+                        ->getChildrenIds($row['id'], true);
                     if (in_array($params['pid'], $childrenIds)) {
                         $this->error(__('Can not change the parent to child or itself'));
                     }
                 }
 
                 try {
-                    //是否采用模型验证
                     if ($this->modelValidate) {
                         $name = str_replace("\\model\\", "\\validate\\", get_class($this->model));
-                        $validate = is_bool($this->modelValidate) ? ($this->modelSceneValidate ? $name . '.edit' : $name) : $this->modelValidate;
+                        $validate = is_bool($this->modelValidate)
+                            ? ($this->modelSceneValidate ? $name . '.edit' : $name)
+                            : $this->modelValidate;
                         $row->validate($validate);
                     }
-                    $params['bt2a'] = $params['bt2a'] *1024*1024;
-                    //var_dump('<pre>',$ids);die;
-                    if($modify == '2'){
+                    if ($modify == '2') {
                         $params['updatetime'] = time();
                     }
-                    $result = Db::name('category')->where(['id'=>$ids])->update($params);
-                    //$result = $row->allowField(true)->save($params);
+                    $result = Db::name('category')->where(['id' => $ids])->update($params);
                     if ($result !== false) {
                         $this->success();
                     } else {
@@ -146,15 +134,15 @@ class Category extends Backend
             }
             $this->error(__('Parameter %s can not be empty', ''));
         }
-        if(!$row['bt2a']){
+
+        if (!$row['bt2a']) {
             $row['bt2a'] = 0;
         }
-        $row['bt2a'] = round($row['bt2a']/(1024*1024),2);
+        $row['bt2a'] = round($row['bt2a'] / (1024 * 1024), 2);
         $row['keywords'] = $this->decodeKeywordsNewlines($row['keywords']);
         $this->view->assign("row", $row);
         return $this->view->fetch();
     }
-
 
     /**
      * Selectpage搜索
@@ -165,24 +153,40 @@ class Category extends Backend
     {
         return parent::selectpage();
     }
+
     public function add()
     {
         if ($this->request->isPost()) {
             $params = $this->request->post("row/a");
-            if (isset($params['bt1b'])) {
-                $params['bt1b'] = ltrim($params['bt1b'], '#');
+            if ($params) {
+                $params = $this->normalizeWriteParams($params, false);
+                $category = new CategoryModel();
+                $category->allowField(true)->save($params);
+                $this->success();
             }
-            if (isset($params['keywords'])) {
-                $params['keywords'] = $this->encodeKeywordsNewlines($params['keywords']);
-            }
-            if($params['bt2a']>0){
-                $params['bt2a'] = $params['bt2a']*1024*1024;
-            }
-            $category = new CategoryModel();
-            $category->allowField(true)->save($params);
-            $this->success();
+            $this->error(__('Parameter %s can not be empty', ''));
         }
         return $this->view->fetch();
+    }
+
+    /**
+     * 统一后台写入前的数据规范化。
+     * 编辑保持历史行为：文件大小无条件按 MB 转字节；新增仅在大于 0 时转换。
+     */
+    protected function normalizeWriteParams(array $params, $isEdit)
+    {
+        if (isset($params['bt1b'])) {
+            $params['bt1b'] = ltrim($params['bt1b'], '#');
+        }
+        if (isset($params['keywords'])) {
+            $params['keywords'] = $this->encodeKeywordsNewlines($params['keywords']);
+        }
+        if (isset($params['bt2a'])) {
+            if ($isEdit || $params['bt2a'] > 0) {
+                $params['bt2a'] = $params['bt2a'] * 1024 * 1024;
+            }
+        }
+        return $params;
     }
 
     /**
