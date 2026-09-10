@@ -26,18 +26,23 @@ jobs:
         run: |
           php -l application/common/library/AppStorePayload.php
           php -l application/common/library/SourceConfigRepository.php
+          php -l application/common/library/BlacklistPolicy.php
           php -l application/common/model/Config.php
           php -l application/index/controller/App.php
           php -l application/index/controller/Index.php
           php -l application/admin/controller/Category.php
           php -l application/admin/controller/Monitor.php
           php -l application/admin/controller/Kami.php
+          php -l application/admin/controller/Black.php
+          php -l application/admin/model/Black.php
           php -l tests/source_config_repository_test.php
+          php -l tests/blacklist_policy_test.php
           php -l tests/deployment_contract_test.php
 
-      - name: Run appstore and deployment regression tests
+      - name: Run appstore, blacklist and deployment regression tests
         run: |
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
           php tests/source_config_repository_test.php
+          php tests/blacklist_policy_test.php
           php tests/deployment_contract_test.php
