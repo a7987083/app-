@@ -33,9 +33,11 @@ jobs:
           php -l application/admin/controller/Monitor.php
           php -l application/admin/controller/Kami.php
           php -l tests/source_config_repository_test.php
+          php -l tests/deployment_contract_test.php
 
-      - name: Run appstore payload regression tests
+      - name: Run appstore and deployment regression tests
         run: |
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
           php tests/source_config_repository_test.php
+          php tests/deployment_contract_test.php
