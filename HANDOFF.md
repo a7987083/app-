@@ -44,49 +44,44 @@ Important legacy semantics preserved:
 - Plain source output removes `UDID` / `Time`; encrypted output retains them before encryption.
 
 ## Refactor Phase 1 Completed
-Commits:
-- `1a0ceed12987e99a3094dfa21fa74a9e86e64c22` — extract pure AppStore payload mapper.
-- `3640d1765f68586a32c6cb09a2e147a10ac86771` — payload regression tests.
-- `6f7f7d41f59ed0e808e4c1ea8f20ce467f73ecfb` — simplify AppStore controller orchestration.
-- `17a390835a990fcffce044536a62f6052ddd782c` — harden dylib missing-card path and remove homepage category N+1 queries.
-- `cf38d6d9d895b7e039fb04b3b7cde9dca6736864` — legacy-vs-current AppStore equivalence matrix.
+- Extracted AppStore payload mapping into `AppStorePayload`.
+- Removed duplicated source/config/app mapping from `App.php`.
+- Fixed `Index::dylib()` missing-card null access.
+- Removed homepage child-category N+1 query pattern.
+- Added payload regression and legacy-equivalence tests.
 
-## Validation Completed
-- PHP syntax checks passed for the changed PHP source and standalone tests using PHP 8.4.
-- `tests/appstore_payload_test.php` passed.
-- `tests/appstore_equivalence_test.php` passed.
-- The equivalence test compares legacy and refactored source arrays / JSON for guest, expired-card, valid-card, free, paid, odd lock values, source metadata, newline handling and wrapper selection.
+## Refactor Phase 2 Completed (code-level)
+- `Category.php` now uses `CategoryModel::getTypeList()` as the authoritative display mapping.
+- Category add/edit normalization is centralized while preserving historical size-conversion behavior.
+- `Monitor::black()` validates missing rows and wraps blacklist insert + monitor delete in one transaction.
+- `Kami::add()` wraps card generation + `fa_kmstr` update in one transaction and rejects counts `<= 0`.
+- Added `.github/workflows/regression.yml` for PHP 8.2 / 8.4 syntax checks and AppStore regression suites.
+
+## CI Validation
+GitHub Actions run `34511000492` completed successfully:
+- `php-regression (8.2)` — success.
+- `php-regression (8.4)` — success.
+- PHP lint step — success.
+- AppStore payload regression step — success.
 
 ## Validation Not Yet Claimed
-- No production database fixture is available in the local test container.
-- No live-server HTTP integration test has been run yet.
-- External encryption services have not been altered; live `appstore` and `appstore_v2` encryption should be smoke-tested before merging to `main`.
+- No live/staging HTTP integration test has been run against a real database.
+- External `appstore` / `appstore_v2` encryption services have not been smoke-tested after these refactors.
+- Production regression is therefore not claimed yet.
 
-## Outstanding Priority Work
-### P0 / safety boundary
-- Keep `main` unchanged until runtime smoke tests pass.
-- Do not combine ThinkPHP framework upgrades, TLS hardening or protocol changes with this refactor.
-
-### P1
-- `application/index/controller/App-mb.php` and `Index2.php` are stale duplicate controller files with conflicting class names; confirm no external/manual entry uses them, then remove or archive outside runtime paths.
-- `Category.php::index()` performs a table write on a list-page read to reset counters using only day-of-month. Replace with a safer counter model in a separate behavior change.
-- Replace hardcoded category type labels in `Category.php` with `CategoryModel::getTypeList()`.
-- Harden `Monitor::black()` against missing monitor rows and duplicate blacklist insertions.
-- Make card generation transactional / batch-oriented and review randomness/collision guarantees.
-- Reduce repeated full-table `fa_config` reads using a scoped config repository/cache with explicit invalidation.
-
-### P2
-- Introduce semantic DTO/accessors around legacy fields (`bt1a`, `bt1b`, `bt2a`, `bt2b`) before considering schema renames.
-- Standardize controller responses instead of mixing `echo/die` and `return json(...)`, only after golden HTTP tests exist.
-- Add CI for PHP lint + standalone regression tests.
-- Plan environment-aware cookie/TLS/security hardening separately.
+## Intentionally Preserved Risks
+- `Category::index()` still performs the historical write-on-read daily reset using day-of-month; changing it would alter visible admin statistics.
+- `application/index/controller/App-mb.php` and `Index2.php` remain untouched pending confirmation that deployment/access logs show no external/manual use.
+- Kami generation still uses per-row inserts and the legacy MD5/time/rand algorithm; batching/uniqueness changes require schema and failure-policy verification first.
+- Monitor blacklist flow still permits duplicate UDID rows by historical behavior.
+- TLS verification behavior remains unchanged.
 
 ## Stability Rules
-1. Preserve existing source JSON keys and existing client semantics.
-2. Preserve blacklist, unlock/card and locked-download behavior unless explicitly changing them.
-3. Prefer additive changes and small reversible commits.
-4. Every protocol-affecting change requires differential/golden tests first.
-5. Do not blindly copy historical source versions or diffs over the current baseline.
+1. Keep `main` unchanged until live/staging smoke tests pass.
+2. Preserve source JSON keys and existing client semantics.
+3. Keep protocol, framework upgrades, TLS hardening and schema migration out of compatibility refactor commits.
+4. Prefer small reversible commits.
+5. Every protocol-affecting change requires differential/golden tests first.
 
 ## Next Recommended Step
-Run live smoke tests against a disposable/staging database for plaintext, `appstore`, `appstore_v2`, valid/expired/no-card and blacklisted cases. If all match the baseline externally, continue with the P1 admin/controller cleanup as separate commits.
+Implement a scoped `fa_config` loader/cache with explicit invalidation from config writes, then add a staging HTTP smoke-test matrix for plaintext, `appstore`, `appstore_v2`, no-card, valid-card, expired-card and blacklist cases before considering merge to `main`.
