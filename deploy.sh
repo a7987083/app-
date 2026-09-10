@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_VERSION="1.1.0-source-flow"
+DEPLOY_VERSION="1.2.0-source-flow-ext-auto"
 REPO_URL="https://github.com/a7987083/app-.git"
 BRANCH="main"
 DEFAULT_DOMAIN="app3.zonoeios.xyz"
@@ -16,7 +16,6 @@ warn(){ printf '[WARN] %s\n' "$*"; }
 die(){ printf '[FAIL] %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "请使用 root 执行"
-# curl | bash 时恢复交互终端。
 if [ ! -t 0 ] && [ -r /dev/tty ]; then exec </dev/tty; fi
 
 printf '极速网络 Apple 签名系统 - 一键部署\n'
@@ -31,7 +30,7 @@ DOMAIN="${DOMAIN:-$DEFAULT_DOMAIN}"
 command -v git >/dev/null 2>&1 || die "缺少 git"
 
 # 源码 auto_install.json 指定 PHP 82；composer.json 要求 PHP ^8.2。
-# 因此优先使用宝塔 PHP 8.2，仅在不存在时退回其它 >=8.2 PHP。
+# 优先使用宝塔 PHP 8.2，仅在不存在时退回其它 >=8.2 PHP。
 for p in /www/server/php/82/bin/php /www/server/php/84/bin/php /www/server/php/83/bin/php "$(command -v php 2>/dev/null || true)"; do
     if [ -n "$p" ] && [ -x "$p" ]; then
         if "$p" -r 'exit(version_compare(PHP_VERSION,"8.2.0",">=")?0:1);'; then
@@ -41,8 +40,15 @@ for p in /www/server/php/82/bin/php /www/server/php/84/bin/php /www/server/php/8
     fi
 done
 [ -n "$PHP_BIN" ] || die "未找到 PHP >= 8.2"
+
 PHP_VER="$($PHP_BIN -r 'echo PHP_VERSION;')"
+PHP_PREFIX="$(cd "$(dirname "$PHP_BIN")/.." && pwd)"
+PHP_SHORT="$(basename "$PHP_PREFIX")"
+PHP_INI="$($PHP_BIN --ini 2>/dev/null | awk -F': ' '/Loaded Configuration File/{print $2; exit}')"
+EXT_DIR="$($PHP_BIN -r 'echo ini_get("extension_dir");')"
+
 info "PHP: ${PHP_BIN} (${PHP_VER})"
+info "PHP prefix: ${PHP_PREFIX}"
 if [[ "$PHP_VER" != 8.2.* ]]; then
     warn "源码 auto_install.json 指定 PHP 8.2；当前使用 ${PHP_VER}，建议宝塔站点最终切换 PHP 8.2。"
 fi
@@ -63,12 +69,101 @@ cd "$APP_DIR"
 [ -f auto_install.json ] || die "缺少 auto_install.json"
 [ -d public ] || die "缺少 public 目录"
 
-# 完全按仓库声明检查依赖：composer.json + auto_install.json。
-MISSING_EXT=""
-for ext in pdo openssl zip dom opcache fileinfo redis; do
-    "$PHP_BIN" -m | grep -qi "^${ext}$" || MISSING_EXT="${MISSING_EXT} ${ext}"
+php_ext_loaded() {
+    "$PHP_BIN" -r 'exit(extension_loaded($argv[1]) ? 0 : 1);' "$1"
+}
+
+reload_php_fpm() {
+    local init_script="/etc/init.d/php-fpm-${PHP_SHORT}"
+    if [ -x "$init_script" ]; then
+        "$init_script" reload >/dev/null 2>&1 || "$init_script" restart >/dev/null 2>&1 || return 1
+        return 0
+    fi
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl reload "php-fpm-${PHP_SHORT}" >/dev/null 2>&1 || systemctl restart "php-fpm-${PHP_SHORT}" >/dev/null 2>&1 || true
+    fi
+    return 0
+}
+
+enable_existing_extension() {
+    local ext="$1"
+    local so="${EXT_DIR}/${ext}.so"
+    local directive
+
+    [ -f "$so" ] || return 1
+    [ -n "$PHP_INI" ] && [ "$PHP_INI" != "(none)" ] && [ -f "$PHP_INI" ] || return 1
+
+    if [ "$ext" = "opcache" ]; then
+        directive="zend_extension=${so}"
+    else
+        directive="extension=${so}"
+    fi
+
+    if ! grep -Fq "$so" "$PHP_INI"; then
+        {
+            printf '\n; zonoe deploy: enable %s\n' "$ext"
+            printf '%s\n' "$directive"
+        } >> "$PHP_INI"
+    fi
+
+    reload_php_fpm || true
+    php_ext_loaded "$ext"
+}
+
+bt_install_extension() {
+    local ext="$1"
+    local installer="/www/server/panel/install/install_soft.sh"
+
+    [ -f "$installer" ] || return 1
+
+    info "尝试通过宝塔扩展安装器安装 PHP ${PHP_SHORT} 的 ${ext} ..."
+    if /bin/bash "$installer" 1 install "$ext" "$PHP_SHORT"; then
+        reload_php_fpm || true
+        if php_ext_loaded "$ext"; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+ensure_auto_extension() {
+    local ext="$1"
+
+    if php_ext_loaded "$ext"; then
+        info "PHP 扩展 ${ext}: OK"
+        return 0
+    fi
+
+    warn "PHP 扩展 ${ext} 缺失，开始自动处理"
+
+    # 优先启用当前 PHP 已存在的模块，避免重复下载安装。
+    if enable_existing_extension "$ext"; then
+        info "PHP 扩展 ${ext}: 已启用现有模块"
+        return 0
+    fi
+
+    # 再调用宝塔自身的 PHP 扩展安装链，并绑定到当前实际 PHP 版本。
+    if bt_install_extension "$ext"; then
+        info "PHP 扩展 ${ext}: 自动安装成功"
+        return 0
+    fi
+
+    die "PHP 扩展 ${ext} 自动安装失败。未改用系统 PHP 包，避免装到错误 PHP 版本。"
+}
+
+# auto_install.json 明确声明需要的扩展：opcache,fileinfo,redis。
+# 缺失时自动启用/安装，并在安装后重新验证。
+for ext in opcache fileinfo redis; do
+    ensure_auto_extension "$ext"
 done
-[ -z "$MISSING_EXT" ] || die "PHP 缺少源码要求的扩展:${MISSING_EXT}"
+
+# composer.json 的其它基础扩展继续严格验证。
+# 它们不在 auto_install.json 的自动扩展列表中，不猜测当前 PHP 编译方式。
+MISSING_CORE=""
+for ext in pdo openssl zip dom; do
+    php_ext_loaded "$ext" || MISSING_CORE="${MISSING_CORE} ${ext}"
+done
+[ -z "$MISSING_CORE" ] || die "PHP 缺少 composer.json 要求的基础扩展:${MISSING_CORE}。这些不在源码 auto_install.json 的自动安装列表中。"
 
 DISABLED=",$($PHP_BIN -r 'echo preg_replace("/\\s+/","",ini_get("disable_functions"));'),"
 for fn in proc_open pcntl_signal pcntl_alarm symlink; do
@@ -89,8 +184,8 @@ fi
 info "Composer: $($COMPOSER --version 2>/dev/null | head -n1)"
 COMPOSER_ALLOW_SUPERUSER=1 "$COMPOSER" install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 
-# 源码 config/app.php 的 key/url/name 等直接来自 config/api.php；不使用普通 Laravel APP_KEY 链。
-# 因此这里不调用 artisan key:generate，不改写数据库配置，交给项目原生 /install -> /api/install。
+# 源码 config/app.php 的 key/url/name 等直接来自 config/api.php；不使用普通 Laravel APP_KEY / DB_* 链。
+# 数据库配置、迁移、storage:link、管理员初始化交给项目原生 /install -> /api/install。
 
 # auto_install.json 指定的目录与清理动作。
 mkdir -p storage/AppleSignV2 storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
@@ -108,7 +203,6 @@ REWRITE_CONF="/www/server/panel/vhost/rewrite/${DOMAIN}.conf"
 if [ -f "$NGINX_CONF" ]; then
     cp -a "$NGINX_CONF" "${NGINX_CONF}.bak.deploy-$(date +%Y%m%d-%H%M%S)"
 
-    # 只替换 server 站点 root 行；当前宝塔站点配置使用标准 root 指令。
     sed -i -E "s#^[[:space:]]*root[[:space:]]+[^;]+;#    root ${APP_DIR}/public;#" "$NGINX_CONF"
 
     mkdir -p "$(dirname "$REWRITE_CONF")"
@@ -138,12 +232,13 @@ else
     warn "请将网站运行目录设置为 ${APP_DIR}/public，并配置 Laravel 入口伪静态。"
 fi
 
-# 源码安装器自己执行数据库配置/迁移、storage:link、管理员初始化等业务安装步骤。
 printf '\n==================================\n'
 printf '基础部署完成（源码原生安装流程）\n'
+printf 'deploy version: %s\n' "$DEPLOY_VERSION"
 printf '源码目录: %s\n' "$APP_DIR"
 printf '运行目录: %s/public\n' "$APP_DIR"
 printf 'PHP: %s\n' "$PHP_VER"
+printf 'PHP扩展: opcache/fileinfo/redis 已验证\n'
 printf '数据库配置: 未写入（按源码设计由 /install 页面填写）\n'
 printf '下一步访问: http://%s/install\n' "$DOMAIN"
 printf '==================================\n'
