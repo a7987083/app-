@@ -5,6 +5,7 @@ namespace app\index\controller;
 use app\common\library\AppStorePayload;
 use app\common\library\BlacklistPolicy;
 use app\common\library\SourceConfigRepository;
+use app\common\library\TraceMonitorPolicy;
 use think\Db;
 
 class App
@@ -61,18 +62,15 @@ class App
      */
     protected function processTraceValue($traceValue, $openblack, $openblack2)
     {
-        $decoded = base64_decode($traceValue);
-        $udidArr = explode('|', $decoded);
-        $udid1 = isset($udidArr[0]) ? $udidArr[0] : null;
-        $udid2 = isset($udidArr[1]) ? $udidArr[1] : null;
-
-        $this->processTraceUdid($udid1, $openblack, '添加者');
-        $this->processTraceUdid($udid2, $openblack2, '破解者');
+        foreach (TraceMonitorPolicy::entries($traceValue) as $entry) {
+            $autoBlack = $entry['config'] === 'openblack' ? $openblack : $openblack2;
+            $this->processTraceUdid($entry['udid'], $autoBlack, $entry['identity']);
+        }
     }
 
     protected function processTraceUdid($udid, $autoBlack, $identity)
     {
-        if (!$udid || !$this->isLegacyUdid($udid)) {
+        if (!TraceMonitorPolicy::isSupportedUdid($udid)) {
             return;
         }
 
@@ -130,12 +128,6 @@ class App
         if (!empty($black['id']) && empty($black['usetime'])) {
             Db::table('fa_black')->where('id', $black['id'])->update(['usetime' => time()]);
         }
-    }
-
-    protected function isLegacyUdid($udid)
-    {
-        $length = strlen($udid);
-        return $length === 25 || $length === 40;
     }
 
     /**
