@@ -1,0 +1,1513 @@
+---------------------------------------------------------------
+[ 2022-04-30T12:42:58+08:00 ] 45.32.51.164 GET test.nuosike.com/
+[运行时间：0.049187s] [吞吐率：20.33req/s] [内存消耗：3,508.65kb] [文件加载：128]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000153s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000935s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip',
+  'accept' => '*/*',
+  'user-agent' => 'BAOTA-SSL-CHECK',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001529s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /www/wwwroot/test.nuosike.com/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user 'BT_DB_USERNAMR'@'localhost' (using password: YES)[/www/wwwroot/test.nuosike.com/thinkphp/library/think/db/Connection.php:295]
+---------------------------------------------------------------
+[ 2022-04-30T12:42:59+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php
+[运行时间：0.032541s] [吞吐率：30.73req/s] [内存消耗：2,893.29kb] [文件加载：124]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000155s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000959s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'connection' => 'keep-alive',
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'upgrade-insecure-requests' => '1',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001220s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/common/view/tpl/dispatch_jump.tpl [ array (
+  0 => 'code',
+  1 => 'msg',
+  2 => 'data',
+  3 => 'url',
+  4 => 'wait',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000533s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:00+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php
+[运行时间：0.032650s] [吞吐率：30.63req/s] [内存消耗：3,196.34kb] [文件加载：127]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000149s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000965s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'index',
+    2 => 'login',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'keep-alive',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'url' => '/FRKToHDckx.php',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001255s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ RUN ] app\admin\controller\Index->login[ /www/wwwroot/test.nuosike.com/application/admin/controller/Index.php ]
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/admin/view/index/login.html [ array (
+  0 => 'breadcrumb',
+  1 => 'site',
+  2 => 'config',
+  3 => 'auth',
+  4 => 'admin',
+  5 => 'background',
+  6 => 'title',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000112s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:00+08:00 ] 221.228.147.236 GET test.nuosike.com/index.php?s=/captcha
+[运行时间：0.020023s] [吞吐率：49.94req/s] [内存消耗：1,893.02kb] [文件加载：105]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000121s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000913s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'method',
+  'method' => 
+  array (
+    0 => '\\think\\captcha\\CaptchaController',
+    1 => 'index',
+  ),
+  'var' => 
+  array (
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => 'image/webp,image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'id' => NULL,
+)
+[ info ] [ RUN ] think\captcha\CaptchaController->index[ /www/wwwroot/test.nuosike.com/vendor/topthink/think-captcha/src/CaptchaController.php ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:01+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/ajax/lang?callback=define&controllername=index&v=1651293780
+[运行时间：0.029819s] [吞吐率：33.54req/s] [内存消耗：3,056.30kb] [文件加载：125]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000142s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000960s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'ajax',
+    2 => 'lang',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => '*/*',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'callback' => 'define',
+  'controllername' => 'index',
+  'v' => '1651293780',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001234s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/ajax.php
+[ info ] [ RUN ] app\admin\controller\Ajax->lang[ /www/wwwroot/test.nuosike.com/application/admin/controller/Ajax.php ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000108s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:13+08:00 ] 221.228.147.236 POST test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php
+[运行时间：0.034123s] [吞吐率：29.31req/s] [内存消耗：3,840.20kb] [文件加载：133]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000014s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000894s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'index',
+    2 => 'login',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'content-length' => '86',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'connection' => 'keep-alive',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'origin' => 'http://test.nuosike.com',
+  'content-type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'x-requested-with' => 'XMLHttpRequest',
+  'accept' => 'application/json, text/javascript, */*; q=0.01',
+  'host' => 'test.nuosike.com',
+)
+[ info ] [ PARAM ] array (
+  'url' => '/FRKToHDckx.php',
+  '__token__' => '7234d897676d9874e2ebbead67e19081',
+  'username' => 'admin',
+  'password' => '123456',
+  'captcha' => '7sb6',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001066s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ RUN ] app\admin\controller\Index->login[ /www/wwwroot/test.nuosike.com/application/admin/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user 'BT_DB_USERNAMR'@'localhost' (using password: YES)[/www/wwwroot/test.nuosike.com/thinkphp/library/think/db/Connection.php:295]
+---------------------------------------------------------------
+[ 2022-04-30T12:43:14+08:00 ] 221.228.147.236 GET test.nuosike.com/index.php?s=/captcha&r=0.9906574138432115
+[运行时间：0.019412s] [吞吐率：51.52req/s] [内存消耗：1,892.62kb] [文件加载：105]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000013s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000883s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'method',
+  'method' => 
+  array (
+    0 => '\\think\\captcha\\CaptchaController',
+    1 => 'index',
+  ),
+  'var' => 
+  array (
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => 'image/webp,image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'r' => '0.9906574138432115',
+  'id' => NULL,
+)
+[ info ] [ RUN ] think\captcha\CaptchaController->index[ /www/wwwroot/test.nuosike.com/vendor/topthink/think-captcha/src/CaptchaController.php ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:15+08:00 ] 221.228.147.236 POST test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php
+[运行时间：0.034164s] [吞吐率：29.27req/s] [内存消耗：3,780.91kb] [文件加载：134]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000014s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000924s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'index',
+    2 => 'login',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'content-length' => '86',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'connection' => 'keep-alive',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'origin' => 'http://test.nuosike.com',
+  'content-type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'x-requested-with' => 'XMLHttpRequest',
+  'accept' => 'application/json, text/javascript, */*; q=0.01',
+  'host' => 'test.nuosike.com',
+)
+[ info ] [ PARAM ] array (
+  'url' => '/FRKToHDckx.php',
+  '__token__' => '7234d897676d9874e2ebbead67e19081',
+  'username' => 'admin',
+  'password' => '123456',
+  'captcha' => '7sb6',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001177s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ RUN ] app\admin\controller\Index->login[ /www/wwwroot/test.nuosike.com/application/admin/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user 'BT_DB_USERNAMR'@'localhost' (using password: YES)[/www/wwwroot/test.nuosike.com/thinkphp/library/think/db/Connection.php:295]
+---------------------------------------------------------------
+[ 2022-04-30T12:43:16+08:00 ] 221.228.147.236 GET test.nuosike.com/index.php?s=/captcha&r=0.02886302895433923
+[运行时间：0.018946s] [吞吐率：52.78req/s] [内存消耗：1,893.21kb] [文件加载：105]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000018s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000899s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'method',
+  'method' => 
+  array (
+    0 => '\\think\\captcha\\CaptchaController',
+    1 => 'index',
+  ),
+  'var' => 
+  array (
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => 'image/webp,image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'r' => '0.02886302895433923',
+  'id' => NULL,
+)
+[ info ] [ RUN ] think\captcha\CaptchaController->index[ /www/wwwroot/test.nuosike.com/vendor/topthink/think-captcha/src/CaptchaController.php ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:17+08:00 ] 221.228.147.236 POST test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php
+[运行时间：0.034460s] [吞吐率：29.02req/s] [内存消耗：3,836.43kb] [文件加载：135]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000015s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000931s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'index',
+    2 => 'login',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'content-length' => '86',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'connection' => 'keep-alive',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'origin' => 'http://test.nuosike.com',
+  'content-type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'x-requested-with' => 'XMLHttpRequest',
+  'accept' => 'application/json, text/javascript, */*; q=0.01',
+  'host' => 'test.nuosike.com',
+)
+[ info ] [ PARAM ] array (
+  'url' => '/FRKToHDckx.php',
+  '__token__' => 'b32ca45b7b34981c64a70a9e2b856dba',
+  'username' => 'admin',
+  'password' => '123456',
+  'captcha' => '7sb6',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001152s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ RUN ] app\admin\controller\Index->login[ /www/wwwroot/test.nuosike.com/application/admin/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user 'BT_DB_USERNAMR'@'localhost' (using password: YES)[/www/wwwroot/test.nuosike.com/thinkphp/library/think/db/Connection.php:295]
+---------------------------------------------------------------
+[ 2022-04-30T12:43:17+08:00 ] 221.228.147.236 GET test.nuosike.com/index.php?s=/captcha&r=0.7740885824695466
+[运行时间：0.019205s] [吞吐率：52.07req/s] [内存消耗：1,893.21kb] [文件加载：105]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000015s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000880s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'method',
+  'method' => 
+  array (
+    0 => '\\think\\captcha\\CaptchaController',
+    1 => 'index',
+  ),
+  'var' => 
+  array (
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => 'image/webp,image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'r' => '0.7740885824695466',
+  'id' => NULL,
+)
+[ info ] [ RUN ] think\captcha\CaptchaController->index[ /www/wwwroot/test.nuosike.com/vendor/topthink/think-captcha/src/CaptchaController.php ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:20+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php
+[运行时间：0.028028s] [吞吐率：35.68req/s] [内存消耗：3,048.22kb] [文件加载：125]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000015s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000926s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'index',
+    2 => 'login',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'keep-alive',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'url' => '/FRKToHDckx.php',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001151s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ RUN ] app\admin\controller\Index->login[ /www/wwwroot/test.nuosike.com/application/admin/controller/Index.php ]
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/admin/view/index/login.html [ array (
+  0 => 'breadcrumb',
+  1 => 'site',
+  2 => 'config',
+  3 => 'auth',
+  4 => 'admin',
+  5 => 'background',
+  6 => 'title',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000122s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:20+08:00 ] 221.228.147.236 GET test.nuosike.com/index.php?s=/captcha
+[运行时间：0.019124s] [吞吐率：52.29req/s] [内存消耗：1,893.15kb] [文件加载：105]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000012s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000883s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'method',
+  'method' => 
+  array (
+    0 => '\\think\\captcha\\CaptchaController',
+    1 => 'index',
+  ),
+  'var' => 
+  array (
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => 'image/webp,image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'id' => NULL,
+)
+[ info ] [ RUN ] think\captcha\CaptchaController->index[ /www/wwwroot/test.nuosike.com/vendor/topthink/think-captcha/src/CaptchaController.php ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:20+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/ajax/lang?callback=define&controllername=index&v=1651293800
+[运行时间：0.027988s] [吞吐率：35.73req/s] [内存消耗：3,056.30kb] [文件加载：125]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000014s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000937s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'ajax',
+    2 => 'lang',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => '*/*',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'callback' => 'define',
+  'controllername' => 'index',
+  'v' => '1651293800',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001238s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/ajax.php
+[ info ] [ RUN ] app\admin\controller\Ajax->lang[ /www/wwwroot/test.nuosike.com/application/admin/controller/Ajax.php ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000108s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:43:49+08:00 ] 61.147.15.65 GET test.nuosike.com/favicon.ico
+[运行时间：0.018701s] [吞吐率：53.47req/s] [内存消耗：1,932.80kb] [文件加载：106]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000013s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000911s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'favicon.ico',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'cache-control' => 'no-cache',
+  'connection' => 'keep-alive',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'accept-encoding' => 'gzip, deflate',
+  'user-agent' => 'Dalvik/2.1.0 (Linux; U; Android 9.0; ZTE BA520 Build/MRA58K)',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:44:07+08:00 ] 61.147.15.67 GET test.nuosike.com/
+[运行时间：0.029978s] [吞吐率：33.36req/s] [内存消耗：3,509.96kb] [文件加载：128]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000014s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000889s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'cache-control' => 'no-cache',
+  'connection' => 'keep-alive',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'accept-encoding' => 'gzip, deflate',
+  'user-agent' => 'Dalvik/2.1.0 (Linux; U; Android 9.0; ZTE BA520 Build/MRA58K)',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001051s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /www/wwwroot/test.nuosike.com/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user 'BT_DB_USERNAMR'@'localhost' (using password: YES)[/www/wwwroot/test.nuosike.com/thinkphp/library/think/db/Connection.php:295]
+---------------------------------------------------------------
+[ 2022-04-30T12:44:17+08:00 ] 61.147.15.67 GET test.nuosike.com/
+[运行时间：0.031822s] [吞吐率：31.42req/s] [内存消耗：3,510.09kb] [文件加载：128]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000014s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000929s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'cache-control' => 'no-cache',
+  'connection' => 'keep-alive',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'accept-encoding' => 'gzip, deflate',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11) AppleWebKit/601.1.27 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/601.1.27',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001181s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /www/wwwroot/test.nuosike.com/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user 'BT_DB_USERNAMR'@'localhost' (using password: YES)[/www/wwwroot/test.nuosike.com/thinkphp/library/think/db/Connection.php:295]
+---------------------------------------------------------------
+[ 2022-04-30T12:45:32+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php
+[运行时间：0.027618s] [吞吐率：36.21req/s] [内存消耗：3,048.18kb] [文件加载：125]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000019s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000897s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'index',
+    2 => 'login',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'keep-alive',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'url' => '/FRKToHDckx.php',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001065s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ RUN ] app\admin\controller\Index->login[ /www/wwwroot/test.nuosike.com/application/admin/controller/Index.php ]
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/admin/view/index/login.html [ array (
+  0 => 'breadcrumb',
+  1 => 'site',
+  2 => 'config',
+  3 => 'auth',
+  4 => 'admin',
+  5 => 'background',
+  6 => 'title',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000126s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:45:32+08:00 ] 221.228.147.236 GET test.nuosike.com/index.php?s=/captcha
+[运行时间：0.019046s] [吞吐率：52.50req/s] [内存消耗：1,893.11kb] [文件加载：105]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000013s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000912s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'method',
+  'method' => 
+  array (
+    0 => '\\think\\captcha\\CaptchaController',
+    1 => 'index',
+  ),
+  'var' => 
+  array (
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => 'image/webp,image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'id' => NULL,
+)
+[ info ] [ RUN ] think\captcha\CaptchaController->index[ /www/wwwroot/test.nuosike.com/vendor/topthink/think-captcha/src/CaptchaController.php ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:45:33+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/ajax/lang?callback=define&controllername=index&v=1651293932
+[运行时间：0.026676s] [吞吐率：37.49req/s] [内存消耗：3,056.27kb] [文件加载：125]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000017s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000897s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'ajax',
+    2 => 'lang',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => '*/*',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'callback' => 'define',
+  'controllername' => 'index',
+  'v' => '1651293932',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001054s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/ajax.php
+[ info ] [ RUN ] app\admin\controller\Ajax->lang[ /www/wwwroot/test.nuosike.com/application/admin/controller/Ajax.php ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000108s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:45:44+08:00 ] 221.228.147.236 POST test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php
+[运行时间：0.038754s] [吞吐率：25.80req/s] [内存消耗：3,844.68kb] [文件加载：135]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000016s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000892s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'index',
+    2 => 'login',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'content-length' => '86',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'connection' => 'keep-alive',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'origin' => 'http://test.nuosike.com',
+  'content-type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'x-requested-with' => 'XMLHttpRequest',
+  'accept' => 'application/json, text/javascript, */*; q=0.01',
+  'host' => 'test.nuosike.com',
+)
+[ info ] [ PARAM ] array (
+  'url' => '/FRKToHDckx.php',
+  '__token__' => '6cf0186bc295565a90eba8482d50bbe4',
+  'username' => 'admin',
+  'password' => '123456',
+  'captcha' => '7zd7',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001172s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ RUN ] app\admin\controller\Index->login[ /www/wwwroot/test.nuosike.com/application/admin/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.002943s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:45:44+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php
+[运行时间：0.063814s] [吞吐率：15.67req/s] [内存消耗：4,174.49kb] [文件加载：146]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000012s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000891s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/index/login?url=%2FFRKToHDckx.php',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'keep-alive',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001046s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ RUN ] app\admin\controller\Index->index[ /www/wwwroot/test.nuosike.com/application/admin/controller/Index.php ]
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/admin/view/index/index.html [ array (
+  0 => 'breadcrumb',
+  1 => 'site',
+  2 => 'config',
+  3 => 'auth',
+  4 => 'admin',
+  5 => 'menulist',
+  6 => 'navlist',
+  7 => 'fixedmenu',
+  8 => 'referermenu',
+  9 => 'title',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000129s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:45:44+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/category?addtabs=1
+[运行时间：0.040758s] [吞吐率：24.53req/s] [内存消耗：4,084.69kb] [文件加载：137]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000013s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000850s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'category',
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'keep-alive',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'addtabs' => '1',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001072s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/category.php
+[ info ] [ RUN ] app\admin\controller\Category->index[ /www/wwwroot/test.nuosike.com/application/admin/controller/Category.php ]
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/admin/view/category/index.html [ array (
+  0 => 'breadcrumb',
+  1 => 'site',
+  2 => 'config',
+  3 => 'auth',
+  4 => 'admin',
+  5 => 'flagList',
+  6 => 'typeList',
+  7 => 'parentList',
+) ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000123s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:45:44+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/ajax/lang?callback=define&controllername=category&v=1651293944
+[运行时间：0.035096s] [吞吐率：28.49req/s] [内存消耗：3,834.05kb] [文件加载：132]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000015s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000888s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'ajax',
+    2 => 'lang',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/category?addtabs=1',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => '*/*',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'callback' => 'define',
+  'controllername' => 'category',
+  'v' => '1651293944',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001170s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/ajax.php
+[ info ] [ RUN ] app\admin\controller\Ajax->lang[ /www/wwwroot/test.nuosike.com/application/admin/controller/Ajax.php ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/category.php
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000111s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:45:44+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/ajax/lang?callback=define&controllername=index&v=1651293944
+[运行时间：0.033765s] [吞吐率：29.62req/s] [内存消耗：3,837.91kb] [文件加载：132]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000011s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000892s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'ajax',
+    2 => 'lang',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip, deflate',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'connection' => 'keep-alive',
+  'accept' => '*/*',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'callback' => 'define',
+  'controllername' => 'index',
+  'v' => '1651293944',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001058s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/ajax.php
+[ info ] [ RUN ] app\admin\controller\Ajax->lang[ /www/wwwroot/test.nuosike.com/application/admin/controller/Ajax.php ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/index.php
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000111s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T12:45:46+08:00 ] 221.228.147.236 GET test.nuosike.com/FRKToHDckx.php/category/index?sort=weigh&order=desc&_=1651293942671
+[运行时间：0.035998s] [吞吐率：27.78req/s] [内存消耗：3,900.25kb] [文件加载：135]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000015s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000884s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'admin',
+    1 => 'category',
+    2 => 'index',
+  ),
+)
+[ info ] [ HEADER ] array (
+  'x-requested-with' => 'XMLHttpRequest',
+  'accept-language' => 'zh-CN,zh-Hans;q=0.9',
+  'referer' => 'http://test.nuosike.com/FRKToHDckx.php/category?addtabs=1',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+  'accept' => 'application/json, text/javascript, */*; q=0.01',
+  'connection' => 'keep-alive',
+  'cookie' => 'PHPSESSID=s21bqsd7rraq2451g7uh9vigr0',
+  'accept-encoding' => 'gzip, deflate',
+  'content-type' => 'application/json',
+  'host' => 'test.nuosike.com',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+  'sort' => 'weigh',
+  'order' => 'desc',
+  '_' => '1651293942671',
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001056s ]
+[ info ] [ SESSION ] INIT array (
+  'id' => '',
+  'var_session_id' => '',
+  'prefix' => 'think',
+  'type' => '',
+  'auto_start' => true,
+)
+[ info ] [ DB ] INIT mysql
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/admin/lang/zh-cn/category.php
+[ info ] [ RUN ] app\admin\controller\Category->index[ /www/wwwroot/test.nuosike.com/application/admin/controller/Category.php ]
+[ info ] [ BEHAVIOR ] Run app\admin\behavior\AdminLog @app_end [ RunTime:0.000108s ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T15:39:33+08:00 ] 123.160.221.26 GET test.nuosike.com/
+[运行时间：0.040465s] [吞吐率：24.71req/s] [内存消耗：3,680.77kb] [文件加载：129]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000016s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001092s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip',
+  'upgrade-insecure-requests' => '1',
+  'sec-gpc' => '1',
+  'dnt' => '1',
+  'connection' => 'keep-alive',
+  'cache-control' => 'max-age=0',
+  'accept-language' => 'en;q=0.9',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001361s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /www/wwwroot/test.nuosike.com/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/index/view/index/index.html [ array (
+  0 => 'user',
+  1 => 'site',
+  2 => 'config',
+  3 => 'img',
+  4 => 'category',
+  5 => 'xm',
+) ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T15:39:35+08:00 ] 123.160.221.27 GET test.nuosike.com/
+[运行时间：0.038343s] [吞吐率：26.08req/s] [内存消耗：3,541.45kb] [文件加载：127]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000015s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001104s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip',
+  'upgrade-insecure-requests' => '1',
+  'accept-language' => 'en',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001377s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /www/wwwroot/test.nuosike.com/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/index/view/index/index.html [ array (
+  0 => 'user',
+  1 => 'site',
+  2 => 'config',
+  3 => 'img',
+  4 => 'category',
+  5 => 'xm',
+) ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T15:39:35+08:00 ] 123.160.221.25 GET test.nuosike.com/appstore
+[运行时间：0.032125s] [吞吐率：31.13req/s] [内存消耗：2,856.45kb] [文件加载：113]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000015s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001028s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'index',
+    1 => 'App',
+    2 => 'list',
+  ),
+  'convert' => false,
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip',
+  'upgrade-insecure-requests' => '1',
+  'referer' => 'http://test.nuosike.com/',
+  'accept-language' => 'en',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001344s ]
+[ info ] [ RUN ] app\index\controller\App->list[ /www/wwwroot/test.nuosike.com/application/index/controller/App.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T15:39:40+08:00 ] 123.160.221.26 GET test.nuosike.com/favicon.ico
+[运行时间：0.022660s] [吞吐率：44.13req/s] [内存消耗：1,933.26kb] [文件加载：106]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000163s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001126s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'favicon.ico',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip',
+  'upgrade-insecure-requests' => '1',
+  'sec-gpc' => '1',
+  'dnt' => '1',
+  'connection' => 'keep-alive',
+  'cache-control' => 'max-age=0',
+  'accept-language' => 'en;q=0.9',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T15:40:15+08:00 ] 123.160.221.26 GET test.nuosike.com/
+[运行时间：0.037305s] [吞吐率：26.81req/s] [内存消耗：3,541.90kb] [文件加载：127]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000016s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001068s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip',
+  'upgrade-insecure-requests' => '1',
+  'sec-gpc' => '1',
+  'dnt' => '1',
+  'connection' => 'keep-alive',
+  'cache-control' => 'max-age=0',
+  'accept-language' => 'en;q=0.9',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001234s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /www/wwwroot/test.nuosike.com/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/index/view/index/index.html [ array (
+  0 => 'user',
+  1 => 'site',
+  2 => 'config',
+  3 => 'img',
+  4 => 'category',
+  5 => 'xm',
+) ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T15:40:18+08:00 ] 123.160.221.25 GET test.nuosike.com/
+[运行时间：0.034069s] [吞吐率：29.35req/s] [内存消耗：3,541.45kb] [文件加载：127]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000015s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000937s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => '',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip',
+  'upgrade-insecure-requests' => '1',
+  'accept-language' => 'en',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001256s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn/index.php
+[ info ] [ RUN ] app\index\controller\Index->index[ /www/wwwroot/test.nuosike.com/application/index/controller/Index.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ VIEW ] /www/wwwroot/test.nuosike.com/public/../application/index/view/index/index.html [ array (
+  0 => 'user',
+  1 => 'site',
+  2 => 'config',
+  3 => 'img',
+  4 => 'category',
+  5 => 'xm',
+) ]
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T15:40:19+08:00 ] 123.160.221.23 GET test.nuosike.com/appstore
+[运行时间：0.033006s] [吞吐率：30.30req/s] [内存消耗：2,856.45kb] [文件加载：113]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000016s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001070s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'index',
+    1 => 'App',
+    2 => 'list',
+  ),
+  'convert' => false,
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip',
+  'upgrade-insecure-requests' => '1',
+  'referer' => 'http://test.nuosike.com/',
+  'accept-language' => 'en',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/public/../application/index/lang/zh-cn.php
+[ info ] [ BEHAVIOR ] Run app\common\behavior\Common @module_init [ RunTime:0.001398s ]
+[ info ] [ RUN ] app\index\controller\App->list[ /www/wwwroot/test.nuosike.com/application/index/controller/App.php ]
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2022-04-30T15:40:24+08:00 ] 123.160.221.26 GET test.nuosike.com/favicon.ico
+[运行时间：0.021572s] [吞吐率：46.36req/s] [内存消耗：1,933.26kb] [文件加载：106]
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.000017s ]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run Closure @app_init [ RunTime:0.001040s ]
+[ info ] [ LANG ] /www/wwwroot/test.nuosike.com/thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+  'type' => 'module',
+  'module' => 
+  array (
+    0 => 'favicon.ico',
+    1 => NULL,
+    2 => NULL,
+  ),
+)
+[ info ] [ HEADER ] array (
+  'accept-encoding' => 'gzip',
+  'upgrade-insecure-requests' => '1',
+  'sec-gpc' => '1',
+  'dnt' => '1',
+  'connection' => 'keep-alive',
+  'cache-control' => 'max-age=0',
+  'accept-language' => 'en;q=0.9',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+  'host' => 'test.nuosike.com',
+  'content-type' => '',
+  'content-length' => '',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File

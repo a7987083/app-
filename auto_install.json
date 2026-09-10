@@ -1,0 +1,12 @@
+{
+  "php_ext":"",
+  "chmod":[],
+  "success_url":"/FRKToHDckx.php",
+  "php_versions":"70,71,72,73,74",
+  "db_config":"application/database.php",
+  "admin_username":"admin",
+  "admin_password":"123456",
+  "run_path":"/public",
+  "remove_file":["/index.html","/404.html","/.user.ini"],
+  "enable_functions":["putenv"]
+}
