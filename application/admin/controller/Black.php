@@ -43,13 +43,15 @@ class Black extends Backend
 
             try {
                 $result = Db::table('fa_black')->insert(BlacklistPolicy::insertData($udid, time(), $endtime));
-                if ($result !== 1) {
-                    $this->error('黑名单添加失败');
-                }
-                $this->success();
             } catch (\Exception $e) {
                 $this->error($e->getMessage());
+                return;
             }
+
+            if ($result !== 1) {
+                $this->error('黑名单添加失败');
+            }
+            $this->success();
         }
 
         return parent::add();
