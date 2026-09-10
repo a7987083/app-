@@ -3,6 +3,7 @@
 namespace app\index\controller;
 
 use app\common\controller\Frontend;
+use app\common\library\SourceConfigRepository;
 use think\Db;
 
 class Index extends Frontend
@@ -108,7 +109,7 @@ class Index extends Frontend
 
     protected function dylibConfig()
     {
-        $map = [
+        return SourceConfigRepository::project(SourceConfigRepository::rows(), [
             'name' => 'name',
             'payURL' => 'pay',
             'dylib-look' => 'look',
@@ -116,21 +117,9 @@ class Index extends Frontend
             'dylib-notice' => 'notice',
             'dylib-time' => 'time',
             'dylib-on' => 'on',
-        ];
-        $data = [];
-        $config = Db::table('fa_config')->select();
-        foreach ($config as $row) {
-            if (isset($row['name']) && isset($map[$row['name']])) {
-                $data[$map[$row['name']]] = $row['value'];
-            }
-        }
-        return $data;
+        ]);
     }
 
-    /**
-     * Replace one query per parent with one child query while preserving
-     * each parent's weigh-desc order and the original xm[parentId] shape.
-     */
     protected function loadChildrenByParent($parents)
     {
         $grouped = [];
