@@ -3,6 +3,7 @@
 namespace app\index\controller;
 
 use app\common\library\AppStorePayload;
+use app\common\library\BlacklistPolicy;
 use app\common\library\SourceConfigRepository;
 use think\Db;
 
@@ -27,8 +28,9 @@ class App
         $kcode = isset($_GET['code']) ? $_GET['code'] : '';
         $nowtime = date('Y-m-d H:i:s');
 
-        $black = Db::table('fa_black')->where('udid', $udid)->find();
+        $black = $this->activeBlacklist($udid);
         if ($black) {
+            $this->markBlacklistUsed($black);
             $this->emitPayload(
                 AppStorePayload::blacklisted($udid, $nowtime),
                 $opencry,
@@ -75,15 +77,15 @@ class App
         }
 
         if ($autoBlack == '1') {
-            $black = Db::table('fa_black')->where(['udid' => $udid])->find();
+            $black = $this->activeBlacklist($udid);
             if (!$black) {
-                Db::table('fa_black')->insert(['udid' => $udid, 'addtime' => time()]);
+                Db::table('fa_black')->insert(BlacklistPolicy::insertData($udid));
             }
             Db::table('fa_monitor')->where(['udid' => $udid])->delete();
             return;
         }
 
-        $black = Db::name('black')->where('udid', $udid)->find();
+        $black = $this->activeBlacklist($udid);
         if ($black) {
             return;
         }
@@ -98,6 +100,22 @@ class App
                 'count' => 1,
                 'addtime' => time(),
             ]);
+        }
+    }
+
+    protected function activeBlacklist($udid)
+    {
+        if ($udid === null || $udid === '') {
+            return null;
+        }
+        $rows = Db::table('fa_black')->where('udid', $udid)->order('id desc')->select();
+        return BlacklistPolicy::findActive($rows);
+    }
+
+    protected function markBlacklistUsed(array $black)
+    {
+        if (!empty($black['id']) && empty($black['usetime'])) {
+            Db::table('fa_black')->where('id', $black['id'])->update(['usetime' => time()]);
         }
     }
 
