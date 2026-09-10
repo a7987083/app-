@@ -1,11 +1,17 @@
 name: Import ceshi1 source
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/import-ceshi1.yml'
   workflow_dispatch:
     inputs:
       source_url:
         description: 'Direct URL to ceshi1_com_YFEfj.tar.gz'
-        required: true
+        required: false
+        default: 'https://ios.zonoeios.xyz/ceshi1_com_YFEfj.tar.gz'
         type: string
       preserve_deploy:
         description: 'Keep deploy.sh in repository root'
@@ -28,7 +34,7 @@ jobs:
 
       - name: Download source archive
         env:
-          SOURCE_URL: ${{ inputs.source_url }}
+          SOURCE_URL: ${{ inputs.source_url || 'https://ios.zonoeios.xyz/ceshi1_com_YFEfj.tar.gz' }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/ceshi1-import
@@ -58,7 +64,7 @@ jobs:
 
       - name: Replace repository contents
         env:
-          PRESERVE_DEPLOY: ${{ inputs.preserve_deploy }}
+          PRESERVE_DEPLOY: ${{ inputs.preserve_deploy || 'true' }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/ceshi1-preserve
@@ -73,10 +79,9 @@ jobs:
 
           cp -a /tmp/ceshi1-import/source/. ./
 
-          # Do not import a nested Git repository if the archive contains one.
+          # Do not import nested GitHub/Git metadata from the archive.
           rm -rf .git .github
           mkdir -p .github/workflows
-
           git show HEAD:.github/workflows/import-ceshi1.yml > .github/workflows/import-ceshi1.yml
 
           if [ "$PRESERVE_DEPLOY" = "true" ] && [ -f /tmp/ceshi1-preserve/deploy.sh ]; then
