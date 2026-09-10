@@ -3,6 +3,7 @@
 namespace app\index\controller;
 
 use app\common\library\AppStorePayload;
+use app\common\library\SourceConfigRepository;
 use think\Db;
 
 class App
@@ -13,13 +14,15 @@ class App
         $traceValue = is_array($input) && array_key_exists('value', $input) ? $input['value'] : null;
         $appType = AppStorePayload::appType(isset($_SERVER['HTTP_APPSTORE']) ? $_SERVER['HTTP_APPSTORE'] : null);
 
-        $openblack = Db::name('config')->where(['name' => 'openblack'])->value('value');
-        $openblack2 = Db::name('config')->where(['name' => 'openblack2'])->value('value');
+        $configRows = SourceConfigRepository::rows();
+        $configValues = SourceConfigRepository::mapRows($configRows);
+        $openblack = array_key_exists('openblack', $configValues) ? $configValues['openblack'] : null;
+        $openblack2 = array_key_exists('openblack2', $configValues) ? $configValues['openblack2'] : null;
         if ($traceValue) {
             $this->processTraceValue($traceValue, $openblack, $openblack2);
         }
 
-        $opencry = Db::name('config')->where(['name' => 'opencry'])->value('value');
+        $opencry = array_key_exists('opencry', $configValues) ? $configValues['opencry'] : null;
         $udid = isset($_GET['udid']) ? $_GET['udid'] : '';
         $kcode = isset($_GET['code']) ? $_GET['code'] : '';
         $nowtime = date('Y-m-d H:i:s');
@@ -43,7 +46,7 @@ class App
         $mode = $kamiRows ? 'licensed' : 'guest';
         $allowLockedDownload = $kamiRows ? !(time() > $kamiRows[0]['endtime']) : false;
 
-        $payload = $this->buildSourcePayload($udid, $nowtime, $mode, $allowLockedDownload);
+        $payload = $this->buildSourcePayload($configRows, $udid, $nowtime, $mode, $allowLockedDownload);
         if (is_object($payload)) {
             return $payload;
         }
@@ -108,9 +111,8 @@ class App
      * Build the exact public source payload from current fa_config/fa_category rows.
      * Returns a ThinkPHP JSON response object when the old controller would do so.
      */
-    protected function buildSourcePayload($udid, $nowtime, $mode, $allowLockedDownload)
+    protected function buildSourcePayload(array $config, $udid, $nowtime, $mode, $allowLockedDownload)
     {
-        $config = Db::table('fa_config')->select();
         if (empty($config)) {
             return json(['code' => 0, 'msg' => '暂无站点数据']);
         }
