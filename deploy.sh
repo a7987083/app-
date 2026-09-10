@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_VERSION="1.1.1-ceshi1-remote-baota"
+DEPLOY_VERSION="1.1.2-ceshi1-remote-baota"
 REPO_URL="${REPO_URL:-https://github.com/a7987083/app-.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
 SOURCE_TARBALL="${SOURCE_TARBALL:-}"
@@ -27,10 +27,8 @@ if [ -z "$DOMAIN" ]; then
 fi
 DOMAIN="$(printf '%s' "$DOMAIN" | tr 'A-Z' 'a-z' | tr -d '\r\n' | xargs)"
 [ -n "$DOMAIN" ] || die "域名不能为空"
-
 APP_DIR="${APP_DIR:-/www/wwwroot/$DOMAIN}"
 
-# 源码 auto_install.json 指定 PHP 70,71,72,73,74；优先最高的 7.4。
 PHP_SHORT=""
 for v in 74 73 72 71 70; do
     if [ -x "/www/server/php/$v/bin/php" ]; then PHP_SHORT="$v"; break; fi
@@ -48,7 +46,6 @@ log "目标域名: $DOMAIN"
 log "目标目录: $APP_DIR"
 log "选择 PHP: $PHP_VER ($PHP_SHORT)"
 
-# 先准备/验证源码，再动宝塔站点和数据库，避免半成品站点。
 if [ -n "$SOURCE_TARBALL" ]; then
     [ -f "$SOURCE_TARBALL" ] || die "SOURCE_TARBALL 不存在: $SOURCE_TARBALL"
     log "从本地源码包解压: $SOURCE_TARBALL"
@@ -60,18 +57,10 @@ else
     rm -rf "$SRC_DIR/.git"
 fi
 
-for f in \
-    auto_install.json \
-    import.sql \
-    application/database.php \
-    application/config.php \
-    public/index.php \
-    public/FRKToHDckx.php \
-    vendor/autoload.php; do
+for f in auto_install.json import.sql application/database.php application/config.php public/index.php public/FRKToHDckx.php vendor/autoload.php; do
     [ -e "$SRC_DIR/$f" ] || die "源码不完整，缺少: $f"
 done
 
-# 按源码自身 auto_install.json 校验，而不是按通用 PHP 项目猜。
 $PHP_BIN -r '
 $j=json_decode(file_get_contents($argv[1]),true);
 if(!$j){fwrite(STDERR,"invalid auto_install.json\n");exit(2);}
@@ -83,92 +72,113 @@ for ext in PDO pdo_mysql; do
     "$PHP_BIN" -r "exit(extension_loaded('$ext')?0:1);" || die "PHP $PHP_VER 缺少扩展: $ext"
 done
 
-# 宝塔核心模块位于 /www/server/panel/class；同时保留 panel 根目录兼容旧版本。
-SITE_EXISTS="$($PANEL_PY - <<PY
+# 查询宝塔站点及其关联数据库。输出: site_exists<TAB>site_id<TAB>db_user<TAB>db_pass
+PANEL_STATE="$($PANEL_PY - <<PY
 import sys
 sys.path.insert(0, '$PANEL_ROOT/class')
 sys.path.insert(0, '$PANEL_ROOT')
 import public
-print(1 if public.M('sites').where('name=?', ('$DOMAIN',)).count() else 0)
+site = public.M('sites').where('name=?', ('$DOMAIN',)).field('id').find()
+if not site:
+    print('0\t\t\t')
+else:
+    sid = site.get('id','')
+    db = public.M('databases').where('pid=?', (sid,)).field('username,password').find() or {}
+    print('1\t%s\t%s\t%s' % (sid, db.get('username',''), db.get('password','')))
 PY
-)" || die "无法读取宝塔站点数据库，请确认 $PANEL_ROOT/class/public.py 存在"
-[ "$SITE_EXISTS" = "0" ] || die "宝塔中已存在站点 $DOMAIN；本脚本默认不覆盖现有站点"
+)" || die "无法读取宝塔站点/数据库信息"
+IFS=$'\t' read -r SITE_EXISTS SITE_ID PANEL_DB_USER PANEL_DB_PASS <<< "$PANEL_STATE"
 
-if [ -e "$APP_DIR" ] && find "$APP_DIR" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
-    die "目标目录非空: $APP_DIR；为避免误删，已停止"
+RESUME=0
+if [ "$SITE_EXISTS" = "1" ]; then
+    if [ -f "$APP_DIR/application/database.php" ] && [ -f "$APP_DIR/import.sql" ]; then
+        RESUME=1
+        warn "检测到上次未完成部署，进入续装模式: $DOMAIN"
+        [ -n "$PANEL_DB_USER" ] || die "续装失败：宝塔站点存在但未找到关联数据库"
+        DB_USER="$PANEL_DB_USER"
+        DB_NAME="$PANEL_DB_USER"
+        DB_PASS="$PANEL_DB_PASS"
+    else
+        die "宝塔中已存在站点 $DOMAIN；且不是可识别的未完成部署，停止以避免覆盖"
+    fi
 fi
 
-TOKEN="$(tr -dc 'a-z0-9' </dev/urandom | head -c 8 || true)"
-[ ${#TOKEN} -eq 8 ] || TOKEN="$(date +%s | tail -c 9)"
-DB_USER="z${TOKEN}"
-DB_NAME="${DB_USER}"
-DB_PASS="$(tr -dc 'A-Za-z0-9_@#%+=' </dev/urandom | head -c 24 || true)"
-[ ${#DB_PASS} -ge 16 ] || DB_PASS="Zonoe_${TOKEN}_$(date +%s)"
+if [ "$RESUME" = "0" ]; then
+    if [ -e "$APP_DIR" ] && find "$APP_DIR" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
+        die "目标目录非空: $APP_DIR；为避免误删，已停止"
+    fi
 
-log "调用宝塔原生 AddSite 创建站点 + MySQL 数据库"
-BT_RESULT="$DOMAIN=$DOMAIN APP_DIR=$APP_DIR PHP_SHORT=$PHP_SHORT DB_USER=$DB_USER DB_PASS=$DB_PASS PANEL_ROOT=$PANEL_ROOT "$PANEL_PY" - <<'PY'
+    TOKEN="$(tr -dc 'a-z0-9' </dev/urandom | head -c 8 || true)"
+    [ ${#TOKEN} -eq 8 ] || TOKEN="$(date +%s | tail -c 9)"
+    DB_USER="z${TOKEN}"
+    DB_NAME="$DB_USER"
+    DB_PASS="$(tr -dc 'A-Za-z0-9_@#%+=' </dev/urandom | head -c 24 || true)"
+    [ ${#DB_PASS} -ge 16 ] || DB_PASS="Zonoe_${TOKEN}_$(date +%s)"
+
+    log "调用宝塔原生 AddSite 创建站点 + MySQL 数据库"
+    BT_RESULT="$DOMAIN=$DOMAIN APP_DIR=$APP_DIR PHP_SHORT=$PHP_SHORT DB_USER=$DB_USER DB_PASS=$DB_PASS PANEL_ROOT=$PANEL_ROOT "$PANEL_PY" - <<'PY'
 import os,sys,json
 panel_root=os.environ.get('PANEL_ROOT','/www/server/panel')
 sys.path.insert(0, panel_root + '/class')
 sys.path.insert(0, panel_root)
-import public
 from panelSite import panelSite
 
 domain=os.environ['DOMAIN']; path=os.environ['APP_DIR']; phpver=os.environ['PHP_SHORT']
 dbuser=os.environ['DB_USER']; dbpass=os.environ['DB_PASS']
-
 class G(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
-
 g=G()
 g.webname=json.dumps({'domain':domain,'domainlist':[]})
-g.path=path
-g.port='80'
-g.version=phpver
-g.ps='ceshi1 one-click deploy'
-g.ftp='false'
-g.sql='MySQL'
-g.type_id=0
-g.type='PHP'
-g.project_type='PHP'
-g.codeing='utf8mb4'
-g.datauser=dbuser
-g.datapassword=dbpass
-g.ftp_username=''
-g.ftp_password=''
-g.set_ssl='0'
+g.path=path; g.port='80'; g.version=phpver; g.ps='ceshi1 one-click deploy'
+g.ftp='false'; g.sql='MySQL'; g.type_id=0; g.type='PHP'; g.project_type='PHP'; g.codeing='utf8mb4'
+g.datauser=dbuser; g.datapassword=dbpass; g.ftp_username=''; g.ftp_password=''; g.set_ssl='0'
 res=panelSite().AddSite(g)
 print(json.dumps(res,ensure_ascii=False))
 if not isinstance(res,dict) or not res.get('siteStatus') or not res.get('databaseStatus'):
     raise SystemExit(9)
 PY
-)" || die "宝塔 AddSite/数据库创建失败: ${BT_RESULT:-无返回}"
-printf '%s\n' "$BT_RESULT" | tail -1
+    )" || die "宝塔 AddSite/数据库创建失败: ${BT_RESULT:-无返回}"
+    printf '%s\n' "$BT_RESULT" | tail -1
 
-for f in .user.ini .htaccess index.html 404.html; do
-    chattr -i "$APP_DIR/$f" 2>/dev/null || true
-    rm -f "$APP_DIR/$f"
-done
+    # 以宝塔实际返回的数据库账号/密码为准，避免面板内部调整后与请求值不一致。
+    DB_REAL="$BT_RESULT" "$PANEL_PY" - <<'PY' > "$TMP_DIR/db-real"
+import os,json
+lines=[x for x in os.environ.get('BT_RESULT','').splitlines() if x.strip()]
+obj=json.loads(lines[-1]) if lines else {}
+print('%s\t%s' % (obj.get('databaseUser',''), obj.get('databasePass','')))
+PY
+    IFS=$'\t' read -r REAL_DB_USER REAL_DB_PASS < "$TMP_DIR/db-real"
+    [ -n "$REAL_DB_USER" ] && DB_USER="$REAL_DB_USER"
+    [ -n "$REAL_DB_PASS" ] && DB_PASS="$REAL_DB_PASS"
+    DB_NAME="$DB_USER"
 
-log "写入 ceshi1 源码"
-rsync -a --delete "$SRC_DIR/" "$APP_DIR/"
+    for f in .user.ini .htaccess index.html 404.html; do
+        chattr -i "$APP_DIR/$f" 2>/dev/null || true
+        rm -f "$APP_DIR/$f"
+    done
 
-log "写入源码数据库占位符"
-DB_NAME="$DB_NAME" DB_USER="$DB_USER" DB_PASS="$DB_PASS" "$PANEL_PY" - <<PY
+    log "写入 ceshi1 源码"
+    rsync -a --delete "$SRC_DIR/" "$APP_DIR/"
+
+    log "写入源码数据库配置"
+    DB_NAME="$DB_NAME" DB_USER="$DB_USER" DB_PASS="$DB_PASS" APP_DIR="$APP_DIR" "$PANEL_PY" - <<'PY'
+import os
 from pathlib import Path
-p=Path('$APP_DIR/application/database.php')
+p=Path(os.environ['APP_DIR'])/'application/database.php'
 s=p.read_text(encoding='utf-8')
 for old,new in {
-    'BT_DB_NAME': '$DB_NAME',
-    'BT_DB_USERNAME': '$DB_USER',
-    'BT_DB_PASSWORD': '$DB_PASS',
+    'BT_DB_NAME': os.environ['DB_NAME'],
+    'BT_DB_USERNAME': os.environ['DB_USER'],
+    'BT_DB_PASSWORD': os.environ['DB_PASS'],
 }.items():
-    if old not in s:
-        raise SystemExit('missing placeholder: '+old)
+    if old not in s: raise SystemExit('missing placeholder: '+old)
     s=s.replace(old,new)
 p.write_text(s,encoding='utf-8')
 PY
+else
+    log "续装：保留现有源码和数据库配置"
+fi
 
 MYSQL_BIN=""
 for b in /www/server/mysql/bin/mysql /usr/bin/mysql "$(command -v mysql 2>/dev/null || true)"; do
@@ -176,9 +186,24 @@ for b in /www/server/mysql/bin/mysql /usr/bin/mysql "$(command -v mysql 2>/dev/n
 done
 [ -n "$MYSQL_BIN" ] || die "未找到 mysql 客户端"
 
-log "导入源码自带 import.sql"
-MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -h127.0.0.1 -u"$DB_USER" "$DB_NAME" < "$APP_DIR/import.sql" \
-    || die "import.sql 导入失败"
+# 导入前先验证数据库认证。宝塔自己的部署流程默认使用本机 socket。
+MYSQL_MODE=""
+if MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -u"$DB_USER" "$DB_NAME" -Nse 'SELECT 1' >/dev/null 2>&1; then
+    MYSQL_MODE="socket"
+elif MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -hlocalhost -u"$DB_USER" "$DB_NAME" -Nse 'SELECT 1' >/dev/null 2>&1; then
+    MYSQL_MODE="localhost"
+elif MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -h127.0.0.1 -u"$DB_USER" "$DB_NAME" -Nse 'SELECT 1' >/dev/null 2>&1; then
+    MYSQL_MODE="127.0.0.1"
+else
+    die "数据库认证失败：宝塔记录账号=$DB_USER 数据库=$DB_NAME；socket/localhost/127.0.0.1 均无法登录"
+fi
+
+log "导入源码自带 import.sql（MySQL: $MYSQL_MODE）"
+case "$MYSQL_MODE" in
+    socket)    MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -u"$DB_USER" "$DB_NAME" < "$APP_DIR/import.sql" ;;
+    localhost) MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -hlocalhost -u"$DB_USER" "$DB_NAME" < "$APP_DIR/import.sql" ;;
+    127.0.0.1) MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -h127.0.0.1 -u"$DB_USER" "$DB_NAME" < "$APP_DIR/import.sql" ;;
+esac
 
 log "设置当前站点 open_basedir"
 chattr -i "$APP_DIR/public/.user.ini" 2>/dev/null || true
@@ -194,8 +219,7 @@ enable_putenv(){
     "$PANEL_PY" - "$ini" <<'PY'
 import re,sys
 p=sys.argv[1]
-s=open(p,encoding='utf-8',errors='ignore').read()
-lines=[]
+s=open(p,encoding='utf-8',errors='ignore').read(); lines=[]
 for line in s.splitlines(True):
     if re.match(r'^\s*disable_functions\s*=', line):
         k,v=line.split('=',1)
