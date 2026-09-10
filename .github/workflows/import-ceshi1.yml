@@ -1,4 +1,4 @@
-name: Import ceshi1 source
+name: One-shot replace with latest ceshi1 source
 
 on:
   push:
@@ -6,24 +6,12 @@ on:
       - main
     paths:
       - '.github/workflows/import-ceshi1.yml'
-  workflow_dispatch:
-    inputs:
-      source_url:
-        description: 'Direct URL to ceshi1_com_YFEfj.tar.gz'
-        required: false
-        default: 'https://ios.zonoeios.xyz/ceshi1_com_YFEfj.tar.gz'
-        type: string
-      preserve_deploy:
-        description: 'Keep deploy.sh in repository root'
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: write
 
 jobs:
-  import:
+  replace:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
@@ -32,23 +20,22 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Download source archive
-        env:
-          SOURCE_URL: ${{ inputs.source_url || 'https://ios.zonoeios.xyz/ceshi1_com_YFEfj.tar.gz' }}
+      - name: Download latest source
         run: |
           set -euo pipefail
-          mkdir -p /tmp/ceshi1-import
-          curl -fL --retry 3 --retry-delay 2 "$SOURCE_URL" -o /tmp/ceshi1-import/source.tar.gz
+          rm -rf /tmp/ceshi1-import
+          mkdir -p /tmp/ceshi1-import/extract /tmp/ceshi1-import/source
+          curl -fL --retry 3 --retry-delay 2 \
+            'https://ios.zonoeios.xyz/ceshi1_com_YFEfj.tar.gz' \
+            -o /tmp/ceshi1-import/source.tar.gz
           test -s /tmp/ceshi1-import/source.tar.gz
           tar -tzf /tmp/ceshi1-import/source.tar.gz >/dev/null
+          sha256sum /tmp/ceshi1-import/source.tar.gz
 
-      - name: Extract and normalize source root
+      - name: Extract and validate 20260904 source
         run: |
           set -euo pipefail
-          rm -rf /tmp/ceshi1-import/extract /tmp/ceshi1-import/source
-          mkdir -p /tmp/ceshi1-import/extract /tmp/ceshi1-import/source
           tar -xzf /tmp/ceshi1-import/source.tar.gz -C /tmp/ceshi1-import/extract
-
           shopt -s dotglob nullglob
           entries=(/tmp/ceshi1-import/extract/*)
           if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
@@ -56,59 +43,52 @@ jobs:
           else
             cp -a /tmp/ceshi1-import/extract/. /tmp/ceshi1-import/source/
           fi
-
           rm -rf /tmp/ceshi1-import/source/.git /tmp/ceshi1-import/source/.github
-
           test -f /tmp/ceshi1-import/source/auto_install.json
-          test -f /tmp/ceshi1-import/source/import.sql
           test -f /tmp/ceshi1-import/source/application/database.php
           test -f /tmp/ceshi1-import/source/public/index.php
+          test -f /tmp/ceshi1-import/source/ver.json
+          grep -q '20260904' /tmp/ceshi1-import/source/ver.json
+          echo 'ver.json:'
+          cat /tmp/ceshi1-import/source/ver.json
+          echo
+          echo "source_files=$(find /tmp/ceshi1-import/source -type f | wc -l)"
+          sha256sum \
+            /tmp/ceshi1-import/source/ver.json \
+            /tmp/ceshi1-import/source/application/admin/controller/general/Config.php \
+            /tmp/ceshi1-import/source/application/common/behavior/Common.php \
+            /tmp/ceshi1-import/source/public/assets/js/backend/category.js
 
-      - name: Replace repository contents
-        env:
-          PRESERVE_DEPLOY: ${{ inputs.preserve_deploy || 'true' }}
+      - name: Delete old repository tree and copy latest source
         run: |
           set -euo pipefail
-          mkdir -p /tmp/ceshi1-preserve
-          if [ "$PRESERVE_DEPLOY" = "true" ] && [ -f deploy.sh ]; then
-            cp -a deploy.sh /tmp/ceshi1-preserve/deploy.sh
-          fi
-
-          find . -mindepth 1 -maxdepth 1 \
-            ! -name .git \
-            ! -name .github \
-            -exec rm -rf {} +
-
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a /tmp/ceshi1-import/source/. ./
 
-          if [ "$PRESERVE_DEPLOY" = "true" ] && [ -f /tmp/ceshi1-preserve/deploy.sh ]; then
-            cp -a /tmp/ceshi1-preserve/deploy.sh deploy.sh
-          fi
-
-      - name: Validate imported tree
+      - name: Verify replacement tree
         run: |
           set -euo pipefail
           test -d .git
-          test -f .github/workflows/import-ceshi1.yml
+          test -f ver.json
           test -f auto_install.json
-          test -f import.sql
           test -f application/database.php
           test -f application/config.php
           test -f public/index.php
-          test -f public/FRKToHDckx.php
           test -f vendor/autoload.php
-          echo "files=$(find . -type f ! -path './.git/*' | wc -l)"
+          test ! -e .github
+          test ! -e deploy.sh
+          test ! -e install.sh
+          test ! -e import.sql
+          grep -q '20260904' ver.json
+          echo "repo_files=$(find . -type f ! -path './.git/*' | wc -l)"
           du -sh .
 
-      - name: Commit and push to main
+      - name: Commit exact replacement to main
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          git commit -m "import: ceshi1 source"
+          git status --short
+          git commit -m 'import: replace repository with ceshi1 20260904 source'
           git push origin HEAD:main
