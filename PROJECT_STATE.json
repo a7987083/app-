@@ -4,7 +4,7 @@
   "stable_branch": "main",
   "stable_baseline_commit": "598235962ea328c6558fe4935fe19ba552c1490d",
   "refactor_phase": 2,
-  "status": "phase_2_admin_cleanup_in_progress",
+  "status": "phase_2_code_verified",
   "runtime_changes": true,
   "architecture": {
     "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
@@ -25,14 +25,14 @@
     "Centralized Category add/edit normalization while preserving legacy size behavior",
     "Made Monitor blacklist move transactional and safe for missing rows",
     "Made Kami generation transactional and rejected non-positive counts",
-    "Added PHP lint and AppStore regression GitHub Actions workflow"
+    "Added PHP 8.2/8.4 lint and AppStore regression GitHub Actions workflow"
   ],
   "validation": {
     "source_inspection": "done",
     "phase_1_php_syntax": "passed_php_8_4",
     "payload_regression_test": "passed",
     "legacy_equivalence_test": "passed",
-    "phase_2_ci_workflow": "configured_run_not_yet_observed",
+    "phase_2_ci_workflow": "passed_run_34511000492_php_8_2_and_8_4",
     "live_http_integration": "not_run",
     "external_encryption_smoke_test": "not_run",
     "production_regression": "not_claimed"
@@ -44,5 +44,5 @@
     "Monitor blacklist flow still allows duplicate UDID rows by historical behavior",
     "TLS verification behavior remains unchanged"
   ],
-  "next_task": "Verify phase-two CI, then inspect deployment usage of stale controllers and design scoped config repository/cache"
+  "next_task": "Build scoped config loader/cache with explicit invalidation, then add staging HTTP smoke matrix before merging to main"
 }
