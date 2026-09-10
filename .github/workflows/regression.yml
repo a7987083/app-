@@ -41,10 +41,11 @@ jobs:
           php -l tests/blacklist_persistence_contract_test.php
           php -l tests/trace_monitor_policy_test.php
           php -l tests/trace_monitor_contract_test.php
+          php -l tests/category_listing_contract_test.php
           php -l tests/deployment_contract_test.php
           bash -n tools/trace_monitor_probe.sh
 
-      - name: Run appstore, trace-monitor, blacklist and deployment regression tests
+      - name: Run appstore, category, trace-monitor, blacklist and deployment regression tests
         run: |
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
@@ -53,4 +54,5 @@ jobs:
           php tests/blacklist_persistence_contract_test.php
           php tests/trace_monitor_policy_test.php
           php tests/trace_monitor_contract_test.php
+          php tests/category_listing_contract_test.php
           php tests/deployment_contract_test.php
