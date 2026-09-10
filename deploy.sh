@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_VERSION="1.1.2-ceshi1-remote-baota"
+DEPLOY_VERSION="1.1.3-ceshi1-remote-baota"
 REPO_URL="${REPO_URL:-https://github.com/a7987083/app-.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
 SOURCE_TARBALL="${SOURCE_TARBALL:-}"
@@ -72,7 +72,7 @@ for ext in PDO pdo_mysql; do
     "$PHP_BIN" -r "exit(extension_loaded('$ext')?0:1);" || die "PHP $PHP_VER 缺少扩展: $ext"
 done
 
-# 查询宝塔站点及其关联数据库。输出: site_exists<TAB>site_id<TAB>db_user<TAB>db_pass
+# 查询宝塔站点及其关联数据库。不同宝塔版本可能无法按站点名命中，目录指纹作为第二续装通道。
 PANEL_STATE="$($PANEL_PY - <<PY
 import sys
 sys.path.insert(0, '$PANEL_ROOT/class')
@@ -86,26 +86,43 @@ else:
     db = public.M('databases').where('pid=?', (sid,)).field('username,password').find() or {}
     print('1\t%s\t%s\t%s' % (sid, db.get('username',''), db.get('password','')))
 PY
-)" || die "无法读取宝塔站点/数据库信息"
+)" || PANEL_STATE=$'0\t\t\t'
 IFS=$'\t' read -r SITE_EXISTS SITE_ID PANEL_DB_USER PANEL_DB_PASS <<< "$PANEL_STATE"
 
+PROJECT_DIR_READY=0
+if [ -f "$APP_DIR/application/database.php" ] \
+   && [ -f "$APP_DIR/import.sql" ] \
+   && [ -f "$APP_DIR/public/FRKToHDckx.php" ] \
+   && [ -f "$APP_DIR/vendor/autoload.php" ]; then
+    PROJECT_DIR_READY=1
+fi
+
 RESUME=0
-if [ "$SITE_EXISTS" = "1" ]; then
-    if [ -f "$APP_DIR/application/database.php" ] && [ -f "$APP_DIR/import.sql" ]; then
-        RESUME=1
-        warn "检测到上次未完成部署，进入续装模式: $DOMAIN"
-        [ -n "$PANEL_DB_USER" ] || die "续装失败：宝塔站点存在但未找到关联数据库"
+if [ "$PROJECT_DIR_READY" = "1" ]; then
+    RESUME=1
+    warn "检测到本项目已写入目标目录，进入续装模式: $DOMAIN"
+
+    # 优先从已写入的 database.php 读取真实数据库配置；这正是上次失败前写入的配置。
+    DB_STATE="$APP_DIR=$APP_DIR "$PHP_BIN" -r '
+        $c=include getenv("APP_DIR")."/application/database.php";
+        echo ($c["database"]??"")."\t".($c["username"]??"")."\t".($c["password"]??"");
+    ')"
+    IFS=$'\t' read -r DB_NAME DB_USER DB_PASS <<< "$DB_STATE"
+
+    # 若 database.php 仍是源码占位符，则回退宝塔数据库记录。
+    if [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ "$DB_NAME" = "BT_DB_NAME" ] || [ "$DB_USER" = "BT_DB_USERNAME" ]; then
+        [ -n "$PANEL_DB_USER" ] || die "续装失败：现有 database.php 尚未写入数据库信息，且宝塔未返回关联数据库"
         DB_USER="$PANEL_DB_USER"
         DB_NAME="$PANEL_DB_USER"
         DB_PASS="$PANEL_DB_PASS"
-    else
-        die "宝塔中已存在站点 $DOMAIN；且不是可识别的未完成部署，停止以避免覆盖"
     fi
+elif [ "$SITE_EXISTS" = "1" ]; then
+    die "宝塔中已存在站点 $DOMAIN，但目标目录不是可识别的本项目；停止以避免覆盖"
 fi
 
 if [ "$RESUME" = "0" ]; then
     if [ -e "$APP_DIR" ] && find "$APP_DIR" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
-        die "目标目录非空: $APP_DIR；为避免误删，已停止"
+        die "目标目录非空且不是可识别的本项目: $APP_DIR；为避免误删，已停止"
     fi
 
     TOKEN="$(tr -dc 'a-z0-9' </dev/urandom | head -c 8 || true)"
@@ -141,7 +158,6 @@ PY
     )" || die "宝塔 AddSite/数据库创建失败: ${BT_RESULT:-无返回}"
     printf '%s\n' "$BT_RESULT" | tail -1
 
-    # 以宝塔实际返回的数据库账号/密码为准，避免面板内部调整后与请求值不一致。
     DB_REAL="$BT_RESULT" "$PANEL_PY" - <<'PY' > "$TMP_DIR/db-real"
 import os,json
 lines=[x for x in os.environ.get('BT_RESULT','').splitlines() if x.strip()]
@@ -186,7 +202,6 @@ for b in /www/server/mysql/bin/mysql /usr/bin/mysql "$(command -v mysql 2>/dev/n
 done
 [ -n "$MYSQL_BIN" ] || die "未找到 mysql 客户端"
 
-# 导入前先验证数据库认证。宝塔自己的部署流程默认使用本机 socket。
 MYSQL_MODE=""
 if MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -u"$DB_USER" "$DB_NAME" -Nse 'SELECT 1' >/dev/null 2>&1; then
     MYSQL_MODE="socket"
@@ -195,7 +210,7 @@ elif MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -hlocalhost -u"$DB_USER" "$DB_NAME" -Nse 
 elif MYSQL_PWD="$DB_PASS" "$MYSQL_BIN" -h127.0.0.1 -u"$DB_USER" "$DB_NAME" -Nse 'SELECT 1' >/dev/null 2>&1; then
     MYSQL_MODE="127.0.0.1"
 else
-    die "数据库认证失败：宝塔记录账号=$DB_USER 数据库=$DB_NAME；socket/localhost/127.0.0.1 均无法登录"
+    die "数据库认证失败：账号=$DB_USER 数据库=$DB_NAME；socket/localhost/127.0.0.1 均无法登录"
 fi
 
 log "导入源码自带 import.sql（MySQL: $MYSQL_MODE）"
