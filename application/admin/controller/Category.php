@@ -22,24 +22,24 @@ class Category extends Backend
     protected $model = null;
     protected $categorylist = [];
     protected $noNeedRight = ['selectpage'];
+    protected $searchFields = 'name';
 
     public function _initialize()
     {
         parent::_initialize();
         $this->model = model('app\common\model\Category');
 
-        $tree = Tree::instance();
-        $tree->init(collection($this->model->order('weigh desc,id desc')->select())->toArray(), 'pid');
-        $this->categorylist = $tree->getTreeList($tree->getTreeArray(0), 'name');
-        $categorydata = [0 => ['type' => 'all', 'name' => __('None')]];
-        foreach ($this->categorylist as $v) {
-            $categorydata[$v['id']] = $v;
-        }
         $typeList = CategoryModel::getTypeList();
         $this->view->assign("flagList", $this->model->getFlagList());
         $this->view->assign("typeList", $typeList);
-        $this->view->assign("parentList", $categorydata);
         $this->assignconfig('typeList', $typeList);
+
+        // 列表页改为数据库分页后，不再为每次 index AJAX 请求加载整张分类表和构建 Tree。
+        // add/edit 仍保留原 parentList 行为，避免改变历史的父分类选择语义。
+        $action = strtolower((string)$this->request->action());
+        if ($action === 'add' || $action === 'edit') {
+            $this->view->assign("parentList", $this->buildParentList());
+        }
     }
 
     /**
@@ -57,25 +57,65 @@ class Category extends Backend
 
         $this->request->filter(['strip_tags']);
         if ($this->request->isAjax()) {
+            // 快速搜索只匹配应用名称；分页、排序由 BootstrapTable 的 server 模式传入。
+            list($where, $sort, $order, $offset, $limit) = $this->buildparams('name');
             $type = $this->request->request("type");
             $typeList = CategoryModel::getTypeList();
-            $list = [];
 
-            foreach ($this->categorylist as $v) {
-                if ($type == "all" || $type == null || $type === '' || (string)$v['type'] === (string)$type) {
-                    if (isset($typeList[$v['type']])) {
-                        $v['type'] = $typeList[$v['type']];
-                    }
-                    $list[] = $v;
-                }
+            $offset = max(0, (int)$offset);
+            $limit = (int)$limit;
+            $allowedLimits = [200, 500, 1000];
+            if (!in_array($limit, $allowedLimits, true)) {
+                $limit = 1000;
             }
 
+            $countQuery = Db::name('category')->where($where);
+            if ($type !== null && $type !== '' && $type !== 'all') {
+                $countQuery->where('type', '=', $type);
+            }
+            $total = $countQuery->count();
+
+            // 只取后台列表和列选择器真正使用的字段，避免把安装地址等无关字段传到浏览器。
+            $listQuery = Db::name('category')
+                ->field('id,type,name,nickname,keywords,bt2b,beizhu,image,weigh,status')
+                ->where($where);
+            if ($type !== null && $type !== '' && $type !== 'all') {
+                $listQuery->where('type', '=', $type);
+            }
+            $list = $listQuery
+                ->order($sort, $order)
+                ->limit($offset, $limit)
+                ->select();
+
+            foreach ($list as &$row) {
+                if (isset($typeList[$row['type']])) {
+                    $row['type'] = $typeList[$row['type']];
+                }
+            }
+            unset($row);
+
             return json([
-                'total' => count($list),
+                'total' => (int)$total,
                 'rows' => $list,
             ]);
         }
         return $this->view->fetch();
+    }
+
+    /**
+     * 仅 add/edit 需要完整父分类树，避免列表请求重复加载全部项目。
+     */
+    protected function buildParentList()
+    {
+        $tree = Tree::instance();
+        $tree->init(collection($this->model->order('weigh desc,id desc')->select())->toArray(), 'pid');
+        $this->categorylist = $tree->getTreeList($tree->getTreeArray(0), 'name');
+
+        $categorydata = [0 => ['type' => 'all', 'name' => __('None')]];
+        foreach ($this->categorylist as $v) {
+            $categorydata[$v['id']] = $v;
+        }
+        return $categorydata;
     }
 
     /**
