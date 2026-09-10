@@ -4,17 +4,14 @@ namespace app\admin\controller;
 
 use app\common\controller\Backend;
 use think\Db;
+
 /**
- * 
- *
  * @icon fa fa-circle-o
  */
 class Monitor extends Backend
 {
-    
     /**
-     * Kami模型对象
-     * @var \app\admin\model\Kami
+     * @var \app\admin\model\Monitor
      */
     protected $model = null;
 
@@ -22,39 +19,54 @@ class Monitor extends Backend
     {
         parent::_initialize();
         $this->model = new \app\admin\model\Monitor;
+    }
 
-    }
-    
     /**
-     * 默认生成的控制器所继承的父类中有index/add/edit/del/multi五个基础方法、destroy/restore/recyclebin三个回收站方法
-     * 因此在当前控制器中可不用编写增删改查的代码,除非需要自己控制这部分逻辑
-     * 需要将application/admin/library/traits/Backend.php中对应的方法复制到当前控制器,然后进行修改
+     * 将监控记录移动到黑名单。
+     * 保持历史行为：每次操作仍新增一条 fa_black 记录，再删除对应 monitor。
      */
-	
-    public function black(){
-        $id = $_REQUEST['ids'];
-        $res = Db::table('fa_monitor')->where(['id'=>$id])->find();
-        Db::table('fa_black')->insert(['udid'=>$res['udid'],'addtime'=>time()]);
-        Db::table('fa_monitor')->where(['id'=>$id])->delete();
+    public function black()
+    {
+        $id = $this->request->request('ids');
+        if ($id === null || $id === '') {
+            $this->error(__('Invalid parameters'));
+        }
+
+        $res = Db::table('fa_monitor')->where(['id' => $id])->find();
+        if (!$res || empty($res['udid'])) {
+            $this->error(__('No Results were found'));
+        }
+
+        Db::startTrans();
+        try {
+            Db::table('fa_black')->insert([
+                'udid' => $res['udid'],
+                'addtime' => time(),
+            ]);
+            Db::table('fa_monitor')->where(['id' => $id])->delete();
+            Db::commit();
+        } catch (\Exception $e) {
+            Db::rollback();
+            $this->error($e->getMessage());
+        }
+
         $this->success();
-        var_dump($id);die;
     }
+
     public function add()
     {
         if ($this->request->isPost()) {
             $params = $this->request->post("row/a");
-			
             if ($params) {
-				$gtime = time();
-				$kmqz = trim($params['udid']);
-                $data['udid'] = $kmqz;
-                $data['addtime'] = $gtime;
-                Db::table('fa_monitor')->insert($data);
+                $udid = isset($params['udid']) ? trim($params['udid']) : '';
+                Db::table('fa_monitor')->insert([
+                    'udid' => $udid,
+                    'addtime' => time(),
+                ]);
                 $this->success();
             }
             $this->error(__('Parameter %s can not be empty', ''));
         }
-		return parent::add();
+        return parent::add();
     }
-
 }
