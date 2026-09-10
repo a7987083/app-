@@ -1,5 +1,33 @@
 # Development Changelog
 
+## 2026-09-11 — Refactor Phase 4
+
+Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
+Development branch: `dev/software-source-v1`
+
+### Deployment hardening
+- Added `tests/deployment_contract_test.php`.
+- The deployment contract requires `application/database.php` to contain BaoTa placeholders `BT_DB_NAME`, `BT_DB_USERNAME`, and `BT_DB_PASSWORD`.
+- CI rejects the historical release-template literals `user`, `dbname`, and `pwd` in the database config.
+- Root `auto_install.json` is checked for `application/database.php`, `/public`, and `admin / 123456` metadata.
+- Release documentation now requires inspecting the archived `application/database.php`, not only the repository working tree.
+
+### Real-install finding
+- A Phase 3 BaoTa install reached the backend and captcha successfully but login POST returned HTTP 500.
+- ThinkPHP runtime log identified MySQL 1045: `Access denied for user 'dbname'@'localhost'`.
+- Root cause was the Phase 3 release-building step overlaying the historical database template (`user/dbname/pwd`) over the correct branch version that already used `BT_DB_*` placeholders.
+- Phase 4 packaging keeps the current branch `application/database.php` authoritative.
+
+### Legacy controller audit
+- `application/route.php` routes `/appstore` to `index/App/list` and `/log` to `index/App/log`.
+- No repository reference was found for `App-mb.php` or `Index2.php`.
+- Both files declare class names that duplicate the active controllers and contain stale code; `App-mb.php` also contains an invalid one-argument `str_replace()` call.
+- They remain in place because repository search cannot disprove direct production URLs or external/manual includes. Production access-log verification is required before removal.
+
+### CI
+- PHP 7.0 / 8.2 / 8.4 regression matrix continues to pass.
+- Deployment contract is now part of the standard CI test set.
+
 ## 2026-09-11 — Refactor Phase 3
 
 Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
