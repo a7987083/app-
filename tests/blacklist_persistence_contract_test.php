@@ -29,10 +29,10 @@ if (strpos($blackController, '$result !== 1') === false) {
 }
 
 $model = file_get_contents($root . '/application/admin/model/Black.php');
-if (strpos($model, "setUsetimeAttr") === false || strpos($model, "setEndtimeAttr") === false) {
+if (strpos($model, 'setUsetimeAttr') === false || strpos($model, 'setEndtimeAttr') === false) {
     blacklistContractFail('black model missing usage/expiry setters');
 }
-if (substr_count($model, "return $value === '' ? 0") < 2) {
+if (substr_count($model, "return \$value === '' ? 0") < 2) {
     blacklistContractFail('empty usage/expiry values must persist as zero for NOT NULL columns');
 }
 
