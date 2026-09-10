@@ -8,6 +8,6 @@ curl -fsSL https://raw.githubusercontent.com/a7987083/app-/main/deploy.sh | bash
 
 ## 项目特有安装链
 
-源码确认：`config/database.php` 的默认 mysql 连接从 `config('api.mysql.*')` 读取，而实际配置位于 `config/api.php`；路由提供 `GET /install` 和 `POST /api/install`，后者进入 `InstallController::install`。控制器还包含数据库连接检查、配置写入、migration、storage:link、管理员创建以及项目接口/授权相关处理。
+源码确认：`config/database.php` 的默认 mysql 连接从 `config('api.mysql.*')` 读取，而实际配置位于 `config/api.php`；路由提供 `GET /install` 和 `POST /api/install`，后者进入 `InstallController::install`。控制器中可确认存在数据库连接检查、配置写入、`migrate --force`、`storage:link`、管理员初始化及项目接口/授权相关处理。
 
 因此部署脚本有意不重新实现或绕过这段业务安装逻辑。基础环境准备完成后访问 `/install`，由项目自己的安装器完成数据库和业务初始化，避免漏掉项目特有步骤。
