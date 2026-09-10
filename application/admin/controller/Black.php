@@ -3,18 +3,18 @@
 namespace app\admin\controller;
 
 use app\common\controller\Backend;
+use app\common\library\BlacklistPolicy;
 use think\Db;
+
 /**
- * 
+ * 黑名单管理
  *
  * @icon fa fa-circle-o
  */
 class Black extends Backend
 {
-    
     /**
-     * Kami模型对象
-     * @var \app\admin\model\Kami
+     * @var \app\admin\model\Black
      */
     protected $model = null;
 
@@ -22,32 +22,36 @@ class Black extends Backend
     {
         parent::_initialize();
         $this->model = new \app\admin\model\Black;
-
     }
-    
-    /**
-     * 默认生成的控制器所继承的父类中有index/add/edit/del/multi五个基础方法、destroy/restore/recyclebin三个回收站方法
-     * 因此在当前控制器中可不用编写增删改查的代码,除非需要自己控制这部分逻辑
-     * 需要将application/admin/library/traits/Backend.php中对应的方法复制到当前控制器,然后进行修改
-     */
-	
 
     public function add()
     {
         if ($this->request->isPost()) {
-            $params = $this->request->post("row/a");
-			
-            if ($params) {
-				$gtime = time();
-				$kmqz = trim($params['udid']);
-                $data['udid'] = $kmqz;
-                $data['addtime'] = $gtime;
-                Db::table('fa_black')->insert($data);
-                $this->success();
+            $params = $this->request->post('row/a');
+            $udid = $params && isset($params['udid']) ? trim($params['udid']) : '';
+            if ($udid === '') {
+                $this->error('UDID不能为空');
             }
-            $this->error(__('Parameter %s can not be empty', ''));
-        }
-		return parent::add();
-    }
 
+            $endtime = 0;
+            if (isset($params['endtime']) && trim((string)$params['endtime']) !== '') {
+                $endtime = is_numeric($params['endtime']) ? (int)$params['endtime'] : strtotime($params['endtime']);
+                if (!$endtime) {
+                    $this->error('到期时间格式不正确');
+                }
+            }
+
+            try {
+                $result = Db::table('fa_black')->insert(BlacklistPolicy::insertData($udid, time(), $endtime));
+                if ($result !== 1) {
+                    $this->error('黑名单添加失败');
+                }
+                $this->success();
+            } catch (\Exception $e) {
+                $this->error($e->getMessage());
+            }
+        }
+
+        return parent::add();
+    }
 }
