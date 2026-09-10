@@ -1,5 +1,46 @@
 # Development Changelog
 
+## 2026-09-11 — Refactor Phase 5
+
+Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
+Development branch: `dev/software-source-v1`
+
+### Blacklist fix
+- Real admin testing showed `black/add` returned `code=1` while no row appeared in `fa_black`.
+- Database inspection confirmed `fa_black.usetime` and `fa_black.endtime` are `NOT NULL` without defaults, while the legacy controller inserted only `udid` and `addtime`.
+- Added `application/common/library/BlacklistPolicy.php` as the single source for blacklist insert/lifetime semantics.
+- New blacklist rows now persist `udid`, `addtime`, `usetime=0`, and `endtime` (`0` means permanent).
+- `Black::add()` validates UDID/expiration, checks the INSERT result, and surfaces database failures instead of returning a false success.
+- `Monitor::black()` and automatic trace blacklisting now also write complete rows; monitor move remains transactional and automatic blacklisting keeps insert + monitor cleanup atomic.
+- AppStore and dylib blacklist checks now ignore expired blacklist rows.
+- The first real blacklist hit records `usetime` when it is still zero.
+
+### Blacklist UI
+- Blacklist list now shows add time, use time and expiration time.
+- `usetime=0` renders as `未使用`.
+- `endtime=0` renders as `永久`.
+- Add form supports optional expiration; leaving it blank creates a permanent blacklist.
+- Edit form exposes `usetime` and `endtime`; blank values persist as zero to match the existing `NOT NULL` schema.
+
+### BaoTa pseudo-static deployment
+- Added root `nginx.rewrite` using the requested ThinkPHP rule:
+  `rewrite ^(.*)$ /index.php?s=$1 last; break;`
+- BaoTa one-click packages import root `nginx.rewrite` as the Nginx pseudo-static rule.
+- `tests/deployment_contract_test.php` now requires the rewrite file and verifies the `location /`, file-existence guard and ThinkPHP target.
+
+### Tests / CI
+- Added `tests/blacklist_policy_test.php`.
+- Added `tests/blacklist_persistence_contract_test.php` to prevent incomplete `fa_black` inserts from returning.
+- CI lints blacklist controller/model/policy code and runs blacklist + deployment contracts on PHP 7.0 / 8.2 / 8.4.
+
+### Phase 4 real-install result
+- The user reported the Phase 4 BaoTa one-click install succeeded and the earlier `dbname` credential substitution problem is resolved.
+
+### Still to verify on a real Phase 5 install
+- BaoTa automatically imports `nginx.rewrite` into site pseudo-static configuration.
+- Admin blacklist add creates a row with `usetime/endtime` populated as designed.
+- Permanent blacklist, temporary blacklist expiry, first-hit `usetime`, `/appstore`, and `/dylib` blacklist behavior.
+
 ## 2026-09-11 — Refactor Phase 4
 
 Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
@@ -108,4 +149,4 @@ Development branch: `dev/software-source-v1`
 
 ### Remaining validation
 - Live/staging HTTP smoke tests against a real database.
-- External `appstore` and `appstore_v2` encryption smoke tests.
+- External `appstore` / `appstore_v2` encryption smoke tests.
