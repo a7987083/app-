@@ -1,5 +1,34 @@
 # Development Changelog
 
+## 2026-09-11 — Refactor Phase 6
+
+Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
+Development branch: `dev/software-source-v1`
+
+### Trace monitor stabilization
+- Confirmed the historical monitor is not an HTTP error counter: `/appstore` decodes optional JSON `value` as Base64 `添加者UDID|破解者UDID` and only processes 25/40-character values.
+- Added `application/common/library/TraceMonitorPolicy.php` to centralize the original first-position/second-position identity mapping and the 25/40-character compatibility gate.
+- `App.php` now delegates trace payload parsing and UDID acceptance to the policy helper while preserving `openblack` / `openblack2`, `fa_monitor` counting, and automatic blacklist behavior.
+- Monitor admin labels are clarified from `身份 / 异常请求次数` to `来源身份 / 来源记录次数`; database and protocol semantics are unchanged.
+
+### Diagnostics
+- Added `tools/trace_monitor_probe.sh` so a deployment can be tested from a terminal with one command.
+- Added `TRACE_MONITOR.md` documenting payload format, switch behavior, database verification, and the boundary that the server does not independently prove whether a device is truly an adder/cracker.
+
+### Fresh deployment seed
+- Inspection of the Phase 5 release `import.sql` found two historical `fa_monitor` rows dated 2022.
+- These are runtime observations, not application defaults. Phase 6 BaoTa packaging removes those two rows and resets the fresh `fa_monitor` auto-increment seed so a new installation starts with an empty monitor list.
+- Existing production databases are not modified or purged by this change.
+
+### Tests / CI
+- Added `tests/trace_monitor_policy_test.php` covering 25/40-character acceptance, invalid lengths, identity ordering, switch mapping, one-sided payloads, and extra payload positions.
+- Added `tests/trace_monitor_contract_test.php` to prevent controller-side decoding/length rules from drifting away from `TraceMonitorPolicy` and to lock the clarified admin labels.
+- CI now lints the policy/tests/probe and runs the trace-monitor regression set on PHP 7.0 / 8.2 / 8.4.
+- GitHub Actions Run `34535349012` passed all three PHP versions.
+
+### Phase 5 real-test result
+- The user reported Phase 5 one-click deployment and blacklist behavior tested OK, including the previous deployment/blacklist fixes.
+
 ## 2026-09-11 — Refactor Phase 5
 
 Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
@@ -56,7 +85,7 @@ Development branch: `dev/software-source-v1`
 ### Real-install finding
 - A Phase 3 BaoTa install reached the backend and captcha successfully but login POST returned HTTP 500.
 - ThinkPHP runtime log identified MySQL 1045: `Access denied for user 'dbname'@'localhost'`.
-- Root cause was the Phase 3 release-building step overlaying the historical database template (`user/dbname/pwd`) over the correct branch version that already used `BT_DB_*` placeholders.
+- Root cause was the Phase 3 release-building step overlaying the historical database template (`user/dbname/pwd`) over the correct branch `application/database.php`.
 - Phase 4 packaging keeps the current branch `application/database.php` authoritative.
 
 ### Legacy controller audit
@@ -104,7 +133,7 @@ Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
 Development branch: `dev/software-source-v1`
 
 ### Refactored
-- `Category.php` now uses `CategoryModel::getTypeList()` as the single type-label source instead of duplicating 1..5 labels.
+- `Category.php` now uses `CategoryModel::getTypeList()` as the single type-label source instead of a second hardcoded 1..5 mapping.
 - Category add/edit color, newline and size normalization now share one helper.
 - Historical add/edit size conversion differences are intentionally preserved.
 
