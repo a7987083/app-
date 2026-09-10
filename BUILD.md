@@ -8,6 +8,7 @@ This repository is a legacy ThinkPHP 5.0.24 application. Refactor validation use
 php -l application/common/library/AppStorePayload.php
 php -l application/common/library/SourceConfigRepository.php
 php -l application/common/library/BlacklistPolicy.php
+php -l application/common/library/TraceMonitorPolicy.php
 php -l application/common/model/Config.php
 php -l application/index/controller/App.php
 php -l application/index/controller/Index.php
@@ -21,7 +22,10 @@ php -l tests/appstore_equivalence_test.php
 php -l tests/source_config_repository_test.php
 php -l tests/blacklist_policy_test.php
 php -l tests/blacklist_persistence_contract_test.php
+php -l tests/trace_monitor_policy_test.php
+php -l tests/trace_monitor_contract_test.php
 php -l tests/deployment_contract_test.php
+bash -n tools/trace_monitor_probe.sh
 ```
 
 ## Regression tests
@@ -32,6 +36,8 @@ php tests/appstore_equivalence_test.php
 php tests/source_config_repository_test.php
 php tests/blacklist_policy_test.php
 php tests/blacklist_persistence_contract_test.php
+php tests/trace_monitor_policy_test.php
+php tests/trace_monitor_contract_test.php
 php tests/deployment_contract_test.php
 ```
 
@@ -43,6 +49,8 @@ OK appstore_equivalence_test
 OK source_config_repository_test
 OK blacklist_policy_test
 OK blacklist_persistence_contract_test
+OK trace_monitor_policy_test
+OK trace_monitor_contract_test
 OK deployment_contract_test
 ```
 
@@ -84,13 +92,17 @@ location / {
 }
 ```
 
+Fresh release SQL must not preload historical `fa_monitor` runtime observations. Phase 6 removes the inherited 2022 rows from the BaoTa release seed; existing deployed databases are not altered.
+
 Before publishing a ZIP, inspect the actual archive rather than only the working tree:
 
 ```bash
-unzip -p zonoe-source-phase5-bt.zip application/database.php | grep -E 'BT_DB_NAME|BT_DB_USERNAME|BT_DB_PASSWORD'
-unzip -p zonoe-source-phase5-bt.zip application/database.php | grep -E "'user'|'dbname'|'pwd'" && exit 1 || true
-unzip -p zonoe-source-phase5-bt.zip nginx.rewrite
-unzip -l zonoe-source-phase5-bt.zip | grep -E '(^| )auto_install.json$|(^| )import.sql$|(^| )nginx.rewrite$'
+unzip -p zonoe-source-phase6-bt.zip application/database.php | grep -E 'BT_DB_NAME|BT_DB_USERNAME|BT_DB_PASSWORD'
+unzip -p zonoe-source-phase6-bt.zip application/database.php | grep -E "'user'|'dbname'|'pwd'" && exit 1 || true
+unzip -p zonoe-source-phase6-bt.zip nginx.rewrite
+unzip -p zonoe-source-phase6-bt.zip import.sql | grep "00008030-001E78490133802E" && exit 1 || true
+unzip -p zonoe-source-phase6-bt.zip import.sql | grep "00008110-001229DE2E82802E" && exit 1 || true
+unzip -l zonoe-source-phase6-bt.zip | grep -E '(^| )auto_install.json$|(^| )import.sql$|(^| )nginx.rewrite$'
 ```
 
 ## Phase 5 blacklist smoke matrix
@@ -104,6 +116,20 @@ unzip -l zonoe-source-phase5-bt.zip | grep -E '(^| )auto_install.json$|(^| )impo
 7. Monitor -> blacklist action creates a complete permanent row and removes the monitor row atomically.
 8. Automatic trace blacklist creates a complete permanent row and does not delete the monitor record if insert fails.
 
+## Phase 6 trace-monitor smoke matrix
+
+Use `TRACE_MONITOR.md` and the bundled probe:
+
+```bash
+bash tools/trace_monitor_probe.sh https://example.com
+```
+
+With `openblack=0` and `openblack2=0`, one request should create/update two `fa_monitor` rows: first position `添加者`, second position `破解者`. Repeating the request increments `count`.
+
+With the corresponding auto-black switch enabled, the valid trace UDID should enter `fa_black` as a permanent row and its monitor row should be removed only after blacklist persistence succeeds.
+
+The server does not independently authenticate `添加者/破解者`; those labels are inherited from client payload position.
+
 ## Pre-merge live smoke matrix
 
 Use a staging/disposable database and compare external HTTP behavior with baseline commit `598235962ea328c6558fe4935fe19ba552c1490d`.
@@ -115,9 +141,10 @@ Use a staging/disposable database and compare external HTTP behavior with baseli
 5. Plain source, valid card.
 6. Plain source, expired card.
 7. Plain source, active and expired blacklisted UDID.
-8. Encrypted default `appstore` wrapper.
-9. Encrypted `APPSTORE: v2` wrapper.
-10. Free app, `lock=1` app, and nonstandard truthy lock value.
-11. Announcement / source metadata and multiline description serialization.
+8. Trace monitor with auto-black off and on.
+9. Encrypted default `appstore` wrapper.
+10. Encrypted `APPSTORE: v2` wrapper.
+11. Free app, `lock=1` app, and nonstandard truthy lock value.
+12. Announcement / source metadata and multiline description serialization.
 
 Do not merge to `main` solely from lint/unit results; real BaoTa substitution, rewrite import, external encryption endpoints and production-like database paths require smoke coverage.
