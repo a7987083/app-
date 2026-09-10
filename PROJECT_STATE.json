@@ -3,46 +3,50 @@
   "development_branch": "dev/software-source-v1",
   "stable_branch": "main",
   "stable_baseline_commit": "598235962ea328c6558fe4935fe19ba552c1490d",
-  "refactor_phase": 2,
-  "status": "phase_2_code_verified",
+  "refactor_phase": 3,
+  "status": "phase_3_code_verified_deploy_package_prepared",
   "runtime_changes": true,
   "architecture": {
     "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
     "source_route": "/appstore -> index/App/list",
     "source_payload_mapper": "application/common/library/AppStorePayload.php",
+    "source_config_repository": "application/common/library/SourceConfigRepository.php",
     "source_tables": ["fa_config", "fa_category", "fa_kami", "fa_black", "fa_monitor"],
     "admin_app_controller": "application/admin/controller/Category.php",
     "dylib_controller": "application/index/controller/Index.php"
   },
   "completed_changes": [
     "Extracted legacy AppStore payload mapping into a pure component",
-    "Removed duplicated source/config/app mapping from App controller",
     "Preserved guest/licensed lock semantics and appstore/appstore_v2 wrappers",
-    "Fixed dylib missing-card null access",
-    "Removed homepage child-category N+1 query pattern",
-    "Added standalone regression and differential equivalence tests",
-    "Centralized Category type display through CategoryModel::getTypeList()",
-    "Centralized Category add/edit normalization while preserving legacy size behavior",
-    "Made Monitor blacklist move transactional and safe for missing rows",
-    "Made Kami generation transactional and rejected non-positive counts",
-    "Added PHP 8.2/8.4 lint and AppStore regression GitHub Actions workflow"
+    "Fixed dylib missing-card null access and homepage child-category N+1 queries",
+    "Centralized Category type display and write normalization",
+    "Made Monitor blacklist move and Kami generation transactional",
+    "Added SourceConfigRepository with shared 60-second cache",
+    "Routed App and dylib config reads through SourceConfigRepository",
+    "Invalidated source config cache after Config model writes/deletes",
+    "Added source-config mapping regression test",
+    "Extended CI to PHP 7.0, 8.2 and 8.4",
+    "Made legacy equivalence test PHP 7.0 compatible",
+    "Prepared a Baota one-click deployment artifact with root auto_install.json and import.sql"
   ],
   "validation": {
     "source_inspection": "done",
-    "phase_1_php_syntax": "passed_php_8_4",
     "payload_regression_test": "passed",
     "legacy_equivalence_test": "passed",
-    "phase_2_ci_workflow": "passed_run_34511000492_php_8_2_and_8_4",
+    "source_config_repository_test": "passed",
+    "phase_3_ci_workflow": "passed_run_34523737358_php_7_0_8_2_8_4",
+    "deployment_zip_structure": "verified_root_auto_install_and_import_sql",
     "live_http_integration": "not_run",
+    "baota_real_install": "not_run",
     "external_encryption_smoke_test": "not_run",
     "production_regression": "not_claimed"
   },
   "intentionally_preserved_risks": [
     "Category list-page daily reset still writes cs/cstime using day-of-month",
     "App-mb.php and Index2.php remain in runtime paths pending deployment usage verification",
-    "Kami still uses per-row inserts and legacy MD5/time/rand generation semantics",
-    "Monitor blacklist flow still allows duplicate UDID rows by historical behavior",
+    "Kami keeps legacy MD5/time/rand generation semantics",
+    "Monitor blacklist flow keeps historical duplicate-row behavior",
     "TLS verification behavior remains unchanged"
   ],
-  "next_task": "Build scoped config loader/cache with explicit invalidation, then add staging HTTP smoke matrix before merging to main"
+  "next_task": "Install the Phase 3 Baota package on a disposable test site and run plaintext/appstore/appstore_v2 plus card/blacklist HTTP smoke tests before any main merge"
 }
