@@ -3,6 +3,7 @@
 namespace app\index\controller;
 
 use app\common\controller\Frontend;
+use app\common\library\BlacklistPolicy;
 use app\common\library\SourceConfigRepository;
 use think\Db;
 
@@ -31,7 +32,7 @@ class Index extends Frontend
             die;
         }
 
-        $black = Db::name('black')->where('udid', $res['udid'])->find();
+        $black = $this->activeBlacklist($res['udid']);
         if ($res['endtime'] <= time()) {
             $res = Db::name('kami')->where('udid', $udid)->where(['endtime' => ['>', time()]])->find();
             if (!$res) {
@@ -43,6 +44,7 @@ class Index extends Frontend
         }
 
         if ($black) {
+            $this->markBlacklistUsed($black);
             $arr['msg'] = 'UDID黑名单';
             $arr['code'] = 666;
         } else {
@@ -105,6 +107,19 @@ class Index extends Frontend
         $data['xm'] = $this->loadChildrenByParent($data['category']);
 
         return $this->view->fetch('', $data);
+    }
+
+    protected function activeBlacklist($udid)
+    {
+        $rows = Db::name('black')->where('udid', $udid)->order('id desc')->select();
+        return BlacklistPolicy::findActive($rows);
+    }
+
+    protected function markBlacklistUsed(array $black)
+    {
+        if (!empty($black['id']) && empty($black['usetime'])) {
+            Db::name('black')->where('id', $black['id'])->update(['usetime' => time()]);
+        }
     }
 
     protected function dylibConfig()
