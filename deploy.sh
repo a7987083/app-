@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_VERSION="1.2.2-source-flow-ext-auto"
+DEPLOY_VERSION="1.2.3-source-flow-ext-auto"
 REPO_URL="https://github.com/a7987083/app-.git"
 BRANCH="main"
 DEFAULT_DOMAIN="app3.zonoeios.xyz"
@@ -43,7 +43,8 @@ PHP_VER="$($PHP_BIN -r 'echo PHP_VERSION;' 2>/dev/null || true)"
 [ -n "$PHP_VER" ] || die "当前 PHP 无法正常执行: $PHP_BIN"
 PHP_PREFIX="$(cd "$(dirname "$PHP_BIN")/.." && pwd)"
 PHP_SHORT="$(basename "$PHP_PREFIX")"
-PHP_INI="$($PHP_BIN --ini 2>/dev/null | awk -F': ' '/Loaded Configuration File/{print $2; exit}' || true)"
+PHP_CLI_INI="$($PHP_BIN --ini 2>/dev/null | awk -F': ' '/Loaded Configuration File/{print $2; exit}' || true)"
+PHP_FPM_INI="${PHP_PREFIX}/etc/php.ini"
 EXT_DIR="$($PHP_BIN -r 'echo ini_get("extension_dir");' 2>/dev/null || true)"
 if [ -z "$EXT_DIR" ] || [ ! -d "$EXT_DIR" ]; then
     EXT_DIR="$(find "$PHP_PREFIX" -type d -path '*/lib/php/extensions/*' 2>/dev/null | head -n1 || true)"
@@ -51,7 +52,8 @@ fi
 
 info "PHP: ${PHP_BIN} (${PHP_VER})"
 info "PHP prefix: ${PHP_PREFIX}"
-info "PHP ini: ${PHP_INI:-未检测到}"
+info "PHP CLI ini: ${PHP_CLI_INI:-未检测到}"
+info "PHP FPM ini: ${PHP_FPM_INI}"
 info "extension_dir: ${EXT_DIR:-未检测到}"
 if [[ "$PHP_VER" != 8.2.* ]]; then
     warn "源码 auto_install.json 指定 PHP 8.2；当前使用 ${PHP_VER}，建议宝塔站点最终切换 PHP 8.2。"
@@ -75,7 +77,7 @@ cd "$APP_DIR"
 php_ext_loaded() {
     local ext="$1"
     if [ "$ext" = "opcache" ]; then
-        "$PHP_BIN" -r 'exit((extension_loaded("Zend OPcache") || extension_loaded("opcache")) ? 0 : 1);' >/dev/null 2>&1
+        "$PHP_BIN" -r 'exit(function_exists("opcache_get_status") ? 0 : 1);' >/dev/null 2>&1
     else
         "$PHP_BIN" -r 'exit(extension_loaded($argv[1]) ? 0 : 1);' "$ext" >/dev/null 2>&1
     fi
@@ -93,24 +95,51 @@ reload_php_fpm() {
     return 0
 }
 
+append_opcache_ini() {
+    local ini="$1"
+    local so="$2"
+    [ -f "$ini" ] || return 0
+
+    # 若已有任何启用 OPcache 的 zend_extension 行，不重复追加。
+    if ! grep -Eqi '^[[:space:]]*zend_extension[[:space:]]*=.*opcache(\.so)?([[:space:]]|$)' "$ini"; then
+        {
+            printf '\n; zonoe deploy: enable Zend OPcache\n'
+            printf 'zend_extension=%s\n' "$so"
+        } >> "$ini"
+    fi
+
+    if [ "$ini" = "$PHP_CLI_INI" ] && ! grep -Eqi '^[[:space:]]*opcache\.enable_cli[[:space:]]*=[[:space:]]*1' "$ini"; then
+        printf 'opcache.enable_cli=1\n' >> "$ini"
+    fi
+}
+
 enable_existing_extension() {
     local ext="$1"
     local so=""
-    local directive
 
     [ -n "$EXT_DIR" ] || return 1
     so="${EXT_DIR}/${ext}.so"
     [ -f "$so" ] || return 1
-    [ -n "$PHP_INI" ] && [ "$PHP_INI" != "(none)" ] && [ -f "$PHP_INI" ] || return 1
 
-    if [ "$ext" = "opcache" ]; then directive="zend_extension=${so}"; else directive="extension=${so}"; fi
-    if ! grep -Fq "$so" "$PHP_INI"; then
-        {
-            printf '\n; zonoe deploy: enable %s\n' "$ext"
-            printf '%s\n' "$directive"
-            if [ "$ext" = "opcache" ]; then printf 'opcache.enable_cli=1\n'; fi
-        } >> "$PHP_INI"
+    if [ "$ext" = "opcache" ]; then
+        # 先用 -n + 指定 so 验证刚编译出的 Zend 扩展本身可加载。
+        if ! "$PHP_BIN" -n -d "zend_extension=${so}" -d opcache.enable_cli=1 -r 'exit(function_exists("opcache_get_status") ? 0 : 1);' >/dev/null 2>&1; then
+            warn "已找到 ${so}，但当前 PHP 无法直接加载该 OPcache 模块"
+            return 1
+        fi
+
+        append_opcache_ini "$PHP_CLI_INI" "$so"
+        append_opcache_ini "$PHP_FPM_INI" "$so"
+    else
+        [ -n "$PHP_CLI_INI" ] && [ -f "$PHP_CLI_INI" ] || return 1
+        if ! grep -Eqi "^[[:space:]]*extension[[:space:]]*=.*${ext}(\\.so)?([[:space:]]|$)" "$PHP_CLI_INI"; then
+            {
+                printf '\n; zonoe deploy: enable %s\n' "$ext"
+                printf 'extension=%s\n' "$so"
+            } >> "$PHP_CLI_INI"
+        fi
     fi
+
     reload_php_fpm || true
     php_ext_loaded "$ext"
 }
@@ -140,7 +169,7 @@ compile_opcache_exact_version() {
     command -v curl >/dev/null 2>&1 || { warn "缺少 curl，无法下载 PHP 源码"; return 1; }
     command -v tar >/dev/null 2>&1 || { warn "缺少 tar，无法解压 PHP 源码"; return 1; }
 
-    info "宝塔扩展安装器无法处理 OPcache，改用 PHP ${PHP_VER} 同版本源码编译 ext/opcache"
+    info "使用 PHP ${PHP_VER} 同版本源码编译 ext/opcache"
     rm -rf "$tmp"
     mkdir -p "$tmp"
     (
@@ -155,10 +184,21 @@ compile_opcache_exact_version() {
     ) || { rm -rf "$tmp"; return 1; }
     rm -rf "$tmp"
 
-    EXT_DIR="$($PHP_BIN -r 'echo ini_get("extension_dir");' 2>/dev/null || true)"
+    # php-config 是权威来源；优先使用它返回的 extension-dir。
+    EXT_DIR="$($phpconfig --extension-dir 2>/dev/null || true)"
+    if [ -z "$EXT_DIR" ] || [ ! -d "$EXT_DIR" ]; then
+        EXT_DIR="$($PHP_BIN -r 'echo ini_get("extension_dir");' 2>/dev/null || true)"
+    fi
     if [ -z "$EXT_DIR" ] || [ ! -d "$EXT_DIR" ]; then
         EXT_DIR="$(find "$PHP_PREFIX" -type d -path '*/lib/php/extensions/*' 2>/dev/null | head -n1 || true)"
     fi
+
+    [ -n "$EXT_DIR" ] && [ -f "${EXT_DIR}/opcache.so" ] || {
+        warn "编译完成，但未找到安装后的 opcache.so；extension_dir=${EXT_DIR:-空}"
+        return 1
+    }
+
+    info "OPcache 已安装到: ${EXT_DIR}/opcache.so"
     enable_existing_extension opcache
 }
 
@@ -177,13 +217,11 @@ ensure_auto_extension() {
     fi
 
     if [ "$ext" = "opcache" ]; then
-        # OPcache 是 PHP 自带 Zend 扩展。宝塔对某些 PHP 版本会提示已安装/请选择其它版本，
-        # 因此先修正 Zend OPcache 检测；确实没有 opcache.so 时才使用同版本 PHP 源码编译。
         if compile_opcache_exact_version; then
             info "PHP 扩展 opcache: 同版本源码编译并启用成功"
             return 0
         fi
-        die "PHP 扩展 opcache 自动处理失败。请检查 phpize/php-config/编译工具输出。"
+        die "PHP 扩展 opcache 自动处理失败。请检查上方 OPcache 加载验证输出。"
     fi
 
     if bt_install_extension "$ext"; then
