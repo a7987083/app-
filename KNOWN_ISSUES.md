@@ -22,43 +22,53 @@
 ### Category list has write-on-read daily reset
 - `Category::index()` resets `cs/cstime` by updating rows when the admin list is opened.
 - `cstime` uses only day-of-month, which is an unsafe date identity and creates unnecessary table writes.
-- This behavior was intentionally preserved in phase two because removing it changes visible admin statistics.
+- This behavior was intentionally preserved because removing it changes visible admin statistics.
 - Replace with a real date/statistics model or compute daily counts independently in a dedicated behavior-change phase.
 
-### Repeated full config reads
-- Public source and dylib endpoints scan all `fa_config` rows then pick a small subset.
-- Add a scoped config repository/cache with explicit invalidation from config-save paths.
-
 ### Card generation performance / uniqueness
-- Phase two made card generation transactional and corrected non-positive count validation.
+- Card generation is transactional and rejects non-positive counts.
 - Generation still performs one insert per card to preserve current insertion/failure semantics.
 - Generator remains based on MD5/time/substrings plus `rand()` and has weak collision guarantees.
 - Before switching to batch insert, verify table indexes, maximum generation count, duplicate policy and desired collision behavior.
 
-### Monitor blacklist idempotence
-- Phase two now validates the monitor row and wraps blacklist insert + monitor delete in one transaction.
-- Historical behavior still permits duplicate `fa_black` rows when the same UDID is blacklisted from different monitor records.
+### Duplicate blacklist policy
+- Blacklist insertion is now schema-complete and monitor moves are transactional.
+- Historical behavior still permits duplicate `fa_black` rows for the same UDID.
+- Phase 5 treats every active row independently: any permanent/future row keeps the UDID blacklisted even if another duplicate row has expired.
 - Decide whether blacklist should become idempotent before adding a unique constraint or deduplication.
+
+### Blacklist expiry cleanup
+- Phase 5 ignores expired blacklist rows at runtime but does not delete them automatically.
+- Decide later whether expired rows should remain as audit history, be archived, or be cleaned periodically.
 
 ## Completed P1 cleanup
 
+### Shared config reads
+- Phase 3 added `SourceConfigRepository` with a shared 60-second cache and explicit invalidation after config writes/deletes.
+- Public AppStore and dylib config reads use the shared repository.
+
 ### Category duplicate display/write rules
-- Type display now uses `CategoryModel::getTypeList()` instead of a second hardcoded 1..5 mapping.
-- Add/edit color, description-newline and size normalization now share one helper while preserving the historical add/edit size-conversion difference.
+- Type display uses `CategoryModel::getTypeList()` instead of a second hardcoded 1..5 mapping.
+- Add/edit color, description-newline and size normalization share one helper while preserving historical behavior.
 
 ### Monitor blacklist safety
 - Missing IDs / missing monitor rows are rejected instead of dereferencing null data.
 - Insert + delete is transactional.
-- Unreachable debug output after success was removed.
+- Phase 5 now inserts all required `fa_black` fields (`udid/addtime/usetime/endtime`).
+
+### Blacklist false-success bug
+- Real testing showed `Black::add()` returned success but inserted nothing because `usetime/endtime` were omitted even though both database columns are `NOT NULL` without defaults.
+- Phase 5 adds `BlacklistPolicy`, complete inserts, insert-result checking, optional expiry, first-hit `usetime`, and active/expired evaluation.
 
 ### Kami write consistency
-- Generation + `fa_kmstr` update is now transactional.
-- Counts `<= 0` are rejected consistently with the existing error text.
+- Generation + `fa_kmstr` update is transactional.
+- Counts `<= 0` are rejected consistently.
 - Empty `fa_kmstr` state no longer causes an array-offset access on the add form.
 
-### Repository CI
-- `.github/workflows/regression.yml` now defines PHP 8.2/8.4 syntax checks and standalone AppStore regression tests.
-- At creation time GitHub had not yet exposed a workflow run, so CI success is not yet claimed.
+### BaoTa deployment contract
+- Phase 4 fixed `BT_DB_*` credential substitution and the real one-click retest succeeded.
+- Phase 5 adds root `nginx.rewrite` so BaoTa can automatically import the required ThinkPHP pseudo-static rule.
+- CI validates database placeholders and rewrite contract on PHP 7.0 / 8.2 / 8.4.
 
 ## P2 — maintainability / modernization
 
