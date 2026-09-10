@@ -1,82 +1,75 @@
 # Known Issues and Refactor Backlog
 
-## P0 — do not mix into compatibility refactors
+## P0 — compatibility boundaries
 
-### Legacy framework / dependency boundary
-- Runtime is ThinkPHP 5.0.24.
-- Framework modernization is desirable but high-risk and must wait until HTTP golden/integration tests exist.
+### Legacy framework
+- Runtime remains ThinkPHP 5.0.24.
+- Framework modernization is high-risk and should wait for broader HTTP integration/golden coverage.
 
-### TLS verification disabled in legacy HTTP clients
-- AppStore encryption request currently disables peer verification.
-- Other legacy HTTP helpers also disable TLS verification.
-- This is a security risk, but changing it can break deployed integrations; harden in a separate tested change.
+### External encryption / TLS
+- Existing `appstore/appstore_v2` whole-payload encryption is intentionally unchanged.
+- Real measurement showed plain `/appstore` around 0.11s total and encrypted around 10.48s total; the external encryption call is the dominant latency.
+- Legacy HTTP code still disables TLS peer verification. Hardening it may break deployed integrations and belongs in a separate tested phase.
 
-## P1 — next engineering work
+## P1 — still open
 
-### Stale duplicate controllers
-- `application/index/controller/App-mb.php` declares `class App`.
-- `application/index/controller/Index2.php` declares `class Index`.
-- Both duplicate stale production logic; no repository references were found during review.
-- They remain untouched until external/manual URL usage can be ruled out from deployment/access logs.
+### Legacy duplicate controllers require production-log gate
+- `application/index/controller/App-mb.php` and `Index2.php` are stale duplicate controllers.
+- Static route/reference audit found no application use.
+- They remain until actual BaoTa production access logs are checked.
+- Phase 8 provides `tools/legacy_controller_access_audit.sh`; it refuses deletion on a hit or when logs are unavailable.
 
-### Category list has write-on-read daily reset
-- `Category::index()` resets `cs/cstime` by updating rows when the admin list is opened.
-- `cstime` uses only day-of-month, which is an unsafe date identity and creates unnecessary table writes.
-- This behavior was intentionally preserved because removing it changes visible admin statistics.
-- Replace with a real date/statistics model or compute daily counts independently in a dedicated behavior-change phase.
+### Existing blacklist duplicate history
+- Phase 8 prevents a new manual active duplicate for the same UDID.
+- Existing historical duplicates are intentionally not deduplicated destructively.
+- Runtime compatibility remains: any active permanent/future row keeps the UDID blocked.
 
-### Card generation performance / uniqueness
-- Card generation is transactional and rejects non-positive counts.
-- Generation still performs one insert per card to preserve current insertion/failure semantics.
-- Generator remains based on MD5/time/substrings plus `rand()` and has weak collision guarantees.
-- Before switching to batch insert, verify table indexes, maximum generation count, duplicate policy and desired collision behavior.
+### Card DB uniqueness is enforced in application code, not schema
+- Phase 8 replaces the old MD5/time/`rand()` generator with `random_bytes` and checks candidate codes against existing DB codes.
+- `fa_kami.kami` still has no unique index. A DB unique constraint should only be added after auditing/migrating possible historical duplicates.
+- Card inserts remain one-by-one inside one transaction to preserve current insertion/failure behavior.
 
-### Duplicate blacklist policy
-- Blacklist insertion is now schema-complete and monitor moves are transactional.
-- Historical behavior still permits duplicate `fa_black` rows for the same UDID.
-- Phase 5 treats every active row independently: any permanent/future row keeps the UDID blacklisted even if another duplicate row has expired.
-- Decide whether blacklist should become idempotent before adding a unique constraint or deduplication.
-
-### Blacklist expiry cleanup
-- Phase 5 ignores expired blacklist rows at runtime but does not delete them automatically.
-- Decide later whether expired rows should remain as audit history, be archived, or be cleaned periodically.
+### Expired blacklist retention
+- Expired rows are ignored at runtime and now display `已过期` in admin.
+- They are retained as history; no automatic purge/archive job exists.
 
 ## Completed P1 cleanup
 
+### Category large-list administration
+- Phase 7 added true server-side pagination with default 1000 rows, full-database app-name search, server-side type tabs, deferred parent tree construction and lightweight default columns.
+- Phase 8 adds top+bottom pagination, prevents parent-list auto refresh after a successful add, and defaults new apps to paid.
+
+### Category daily statistics
+- Phase 8 removes the admin list write-on-read reset.
+- Daily date identity is now `YYYYMMDD` through `CategoryDailyStat`, fixing cross-month same-day collisions.
+- Existing `cstime=1..31` values migrate lazily on the next hit.
+- Transaction + row lock protects concurrent increments/reset transitions.
+
+### Card generation safety
+- Phase 8 uses cryptographic random bytes while preserving uppercase prefix + 12-hex visible format.
+- Generated batches are unique, checked against existing DB codes, and insert return values/type values are validated.
+- Blank `addtime/usetime/endtime` normalize to `0` to match NOT NULL columns.
+
 ### Shared config reads
-- Phase 3 added `SourceConfigRepository` with a shared 60-second cache and explicit invalidation after config writes/deletes.
-- Public AppStore and dylib config reads use the shared repository.
+- Phase 3 added `SourceConfigRepository` with shared 60-second cache and invalidation after config writes/deletes.
 
-### Category duplicate display/write rules
-- Type display uses `CategoryModel::getTypeList()` instead of a second hardcoded 1..5 mapping.
-- Add/edit color, description-newline and size normalization share one helper while preserving historical behavior.
-
-### Monitor blacklist safety
-- Missing IDs / missing monitor rows are rejected instead of dereferencing null data.
-- Insert + delete is transactional.
-- Phase 5 now inserts all required `fa_black` fields (`udid/addtime/usetime/endtime`).
-
-### Blacklist false-success bug
-- Real testing showed `Black::add()` returned success but inserted nothing because `usetime/endtime` were omitted even though both database columns are `NOT NULL` without defaults.
-- Phase 5 adds `BlacklistPolicy`, complete inserts, insert-result checking, optional expiry, first-hit `usetime`, and active/expired evaluation.
-
-### Kami write consistency
-- Generation + `fa_kmstr` update is transactional.
-- Counts `<= 0` are rejected consistently.
-- Empty `fa_kmstr` state no longer causes an array-offset access on the add form.
+### Blacklist persistence / monitor safety
+- Phase 5 fixed incomplete `fa_black` inserts, false-success, active/expired evaluation and first-hit use time.
+- Monitor -> blacklist remains transactional.
+- Phase 8 adds active duplicate prevention for manual admin add and explicit expired-history display.
 
 ### BaoTa deployment contract
-- Phase 4 fixed `BT_DB_*` credential substitution and the real one-click retest succeeded.
-- Phase 5 adds root `nginx.rewrite` so BaoTa can automatically import the required ThinkPHP pseudo-static rule.
-- CI validates database placeholders and rewrite contract on PHP 7.0 / 8.2 / 8.4.
+- Phase 4 fixed `BT_DB_*` credential substitution after a real MySQL 1045 installation failure.
+- Phase 5 added root `nginx.rewrite`.
+- Fresh release SQL does not preload inherited runtime monitor observations.
 
-## P2 — maintainability / modernization
+## P2 — maintainability
 
 ### Cryptic legacy schema fields
-`fa_category` exposes legacy names such as `bt1a`, `bt1b`, `bt2a`, `bt2b` throughout controllers/views. Add semantic DTO/accessor names before any physical DB migration.
+`fa_category` still exposes names such as `bt1a`, `bt1b`, `bt2a`, `bt2b`. Introduce semantic accessors/DTO names before considering a physical DB migration.
 
 ### Mixed response styles
-Controllers mix `echo + die` with ThinkPHP `json()` responses. Standardize only after HTTP golden tests, because headers/body formatting are part of existing client compatibility.
+Controllers mix `echo + die` with ThinkPHP `json()` responses. Standardize only after HTTP behavior is fully golden-tested because headers/body formatting are part of client compatibility.
 
 ### Security headers/cookies
 Cookie and transport defaults are legacy. Harden per deployment environment rather than changing defaults blindly.
