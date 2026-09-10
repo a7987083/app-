@@ -3,8 +3,8 @@
   "development_branch": "dev/software-source-v1",
   "stable_branch": "main",
   "stable_baseline_commit": "598235962ea328c6558fe4935fe19ba552c1490d",
-  "refactor_phase": 5,
-  "status": "phase_5_blacklist_and_baota_rewrite_ci_verified_ready_for_real_install_test",
+  "refactor_phase": 6,
+  "status": "phase_6_trace_monitor_stabilization_ci_verified",
   "runtime_changes": true,
   "architecture": {
     "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
@@ -12,6 +12,7 @@
     "source_payload_mapper": "application/common/library/AppStorePayload.php",
     "source_config_repository": "application/common/library/SourceConfigRepository.php",
     "blacklist_policy": "application/common/library/BlacklistPolicy.php",
+    "trace_monitor_policy": "application/common/library/TraceMonitorPolicy.php",
     "source_tables": ["fa_config", "fa_category", "fa_kami", "fa_black", "fa_monitor"],
     "admin_app_controller": "application/admin/controller/Category.php",
     "dylib_controller": "application/index/controller/Index.php"
@@ -33,7 +34,13 @@
     "Monitor-to-blacklist and automatic trace blacklist paths now write complete fa_black rows",
     "AppStore and dylib blacklist checks ignore expired rows and record first blacklist hit time",
     "Added root nginx.rewrite for BaoTa automatic ThinkPHP pseudo-static import",
-    "Added blacklist policy, persistence-contract and nginx deployment regression coverage"
+    "Added blacklist policy, persistence-contract and nginx deployment regression coverage",
+    "Phase 5 real deployment and blacklist behavior were user-verified OK",
+    "Extracted legacy 添加者/破解者 trace parsing and 25/40-character gate into TraceMonitorPolicy",
+    "Clarified monitor UI labels from generic abnormal-request wording to source-identity/source-record wording",
+    "Added a reusable terminal trace-monitor probe script",
+    "Added trace monitor policy and integration regression tests",
+    "Phase 6 release seed policy removes historical 2022 fa_monitor observations from fresh BaoTa packages"
   ],
   "validation": {
     "payload_regression_test": "passed",
@@ -42,11 +49,13 @@
     "deployment_contract_test": "passed",
     "blacklist_policy_test": "passed",
     "blacklist_persistence_contract_test": "passed",
-    "phase_4_real_baota_install": "user_reported_success",
-    "phase_5_ci_workflow": "passed_run_34533476250_php_7_0_8_2_8_4",
-    "phase_5_real_baota_install": "not_run",
-    "phase_5_real_blacklist_insert": "not_run",
-    "phase_5_nginx_rewrite_import": "not_run",
+    "trace_monitor_policy_test": "passed",
+    "trace_monitor_contract_test": "passed",
+    "phase_5_real_baota_install": "user_reported_success",
+    "phase_5_real_blacklist_insert": "user_reported_success",
+    "phase_5_nginx_rewrite_import": "user_reported_success",
+    "phase_6_ci_workflow": "passed_run_34535349012_php_7_0_8_2_8_4",
+    "phase_6_real_trace_monitor_probe": "not_run",
     "external_encryption_smoke_test": "not_run",
     "production_regression": "not_claimed"
   },
@@ -55,7 +64,8 @@
     "App-mb.php and Index2.php remain in runtime paths pending production access-log verification",
     "Kami keeps legacy MD5/time/rand generation semantics",
     "Duplicate blacklist rows remain allowed for compatibility",
-    "TLS verification behavior remains unchanged"
+    "TLS verification behavior remains unchanged",
+    "Trace identities are labels supplied by client payload position; the server does not independently prove adder/cracker identity"
   ],
-  "next_task": "Install Phase 5 BaoTa ZIP on a disposable site; verify nginx pseudo-static auto-import, admin blacklist add writes fa_black with usetime/endtime, permanent/temporary expiry behavior, and AppStore/dylib blacklist enforcement"
+  "next_task": "Run the Phase 6 trace monitor probe against a disposable deployment. If successful, keep Phase 6 as the compatibility baseline and move next to Category cs/cstime statistics cleanup with behavior tests before changing runtime semantics."
 }
