@@ -1,0 +1,110 @@
+name: Import ceshi1 source
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: 'Direct URL to ceshi1_com_YFEfj.tar.gz'
+        required: true
+        type: string
+      preserve_deploy:
+        description: 'Keep deploy.sh in repository root'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Download source archive
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ceshi1-import
+          curl -fL --retry 3 --retry-delay 2 "$SOURCE_URL" -o /tmp/ceshi1-import/source.tar.gz
+          test -s /tmp/ceshi1-import/source.tar.gz
+          tar -tzf /tmp/ceshi1-import/source.tar.gz >/dev/null
+
+      - name: Extract and normalize source root
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/ceshi1-import/extract /tmp/ceshi1-import/source
+          mkdir -p /tmp/ceshi1-import/extract /tmp/ceshi1-import/source
+          tar -xzf /tmp/ceshi1-import/source.tar.gz -C /tmp/ceshi1-import/extract
+
+          shopt -s dotglob nullglob
+          entries=(/tmp/ceshi1-import/extract/*)
+          if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
+            cp -a "${entries[0]}/." /tmp/ceshi1-import/source/
+          else
+            cp -a /tmp/ceshi1-import/extract/. /tmp/ceshi1-import/source/
+          fi
+
+          test -f /tmp/ceshi1-import/source/auto_install.json
+          test -f /tmp/ceshi1-import/source/import.sql
+          test -f /tmp/ceshi1-import/source/application/database.php
+          test -f /tmp/ceshi1-import/source/public/index.php
+
+      - name: Replace repository contents
+        env:
+          PRESERVE_DEPLOY: ${{ inputs.preserve_deploy }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ceshi1-preserve
+          if [ "$PRESERVE_DEPLOY" = "true" ] && [ -f deploy.sh ]; then
+            cp -a deploy.sh /tmp/ceshi1-preserve/deploy.sh
+          fi
+
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name .git \
+            ! -name .github \
+            -exec rm -rf {} +
+
+          cp -a /tmp/ceshi1-import/source/. ./
+
+          # Do not import a nested Git repository if the archive contains one.
+          rm -rf .git .github
+          mkdir -p .github/workflows
+
+          git show HEAD:.github/workflows/import-ceshi1.yml > .github/workflows/import-ceshi1.yml
+
+          if [ "$PRESERVE_DEPLOY" = "true" ] && [ -f /tmp/ceshi1-preserve/deploy.sh ]; then
+            cp -a /tmp/ceshi1-preserve/deploy.sh deploy.sh
+          fi
+
+      - name: Validate imported tree
+        run: |
+          set -euo pipefail
+          test -f auto_install.json
+          test -f import.sql
+          test -f application/database.php
+          test -f application/config.php
+          test -f public/index.php
+          test -f public/FRKToHDckx.php
+          test -f vendor/autoload.php
+          echo "files=$(find . -type f ! -path './.git/*' | wc -l)"
+          du -sh .
+
+      - name: Commit and push to main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "import: ceshi1 source"
+          git push origin HEAD:main
