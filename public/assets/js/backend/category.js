@@ -23,6 +23,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 sortName: 'weigh',
                 sidePagination: 'server',
                 pagination: true,
+                paginationVAlign: 'both',
                 pageSize: 1000,
                 pageList: [200, 500, 1000],
                 commonSearch: false,
@@ -61,7 +62,14 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             });
         },
         add: function () {
-            Controller.api.bindevent();
+            // 新增成功后只关闭当前窗口，不自动刷新父级 1000 条列表。
+            Controller.api.bindevent(function (data, ret) {
+                var msg = ret && ret.hasOwnProperty("msg") && ret.msg !== "" ? ret.msg : __('Operation completed');
+                parent.Toastr.success(msg);
+                var index = parent.Layer.getFrameIndex(window.name);
+                parent.Layer.close(index);
+                return false;
+            });
             setTimeout(function () {
                 $("#c-type").trigger("change");
             }, 100);
@@ -112,7 +120,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     setTimeout(syncPickerFromText, 0);
                 });
             },
-            bindevent: function () {
+            bindevent: function (success) {
                 $(document).on("change", "#c-type", function () {
                     $("#c-pid option[data-type='all']").prop("selected", true);
                     $("#c-pid option").removeClass("hide");
@@ -120,7 +128,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     $("#c-pid").data("selectpicker") && $("#c-pid").selectpicker("refresh");
                 });
                 Controller.api.initColorPicker();
-                Form.api.bindevent($("form[role=form]"));
+                Form.api.bindevent($("form[role=form]"), success);
             }
         }
     };
