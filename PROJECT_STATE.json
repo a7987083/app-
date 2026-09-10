@@ -3,8 +3,8 @@
   "development_branch": "dev/software-source-v1",
   "stable_branch": "main",
   "stable_baseline_commit": "598235962ea328c6558fe4935fe19ba552c1490d",
-  "refactor_phase": 6,
-  "status": "phase_6_trace_monitor_stabilization_ci_verified",
+  "refactor_phase": 7,
+  "status": "phase_7_category_admin_paging_ci_verified_ready_for_real_test",
   "runtime_changes": true,
   "architecture": {
     "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
@@ -40,7 +40,14 @@
     "Clarified monitor UI labels from generic abnormal-request wording to source-identity/source-record wording",
     "Added a reusable terminal trace-monitor probe script",
     "Added trace monitor policy and integration regression tests",
-    "Phase 6 release seed policy removes historical 2022 fa_monitor observations from fresh BaoTa packages"
+    "Phase 6 release seed policy removes historical 2022 fa_monitor observations from fresh BaoTa packages",
+    "Phase 7 changes Category admin from full-list client rendering to true server-side pagination",
+    "Phase 7 defaults to 1000 rows per page with 200/500/1000 page-size choices",
+    "Phase 7 quick search now runs against the full database by application name instead of only in-memory loaded rows",
+    "Phase 7 type tabs are filtered by the server and reset to page 1",
+    "Phase 7 hides software description, remark, app icon and weigh columns by default while keeping the column chooser",
+    "Phase 7 index requests no longer build the full category Tree; parentList construction is deferred to add/edit",
+    "Phase 7 Category list query sends only the fields required by the table/column chooser"
   ],
   "validation": {
     "payload_regression_test": "passed",
@@ -51,13 +58,24 @@
     "blacklist_persistence_contract_test": "passed",
     "trace_monitor_policy_test": "passed",
     "trace_monitor_contract_test": "passed",
+    "category_listing_contract_test": "passed",
     "phase_5_real_baota_install": "user_reported_success",
     "phase_5_real_blacklist_insert": "user_reported_success",
     "phase_5_nginx_rewrite_import": "user_reported_success",
-    "phase_6_ci_workflow": "passed_run_34535349012_php_7_0_8_2_8_4",
-    "phase_6_real_trace_monitor_probe": "not_run",
+    "phase_6_ci_workflow": "passed",
+    "phase_7_ci_workflow": "passed_run_34539342456_php_7_0_8_2_8_4",
+    "phase_7_real_admin_paging_search_test": "not_run",
+    "phase_7_real_browser_memory_test": "not_run",
     "external_encryption_smoke_test": "not_run",
     "production_regression": "not_claimed"
+  },
+  "performance_findings": {
+    "active_apps_observed": 4709,
+    "appstore_plain_ttfb_seconds_observed": 0.102178,
+    "appstore_plain_total_seconds_observed": 0.110784,
+    "appstore_encrypted_ttfb_seconds_observed": 10.464952,
+    "appstore_encrypted_total_seconds_observed": 10.476304,
+    "conclusion": "Existing opencry whole-payload external encryption is the dominant public /appstore latency; protocol/encryption behavior is intentionally unchanged in Phase 7."
   },
   "intentionally_preserved_risks": [
     "Category list-page daily reset still writes cs/cstime using day-of-month",
@@ -65,7 +83,8 @@
     "Kami keeps legacy MD5/time/rand generation semantics",
     "Duplicate blacklist rows remain allowed for compatibility",
     "TLS verification behavior remains unchanged",
-    "Trace identities are labels supplied by client payload position; the server does not independently prove adder/cracker identity"
+    "Trace identities are labels supplied by client payload position; the server does not independently prove adder/cracker identity",
+    "appstore/appstore_v2 encryption remains whole-payload and depends on the existing external encryption service"
   ],
-  "next_task": "Run the Phase 6 trace monitor probe against a disposable deployment. If successful, keep Phase 6 as the compatibility baseline and move next to Category cs/cstime statistics cleanup with behavior tests before changing runtime semantics."
+  "next_task": "Deploy the Phase 7 BaoTa package to a disposable/real-compatible site and verify Category admin: first page returns 1000 rows, page navigation works, quick search covers the whole dataset, type tabs reset to page 1, hidden columns can be re-enabled, add/edit/delete/batch actions still work, and browser memory is materially lower than the old full-list rendering."
 }
