@@ -3,6 +3,7 @@
 namespace app\admin\controller;
 
 use app\common\controller\Backend;
+use app\common\library\BlacklistPolicy;
 use think\Db;
 
 /**
@@ -22,7 +23,7 @@ class Monitor extends Backend
     }
 
     /**
-     * 将监控记录移动到黑名单。
+     * 将监控记录移动到永久黑名单。
      * 保持历史行为：每次操作仍新增一条 fa_black 记录，再删除对应 monitor。
      */
     public function black()
@@ -39,10 +40,10 @@ class Monitor extends Backend
 
         Db::startTrans();
         try {
-            Db::table('fa_black')->insert([
-                'udid' => $res['udid'],
-                'addtime' => time(),
-            ]);
+            $inserted = Db::table('fa_black')->insert(BlacklistPolicy::insertData($res['udid']));
+            if ($inserted !== 1) {
+                throw new \RuntimeException('黑名单添加失败');
+            }
             Db::table('fa_monitor')->where(['id' => $id])->delete();
             Db::commit();
         } catch (\Exception $e) {
