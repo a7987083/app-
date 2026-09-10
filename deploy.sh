@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_VERSION="1.2.3-source-flow-ext-auto"
+DEPLOY_VERSION="1.2.4-source-flow-custom-domain"
 REPO_URL="https://github.com/a7987083/app-.git"
 BRANCH="main"
 DEFAULT_DOMAIN="app3.zonoeios.xyz"
-DEFAULT_DIR="/www/wwwroot/${DEFAULT_DOMAIN}"
 PHP_BIN=""
 APP_DIR=""
 DOMAIN=""
@@ -22,13 +21,16 @@ printf '极速网络 Apple 签名系统 - 一键部署\n'
 printf 'deploy version: %s\n' "$DEPLOY_VERSION"
 printf '==================================\n'
 
-read -r -p "站点目录 [${DEFAULT_DIR}]: " APP_DIR || true
-APP_DIR="${APP_DIR:-$DEFAULT_DIR}"
+# 先输入域名，再由域名动态生成默认站点目录。
 read -r -p "域名 [${DEFAULT_DOMAIN}]: " DOMAIN || true
 DOMAIN="${DOMAIN:-$DEFAULT_DOMAIN}"
+DEFAULT_DIR="/www/wwwroot/${DOMAIN}"
+read -r -p "站点目录 [${DEFAULT_DIR}]: " APP_DIR || true
+APP_DIR="${APP_DIR:-$DEFAULT_DIR}"
 
 command -v git >/dev/null 2>&1 || die "缺少 git"
 
+# 源码 auto_install.json 指定 PHP 8.2；优先使用宝塔 PHP 8.2。
 for p in /www/server/php/82/bin/php /www/server/php/84/bin/php /www/server/php/83/bin/php "$(command -v php 2>/dev/null || true)"; do
     if [ -n "$p" ] && [ -x "$p" ]; then
         if "$p" -r 'exit(version_compare(PHP_VERSION,"8.2.0",">=")?0:1);' >/dev/null 2>&1; then
@@ -59,6 +61,7 @@ if [[ "$PHP_VER" != 8.2.* ]]; then
     warn "源码 auto_install.json 指定 PHP 8.2；当前使用 ${PHP_VER}，建议宝塔站点最终切换 PHP 8.2。"
 fi
 
+# 已有项目保留配置；不存在时从 GitHub 拉取。
 if [ -f "$APP_DIR/artisan" ] && [ -f "$APP_DIR/config/api.php" ]; then
     info "检测到已有项目源码，保留现有文件并继续环境配置：$APP_DIR"
 elif [ -e "$APP_DIR" ] && [ "$(find "$APP_DIR" -mindepth 1 -maxdepth 1 2>/dev/null | head -n1)" ]; then
@@ -100,7 +103,6 @@ append_opcache_ini() {
     local so="$2"
     [ -f "$ini" ] || return 0
 
-    # 若已有任何启用 OPcache 的 zend_extension 行，不重复追加。
     if ! grep -Eqi '^[[:space:]]*zend_extension[[:space:]]*=.*opcache(\.so)?([[:space:]]|$)' "$ini"; then
         {
             printf '\n; zonoe deploy: enable Zend OPcache\n'
@@ -122,12 +124,10 @@ enable_existing_extension() {
     [ -f "$so" ] || return 1
 
     if [ "$ext" = "opcache" ]; then
-        # 先用 -n + 指定 so 验证刚编译出的 Zend 扩展本身可加载。
         if ! "$PHP_BIN" -n -d "zend_extension=${so}" -d opcache.enable_cli=1 -r 'exit(function_exists("opcache_get_status") ? 0 : 1);' >/dev/null 2>&1; then
             warn "已找到 ${so}，但当前 PHP 无法直接加载该 OPcache 模块"
             return 1
         fi
-
         append_opcache_ini "$PHP_CLI_INI" "$so"
         append_opcache_ini "$PHP_FPM_INI" "$so"
     else
@@ -184,7 +184,6 @@ compile_opcache_exact_version() {
     ) || { rm -rf "$tmp"; return 1; }
     rm -rf "$tmp"
 
-    # php-config 是权威来源；优先使用它返回的 extension-dir。
     EXT_DIR="$($phpconfig --extension-dir 2>/dev/null || true)"
     if [ -z "$EXT_DIR" ] || [ ! -d "$EXT_DIR" ]; then
         EXT_DIR="$($PHP_BIN -r 'echo ini_get("extension_dir");' 2>/dev/null || true)"
@@ -238,16 +237,30 @@ MISSING_CORE=""
 for ext in pdo openssl zip dom; do php_ext_loaded "$ext" || MISSING_CORE="${MISSING_CORE} ${ext}"; done
 [ -z "$MISSING_CORE" ] || die "PHP 缺少 composer.json 要求的基础扩展:${MISSING_CORE}。这些不在源码 auto_install.json 的自动安装列表中。"
 
-DISABLED=",$($PHP_BIN -r 'echo preg_replace("/\\s+/","",ini_get("disable_functions"));' 2>/dev/null || true),"
+DISABLED_RAW="$($PHP_BIN -r 'echo preg_replace("/\\s+/","",ini_get("disable_functions"));' 2>/dev/null || true)"
+DISABLED=",${DISABLED_RAW},"
 for fn in proc_open pcntl_signal pcntl_alarm symlink; do
     case "$DISABLED" in *",${fn},"*) die "PHP 禁用了源码 auto_install.json 要求的函数: ${fn}" ;; esac
 done
 info "PHP 扩展/函数检查通过"
 
-if command -v composer >/dev/null 2>&1; then COMPOSER="$(command -v composer)"; elif [ -x /usr/local/bin/composer ]; then COMPOSER="/usr/local/bin/composer"; else die "未找到 composer"; fi
-info "Composer: $($COMPOSER --version 2>/dev/null | head -n1)"
-COMPOSER_ALLOW_SUPERUSER=1 "$COMPOSER" install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+# Composer 固定使用当前选中的宝塔 PHP。putenv 仅对 Composer 进程临时解除，不修改网站 PHP/FPM 全局安全配置。
+if command -v composer >/dev/null 2>&1; then
+    COMPOSER="$(command -v composer)"
+elif [ -x /usr/local/bin/composer ]; then
+    COMPOSER="/usr/local/bin/composer"
+else
+    die "未找到 composer"
+fi
 
+COMPOSER_DISABLED="$(printf '%s' "$DISABLED_RAW" | tr ',' '\n' | sed '/^[[:space:]]*$/d' | grep -vx 'putenv' | paste -sd, - || true)"
+info "Composer: ${COMPOSER}（使用 ${PHP_BIN} 执行）"
+if [[ ",${DISABLED_RAW}," == *",putenv,"* ]]; then
+    info "检测到 putenv 被禁用：仅在 Composer 当前进程临时允许，不修改全局 php.ini"
+fi
+COMPOSER_ALLOW_SUPERUSER=1 "$PHP_BIN" -d "disable_functions=${COMPOSER_DISABLED}" "$COMPOSER" install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+# 源码 config/app.php 的 key/url/name 等来自 config/api.php；数据库与管理员初始化继续交给原生 /install。
 mkdir -p storage/AppleSignV2 storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
 chmod 755 storage/AppleSignV2
 chown -R www:www storage bootstrap/cache 2>/dev/null || true
@@ -257,6 +270,7 @@ rm -f index.html 404.html .user.ini
 
 "$PHP_BIN" artisan optimize:clear || die "Laravel 缓存清理失败"
 
+# 根据用户输入域名动态匹配宝塔站点配置。
 NGINX_CONF="/www/server/panel/vhost/nginx/${DOMAIN}.conf"
 REWRITE_CONF="/www/server/panel/vhost/rewrite/${DOMAIN}.conf"
 if [ -f "$NGINX_CONF" ]; then
@@ -273,6 +287,7 @@ location / {
 EOF
     info "运行目录已设置为: ${APP_DIR}/public"
     info "伪静态已写入: ${REWRITE_CONF}"
+
     if [ -x /www/server/nginx/sbin/nginx ]; then
         /www/server/nginx/sbin/nginx -t || die "Nginx 配置检查失败，已保留 .bak.deploy-* 备份"
         /www/server/nginx/sbin/nginx -s reload || die "Nginx reload 失败"
@@ -284,12 +299,13 @@ EOF
     fi
 else
     warn "未找到宝塔站点配置: ${NGINX_CONF}"
-    warn "请将网站运行目录设置为 ${APP_DIR}/public，并配置 Laravel 入口伪静态。"
+    warn "请确认宝塔已创建域名 ${DOMAIN} 的网站。运行目录应为 ${APP_DIR}/public。"
 fi
 
 printf '\n==================================\n'
 printf '基础部署完成（源码原生安装流程）\n'
 printf 'deploy version: %s\n' "$DEPLOY_VERSION"
+printf '域名: %s\n' "$DOMAIN"
 printf '源码目录: %s\n' "$APP_DIR"
 printf '运行目录: %s/public\n' "$APP_DIR"
 printf 'PHP: %s\n' "$PHP_VER"
