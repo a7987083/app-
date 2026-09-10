@@ -13,6 +13,7 @@
 - Runtime tables: `fa_config`, `fa_category`, `fa_kami`, `fa_black`, `fa_monitor`.
 - Source protocol mapping: `application/common/library/AppStorePayload.php`.
 - Shared source config/cache: `application/common/library/SourceConfigRepository.php`.
+- Shared blacklist semantics: `application/common/library/BlacklistPolicy.php`.
 - Dylib/UDID endpoint and public homepage: `application/index/controller/Index.php`.
 - App administration: `application/admin/controller/Category.php` + category views/JS.
 - Card / monitor / blacklist administration: `Kami.php`, `Monitor.php`, `Black.php`.
@@ -24,10 +25,11 @@
 2. `App::list()` parses request metadata and legacy trace payload.
 3. `SourceConfigRepository` provides one cached config snapshot.
 4. Blacklist / monitor side effects are applied where configured.
-5. Card state determines whether locked download URLs are exposed.
-6. `fa_category` rows are read.
-7. `AppStorePayload` maps database rows into the legacy public schema.
-8. Plain responses strip runtime `UDID` / `Time`; encrypted responses retain the existing `appstore` / `appstore_v2` wrapper behavior.
+5. Active blacklist lookup uses `BlacklistPolicy`; `endtime=0` means permanent and expired rows are ignored.
+6. Card state determines whether locked download URLs are exposed.
+7. `fa_category` rows are read.
+8. `AppStorePayload` maps database rows into the legacy public schema.
+9. Plain responses strip runtime `UDID` / `Time`; encrypted responses retain the existing `appstore` / `appstore_v2` wrapper behavior.
 
 ## Baseline Protocol Contract
 Source keys preserved: `name`, `message`, `identifier`, `sourceURL`, `sourceicon`, `payURL`, `unlockURL`, `apps`.
@@ -67,14 +69,28 @@ Important legacy semantics preserved:
 - Root cause was release packaging, not login logic: the Phase 3 ZIP overlaid the historical `user/dbname/pwd` database template over the branch `application/database.php`.
 - The authoritative release database config now uses BaoTa placeholders `BT_DB_NAME`, `BT_DB_USERNAME`, `BT_DB_PASSWORD`.
 - Added `tests/deployment_contract_test.php`; CI rejects historical release placeholders and validates `auto_install.json` deployment metadata.
-- Release verification must inspect the actual ZIP copy of `application/database.php` before delivery.
+- Phase 4 BaoTa real-install retest was reported successful by the user.
 - `App-mb.php` and `Index2.php` were statically audited: no repository route/reference found. They remain until production access logs confirm no direct external use.
 
+## Refactor Phase 5
+- Real admin testing showed blacklist add returned `code=1` but no row was inserted.
+- Database inspection proved `fa_black.usetime` and `fa_black.endtime` are `NOT NULL` without defaults, while legacy `Black::add()` inserted only `udid/addtime` and never checked `insert()` result.
+- Added `BlacklistPolicy` and changed all three blacklist insertion paths (admin add, monitor move, automatic trace blacklist) to persist complete rows.
+- `Black::add()` validates input, accepts optional expiration, checks insert result, and reports database failure rather than false success.
+- Blacklist list/add/edit UI now includes `usetime/endtime`; `usetime=0` is `未使用`, `endtime=0` is `永久`.
+- AppStore and dylib blacklist checks ignore expired rows and record first blacklist hit in `usetime`.
+- Added root `nginx.rewrite` with the ThinkPHP rule requested for BaoTa one-click pseudo-static auto import.
+- Deployment contract now requires the rewrite file.
+- Added blacklist policy and persistence-contract regression tests.
+
 ## CI Validation
-Latest Phase 4 workflow run `34526778715` completed successfully. Standard matrix covers PHP 7.0 / 8.2 / 8.4 and runs AppStore, config-repository and deployment-contract regression tests.
+Standard matrix covers PHP 7.0 / 8.2 / 8.4 and runs AppStore, config-repository, blacklist and deployment regression tests. Final Phase 5 run must pass before release ZIP delivery.
 
 ## Validation Not Yet Claimed
-- Phase 4 BaoTa ZIP still requires a fresh disposable-site install test.
+- Phase 5 BaoTa ZIP still requires one real disposable-site install.
+- Verify BaoTa imported `nginx.rewrite` automatically.
+- Verify admin blacklist add creates `fa_black` row with `usetime=0` and expected `endtime`.
+- Verify first `/appstore` or valid `/dylib` blacklist hit stamps `usetime`, permanent blacklist blocks, and expired temporary blacklist no longer blocks.
 - External `appstore` / `appstore_v2` encryption services have not been smoke-tested after refactors.
 - Production regression is not claimed.
 
@@ -82,7 +98,7 @@ Latest Phase 4 workflow run `34526778715` completed successfully. Standard matri
 - `Category::index()` still performs the historical write-on-read daily reset using day-of-month.
 - `App-mb.php` and `Index2.php` remain pending production access-log verification.
 - Kami generation keeps the legacy MD5/time/rand algorithm.
-- Monitor blacklist flow keeps historical duplicate-row behavior.
+- Duplicate blacklist rows remain allowed for compatibility.
 - TLS verification behavior remains unchanged.
 
 ## Stability Rules
@@ -91,7 +107,7 @@ Latest Phase 4 workflow run `34526778715` completed successfully. Standard matri
 3. Keep protocol changes, framework upgrades, TLS hardening and schema migration out of compatibility refactor commits.
 4. Prefer small reversible commits.
 5. Every protocol-affecting change requires differential/golden tests first.
-6. BaoTa release ZIP must contain root `auto_install.json` + `import.sql`; its archived database config must contain only `BT_DB_*` deployment placeholders before installation.
+6. BaoTa release ZIP must contain root `auto_install.json`, `import.sql`, and `nginx.rewrite`; archived `application/database.php` must contain only `BT_DB_*` deployment placeholders before installation.
 
 ## Next Recommended Step
-Install the Phase 4 BaoTa package on a disposable test site. Confirm BaoTa rewrites all three database placeholders, `admin / 123456` login succeeds without HTTP 500, then run plaintext / `appstore` / `appstore_v2` plus valid-card / expired-card / blacklist HTTP smoke tests before any merge to `main`.
+Install the Phase 5 BaoTa package on a disposable site. Confirm database credential substitution and admin login still work, verify pseudo-static rule import, then test permanent/temporary blacklist creation and `/appstore` / `/dylib` enforcement. If these pass, Phase 5 is a suitable new stable candidate.
