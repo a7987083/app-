@@ -1,5 +1,34 @@
 # Development Changelog
 
+## 2026-09-11 — Refactor Phase 3
+
+Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
+Development branch: `dev/software-source-v1`
+
+### Refactored
+- Added `application/common/library/SourceConfigRepository.php` with a shared 60-second `fa_config` cache.
+- `App.php` now reuses one config snapshot for blacklist switches, encryption mode and source metadata.
+- `Index.php::dylibConfig()` now projects its legacy output from the shared repository instead of scanning `fa_config` separately.
+- `Config` model invalidates the source-config cache after writes/deletes.
+
+### Tests / compatibility
+- Added `tests/source_config_repository_test.php`.
+- Extended GitHub Actions to PHP 7.0, 8.2 and 8.4.
+- Replaced PHP 7.1 array destructuring in the equivalence test with `list()` so the test suite itself supports PHP 7.0.
+- GitHub Actions Run `34523737358` passed all three PHP versions.
+
+### Deployment artifact
+- Prepared a Baota one-click deployment ZIP from the stable deployed filesystem baseline plus current refactor runtime files.
+- ZIP root contains `auto_install.json` and a full `import.sql` database seed.
+- `import.sql` contains FastAdmin/software-source tables plus current category/dylib config additions.
+- Initial admin credentials are normalized to `admin / 123456`.
+- `application/database.php` in the package is sanitized; no live database password is shipped.
+
+### Still not claimed
+- No real Baota one-click installation has been executed from this artifact yet.
+- No live/staging HTTP matrix has been run against the deployed Phase 3 package.
+- External appstore/appstore_v2 encryption smoke tests remain pending.
+
 ## 2026-09-11 — Refactor Phase 2
 
 Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
@@ -19,10 +48,7 @@ Development branch: `dev/software-source-v1`
 
 ### CI
 - Added `.github/workflows/regression.yml`.
-- Matrix: PHP 8.2 and PHP 8.4.
-- Lints all PHP files changed by refactor phases 1/2.
-- Runs both standalone AppStore regression suites.
-- Workflow was configured successfully; a GitHub run had not appeared yet at the time of this update, so CI pass status is not claimed here.
+- Initial matrix was PHP 8.2 and PHP 8.4; Phase 3 extends it to PHP 7.0 as well.
 
 ### Intentionally unchanged
 - Stable `main` branch.
