@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_VERSION="1.3.0-baota-auto-site"
+DEPLOY_VERSION="1.3.1-baota-native-site"
 REPO_URL="https://github.com/a7987083/app-.git"
 BRANCH="main"
 DEFAULT_DOMAIN="app3.zonoeios.xyz"
@@ -65,7 +65,8 @@ if [[ "$PHP_VER" != 8.2.* ]]; then
 fi
 
 # 宝塔 11.5.0 实机源码入口：/www/server/panel/class/panelSite.py
-# 使用宝塔自身 panelSite.AddSite 注册网站，而不是手写 SQLite/vhost。
+# 只让宝塔创建/登记普通 PHP 站点；Git 源码仍由本脚本自己管理。
+# 注意：不能把 deploy_type 设为 git，否则宝塔会进入 git.add_gitmanager_site，要求 repo/branch 且拒绝非空目录。
 if [ -x /www/server/panel/pyenv/bin/python3 ]; then
     PANEL_PY="/www/server/panel/pyenv/bin/python3"
 elif [ -x /www/server/panel/pyenv/bin/python ]; then
@@ -119,17 +120,19 @@ try:
     g.ftp='false'
     g.sql='false'
     g.type_id=0
+    g.type='PHP'
     g.project_type='PHP'
-    g.deploy_type='git'
-    g.codeing='utf8mb4'
+    g.codeing='utf8'
     g.datauser=''
     g.datapassword=''
     g.ftp_username=''
     g.ftp_password=''
     g.set_ssl='0'
 
+    # 不传 deploy_type=git。宝塔按普通 PHP 站点流程生成 vhost/DB 记录；
+    # init_site_files 只在文件不存在时创建 .user.ini/index.html/404.html，不覆盖已有 Laravel 源码。
     res=panelSite().AddSite(g)
-    if not isinstance(res, dict) or not res.get('status'):
+    if not isinstance(res, dict) or not res.get('siteStatus'):
         print('BT_ERROR={}'.format(json.dumps(res, ensure_ascii=False)))
         sys.exit(21)
 
@@ -169,7 +172,18 @@ REWRITE_CONF="/www/server/panel/vhost/rewrite/${DOMAIN}.conf"
 if [ -f "$APP_DIR/artisan" ] && [ -f "$APP_DIR/config/api.php" ]; then
     info "检测到已有项目源码，保留现有文件并继续环境配置：$APP_DIR"
 elif [ -e "$APP_DIR" ] && [ "$(find "$APP_DIR" -mindepth 1 -maxdepth 1 2>/dev/null | head -n1)" ]; then
-    die "目录已存在且不是当前项目：$APP_DIR。请先备份/清理后重试。"
+    # 新建宝塔站点会生成默认 .user.ini/index.html/404.html；这三类文件不算业务源码冲突。
+    NON_DEFAULT="$(find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name '.user.ini' ! -name 'index.html' ! -name '404.html' 2>/dev/null | head -n1 || true)"
+    if [ -n "$NON_DEFAULT" ]; then
+        die "目录已存在且不是当前项目：$APP_DIR。请先备份/清理后重试。"
+    fi
+    rm -f "$APP_DIR/index.html" "$APP_DIR/404.html"
+    if [ -e "$APP_DIR/.user.ini" ]; then
+        chattr -i "$APP_DIR/.user.ini" 2>/dev/null || true
+        rm -f "$APP_DIR/.user.ini"
+    fi
+    info "从 GitHub 拉取源码..."
+    git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
 else
     mkdir -p "$(dirname "$APP_DIR")"
     info "从 GitHub 拉取源码..."
@@ -356,13 +370,18 @@ find storage bootstrap/cache -type f -exec chmod 664 {} +
 # 原生安装器需要写 config/api.php
 chown www:www config/api.php 2>/dev/null || true
 chmod 664 config/api.php 2>/dev/null || true
-rm -f index.html 404.html .user.ini
+# 宝塔普通建站可能创建默认页；Laravel 不使用它们。
+rm -f index.html 404.html
+if [ -e .user.ini ]; then
+    chattr -i .user.ini 2>/dev/null || true
+    rm -f .user.ini
+fi
 
 "$PHP_BIN" artisan optimize:clear || die "Laravel 缓存清理失败"
 
 # 用宝塔自身 API 确保 PHP 版本=82、运行目录=/public、Laravel 伪静态。
 baota_configure_site() {
-    # SetSiteRunPath 会移动旧运行目录的 .user.ini；git 模式建站没有该文件，临时创建以保持宝塔自身流程干净。
+    # SetSiteRunPath 会移动旧运行目录的 .user.ini；若已被源码清理，则临时创建空文件以避免 mv 噪声。
     local temp_user_ini=0
     if [ ! -e "$APP_DIR/.user.ini" ] && [ ! -e "$APP_DIR/public/.user.ini" ]; then
         : > "$APP_DIR/.user.ini"
@@ -419,8 +438,7 @@ try:
         open(rewrite_file, 'a').close()
     sites=json.dumps([{'id': int(site_id), 'name': domain, 'file': rewrite_file}], ensure_ascii=False)
     g=Get(sites=sites, rewrite_data=rewrite_data)
-    res=ps.SetRewriteLists(g)
-    # 该接口返回批量结果结构；最终再用 checkWebConfig 与文件内容做硬验证。
+    ps.SetRewriteLists(g)
     if not os.path.exists(rewrite_file):
         print('rewrite file missing after SetRewriteLists')
         sys.exit(33)
@@ -443,6 +461,7 @@ except Exception:
 PY
     local rc=$?
     if [ "$temp_user_ini" -eq 1 ]; then
+        chattr -i "$APP_DIR/public/.user.ini" 2>/dev/null || true
         rm -f "$APP_DIR/.user.ini" "$APP_DIR/public/.user.ini" 2>/dev/null || true
     fi
     [ "$rc" -eq 0 ] || die "宝塔站点配置失败"
