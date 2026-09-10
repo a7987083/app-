@@ -41,6 +41,14 @@ class Black extends Backend
                 }
             }
 
+            $existingRows = Db::table('fa_black')
+                ->where('udid', $udid)
+                ->order('id desc')
+                ->select();
+            if (BlacklistPolicy::findActive($existingRows)) {
+                $this->error('该UDID已在有效黑名单中');
+            }
+
             try {
                 $result = Db::table('fa_black')->insert(BlacklistPolicy::insertData($udid, time(), $endtime));
             } catch (\Exception $e) {
