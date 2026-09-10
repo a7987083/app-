@@ -2,6 +2,7 @@
 
 namespace app\common\model;
 
+use app\common\library\SourceConfigRepository;
 use think\Model;
 
 /**
@@ -10,24 +11,28 @@ use think\Model;
 class Config extends Model
 {
 
-    // 表名,不含前缀
     protected $name = 'config';
-    // 自动写入时间戳字段
     protected $autoWriteTimestamp = false;
-    // 定义时间戳字段名
     protected $createTime = false;
     protected $updateTime = false;
-    // 追加属性
-    protected $append = [
-    ];
+    protected $append = [];
 
     /**
-     * 读取配置类型
-     * @return array
+     * Keep the public source config cache coherent with admin writes/deletes.
      */
+    protected static function init()
+    {
+        self::event('after_write', function () {
+            SourceConfigRepository::forget();
+        });
+        self::event('after_delete', function () {
+            SourceConfigRepository::forget();
+        });
+    }
+
     public static function getTypeList()
     {
-        $typeList = [
+        return [
             'string'   => __('String'),
             'text'     => __('Text'),
             'editor'   => __('Editor'),
@@ -47,12 +52,11 @@ class Config extends Model
             'array'    => __('Array'),
             'custom'   => __('Custom'),
         ];
-        return $typeList;
     }
 
     public static function getRegexList()
     {
-        $regexList = [
+        return [
             'required' => '必选',
             'digits'   => '数字',
             'letters'  => '字母',
@@ -69,7 +73,6 @@ class Config extends Model
             'username' => '用户名',
             'password' => '密码'
         ];
-        return $regexList;
     }
 
     public function getExtendAttr($value, $data)
@@ -82,10 +85,6 @@ class Config extends Model
         return $result;
     }
 
-    /**
-     * 读取分类分组列表
-     * @return array
-     */
     public static function getGroupList()
     {
         $groupList = config('site.configgroup');
@@ -117,11 +116,6 @@ class Config extends Model
         return $fieldarr ? array_combine($fieldarr, $valuearr) : [];
     }
 
-    /**
-     * 将字符串解析成键值数组
-     * @param string $text
-     * @return array
-     */
     public static function decode($text, $split = "\r\n")
     {
         $content = explode($split, $text);
@@ -135,11 +129,6 @@ class Config extends Model
         return $arr;
     }
 
-    /**
-     * 将键值数组转换为字符串
-     * @param array $array
-     * @return string
-     */
     public static function encode($array, $split = "\r\n")
     {
         $content = '';
@@ -153,15 +142,10 @@ class Config extends Model
         return $content;
     }
 
-    /**
-     * 本地上传配置信息
-     * @return array
-     */
     public static function upload()
     {
         $uploadcfg = config('upload');
-
-        $upload = [
+        return [
             'cdnurl'    => $uploadcfg['cdnurl'],
             'uploadurl' => $uploadcfg['uploadurl'],
             'bucket'    => 'local',
@@ -170,7 +154,5 @@ class Config extends Model
             'multipart' => [],
             'multiple'  => $uploadcfg['multiple'],
         ];
-        return $upload;
     }
-
 }
