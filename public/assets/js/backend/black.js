@@ -2,7 +2,6 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
 
     var Controller = {
         index: function () {
-            // 初始化表格参数配置
             Table.api.init({
                 extend: {
                     index_url: 'black/index' + location.search,
@@ -16,7 +15,6 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
 
             var table = $("#table");
 
-            // 初始化表格
             table.bootstrapTable({
                 url: $.fn.bootstrapTable.defaults.extend.index_url,
                 pk: 'id',
@@ -26,13 +24,14 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {checkbox: true},
                         {field: 'id', title: __('Id')},
                         {field: 'udid', title: __('UDID设备码')},
-                        {field: 'addtime', title: __('添加时间'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
+                        {field: 'addtime', title: __('添加时间'), operate: 'RANGE', addclass: 'datetimerange', formatter: Table.api.formatter.datetime},
+                        {field: 'usetime', title: __('使用时间'), operate: 'RANGE', addclass: 'datetimerange', formatter: Controller.api.formatter.useTime},
+                        {field: 'endtime', title: __('到期时间'), operate: 'RANGE', addclass: 'datetimerange', formatter: Controller.api.formatter.endTime},
                         {field: 'operate', title: __('Operate'), table: table, events: Table.api.events.operate, formatter: Table.api.formatter.operate}
                     ]
                 ]
             });
 
-            // 为表格绑定事件
             Table.api.bindevent(table);
         },
         add: function () {
@@ -42,6 +41,20 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             Controller.api.bindevent();
         },
         api: {
+            formatter: {
+                useTime: function (value, row, index) {
+                    if (!value || parseInt(value, 10) === 0) {
+                        return '<span class="text-muted">未使用</span>';
+                    }
+                    return Table.api.formatter.datetime.apply(this, arguments);
+                },
+                endTime: function (value, row, index) {
+                    if (!value || parseInt(value, 10) === 0) {
+                        return '<span class="text-success">永久</span>';
+                    }
+                    return Table.api.formatter.datetime.apply(this, arguments);
+                }
+            },
             bindevent: function () {
                 Form.api.bindevent($("form[role=form]"));
             }
