@@ -3,8 +3,8 @@
   "development_branch": "dev/software-source-v1",
   "stable_branch": "main",
   "stable_baseline_commit": "598235962ea328c6558fe4935fe19ba552c1490d",
-  "refactor_phase": 3,
-  "status": "phase_3_code_verified_deploy_package_prepared",
+  "refactor_phase": 4,
+  "status": "phase_4_deployment_hardening_code_verified",
   "runtime_changes": true,
   "architecture": {
     "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
@@ -26,27 +26,29 @@
     "Invalidated source config cache after Config model writes/deletes",
     "Added source-config mapping regression test",
     "Extended CI to PHP 7.0, 8.2 and 8.4",
-    "Made legacy equivalence test PHP 7.0 compatible",
-    "Prepared a Baota one-click deployment artifact with root auto_install.json and import.sql"
+    "Added a deployment contract regression test that requires BaoTa BT_DB_NAME/BT_DB_USERNAME/BT_DB_PASSWORD placeholders",
+    "CI now rejects legacy release placeholders user/dbname/pwd",
+    "Audited App-mb.php and Index2.php: no repository route/reference found; files remain because external production access is not yet disproved"
   ],
   "validation": {
     "source_inspection": "done",
     "payload_regression_test": "passed",
     "legacy_equivalence_test": "passed",
     "source_config_repository_test": "passed",
-    "phase_3_ci_workflow": "passed_run_34523737358_php_7_0_8_2_8_4",
-    "deployment_zip_structure": "verified_root_auto_install_and_import_sql",
-    "live_http_integration": "not_run",
-    "baota_real_install": "not_run",
+    "deployment_contract_test": "passed",
+    "phase_4_ci_workflow": "passed_run_34526591350_php_7_0_8_2_8_4",
+    "phase_3_real_baota_install": "failed_database_config_release_packaging_used_legacy_dbname_placeholder",
+    "phase_4_baota_release_fix": "prepared_from_branch_database_config_with_bt_db_placeholders",
+    "live_http_integration": "pending_retest",
     "external_encryption_smoke_test": "not_run",
     "production_regression": "not_claimed"
   },
   "intentionally_preserved_risks": [
     "Category list-page daily reset still writes cs/cstime using day-of-month",
-    "App-mb.php and Index2.php remain in runtime paths pending deployment usage verification",
+    "App-mb.php and Index2.php remain in runtime paths pending production access-log verification",
     "Kami keeps legacy MD5/time/rand generation semantics",
     "Monitor blacklist flow keeps historical duplicate-row behavior",
     "TLS verification behavior remains unchanged"
   ],
-  "next_task": "Install the Phase 3 Baota package on a disposable test site and run plaintext/appstore/appstore_v2 plus card/blacklist HTTP smoke tests before any main merge"
+  "next_task": "Retest the Phase 4 BaoTa package on a disposable site; verify database credentials are substituted, admin/123456 login works, then run plaintext/appstore/appstore_v2 and card/blacklist HTTP smoke tests"
 }
