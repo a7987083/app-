@@ -78,10 +78,23 @@ class App
 
         if ($autoBlack == '1') {
             $black = $this->activeBlacklist($udid);
-            if (!$black) {
-                Db::table('fa_black')->insert(BlacklistPolicy::insertData($udid));
+            if ($black) {
+                Db::table('fa_monitor')->where(['udid' => $udid])->delete();
+                return;
             }
-            Db::table('fa_monitor')->where(['udid' => $udid])->delete();
+
+            Db::startTrans();
+            try {
+                $inserted = Db::table('fa_black')->insert(BlacklistPolicy::insertData($udid));
+                if ($inserted !== 1) {
+                    Db::rollback();
+                    return;
+                }
+                Db::table('fa_monitor')->where(['udid' => $udid])->delete();
+                Db::commit();
+            } catch (\Exception $e) {
+                Db::rollback();
+            }
             return;
         }
 
