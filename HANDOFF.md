@@ -14,6 +14,7 @@
 - Source protocol mapping: `application/common/library/AppStorePayload.php`.
 - Shared source config/cache: `application/common/library/SourceConfigRepository.php`.
 - Shared blacklist semantics: `application/common/library/BlacklistPolicy.php`.
+- Legacy trace-monitor semantics: `application/common/library/TraceMonitorPolicy.php`.
 - Dylib/UDID endpoint and public homepage: `application/index/controller/Index.php`.
 - App administration: `application/admin/controller/Category.php` + category views/JS.
 - Card / monitor / blacklist administration: `Kami.php`, `Monitor.php`, `Black.php`.
@@ -22,14 +23,15 @@
 
 ## Source Data Flow
 1. Request enters `/appstore`.
-2. `App::list()` parses request metadata and legacy trace payload.
-3. `SourceConfigRepository` provides one cached config snapshot.
-4. Blacklist / monitor side effects are applied where configured.
-5. Active blacklist lookup uses `BlacklistPolicy`; `endtime=0` means permanent and expired rows are ignored.
-6. Card state determines whether locked download URLs are exposed.
-7. `fa_category` rows are read.
-8. `AppStorePayload` maps database rows into the legacy public schema.
-9. Plain responses strip runtime `UDID` / `Time`; encrypted responses retain the existing `appstore` / `appstore_v2` wrapper behavior.
+2. `App::list()` parses request metadata and optional legacy trace payload.
+3. `TraceMonitorPolicy` maps Base64 `添加者UDID|破解者UDID` positions to `openblack/openblack2` and accepts only the historical 25/40-character UDID lengths.
+4. `SourceConfigRepository` provides one cached config snapshot.
+5. Blacklist / monitor side effects are applied where configured.
+6. Active blacklist lookup uses `BlacklistPolicy`; `endtime=0` means permanent and expired rows are ignored.
+7. Card state determines whether locked download URLs are exposed.
+8. `fa_category` rows are read.
+9. `AppStorePayload` maps database rows into the legacy public schema.
+10. Plain responses strip runtime `UDID` / `Time`; encrypted responses retain the existing `appstore` / `appstore_v2` wrapper behavior.
 
 ## Baseline Protocol Contract
 Source keys preserved: `name`, `message`, `identifier`, `sourceURL`, `sourceicon`, `payURL`, `unlockURL`, `apps`.
@@ -43,6 +45,8 @@ Important legacy semantics preserved:
 - With an existing card, only `lock === "1"` follows locked-download permission.
 - Without a card, legacy PHP truthiness of `lock` is preserved.
 - Plain source output removes `UDID` / `Time`; encrypted output retains them before encryption.
+- Trace first position remains `添加者/openblack`; second position remains `破解者/openblack2`.
+- Trace monitor count is an observation count, not an HTTP error or attack count.
 
 ## Refactor Phase 1
 - Extracted AppStore payload mapping into `AppStorePayload`.
@@ -82,16 +86,25 @@ Important legacy semantics preserved:
 - Added root `nginx.rewrite` with the ThinkPHP rule requested for BaoTa one-click pseudo-static auto import.
 - Deployment contract now requires the rewrite file.
 - Added blacklist policy and persistence-contract regression tests.
+- User subsequently reported Phase 5 deployment and blacklist testing OK.
+
+## Refactor Phase 6
+- Confirmed and documented the actual monitor contract: optional `/appstore` JSON `value` is Base64 `添加者UDID|破解者UDID`; the server does not infer those identities itself.
+- Added `TraceMonitorPolicy` to centralize payload decoding, first/second position mapping, switch mapping, and the historical 25/40-character acceptance rule.
+- `App.php` now uses the helper without changing monitor counting or automatic-blacklist semantics.
+- Monitor UI labels now read `来源身份` and `来源记录次数` to avoid implying HTTP failures or intrusion detection.
+- Added `tools/trace_monitor_probe.sh` plus `TRACE_MONITOR.md` for reproducible terminal verification.
+- Added `trace_monitor_policy_test.php` and `trace_monitor_contract_test.php`.
+- Phase 6 fresh BaoTa package removes the two inherited 2022 `fa_monitor` observation rows from `import.sql`; existing deployed databases are not modified.
 
 ## CI Validation
-Standard matrix covers PHP 7.0 / 8.2 / 8.4 and runs AppStore, config-repository, blacklist and deployment regression tests. Final Phase 5 run must pass before release ZIP delivery.
+Standard matrix covers PHP 7.0 / 8.2 / 8.4 and runs AppStore, config-repository, blacklist, trace-monitor and deployment regression tests.
+
+Phase 6 code CI: GitHub Actions Run `34535349012` passed all three PHP versions before documentation-only follow-up commits.
 
 ## Validation Not Yet Claimed
-- Phase 5 BaoTa ZIP still requires one real disposable-site install.
-- Verify BaoTa imported `nginx.rewrite` automatically.
-- Verify admin blacklist add creates `fa_black` row with `usetime=0` and expected `endtime`.
-- Verify first `/appstore` or valid `/dylib` blacklist hit stamps `usetime`, permanent blacklist blocks, and expired temporary blacklist no longer blocks.
-- External `appstore` / `appstore_v2` encryption services have not been smoke-tested after refactors.
+- Phase 6 trace monitor should still be smoke-tested against a disposable/live-compatible deployment with `tools/trace_monitor_probe.sh`.
+- External `appstore` / `appstore_v2` encryption services have not been independently smoke-tested after all refactors.
 - Production regression is not claimed.
 
 ## Intentionally Preserved Risks
@@ -100,14 +113,16 @@ Standard matrix covers PHP 7.0 / 8.2 / 8.4 and runs AppStore, config-repository,
 - Kami generation keeps the legacy MD5/time/rand algorithm.
 - Duplicate blacklist rows remain allowed for compatibility.
 - TLS verification behavior remains unchanged.
+- Trace `添加者/破解者` identity is based solely on client payload position and is not independently authenticated by the server.
 
 ## Stability Rules
-1. Keep `main` unchanged until live/staging smoke tests pass.
+1. Keep `main` unchanged until the chosen stable candidate is explicitly promoted.
 2. Preserve source JSON keys and existing client semantics.
 3. Keep protocol changes, framework upgrades, TLS hardening and schema migration out of compatibility refactor commits.
 4. Prefer small reversible commits.
 5. Every protocol-affecting change requires differential/golden tests first.
 6. BaoTa release ZIP must contain root `auto_install.json`, `import.sql`, and `nginx.rewrite`; archived `application/database.php` must contain only `BT_DB_*` deployment placeholders before installation.
+7. Fresh deployment SQL should not preload runtime `fa_monitor` observations.
 
 ## Next Recommended Step
-Install the Phase 5 BaoTa package on a disposable site. Confirm database credential substitution and admin login still work, verify pseudo-static rule import, then test permanent/temporary blacklist creation and `/appstore` / `/dylib` enforcement. If these pass, Phase 5 is a suitable new stable candidate.
+Run one Phase 6 trace-monitor smoke test with auto-black disabled and enabled. If that passes, keep Phase 6 as the compatibility baseline and move next to the `Category::index()` `cs/cstime` statistics bug with explicit behavior tests before changing it.
