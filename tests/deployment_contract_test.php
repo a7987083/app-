@@ -9,12 +9,16 @@ function deployFail($message)
 $root = dirname(__DIR__);
 $autoFile = $root . '/auto_install.json';
 $dbFile = $root . '/application/database.php';
+$nginxRewriteFile = $root . '/nginx.rewrite';
 
 if (!is_file($autoFile)) {
     deployFail('missing auto_install.json');
 }
 if (!is_file($dbFile)) {
     deployFail('missing application/database.php');
+}
+if (!is_file($nginxRewriteFile)) {
+    deployFail('missing nginx.rewrite');
 }
 
 $auto = json_decode(file_get_contents($autoFile), true);
@@ -42,8 +46,6 @@ foreach (array('BT_DB_NAME', 'BT_DB_USERNAME', 'BT_DB_PASSWORD') as $placeholder
     }
 }
 
-// These were the legacy package placeholders that caused a deployed site to
-// connect as user "dbname" instead of the database account created by BaoTa.
 $forbidden = array(
     "'database.database', 'user'",
     "'database.username', 'dbname'",
@@ -53,6 +55,17 @@ foreach ($forbidden as $needle) {
     if (strpos($db, $needle) !== false) {
         deployFail('legacy database placeholder leaked into release config: ' . $needle);
     }
+}
+
+$rewrite = preg_replace('/\s+/', ' ', trim(file_get_contents($nginxRewriteFile)));
+if (strpos($rewrite, 'location / {') === false) {
+    deployFail('nginx.rewrite missing location / block');
+}
+if (strpos($rewrite, 'if (!-e $request_filename)') === false) {
+    deployFail('nginx.rewrite missing file-existence guard');
+}
+if (strpos($rewrite, 'rewrite ^(.*)$ /index.php?s=$1 last; break;') === false) {
+    deployFail('nginx.rewrite missing ThinkPHP rewrite target');
 }
 
 echo "OK deployment_contract_test\n";
