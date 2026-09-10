@@ -3,6 +3,7 @@
 namespace app\index\controller;
 
 use app\common\controller\Frontend;
+use app\common\library\CategoryDailyStat;
 use think\Db;
 class Index extends Frontend
 {
@@ -37,17 +38,7 @@ class Index extends Frontend
     public function index()
     {
     	if(!empty($_POST['uid'])){
-    		$id = (int)$_POST['uid'];
-    		$time = (int)date('d',time());
-    		$s = DB::name('category')->where('id',$id)->where('cstime',$time)->find();
-    		if($s){
-    			DB::name('category')->where('id',$id)->setInc('cs');
-    		}else{
-    			DB::name('category')->where('id',$id)->update([
-    				'cs' => 1,
-    				'cstime' => $time
-    			]);
-    		}
+    		CategoryDailyStat::record((int)$_POST['uid']);
     		return 'ok';
     	}
     	$data['img'] = DB::name('attachment')->whereNotNull('urls')->select();
