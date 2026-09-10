@@ -37,6 +37,7 @@ jobs:
           php -l application/admin/model/Black.php
           php -l tests/source_config_repository_test.php
           php -l tests/blacklist_policy_test.php
+          php -l tests/blacklist_persistence_contract_test.php
           php -l tests/deployment_contract_test.php
 
       - name: Run appstore, blacklist and deployment regression tests
@@ -45,4 +46,5 @@ jobs:
           php tests/appstore_equivalence_test.php
           php tests/source_config_repository_test.php
           php tests/blacklist_policy_test.php
+          php tests/blacklist_persistence_contract_test.php
           php tests/deployment_contract_test.php
