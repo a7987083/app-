@@ -1,34 +1,8 @@
 # Build and Validation
 
-This repository is a legacy ThinkPHP 5.0.24 application. Refactor validation uses PHP CLI lint plus standalone regression tests.
+This is a legacy ThinkPHP 5.0.24 / FastAdmin-style application. Validation uses PHP CLI lint, standalone contract tests and a PHP 7.0 / 8.2 / 8.4 GitHub Actions matrix.
 
-## Required PHP checks
-
-```bash
-php -l application/common/library/AppStorePayload.php
-php -l application/common/library/SourceConfigRepository.php
-php -l application/common/library/BlacklistPolicy.php
-php -l application/common/library/TraceMonitorPolicy.php
-php -l application/common/model/Config.php
-php -l application/index/controller/App.php
-php -l application/index/controller/Index.php
-php -l application/admin/controller/Category.php
-php -l application/admin/controller/Monitor.php
-php -l application/admin/controller/Kami.php
-php -l application/admin/controller/Black.php
-php -l application/admin/model/Black.php
-php -l tests/appstore_payload_test.php
-php -l tests/appstore_equivalence_test.php
-php -l tests/source_config_repository_test.php
-php -l tests/blacklist_policy_test.php
-php -l tests/blacklist_persistence_contract_test.php
-php -l tests/trace_monitor_policy_test.php
-php -l tests/trace_monitor_contract_test.php
-php -l tests/deployment_contract_test.php
-bash -n tools/trace_monitor_probe.sh
-```
-
-## Regression tests
+## Standard regression suite
 
 ```bash
 php tests/appstore_payload_test.php
@@ -36,29 +10,59 @@ php tests/appstore_equivalence_test.php
 php tests/source_config_repository_test.php
 php tests/blacklist_policy_test.php
 php tests/blacklist_persistence_contract_test.php
+php tests/blacklist_maintenance_test.php
 php tests/trace_monitor_policy_test.php
 php tests/trace_monitor_contract_test.php
+php tests/category_listing_contract_test.php
+php tests/category_daily_stat_test.php
+php tests/category_statistics_contract_test.php
+php tests/card_code_generator_test.php
+php tests/card_maintenance_contract_test.php
+php tests/legacy_controller_contract_test.php
+bash tests/legacy_controller_audit_test.sh
 php tests/deployment_contract_test.php
 ```
 
-Expected output includes:
+Also lint the application/helper/test PHP files and both shell tools with `php -l` / `bash -n`. `.github/workflows/regression.yml` is the authoritative CI command list.
 
-```text
-OK appstore_payload_test
-OK appstore_equivalence_test
-OK source_config_repository_test
-OK blacklist_policy_test
-OK blacklist_persistence_contract_test
-OK trace_monitor_policy_test
-OK trace_monitor_contract_test
-OK deployment_contract_test
+Phase 8 code CI run `34542868818` passed on PHP 7.0, 8.2 and 8.4.
+
+## Phase 8 admin/statistics/card/blacklist smoke matrix
+
+1. Category list shows pagination controls at both the top and bottom.
+2. Default page size is 1000 and 200/500/1000 choices still work.
+3. Search still covers the complete database, not only the current page.
+4. Category add persists the row, shows success and closes the layer without automatically refreshing the parent 1000-row table.
+5. New Category/App form defaults `是否付费` to `付费`; edit preserves the stored value.
+6. Opening/refreshing Category admin no longer modifies all `cs/cstime` rows.
+7. A category hit on a new date sets `cs=1` and `cstime=YYYYMMDD`; another hit on the same date increments `cs`.
+8. Existing legacy `cstime=1..31` rows roll forward lazily on their next hit; no bulk migration is required.
+9. Generate test day/week/month/quarter/year cards; generated values retain uppercase prefix + 12 hex characters and insert successfully.
+10. Activate a generated card through the existing public flow and verify its duration semantics remain unchanged.
+11. Adding an already-active blacklist UDID from admin is rejected; an expired-only historical UDID can be added again.
+12. Expired blacklist rows show `已过期` and remain available as history.
+
+## Legacy controller production audit
+
+Static source review is not sufficient to delete `App-mb.php` / `Index2.php`. On the BaoTa server run:
+
+```bash
+bash tools/legacy_controller_access_audit.sh /www/wwwlogs
 ```
 
-GitHub Actions runs this matrix on PHP 7.0, 8.2 and 8.4.
+Only after a zero-hit result, guarded deletion can be requested:
+
+```bash
+bash tools/legacy_controller_access_audit.sh \
+  --delete /www/wwwroot/app3.zonoeios.xyz \
+  /www/wwwlogs
+```
+
+A matching log entry exits 2 and refuses deletion. Missing/unreadable log coverage exits 3 and refuses deletion.
 
 ## BaoTa one-click release contract
 
-The release ZIP must place all three deployment files at the ZIP root:
+The ZIP root must contain:
 
 ```text
 auto_install.json
@@ -66,9 +70,7 @@ import.sql
 nginx.rewrite
 ```
 
-`auto_install.json` must point `db_config` to `application/database.php` and `run_path` to `/public`.
-
-The release copy of `application/database.php` must come from the current development branch and contain the BaoTa-recognized placeholders:
+`auto_install.json` must use `application/database.php` and run path `/public`. The release copy of `application/database.php` must contain:
 
 ```text
 BT_DB_NAME
@@ -76,9 +78,9 @@ BT_DB_USERNAME
 BT_DB_PASSWORD
 ```
 
-Do not copy the historical deployment template over this file. The historical literals `user`, `dbname`, and `pwd` caused a real installation to fail with MySQL error 1045 (`Access denied for user 'dbname'@'localhost'`). Phase 4 real-install retest succeeded after this was corrected.
+Do not restore the historical `user / dbname / pwd` template. That caused a real MySQL 1045 deployment failure before Phase 4.
 
-The root `nginx.rewrite` is the BaoTa one-click pseudo-static source and must contain:
+The required Nginx rewrite remains:
 
 ```nginx
 location / {
@@ -92,59 +94,26 @@ location / {
 }
 ```
 
-Fresh release SQL must not preload historical `fa_monitor` runtime observations. Phase 6 removes the inherited 2022 rows from the BaoTa release seed; existing deployed databases are not altered.
+Fresh `import.sql` must not preload the historical 2022 `fa_monitor` runtime observations.
 
-Before publishing a ZIP, inspect the actual archive rather than only the working tree:
+## Release archive inspection
 
-```bash
-unzip -p zonoe-source-phase6-bt.zip application/database.php | grep -E 'BT_DB_NAME|BT_DB_USERNAME|BT_DB_PASSWORD'
-unzip -p zonoe-source-phase6-bt.zip application/database.php | grep -E "'user'|'dbname'|'pwd'" && exit 1 || true
-unzip -p zonoe-source-phase6-bt.zip nginx.rewrite
-unzip -p zonoe-source-phase6-bt.zip import.sql | grep "00008030-001E78490133802E" && exit 1 || true
-unzip -p zonoe-source-phase6-bt.zip import.sql | grep "00008110-001229DE2E82802E" && exit 1 || true
-unzip -l zonoe-source-phase6-bt.zip | grep -E '(^| )auto_install.json$|(^| )import.sql$|(^| )nginx.rewrite$'
-```
-
-## Phase 5 blacklist smoke matrix
-
-1. Admin adds a permanent blacklist row: `fa_black` contains `udid`, current `addtime`, `usetime=0`, `endtime=0`.
-2. Admin adds a temporary blacklist row: `endtime` is the chosen Unix timestamp.
-3. Blacklist list shows `未使用` before the first hit and `永久` for `endtime=0`.
-4. First `/appstore?udid=...` hit returns blacklist payload and stamps `usetime` once.
-5. `/dylib?udid=...` with a valid card and active blacklist returns `code=666` and stamps `usetime` if still zero.
-6. Expired temporary blacklist no longer blocks `/appstore` or valid `/dylib` validation.
-7. Monitor -> blacklist action creates a complete permanent row and removes the monitor row atomically.
-8. Automatic trace blacklist creates a complete permanent row and does not delete the monitor record if insert fails.
-
-## Phase 6 trace-monitor smoke matrix
-
-Use `TRACE_MONITOR.md` and the bundled probe:
+For Phase 8:
 
 ```bash
-bash tools/trace_monitor_probe.sh https://example.com
+unzip -t zonoe-source-phase8-bt.zip
+unzip -p zonoe-source-phase8-bt.zip application/database.php | grep -E 'BT_DB_NAME|BT_DB_USERNAME|BT_DB_PASSWORD'
+unzip -p zonoe-source-phase8-bt.zip nginx.rewrite
+unzip -p zonoe-source-phase8-bt.zip public/assets/js/backend/category.js | grep "paginationVAlign: 'both'"
+unzip -p zonoe-source-phase8-bt.zip application/common/library/CategoryDailyStat.php | grep "date('Ymd'"
+unzip -p zonoe-source-phase8-bt.zip application/common/library/CardCodeGenerator.php | grep random_bytes
+unzip -p zonoe-source-phase8-bt.zip tools/legacy_controller_access_audit.sh | grep -- '--delete'
 ```
 
-With `openblack=0` and `openblack2=0`, one request should create/update two `fa_monitor` rows: first position `添加者`, second position `破解者`. Repeating the request increments `count`.
+`App-mb.php` and `Index2.php` are expected to remain in the Phase 8 ZIP until production access logs have been audited.
 
-With the corresponding auto-black switch enabled, the valid trace UDID should enter `fa_black` as a permanent row and its monitor row should be removed only after blacklist persistence succeeds.
+## Public source compatibility smoke
 
-The server does not independently authenticate `添加者/破解者`; those labels are inherited from client payload position.
+Before any promotion to `main`, recheck plain guest/valid/expired card, active/expired blacklist, trace monitor, default encrypted `appstore`, `APPSTORE: v2`, announcement/metadata and multiline descriptions. Current external encryption protocol and TLS behavior are intentionally unchanged.
 
-## Pre-merge live smoke matrix
-
-Use a staging/disposable database and compare external HTTP behavior with baseline commit `598235962ea328c6558fe4935fe19ba552c1490d`.
-
-1. BaoTa one-click install creates/imports database and rewrites all three DB credentials.
-2. BaoTa imports root `nginx.rewrite`; `/appstore` works without manually choosing a pseudo-static template.
-3. `admin / 123456` login returns non-500 and opens the backend.
-4. Plain source, no card.
-5. Plain source, valid card.
-6. Plain source, expired card.
-7. Plain source, active and expired blacklisted UDID.
-8. Trace monitor with auto-black off and on.
-9. Encrypted default `appstore` wrapper.
-10. Encrypted `APPSTORE: v2` wrapper.
-11. Free app, `lock=1` app, and nonstandard truthy lock value.
-12. Announcement / source metadata and multiline description serialization.
-
-Do not merge to `main` solely from lint/unit results; real BaoTa substitution, rewrite import, external encryption endpoints and production-like database paths require smoke coverage.
+Do not promote solely from lint/unit results; Phase 8 still requires a real BaoTa/admin smoke test.
