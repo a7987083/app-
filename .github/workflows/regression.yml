@@ -28,31 +28,50 @@ jobs:
           php -l application/common/library/SourceConfigRepository.php
           php -l application/common/library/BlacklistPolicy.php
           php -l application/common/library/TraceMonitorPolicy.php
+          php -l application/common/library/CategoryDailyStat.php
+          php -l application/common/library/CardCodeGenerator.php
           php -l application/common/model/Config.php
           php -l application/index/controller/App.php
           php -l application/index/controller/Index.php
+          php -l application/index/controller/Index2.php
           php -l application/admin/controller/Category.php
           php -l application/admin/controller/Monitor.php
           php -l application/admin/controller/Kami.php
           php -l application/admin/controller/Black.php
           php -l application/admin/model/Black.php
+          php -l application/admin/model/Kami.php
           php -l tests/source_config_repository_test.php
           php -l tests/blacklist_policy_test.php
           php -l tests/blacklist_persistence_contract_test.php
+          php -l tests/blacklist_maintenance_test.php
           php -l tests/trace_monitor_policy_test.php
           php -l tests/trace_monitor_contract_test.php
           php -l tests/category_listing_contract_test.php
+          php -l tests/category_daily_stat_test.php
+          php -l tests/category_statistics_contract_test.php
+          php -l tests/card_code_generator_test.php
+          php -l tests/card_maintenance_contract_test.php
+          php -l tests/legacy_controller_contract_test.php
           php -l tests/deployment_contract_test.php
           bash -n tools/trace_monitor_probe.sh
+          bash -n tools/legacy_controller_access_audit.sh
+          bash -n tests/legacy_controller_audit_test.sh
 
-      - name: Run appstore, category, trace-monitor, blacklist and deployment regression tests
+      - name: Run appstore, category, card, trace-monitor, blacklist and deployment regression tests
         run: |
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
           php tests/source_config_repository_test.php
           php tests/blacklist_policy_test.php
           php tests/blacklist_persistence_contract_test.php
+          php tests/blacklist_maintenance_test.php
           php tests/trace_monitor_policy_test.php
           php tests/trace_monitor_contract_test.php
           php tests/category_listing_contract_test.php
+          php tests/category_daily_stat_test.php
+          php tests/category_statistics_contract_test.php
+          php tests/card_code_generator_test.php
+          php tests/card_maintenance_contract_test.php
+          php tests/legacy_controller_contract_test.php
+          bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
