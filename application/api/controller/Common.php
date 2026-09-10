@@ -28,10 +28,18 @@ class Common extends Api
         if ($version = $this->request->request('version')) {
             $lng = $this->request->request('lng');
             $lat = $this->request->request('lat');
+            $upload = Config::get('upload');
+            $uploaddata = [
+                'cdnurl'    => isset($upload['cdnurl']) ? $upload['cdnurl'] : '',
+                'uploadurl' => isset($upload['uploadurl']) ? $upload['uploadurl'] : 'ajax/upload',
+                'maxsize'   => isset($upload['maxsize']) ? $upload['maxsize'] : '10mb',
+                'mimetype'  => isset($upload['mimetype']) ? $upload['mimetype'] : '',
+                'multiple'  => isset($upload['multiple']) ? $upload['multiple'] : false,
+            ];
             $content = [
                 'citydata'    => Area::getCityFromLngLat($lng, $lat),
                 'versiondata' => Version::check($version),
-                'uploaddata'  => Config::get('upload'),
+                'uploaddata'  => $uploaddata,
                 'coverdata'   => Config::get("cover"),
             ];
             $this->success('', $content);
@@ -69,7 +77,7 @@ class Common extends Api
         $typeArr = explode('/', $fileInfo['type']);
 
         //禁止上传PHP和HTML文件
-        if (in_array($fileInfo['type'], ['text/x-php', 'text/html']) || in_array($suffix, ['php', 'html', 'htm'])) {
+        if (in_array($fileInfo['type'], ['text/x-php', 'text/html']) || in_array($suffix, ['php', 'php3', 'php4', 'php5', 'phtml', 'pht', 'phar', 'html', 'htm', 'shtml']) || substr($fileInfo['name'], 0, 1) === '.') {
             $this->error(__('Uploaded file format is limited'));
         }
         //验证文件后缀

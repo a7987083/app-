@@ -43,8 +43,12 @@ class Ajax extends Backend
         header("Expires: " . gmdate("D, d M Y H:i:s", time() + $offset) . " GMT");
 
         $controllername = input("controllername");
-        //默认只加载了控制器对应的语言名，你还根据控制器名来加载额外的语言包
         $this->loadlang($controllername);
+        $callback = $this->request->get('callback', 'define');
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $callback)) {
+            $callback = 'define';
+        }
+        $this->request->get(['callback' => $callback]);
         return jsonp(Lang::get(), 200, [], ['json_encode_param' => JSON_FORCE_OBJECT | JSON_UNESCAPED_UNICODE]);
     }
 
@@ -77,7 +81,7 @@ class Ajax extends Backend
         $typeArr = explode('/', $fileInfo['type']);
 
         //禁止上传PHP和HTML文件
-        if (in_array($fileInfo['type'], ['text/x-php', 'text/html']) || in_array($suffix, ['php', 'html', 'htm'])) {
+        if (in_array($fileInfo['type'], ['text/x-php', 'text/html']) || in_array($suffix, ['php', 'php3', 'php4', 'php5', 'phtml', 'pht', 'phar', 'html', 'htm', 'shtml']) || substr($fileInfo['name'], 0, 1) === '.') {
             $this->error(__('Uploaded file format is limited'));
         }
         //验证文件后缀
@@ -168,6 +172,9 @@ class Ajax extends Backend
         }
         //主键
         $pk = $this->request->post("pk");
+        if ($pk && !$this->isSafeFieldName($pk)) {
+            $this->error();
+        }
         //排序的方式
         $orderway = strtolower($this->request->post("orderway", ""));
         $orderway = $orderway == 'asc' ? 'ASC' : 'DESC';

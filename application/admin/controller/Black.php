@@ -36,13 +36,12 @@ class Black extends Backend
     {
         if ($this->request->isPost()) {
             $params = $this->request->post("row/a");
+			
             if ($params) {
-                $gtime = time();
-                $kmqz = trim($params['udid']);
+				$gtime = time();
+				$kmqz = trim($params['udid']);
                 $data['udid'] = $kmqz;
                 $data['addtime'] = $gtime;
-                $data['usetime'] = $gtime;
-                $data['endtime'] = 2082643200;
                 Db::table('fa_black')->insert($data);
                 $this->success();
             }

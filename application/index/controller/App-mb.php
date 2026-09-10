@@ -8,7 +8,6 @@ class App
 {
     public function list()
     {
-        header('Content-Type: application/json;charset=utf-8');
         $config = Db::table('fa_config')->select();
         if(empty($config)) return json(['code'=>0,'msg'=>'暂无站点数据']);
         $list = Db::table('fa_category')->where('status','normal')->order('weigh desc')->select();

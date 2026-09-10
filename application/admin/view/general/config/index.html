@@ -269,6 +269,39 @@ function sc(){
     window.open('https://control.v-team.cn/panel/login');
     return false;
 }
+function runSystemUpdate(force){
+    layer.msg('正在更新..', {
+        icon: 16
+        ,shade: 0.3
+        ,time: false
+    });
+    $.ajax({
+        type: 'POST',
+        url: 'general/config/system_update',
+        dataType: 'json',
+        data: force ? {force: 1} : {},
+        success: function (str) {
+            layer.alert(str.msg, { icon: str.code == 200 ? 1 : 2, closeBtn: 0 }, function () {
+                layer.closeAll();
+                if (str.code == 200) {
+                    location.reload();
+                }
+            });
+        },
+        error: function () {
+            layer.alert('更新请求失败', {icon: 2});
+        }
+    });
+}
+function updateConfirmHtml(str){
+    var changelog = (str.data && str.data.changelog) ? String(str.data.changelog) : '';
+    var content = '<div style="text-align:left;line-height:1.6;"><p>' + $('<div/>').text(str.msg || '服务器有新版本').html() + '</p>';
+    if (changelog) {
+        content += '<pre style="white-space:pre-wrap;word-break:break-word;background:#f5f5f5;padding:8px;margin-top:8px;max-height:240px;overflow:auto;">' + $('<div/>').text(changelog).html() + '</pre>';
+    }
+    content += '</div>';
+    return content;
+}
 function update(){
      $.ajax({
         type: 'POST',
@@ -276,33 +309,23 @@ function update(){
         dataType: 'json',
         success: function (str) {
             if(str.code == 200){
-                layer.confirm(str.msg, {
-                  btn: ['确认更新', '取消更新'] //可以无限个按钮
-                }, function(index, layero){
-                    layer.msg('正在更新..', {
-                        icon: 16
-                        ,shade: 0.3
-                        ,time: false
-                    });
-                    $.ajax({
-                        type: 'POST',
-                        url: 'general/config/system_update',
-                        dataType: 'json',
-                        success: function (str) {
-                            if(str.code == 200){
-                                layer.alert(str.msg, { icon: 1, closeBtn: 0 }, function (index) { 
-                                	layer.closeAll();
-                                });
-                            }else{
-                                layer.alert(str.msg, { icon: 1, closeBtn: 0 }, function (index) { 
-                                	layer.closeAll();
-                                });
-                            }
-                        }
-                    }); 
-                  //按钮【按钮一】的回调
-                }, function(index){
-                  //按钮【按钮二】的回调
+                var incomplete = str.data && str.data.incomplete;
+                layer.confirm(updateConfirmHtml(str), {
+                  title: incomplete ? '更新未生效' : '发现新版本',
+                  area: ['520px', 'auto'],
+                  btn: [incomplete ? '关闭防篡改并重新安装' : '确认更新', '取消']
+                }, function(){
+                    runSystemUpdate(!!incomplete);
+                });
+            }else if(str.code == 204 && str.data && str.data.can_reinstall){
+                var tip = updateConfirmHtml(str);
+                tip += '<p style="text-align:left;color:#a94442;margin-top:8px;">若网站开了防篡改导致文件没更新成功，可重新下载安装当前版本。</p>';
+                layer.confirm(tip, {
+                  title: '已经是最新版本',
+                  area: ['520px', 'auto'],
+                  btn: ['重新下载并安装', '关闭']
+                }, function(){
+                    runSystemUpdate(true);
                 });
             }else{
                 layer.alert(str.msg)

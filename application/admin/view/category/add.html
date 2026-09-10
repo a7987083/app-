@@ -58,7 +58,7 @@
     <div class="form-group">
         <label for="c-keywords" class="control-label col-xs-12 col-sm-2">软件说明</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-keywords" class="form-control" name="row[keywords]" type="text" value="">
+            <textarea id="c-keywords" class="form-control" name="row[keywords]" rows="5" style="resize:vertical;" placeholder="可直接按回车换行"></textarea>
         </div>
     </div>
 
@@ -88,7 +88,12 @@
     <div class="form-group">
         <label for="c-bt1b" class="control-label col-xs-12 col-sm-2">按钮颜色</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-bt1b" class="form-control" name="row[bt1b]" type="text" value="">
+            <div class="input-group">
+                <span class="input-group-addon" style="padding: 3px 8px;">
+                    <input id="c-bt1b-picker" type="color" title="点击选取颜色" value="#000000" oninput="document.getElementById('c-bt1b').value=this.value.replace('#','')" style="width:36px;height:24px;padding:0;border:none;background:transparent;cursor:pointer;">
+                </span>
+                <input id="c-bt1b" class="form-control" name="row[bt1b]" type="text" value="" placeholder="点击左侧色块选取颜色" maxlength="7">
+            </div>
         </div>
     </div>
 

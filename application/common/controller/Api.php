@@ -164,8 +164,15 @@ class Api
      */
     protected function loadlang($name)
     {
-        $name =  Loader::parseName($name);
-        Lang::load(APP_PATH . $this->request->module() . '/lang/' . $this->request->langset() . '/' . str_replace('.', '/', $name) . '.php');
+        $name = Loader::parseName($name);
+        $name = str_replace(['.', '\\'], '/', $name);
+        // 禁止目录穿越，仅允许控制器名路径
+        if (strpos($name, '..') !== false || !preg_match('/^[a-zA-Z0-9\/_]+$/', $name)) {
+            $name = 'index';
+        }
+        $lang = $this->request->langset();
+        $lang = preg_match('/^[a-zA-Z\-_]{2,10}$/i', $lang) ? $lang : 'zh-cn';
+        Lang::load(APP_PATH . $this->request->module() . '/lang/' . $lang . '/' . $name . '.php');
     }
 
     /**
@@ -213,8 +220,11 @@ class Api
             'time' => Request::instance()->server('REQUEST_TIME'),
             'data' => $data,
         ];
-        // 如果未设置类型则自动判断
-        $type = $type ? $type : ($this->request->param(config('var_jsonp_handler')) ? 'jsonp' : $this->responseType);
+        // 固定 JSON 输出，避免 callback 触发 JSONP XSS
+        $type = $type ? $type : $this->responseType;
+        if (strtolower($type) === 'jsonp') {
+            $type = 'json';
+        }
 
         if (isset($header['statuscode'])) {
             $code = $header['statuscode'];

@@ -85,7 +85,8 @@ class Frontend extends Controller
         $this->view->assign('user', $this->auth->getUser());
 
         // 语言检测
-        $lang = strip_tags($this->request->langset());
+        $lang = $this->request->langset();
+        $lang = preg_match('/^[a-zA-Z\-_]{2,10}$/i', $lang) ? $lang : 'zh-cn';
 
         $site = Config::get("site");
 
@@ -123,8 +124,15 @@ class Frontend extends Controller
      */
     protected function loadlang($name)
     {
-        $name =  Loader::parseName($name);
-        Lang::load(APP_PATH . $this->request->module() . '/lang/' . $this->request->langset() . '/' . str_replace('.', '/', $name) . '.php');
+        $name = Loader::parseName($name);
+        $name = str_replace(['.', '\\'], '/', $name);
+        // 禁止目录穿越，仅允许控制器名路径
+        if (strpos($name, '..') !== false || !preg_match('/^[a-zA-Z0-9\/_]+$/', $name)) {
+            $name = 'index';
+        }
+        $lang = $this->request->langset();
+        $lang = preg_match('/^[a-zA-Z\-_]{2,10}$/i', $lang) ? $lang : 'zh-cn';
+        Lang::load(APP_PATH . $this->request->module() . '/lang/' . $lang . '/' . $name . '.php');
     }
 
     /**

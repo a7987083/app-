@@ -55,26 +55,13 @@ class Category extends Backend
         //设置过滤方法
         $this->request->filter(['strip_tags']);
         if ($this->request->isAjax()) {
-            $search = $this->request->request("search");
             $type = $this->request->request("type");
 
             //构造父类select列表选项数据
             $list = [];
             foreach ($this->categorylist as $k => $v) {
-                if ($search) {
-                    if ($v['type'] == $type && stripos($v['name'], $search) !== false || stripos($v['nickname'], $search) !== false) {
-                        if ($type == "all" || $type == null) {
-                            $list = $this->categorylist;
-                        } else {
-                            $list[] = $v;
-                        }
-                    }
-                } else {
-                    if ($type == "all" || $type == null) {
-                        $list = $this->categorylist;
-                    } elseif ($v['type'] == $type) {
-                        $list[] = $v;
-                    }
+                if ($type == "all" || $type == null || $type === '' || (string)$v['type'] === (string)$type) {
+                    $list[] = $v;
                 }
             }
             foreach ($list as $k => $v){
@@ -117,6 +104,12 @@ class Category extends Backend
             $params = $this->request->post("row/a");
             if ($params) {
                 $params = $this->preExcludeFields($params);
+                if (isset($params['bt1b'])) {
+                    $params['bt1b'] = ltrim($params['bt1b'], '#');
+                }
+                if (isset($params['keywords'])) {
+                    $params['keywords'] = $this->encodeKeywordsNewlines($params['keywords']);
+                }
                 $modify = $params['modify'];
                 unset($params['modify']);
                 if ($params['pid'] != $row['pid']) {
@@ -157,6 +150,7 @@ class Category extends Backend
             $row['bt2a'] = 0;
         }
         $row['bt2a'] = round($row['bt2a']/(1024*1024),2);
+        $row['keywords'] = $this->decodeKeywordsNewlines($row['keywords']);
         $this->view->assign("row", $row);
         return $this->view->fetch();
     }
@@ -175,6 +169,12 @@ class Category extends Backend
     {
         if ($this->request->isPost()) {
             $params = $this->request->post("row/a");
+            if (isset($params['bt1b'])) {
+                $params['bt1b'] = ltrim($params['bt1b'], '#');
+            }
+            if (isset($params['keywords'])) {
+                $params['keywords'] = $this->encodeKeywordsNewlines($params['keywords']);
+            }
             if($params['bt2a']>0){
                 $params['bt2a'] = $params['bt2a']*1024*1024;
             }
@@ -183,5 +183,23 @@ class Category extends Backend
             $this->success();
         }
         return $this->view->fetch();
+    }
+
+    /**
+     * 真实换行转为字面量 \n，保持接口 JSON 仍输出合法转义
+     */
+    protected function encodeKeywordsNewlines($value)
+    {
+        $value = str_replace(["\r\n", "\r"], "\n", (string)$value);
+        return str_replace("\n", '\\n', $value);
+    }
+
+    /**
+     * 字面量 \n 转为真实换行，供后台 textarea 显示
+     */
+    protected function decodeKeywordsNewlines($value)
+    {
+        $value = str_replace(["\r\n", "\r"], "\n", (string)$value);
+        return str_replace('\\n', "\n", $value);
     }
 }

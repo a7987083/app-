@@ -4,6 +4,8 @@ namespace app\admin\controller\general;
 
 use app\common\controller\Backend;
 use app\common\library\Email;
+use app\common\library\SiteConfigSync;
+use app\common\library\UpdateIntegrity;
 use app\common\model\Config as ConfigModel;
 use think\Exception;
 use think\Validate;
@@ -23,7 +25,7 @@ class Config extends Backend
      * @var \app\common\model\Config
      */
     protected $model = null;
-    protected $noNeedRight = ['check', 'rulelist'];
+    protected $noNeedRight = ['check', 'rulelist', 'version_notice'];
 
     public function _initialize()
     {
@@ -266,70 +268,156 @@ class Config extends Backend
             return $this->error(__('Invalid parameters'));
         }
     }
-    //检查更新
+    /**
+     * 拉取远程最新版本（默认缓存 60 秒，避免后台轮询打爆更新站）
+     * @param bool $useCache
+     * @return object|false
+     */
+    protected function fetchRemoteLastVersion($useCache = true)
+    {
+        $cacheKey = 'remote_last_version_json';
+        if ($useCache) {
+            $cached = Cache::get($cacheKey);
+            if (is_string($cached) && $cached !== '') {
+                $obj = json_decode($cached);
+                if ($obj && isset($obj->data)) {
+                    return $obj;
+                }
+            }
+        }
+        $raw = $this->get_fileres('https://update-appstore.nuosike.com/update/server/last_version');
+        $obj = json_decode($raw);
+        if (!$obj || !isset($obj->data)) {
+            return false;
+        }
+        Cache::set($cacheKey, $raw, 60);
+        return $obj;
+    }
+
+    /**
+     * 读取更新说明
+     */
+    protected function parseChangelog($lastVersionRes)
+    {
+        if (!empty($lastVersionRes->changelog)) {
+            return $lastVersionRes->changelog;
+        }
+        $lastVersion = isset($lastVersionRes->data) ? $lastVersionRes->data : '';
+        if ($lastVersion === '') {
+            return '';
+        }
+        $verInfo = $this->get_fileres('https://update-appstore.nuosike.com/update/' . $lastVersion . '/version.json');
+        $verObj = json_decode($verInfo);
+        if ($verObj && !empty($verObj->desc)) {
+            return $verObj->desc;
+        }
+        return '';
+    }
+
+    //检查更新（手动，不走缓存）
     public function update(){
-        // 打开远程版本记录文件比对本地记录文件
-        // 设定目录
-        $local_dir = ROOT_PATH . 'ver.json';
-        // 本地版本
-        $local = $this->get_file($local_dir);
+        $local = $this->get_file(ROOT_PATH . 'ver.json');
         if ($local === false) {
-            $result= [
+            return json([
                 'code'=>406,
                 'msg'=>'本地版本记录文件获取失败',
                 'data'=>''
+            ]);
+        }
+        $last_version_res = $this->fetchRemoteLastVersion(false);
+        if ($last_version_res === false) {
+            return json([
+                'code'=>406,
+                'msg'=>'服务器最新版号接口获取失败',
+                'data'=>''
+            ]);
+        }
+        if (isset($last_version_res->code) && $last_version_res->code == 204 && $last_version_res->data === false) {
+            return json([
+                'code'=>204,
+                'msg'=>'未获取到版号信息',
+                'data'=>''
+            ]);
+        }
+        $last_version = $last_version_res->data;
+        $data = $this->buildVersionPayload($last_version_res, $local);
+        if (!empty($data['has_update'])) {
+            $result = [
+                'code'=>200,
+                'msg'=> !empty($data['incomplete'])
+                    ? '检测到文件与版本号不一致，可能被网站防篡改还原。请关闭防篡改后重新安装。'
+                    : ('服务器有新版本 ' . $last_version),
+                'data'=>$data
             ];
         } else {
-            $arrContextOptions = [
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                ]
+            $result = [
+                'code'=>204,
+                'msg'=>'已经是最新版本',
+                'data'=>$data
             ];
-            // 访问服务器获取最新版号  地址上线后根据域名改变
-            $last_version_res = file_get_contents('https://update-appstore.nuosike.com/update/server/last_version', false, stream_context_create($arrContextOptions));
-            $last_version_res = json_decode($last_version_res);
-            if ($last_version_res === false) {
-                $result= [
-                    'code'=>406,
-                    'msg'=>'服务器最新版号接口获取失败',
-                    'data'=>''
-                ];
-            }elseif($last_version_res->code == 204 && $last_version_res->data === false){
-                $result= [
-                    'code'=>204,
-                    'msg'=>'未获取到版号信息',
-                    'data'=>''
-                ];
-            }else {
-                // 最新版本
-                $last_version = $last_version_res->data;
-
-                // 比较版本
-                $data = [
-                    'last_version' =>$last_version,
-                ];
-
-                if (intval($last_version) > intval($local->version)) {
-                    $result= [
-                        'code'=>200,
-                        'msg'=>'服务器有新版本',
-                        'data'=>$data
-                    ];
-                    rmdirs(CACHE_PATH, false);
-                } else {
-                    $result= [
-                        'code'=>204,
-                        'msg'=>'已经是最新版本',
-                        'data'=>$data
-                    ];
-                    rmdirs(CACHE_PATH, false);
-                }
-
-            }
         }
-
         return json($result);
+    }
+
+    /**
+     * 组装检测结果：新版本、指纹不一致、允许强制重装
+     */
+    protected function buildVersionPayload($lastVersionRes, $local)
+    {
+        $lastVersion = $lastVersionRes->data;
+        $hasNewer = intval($lastVersion) > intval($local->version);
+        $incomplete = false;
+        $remoteSign = isset($lastVersionRes->file_sign) ? (string)$lastVersionRes->file_sign : '';
+        if ($remoteSign !== '') {
+            $incomplete = (UpdateIntegrity::signFromRoot(ROOT_PATH) !== $remoteSign);
+        }
+        return [
+            'has_update'    => $hasNewer || $incomplete,
+            'incomplete'    => $incomplete,
+            'can_reinstall' => true,
+            'last_version'  => $lastVersion,
+            'local_version' => $local->version,
+            'changelog'     => $this->parseChangelog($lastVersionRes),
+            'vn'            => isset($lastVersionRes->vn) ? $lastVersionRes->vn : '',
+        ];
+    }
+
+    /**
+     * 后台轮询：有新版本时推送提示（已登录即可，不要求配置权限）
+     */
+    public function version_notice()
+    {
+        $local = $this->get_file(ROOT_PATH . 'ver.json');
+        if ($local === false) {
+            return json([
+                'code' => 204,
+                'msg'  => '本地版本记录文件获取失败',
+                'data' => ['has_update' => false]
+            ]);
+        }
+        $last_version_res = $this->fetchRemoteLastVersion(true);
+        if ($last_version_res === false || (isset($last_version_res->code) && $last_version_res->code == 204 && $last_version_res->data === false)) {
+            return json([
+                'code' => 204,
+                'msg'  => '未获取到版号信息',
+                'data' => ['has_update' => false]
+            ]);
+        }
+        $last_version = $last_version_res->data;
+        $data = $this->buildVersionPayload($last_version_res, $local);
+        $hasUpdate = !empty($data['has_update']);
+        if ($hasUpdate && !empty($data['incomplete']) && intval($last_version) <= intval($local->version)) {
+            $msg = '检测到文件与版本号不一致，可能被网站防篡改还原。请关闭防篡改后重新安装。';
+        } elseif ($hasUpdate) {
+            $msg = '服务器有新版本 ' . $last_version;
+        } else {
+            $msg = '已经是最新版本';
+        }
+        return json([
+            'code' => 200,
+            'msg'  => $msg,
+            'data' => $data
+        ]);
     }
     public function get_file($url){
         if (trim($url) == '') {
@@ -437,8 +525,8 @@ class Config extends Backend
                 'data'=>''
             ];
         }else{
-            // 版本记录
-            $server = explode(",", $server);
+            // 版本记录（去掉换行，避免 URL 变成 20260902\n/version.json）
+            $server = array_filter(array_map('trim', explode(",", $server)));
             $local = $this->get_fileres($local_up_dir.'ver.txt');
             if ($local === false) {
                 $result = [
@@ -447,9 +535,15 @@ class Config extends Backend
                     'data'=>''
                 ];
             } else {
+                $local = trim($local);
+                $force = intval($this->request->param('force', 0)) === 1;
                 // 循环比较是否需要下载 更新
                 foreach ($server as $key => $value) {
-                    if (intval($local) < intval($value)) {
+                    $value = trim($value);
+                    if ($value === '') {
+                        continue;
+                    }
+                    if ($force || intval($local) < intval($value)) {
                         // 获取更新信息
                         // 服务器各个程序包日志存放路径
                         $up_info = $this->get_fileres($update_res.$value.'/version.json');
@@ -505,10 +599,31 @@ class Config extends Backend
                                                 'msg'=>'文件移动合并失败',
                                                 'data'=>''
                                             ];
+                                        }elseif (!UpdateIntegrity::verifyAgainst($cache_dir.'program/', $base_dir)) {
+                                            $this->deldir($cache_dir);
+                                            $result = [
+                                                'code'=>406,
+                                                'msg'=>'文件覆盖校验失败，网站文件未能写入。请关闭网站防篡改后重试。',
+                                                'data'=>''
+                                            ];
                                         }else{
+                                            sleep(3);
+                                            if (!UpdateIntegrity::verifyAgainst($cache_dir.'program/', $base_dir)) {
+                                                $this->deldir($cache_dir);
+                                                $result = [
+                                                    'code'=>406,
+                                                    'msg'=>'文件可能被网站防篡改还原，版本号未变更。请关闭防篡改后重新安装更新。',
+                                                    'data'=>''
+                                                ];
+                                            } else {
                                             // 更新完改写网站本地版号
+                                            try {
+                                                SiteConfigSync::mergeMissingFromDb();
+                                            } catch (\Exception $e) {
+                                            }
                                             $write_res = file_put_contents($local_up_dir . 'ver.txt', $value);
                                             $json['version'] = $value;
+                                            $json['file_sign'] = UpdateIntegrity::signFromRoot($base_dir);
                                             file_put_contents(ROOT_PATH . 'ver.json',json_encode($json));
                                             if (empty($write_res)) {
                                                 $result = [
@@ -532,6 +647,7 @@ class Config extends Backend
                                                         'data'=>''
                                                     ];
                                                 }
+                                            }
                                             }
                                         }
                                     }

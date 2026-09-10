@@ -183,7 +183,8 @@ class Backend extends Controller
         }
 
         // 语言检测
-        $lang = strip_tags($this->request->langset());
+        $lang = $this->request->langset();
+        $lang = preg_match('/^[a-zA-Z\-_]{2,10}$/i', $lang) ? $lang : 'zh-cn';
 
         $site = Config::get("site");
 
@@ -228,8 +229,15 @@ class Backend extends Controller
      */
     protected function loadlang($name)
     {
-        $name =  Loader::parseName($name);
-        Lang::load(APP_PATH . $this->request->module() . '/lang/' . $this->request->langset() . '/' . str_replace('.', '/', $name) . '.php');
+        $name = Loader::parseName($name);
+        $name = str_replace(['.', '\\'], '/', $name);
+        // 禁止目录穿越，仅允许控制器名路径
+        if (strpos($name, '..') !== false || !preg_match('/^[a-zA-Z0-9\/_]+$/', $name)) {
+            $name = 'index';
+        }
+        $lang = $this->request->langset();
+        $lang = preg_match('/^[a-zA-Z\-_]{2,10}$/i', $lang) ? $lang : 'zh-cn';
+        Lang::load(APP_PATH . $this->request->module() . '/lang/' . $lang . '/' . $name . '.php');
     }
 
     /**
@@ -257,6 +265,8 @@ class Backend extends Controller
         $op = $this->request->get("op", '', 'trim');
         $sort = $this->request->get("sort", !empty($this->model) && $this->model->getPk() ? $this->model->getPk() : 'id');
         $order = $this->request->get("order", "DESC");
+        $sort = $this->sanitizeSortField($sort, $this->model && $this->model->getPk() ? $this->model->getPk() : 'id');
+        $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
         $offset = $this->request->get("offset", 0);
         $limit = $this->request->get("limit", 0);
         $filter = (array)json_decode($filter, true);
@@ -290,6 +300,9 @@ class Backend extends Controller
             $where[] = [implode("|", $searcharr), "LIKE", "%{$search}%"];
         }
         foreach ($filter as $k => $v) {
+            if (!$this->isSafeFieldName($k, true)) {
+                continue;
+            }
             $sym = isset($op[$k]) ? $op[$k] : '=';
             if (stripos($k, ".") === false) {
                 $k = $tableName . $k;
@@ -316,6 +329,8 @@ class Backend extends Controller
                 case 'FINDIN':
                 case 'FINDINSET':
                 case 'FIND_IN_SET':
+                    $v = is_array($v) ? implode(',', $v) : $v;
+                    $v = addslashes($v);
                     $where[] = "FIND_IN_SET('{$v}', " . ($relationSearch ? $k : '`' . str_replace('.', '`.`', $k) . '`') . ")";
                     break;
                 case 'IN':
@@ -404,6 +419,76 @@ class Backend extends Controller
     }
 
     /**
+     * 校验 SQL 标识符（字段名），防止被当成表达式注入
+     * @param string $field
+     * @param bool   $allowDot 是否允许表别名.字段
+     * @return bool
+     */
+    protected function isSafeFieldName($field, $allowDot = false)
+    {
+        if (!is_string($field) || $field === '') {
+            return false;
+        }
+        $pattern = $allowDot
+            ? '/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/'
+            : '/^[a-zA-Z_][a-zA-Z0-9_]*$/';
+        return (bool)preg_match($pattern, $field);
+    }
+
+    /**
+     * 清洗排序字段
+     * @param string $sort
+     * @param string $default
+     * @return string
+     */
+    protected function sanitizeSortField($sort, $default = 'id')
+    {
+        $safe = [];
+        foreach (explode(',', (string)$sort) as $item) {
+            $item = trim($item);
+            if ($this->isSafeFieldName($item, true)) {
+                $safe[] = $item;
+            }
+        }
+        return $safe ? implode(',', $safe) : $default;
+    }
+
+    /**
+     * 当前模型允许参与 SelectPage 查询的字段
+     * @return array
+     */
+    protected function getSelectpageAllowedFields()
+    {
+        $fields = [];
+        if ($this->model) {
+            try {
+                $fields = $this->model->getTableFields();
+            } catch (\Exception $e) {
+                $fields = [];
+            }
+        }
+        return array_map('strtolower', is_array($fields) ? $fields : []);
+    }
+
+    /**
+     * 将请求字段限制在白名单内
+     * @param string $field
+     * @param array  $allowedFields
+     * @param string $default
+     * @return string
+     */
+    protected function sanitizeSelectpageField($field, $allowedFields = [], $default = '')
+    {
+        if (!$this->isSafeFieldName($field)) {
+            return $default;
+        }
+        if ($allowedFields && !in_array(strtolower($field), $allowedFields, true)) {
+            return $default;
+        }
+        return $field;
+    }
+
+    /**
      * Selectpage的实现方法
      *
      * 当前方法只是一个比较通用的搜索匹配,请按需重载此方法来编写自己的搜索逻辑,$where按自己的需求写即可
@@ -423,6 +508,7 @@ class Backend extends Controller
         $pagesize = $this->request->request("pageSize");
         //搜索条件
         $andor = $this->request->request("andOr", "and", "strtoupper");
+        $andor = $andor === 'AND' ? 'AND' : 'OR';
         //排序方式
         $orderby = (array)$this->request->request("orderBy/a");
         //显示的字段
@@ -442,54 +528,98 @@ class Backend extends Controller
             $word = [];
             $pagesize = 99999;
         }
+
+        $allowedFields = $this->getSelectpageAllowedFields();
+        $primarykey = $this->sanitizeSelectpageField($primarykey, $allowedFields, 'id');
+        $field = $this->sanitizeSelectpageField($field, $allowedFields, 'name');
+        $searchfield = array_values(array_filter(array_map(function ($item) use ($allowedFields) {
+            return $this->sanitizeSelectpageField($item, $allowedFields);
+        }, $searchfield)));
+        if (!$searchfield) {
+            $searchfield = [$field ? $field : 'id'];
+        }
+
+        $allowedOperators = ['=', '<>', '>', '>=', '<', '<=', 'like', 'not like', 'in', 'not in'];
+        $safeCustom = [];
+        foreach ($custom as $k => $v) {
+            $customField = $this->sanitizeSelectpageField($k, $allowedFields);
+            if (!$customField) {
+                continue;
+            }
+            if (is_array($v) && count($v) == 2) {
+                $operator = strtolower(trim($v[0]));
+                if (!in_array($operator, $allowedOperators, true)) {
+                    continue;
+                }
+                $safeCustom[$customField] = [$operator, $v[1]];
+            } else {
+                $safeCustom[$customField] = $v;
+            }
+        }
+
         $order = [];
         foreach ($orderby as $k => $v) {
-            $order[$v[0]] = $v[1];
+            if (!is_array($v) || !isset($v[0]) || !isset($v[1])) {
+                continue;
+            }
+            $orderField = $this->sanitizeSelectpageField($v[0], $allowedFields);
+            if ($orderField) {
+                $order[$orderField] = strtoupper($v[1]) === 'ASC' ? 'ASC' : 'DESC';
+            }
         }
-        $field = $field ? $field : 'name';
+
+        $adminIds = $this->getDataLimitAdminIds();
+        $dataLimitField = $this->isSafeFieldName($this->dataLimitField) ? $this->dataLimitField : 'admin_id';
 
         //如果有primaryvalue,说明当前是初始化传值
         if ($primaryvalue !== null) {
-            $where = [$primarykey => ['in', $primaryvalue]];
-            $pagesize = 99999;
-        } else {
-            $where = function ($query) use ($word, $andor, $field, $searchfield, $custom) {
-                $logic = $andor == 'AND' ? '&' : '|';
-                $searchfield = is_array($searchfield) ? implode($logic, $searchfield) : $searchfield;
-                foreach ($word as $k => $v) {
-                    $query->where(str_replace(',', $logic, $searchfield), "like", "%{$v}%");
-                }
-                if ($custom && is_array($custom)) {
-                    foreach ($custom as $k => $v) {
-                        if (is_array($v) && 2 == count($v)) {
-                            $query->where($k, trim($v[0]), $v[1]);
-                        } else {
-                            $query->where($k, '=', $v);
-                        }
-                    }
+            $ids = is_array($primaryvalue) ? $primaryvalue : explode(',', (string)$primaryvalue);
+            $ids = array_values(array_unique(array_filter(array_map('trim', $ids), function ($item) {
+                return $item !== '';
+            })));
+            $where = function ($query) use ($primarykey, $ids, $adminIds, $dataLimitField) {
+                $query->where($primarykey, 'in', $ids ? $ids : ['']);
+                if (is_array($adminIds)) {
+                    $query->where($dataLimitField, 'in', $adminIds);
                 }
             };
-        }
-        $adminIds = $this->getDataLimitAdminIds();
-        if (is_array($adminIds)) {
-            $this->model->where($this->dataLimitField, 'in', $adminIds);
+            $pagesize = 99999;
+        } else {
+            $where = function ($query) use ($word, $andor, $searchfield, $safeCustom, $adminIds, $dataLimitField) {
+                $logic = $andor == 'AND' ? '&' : '|';
+                $searchfield = is_array($searchfield) ? implode($logic, $searchfield) : $searchfield;
+                $word = array_filter(array_unique($word));
+                foreach ($word as $k => $v) {
+                    $query->where($searchfield, "like", "%{$v}%");
+                }
+                foreach ($safeCustom as $k => $v) {
+                    if (is_array($v) && 2 == count($v)) {
+                        $query->where($k, $v[0], $v[1]);
+                    } else {
+                        $query->where($k, '=', $v);
+                    }
+                }
+                if (is_array($adminIds)) {
+                    $query->where($dataLimitField, 'in', $adminIds);
+                }
+            };
         }
         $list = [];
         $total = $this->model->where($where)->count();
         if ($total > 0) {
-            if (is_array($adminIds)) {
-                $this->model->where($this->dataLimitField, 'in', $adminIds);
+            $query = $this->model->where($where);
+            if ($order) {
+                $query->order($order);
             }
-            $datalist = $this->model->where($where)
-                ->order($order)
+            $datalist = $query
                 ->page($page, $pagesize)
                 ->field($this->selectpageFields)
                 ->select();
             foreach ($datalist as $index => $item) {
                 unset($item['password'], $item['salt']);
                 $list[] = [
-                    $primarykey => isset($item[$primarykey]) ? $item[$primarykey] : '',
-                    $field      => isset($item[$field]) ? $item[$field] : '',
+                    $primarykey => isset($item[$primarykey]) ? htmlentities((string)$item[$primarykey], ENT_QUOTES, 'UTF-8') : '',
+                    $field      => isset($item[$field]) ? htmlentities((string)$item[$field], ENT_QUOTES, 'UTF-8') : '',
                     'pid'       => isset($item['pid']) ? $item['pid'] : 0
                 ];
             }

@@ -346,6 +346,85 @@ define(['jquery', 'bootstrap', 'backend', 'addtabs', 'adminlte', 'form'], functi
 
             $(window).resize();
 
+            // 登录后台后自动检测更新，并定时轮询
+            var runSystemUpdate = function (force) {
+                Layer.msg('正在更新..', {icon: 16, shade: 0.3, time: false});
+                $.ajax({
+                    type: 'POST',
+                    url: 'general/config/system_update',
+                    dataType: 'json',
+                    data: force ? {force: 1} : {},
+                    success: function (str) {
+                        Layer.closeAll();
+                        Layer.alert(str.msg || '', {icon: str.code == 200 ? 1 : 2, closeBtn: 0}, function () {
+                            Layer.closeAll();
+                            if (str.code == 200) {
+                                location.reload();
+                            }
+                        });
+                    },
+                    error: function () {
+                        Layer.closeAll();
+                        Layer.alert('更新请求失败', {icon: 2});
+                    }
+                });
+            };
+            var showSystemUpdateConfirm = function (ret) {
+                var changelog = (ret.data && ret.data.changelog) ? String(ret.data.changelog) : '';
+                var incomplete = !!(ret.data && ret.data.incomplete);
+                var content = '<div style="text-align:left;line-height:1.6;"><p>' + $('<div/>').text(ret.msg || '服务器有新版本').html() + '</p>';
+                if (changelog) {
+                    content += '<pre style="white-space:pre-wrap;word-break:break-word;background:#f5f5f5;padding:8px;margin-top:8px;max-height:240px;overflow:auto;">' + $('<div/>').text(changelog).html() + '</pre>';
+                }
+                content += '</div>';
+                Layer.confirm(content, {
+                    title: incomplete ? '更新未生效' : '发现新版本',
+                    area: ['520px', 'auto'],
+                    btn: [incomplete ? '关闭防篡改并重新安装' : '确认更新', '稍后']
+                }, function () {
+                    runSystemUpdate(incomplete);
+                });
+            };
+            var checkSystemUpdateNotice = function (forcePopup) {
+                $.ajax({
+                    url: 'general/config/version_notice',
+                    type: 'GET',
+                    dataType: 'json',
+                    cache: false,
+                    success: function (ret) {
+                        var hasUpdate = ret && ret.code == 200 && ret.data && ret.data.has_update;
+                        var $notice = $("#header-update-notice");
+                        if (!hasUpdate) {
+                            $notice.addClass("hide");
+                            return;
+                        }
+                        $notice.removeClass("hide");
+                        var incomplete = !!(ret.data && ret.data.incomplete);
+                        var shownKey = "sys_update_notice_" + ret.data.last_version + (incomplete ? "_bad" : "");
+                        var alreadyShown = window.sessionStorage && sessionStorage.getItem(shownKey);
+                        if (!forcePopup && alreadyShown) {
+                            return;
+                        }
+                        if (window.sessionStorage) {
+                            sessionStorage.setItem(shownKey, "1");
+                        }
+                        showSystemUpdateConfirm(ret);
+                    }
+                });
+            };
+            $(document).on("click", "#header-update-notice-btn", function () {
+                checkSystemUpdateNotice(true);
+            });
+            setTimeout(function () {
+                checkSystemUpdateNotice(false);
+            }, 1500);
+            setInterval(function () {
+                if (document.hidden) {
+                    return;
+                }
+                checkSystemUpdateNotice(false);
+            }, 120000);
+
         },
         login: function () {
             var lastlogin = localStorage.getItem("lastlogin");

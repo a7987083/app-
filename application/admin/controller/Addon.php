@@ -361,7 +361,6 @@ class Addon extends Backend
         }
         $result = array("total" => $total, "rows" => $list);
 
-        $callback = $this->request->get('callback') ? "jsonp" : "json";
-        return $callback($result);
+        return json($result);
     }
 }

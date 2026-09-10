@@ -30,6 +30,11 @@ class Ajax extends Frontend
 
         $controllername = input("controllername");
         $this->loadlang($controllername);
+        $callback = $this->request->get('callback', 'define');
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $callback)) {
+            $callback = 'define';
+        }
+        $this->request->get(['callback' => $callback]);
         //强制输出JSON Object
         $result = jsonp(Lang::get(), 200, [], ['json_encode_param' => JSON_FORCE_OBJECT | JSON_UNESCAPED_UNICODE]);
         return $result;

@@ -9,7 +9,6 @@ class App
    
     public function list()
     {   
-        header('Content-Type: application/json;charset=utf-8');
         $value = file_get_contents("php://input");
         $value = json_decode($value,true);
         if(empty($_SERVER['HTTP_APPSTORE'])){
@@ -302,7 +301,7 @@ class App
 				if(intval($kdata['jh'])){
 					return json(['code'=>0,'msg'=>'解锁码已使用']);
 				}else{
-				    //---修复解锁到期部分设备无法解锁问题
+				    //修复解锁到期无法解锁问题
 				    				    $existInfo = Db::table('fa_kami')->where('udid',$udid)->select();
 				    if(!empty($existInfo)){
 				        foreach ($existInfo as $k => $v){
