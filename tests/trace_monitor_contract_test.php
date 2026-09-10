@@ -22,10 +22,10 @@ foreach (array(
     }
 }
 
-if (strpos($app, "base64_decode($traceValue)") !== false) {
+if (strpos($app, 'base64_decode($traceValue)') !== false) {
     traceMonitorContractFail('App controller still duplicates trace payload decoding');
 }
-if (strpos($app, "strlen($udid)") !== false) {
+if (strpos($app, 'strlen($udid)') !== false) {
     traceMonitorContractFail('App controller still duplicates legacy UDID length gate');
 }
 
