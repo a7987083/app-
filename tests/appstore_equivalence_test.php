@@ -124,7 +124,7 @@ $currentInfo = AppStorePayload::siteInfo($config);
 assertSameValue('site info', $legacyInfo, $currentInfo);
 
 foreach ([['guest', false], ['licensed', false], ['licensed', true]] as $case) {
-    [$mode, $allow] = $case;
+    list($mode, $allow) = $case;
     $legacyApps = legacyApps($rows, $mode, $allow);
     $currentApps = AppStorePayload::apps($rows, $mode, $allow);
     assertSameValue("apps {$mode}/" . ($allow ? 'allow' : 'deny'), $legacyApps, $currentApps);
