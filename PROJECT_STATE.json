@@ -3,8 +3,8 @@
   "development_branch": "dev/software-source-v1",
   "stable_branch": "main",
   "stable_baseline_commit": "598235962ea328c6558fe4935fe19ba552c1490d",
-  "refactor_phase": 1,
-  "status": "phase_1_refactored_and_unit_verified",
+  "refactor_phase": 2,
+  "status": "phase_2_admin_cleanup_in_progress",
   "runtime_changes": true,
   "architecture": {
     "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
@@ -20,25 +20,29 @@
     "Preserved guest/licensed lock semantics and appstore/appstore_v2 wrappers",
     "Fixed dylib missing-card null access",
     "Removed homepage child-category N+1 query pattern",
-    "Added standalone regression and differential equivalence tests"
+    "Added standalone regression and differential equivalence tests",
+    "Centralized Category type display through CategoryModel::getTypeList()",
+    "Centralized Category add/edit normalization while preserving legacy size behavior",
+    "Made Monitor blacklist move transactional and safe for missing rows",
+    "Made Kami generation transactional and rejected non-positive counts",
+    "Added PHP lint and AppStore regression GitHub Actions workflow"
   ],
   "validation": {
     "source_inspection": "done",
-    "php_syntax": "passed_php_8_4",
+    "phase_1_php_syntax": "passed_php_8_4",
     "payload_regression_test": "passed",
     "legacy_equivalence_test": "passed",
+    "phase_2_ci_workflow": "configured_run_not_yet_observed",
     "live_http_integration": "not_run",
     "external_encryption_smoke_test": "not_run",
     "production_regression": "not_claimed"
   },
-  "known_high_priority_followups": [
-    "Verify and remove/archive stale App-mb.php and Index2.php runtime duplicates",
-    "Refactor Category type mapping to model-owned dictionary",
-    "Replace Category list-page day counter full-table update design",
-    "Harden Monitor blacklisting flow",
-    "Make Kami generation transactional/batched",
-    "Add scoped config loader/cache with invalidation",
-    "Add CI for PHP lint and regression tests"
+  "intentionally_preserved_risks": [
+    "Category list-page daily reset still writes cs/cstime using day-of-month",
+    "App-mb.php and Index2.php remain in runtime paths pending deployment usage verification",
+    "Kami still uses per-row inserts and legacy MD5/time/rand generation semantics",
+    "Monitor blacklist flow still allows duplicate UDID rows by historical behavior",
+    "TLS verification behavior remains unchanged"
   ],
-  "next_task": "Live/staging HTTP smoke test followed by P1 admin/controller cleanup"
+  "next_task": "Verify phase-two CI, then inspect deployment usage of stale controllers and design scoped config repository/cache"
 }
