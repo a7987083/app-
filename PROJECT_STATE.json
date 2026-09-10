@@ -3,32 +3,42 @@
   "development_branch": "dev/software-source-v1",
   "stable_branch": "main",
   "stable_baseline_commit": "598235962ea328c6558fe4935fe19ba552c1490d",
-  "current_goal": "Develop the software-source backend from the current working baseline without regressions.",
-  "status": "baseline_locked",
-  "runtime_changes": false,
-  "key_files": [
-    "application/index/controller/App.php",
-    "application/index/controller/App-mb.php",
-    "application/admin/controller/Category.php",
-    "application/admin/view/category/add.html",
-    "application/admin/view/category/edit.html",
-    "application/extra/site.php"
-  ],
-  "confirmed_capabilities": [
-    "appstore",
-    "appstore_v2",
-    "source_message",
-    "source_encryption",
-    "unlock_kami",
-    "blacklist",
-    "category_types",
-    "dylib_udid_remote_config"
+  "refactor_phase": 1,
+  "status": "phase_1_refactored_and_unit_verified",
+  "runtime_changes": true,
+  "architecture": {
+    "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
+    "source_route": "/appstore -> index/App/list",
+    "source_payload_mapper": "application/common/library/AppStorePayload.php",
+    "source_tables": ["fa_config", "fa_category", "fa_kami", "fa_black", "fa_monitor"],
+    "admin_app_controller": "application/admin/controller/Category.php",
+    "dylib_controller": "application/index/controller/Index.php"
+  },
+  "completed_changes": [
+    "Extracted legacy AppStore payload mapping into a pure component",
+    "Removed duplicated source/config/app mapping from App controller",
+    "Preserved guest/licensed lock semantics and appstore/appstore_v2 wrappers",
+    "Fixed dylib missing-card null access",
+    "Removed homepage child-category N+1 query pattern",
+    "Added standalone regression and differential equivalence tests"
   ],
   "validation": {
     "source_inspection": "done",
-    "php_syntax": "not_run_no_runtime_change",
-    "runtime_test": "not_run_no_runtime_change",
-    "regression_test": "not_run_no_runtime_change"
+    "php_syntax": "passed_php_8_4",
+    "payload_regression_test": "passed",
+    "legacy_equivalence_test": "passed",
+    "live_http_integration": "not_run",
+    "external_encryption_smoke_test": "not_run",
+    "production_regression": "not_claimed"
   },
-  "next_task": "First backward-compatible functional enhancement"
+  "known_high_priority_followups": [
+    "Verify and remove/archive stale App-mb.php and Index2.php runtime duplicates",
+    "Refactor Category type mapping to model-owned dictionary",
+    "Replace Category list-page day counter full-table update design",
+    "Harden Monitor blacklisting flow",
+    "Make Kami generation transactional/batched",
+    "Add scoped config loader/cache with invalidation",
+    "Add CI for PHP lint and regression tests"
+  ],
+  "next_task": "Live/staging HTTP smoke test followed by P1 admin/controller cleanup"
 }
