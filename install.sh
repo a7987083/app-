@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-INSTALLER_VERSION="1.0.0"
+INSTALLER_VERSION="1.0.1"
 REPO_OWNER="${REPO_OWNER:-a7987083}"
 REPO_NAME="${REPO_NAME:-app-}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
@@ -31,8 +31,10 @@ DOMAIN="${DOMAIN:-}"
 if [ -z "$DOMAIN" ]; then
     read -r -p "请输入部署域名（例如 ios.example.com）: " DOMAIN
 fi
-DOMAIN="$(printf '%s' "$DOMAIN" | tr 'A-Z' 'a-z' | xargs)"
-[[ "$DOMAIN" =~ ^([a-z0-9-]+\.)+[a-z0-9-]+$ ]] || die "域名格式不正确: $DOMAIN"
+DOMAIN="$(printf '%s' "$DOMAIN" | tr 'A-Z' 'a-z' | tr -d '\r\n' | xargs)"
+if ! printf '%s\n' "$DOMAIN" | grep -Eq '^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$'; then
+    die "域名格式不正确: $DOMAIN"
+fi
 
 ADMIN_USER="${ADMIN_USER:-}"
 if [ -z "$ADMIN_USER" ]; then
