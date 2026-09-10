@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_VERSION="1.1.0-ceshi1-remote-baota"
+DEPLOY_VERSION="1.1.1-ceshi1-remote-baota"
 REPO_URL="${REPO_URL:-https://github.com/a7987083/app-.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
 SOURCE_TARBALL="${SOURCE_TARBALL:-}"
@@ -25,8 +25,8 @@ DOMAIN="${1:-${DOMAIN:-}}"
 if [ -z "$DOMAIN" ]; then
     read -r -p "请输入域名（例如 ios.zonoeios.xyz）: " DOMAIN
 fi
-DOMAIN="$(printf '%s' "$DOMAIN" | tr 'A-Z' 'a-z' | xargs)"
-[[ "$DOMAIN" =~ ^([a-z0-9-]+\.)+[a-z0-9-]+$ ]] || die "域名格式不正确: $DOMAIN"
+DOMAIN="$(printf '%s' "$DOMAIN" | tr 'A-Z' 'a-z' | tr -d '\r\n' | xargs)"
+[ -n "$DOMAIN" ] || die "域名不能为空"
 
 APP_DIR="${APP_DIR:-/www/wwwroot/$DOMAIN}"
 
@@ -83,13 +83,15 @@ for ext in PDO pdo_mysql; do
     "$PHP_BIN" -r "exit(extension_loaded('$ext')?0:1);" || die "PHP $PHP_VER 缺少扩展: $ext"
 done
 
+# 宝塔核心模块位于 /www/server/panel/class；同时保留 panel 根目录兼容旧版本。
 SITE_EXISTS="$($PANEL_PY - <<PY
 import sys
+sys.path.insert(0, '$PANEL_ROOT/class')
 sys.path.insert(0, '$PANEL_ROOT')
 import public
 print(1 if public.M('sites').where('name=?', ('$DOMAIN',)).count() else 0)
 PY
-)"
+)" || die "无法读取宝塔站点数据库，请确认 $PANEL_ROOT/class/public.py 存在"
 [ "$SITE_EXISTS" = "0" ] || die "宝塔中已存在站点 $DOMAIN；本脚本默认不覆盖现有站点"
 
 if [ -e "$APP_DIR" ] && find "$APP_DIR" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
@@ -104,9 +106,11 @@ DB_PASS="$(tr -dc 'A-Za-z0-9_@#%+=' </dev/urandom | head -c 24 || true)"
 [ ${#DB_PASS} -ge 16 ] || DB_PASS="Zonoe_${TOKEN}_$(date +%s)"
 
 log "调用宝塔原生 AddSite 创建站点 + MySQL 数据库"
-BT_RESULT="$DOMAIN=$DOMAIN APP_DIR=$APP_DIR PHP_SHORT=$PHP_SHORT DB_USER=$DB_USER DB_PASS=$DB_PASS "$PANEL_PY" - <<'PY'
+BT_RESULT="$DOMAIN=$DOMAIN APP_DIR=$APP_DIR PHP_SHORT=$PHP_SHORT DB_USER=$DB_USER DB_PASS=$DB_PASS PANEL_ROOT=$PANEL_ROOT "$PANEL_PY" - <<'PY'
 import os,sys,json
-sys.path.insert(0, '/www/server/panel')
+panel_root=os.environ.get('PANEL_ROOT','/www/server/panel')
+sys.path.insert(0, panel_root + '/class')
+sys.path.insert(0, panel_root)
 import public
 from panelSite import panelSite
 
