@@ -1,4 +1,4 @@
-name: One-shot replace with latest ceshi1 source
+name: Apply ceshi1 20260904 replacement
 
 on:
   push:
@@ -20,75 +20,55 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Download latest source
+      - name: Rebuild validated patch
         run: |
           set -euo pipefail
-          rm -rf /tmp/ceshi1-import
-          mkdir -p /tmp/ceshi1-import/extract /tmp/ceshi1-import/source
-          curl -fL --retry 3 --retry-delay 2 \
-            'https://ios.zonoeios.xyz/ceshi1_com_YFEfj.tar.gz' \
-            -o /tmp/ceshi1-import/source.tar.gz
-          test -s /tmp/ceshi1-import/source.tar.gz
-          tar -tzf /tmp/ceshi1-import/source.tar.gz >/dev/null
-          sha256sum /tmp/ceshi1-import/source.tar.gz
+          cat .bootstrap/part00 .bootstrap/part01 .bootstrap/part02 .bootstrap/part03 | base64 -d > /tmp/ceshi1_safe_patch.tgz
+          echo 'a504d0d11b993ea9af07e8d3f287d559bac5fc7b082968774870ddb3e6db2f38  /tmp/ceshi1_safe_patch.tgz' | sha256sum -c -
+          rm -rf /tmp/ceshi1-patch
+          mkdir -p /tmp/ceshi1-patch
+          tar -xzf /tmp/ceshi1_safe_patch.tgz -C /tmp/ceshi1-patch
 
-      - name: Extract and validate 20260904 source
+      - name: Apply exact replacement delta
         run: |
           set -euo pipefail
-          tar -xzf /tmp/ceshi1-import/source.tar.gz -C /tmp/ceshi1-import/extract
-          shopt -s dotglob nullglob
-          entries=(/tmp/ceshi1-import/extract/*)
-          if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
-            cp -a "${entries[0]}/." /tmp/ceshi1-import/source/
-          else
-            cp -a /tmp/ceshi1-import/extract/. /tmp/ceshi1-import/source/
-          fi
-          rm -rf /tmp/ceshi1-import/source/.git /tmp/ceshi1-import/source/.github
-          test -f /tmp/ceshi1-import/source/auto_install.json
-          test -f /tmp/ceshi1-import/source/application/database.php
-          test -f /tmp/ceshi1-import/source/public/index.php
-          test -f /tmp/ceshi1-import/source/ver.json
-          grep -q '20260904' /tmp/ceshi1-import/source/ver.json
-          echo 'ver.json:'
-          cat /tmp/ceshi1-import/source/ver.json
-          echo
-          echo "source_files=$(find /tmp/ceshi1-import/source -type f | wc -l)"
-          sha256sum \
-            /tmp/ceshi1-import/source/ver.json \
-            /tmp/ceshi1-import/source/application/admin/controller/general/Config.php \
-            /tmp/ceshi1-import/source/application/common/behavior/Common.php \
-            /tmp/ceshi1-import/source/public/assets/js/backend/category.js
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            rm -rf -- "$path"
+          done < /tmp/ceshi1-patch/delete.txt
+          cp -a /tmp/ceshi1-patch/files/. ./
+          rm -rf .bootstrap .github
 
-      - name: Delete old repository tree and copy latest source
+      - name: Validate source tree
         run: |
           set -euo pipefail
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a /tmp/ceshi1-import/source/. ./
-
-      - name: Verify replacement tree
-        run: |
-          set -euo pipefail
-          test -d .git
           test -f ver.json
-          test -f auto_install.json
-          test -f application/database.php
-          test -f application/config.php
-          test -f public/index.php
-          test -f vendor/autoload.php
-          test ! -e .github
+          grep -q '20260904' ver.json
+          test -f application/common/library/SiteConfigSync.php
+          test -f application/common/library/UpdateIntegrity.php
           test ! -e deploy.sh
           test ! -e install.sh
           test ! -e import.sql
-          grep -q '20260904' ver.json
-          echo "repo_files=$(find . -type f ! -path './.git/*' | wc -l)"
-          du -sh .
+          test ! -e .github
+          test ! -e .bootstrap
+          grep -q 'BT_DB_NAME' application/database.php
+          grep -q 'BT_DB_USERNAME' application/database.php
+          grep -q 'BT_DB_PASSWORD' application/database.php
+          if grep -Eq "'password'[[:space:]]*=>[[:space:]]*'[^']+'" application/database.php && ! grep -q "'password'[[:space:]]*=>[[:space:]]*'BT_DB_PASSWORD'" application/database.php; then
+            echo 'Refusing to commit a real database password'
+            exit 1
+          fi
+          git add -A
+          ACTUAL_TREE="$(git write-tree)"
+          EXPECTED_TREE='f4e758c3ecddc5abbad0e0f7c9874085bb0bb8b7'
+          echo "actual_tree=$ACTUAL_TREE"
+          echo "expected_tree=$EXPECTED_TREE"
+          test "$ACTUAL_TREE" = "$EXPECTED_TREE"
 
-      - name: Commit exact replacement to main
+      - name: Commit replacement
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git status --short
           git commit -m 'import: replace repository with ceshi1 20260904 source'
           git push origin HEAD:main
