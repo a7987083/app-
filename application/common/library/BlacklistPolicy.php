@@ -28,6 +28,11 @@ class BlacklistPolicy
         return $endtime === 0 || $endtime > $now;
     }
 
+    public static function isExpired(array $row, $now = null)
+    {
+        return !self::isActive($row, $now);
+    }
+
     public static function findActive(array $rows, $now = null)
     {
         foreach ($rows as $row) {
