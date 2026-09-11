@@ -95,3 +95,53 @@ jobs:
           php tests/legacy_controller_contract_test.php
           bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
+
+  package-release:
+    if: github.event_name == 'push'
+    needs: php-regression
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate BaoTa release contract
+        run: |
+          set -euo pipefail
+          test -f auto_install.json
+          test -f import.sql
+          test -f nginx.rewrite
+          test -f application/common/library/SourceAppRecord.php
+          test -f application/common/library/SourceHttpClient.php
+          test -f application/common/library/SourceResponse.php
+          test -f application/common/library/CardEntitlementPolicy.php
+          test -f application/common/library/CardDeviceTransfer.php
+          test -f application/index/view/index/unbind.html
+          test ! -e application/index/controller/App-mb.php
+          test ! -e application/index/controller/Index2.php
+          grep -F "Route::rule('unbind','index/Index/unbind');" application/route.php
+          grep -F 'BT_DB_NAME' application/database.php
+          grep -F 'BT_DB_USERNAME' application/database.php
+          grep -F 'BT_DB_PASSWORD' application/database.php
+          grep -F 'SOURCE_HTTP_VERIFY_TLS' application/common/library/SourceHttpClient.php
+          grep -F 'CardEntitlementPolicy::activationState' application/index/controller/App.php
+          grep -F 'CardDeviceTransfer::transfer' application/index/controller/Index.php
+
+      - name: Build BaoTa deployment ZIP
+        run: |
+          set -euo pipefail
+          zip -qr zonoe-source-phase10-bt.zip . \
+            -x '.git/*' \
+               'zonoe-source-phase10-bt.zip' \
+               'zonoe-source-phase10-bt.zip.sha256'
+          sha256sum zonoe-source-phase10-bt.zip > zonoe-source-phase10-bt.zip.sha256
+          unzip -t zonoe-source-phase10-bt.zip >/dev/null
+
+      - name: Upload BaoTa release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zonoe-source-phase10-bt
+          path: |
+            zonoe-source-phase10-bt.zip
+            zonoe-source-phase10-bt.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
