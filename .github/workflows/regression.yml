@@ -33,7 +33,6 @@ jobs:
           php -l application/common/model/Config.php
           php -l application/index/controller/App.php
           php -l application/index/controller/Index.php
-          php -l application/index/controller/Index2.php
           php -l application/admin/controller/Category.php
           php -l application/admin/controller/Monitor.php
           php -l application/admin/controller/Kami.php
