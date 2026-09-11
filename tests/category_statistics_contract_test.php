@@ -9,7 +9,6 @@ function statsContractFail($message)
 $root = dirname(__DIR__);
 $admin = file_get_contents($root . '/application/admin/controller/Category.php');
 $index = file_get_contents($root . '/application/index/controller/Index.php');
-$legacyIndex = file_get_contents($root . '/application/index/controller/Index2.php');
 $helper = file_get_contents($root . '/application/common/library/CategoryDailyStat.php');
 
 $indexStart = strpos($admin, 'public function index()');
@@ -29,9 +28,6 @@ foreach (array(
     if (strpos($index, $needle) === false) {
         statsContractFail('Index.php missing: ' . $needle);
     }
-    if (strpos($legacyIndex, $needle) === false) {
-        statsContractFail('Index2.php compatibility path missing: ' . $needle);
-    }
 }
 
 foreach (array(
@@ -45,8 +41,14 @@ foreach (array(
     }
 }
 
-if (strpos($index, "date('d'") !== false || strpos($legacyIndex, "date('d'") !== false) {
+if (strpos($index, "date('d'") !== false) {
     statsContractFail('day-of-month counter key remains in runtime controller');
+}
+
+foreach (array('App-mb.php', 'Index2.php') as $file) {
+    if (is_file($root . '/application/index/controller/' . $file)) {
+        statsContractFail('retired controller still exists: ' . $file);
+    }
 }
 
 echo "OK category_statistics_contract_test\n";
