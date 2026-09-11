@@ -22,20 +22,27 @@ jobs:
             echo "Phase 12 payload already applied"
             exit 0
           fi
+          wc -c tools/phase12_chunks/*
+          sha256sum tools/phase12_chunks/*
           cat tools/phase12_chunks/00 tools/phase12_chunks/01 tools/phase12_chunks/02 tools/phase12_chunks/03 tools/phase12_chunks/04 tools/phase12_chunks/05 > /tmp/phase12_payload.b64
-          base64 -d /tmp/phase12_payload.b64 > /tmp/phase12_payload.tar.gz
+          python3 - <<'PY'
+          import base64, pathlib
+          p=pathlib.Path('/tmp/phase12_payload.b64')
+          b=p.read_bytes()
+          print('combined bytes', len(b), 'mod4', len(b)%4)
+          try:
+              out=base64.b64decode(b, validate=True)
+          except Exception as e:
+              print('BASE64_ERROR', repr(e))
+              raise
+          pathlib.Path('/tmp/phase12_payload.tar.gz').write_bytes(out)
+          PY
           echo "8629580b20ed9416ab46c3df75f97e2525eecbf9653ff58e2c9a8576abde7fd4  /tmp/phase12_payload.tar.gz" | sha256sum -c -
           tar -xzf /tmp/phase12_payload.tar.gz -C .
           rm -f tools/phase12_payload.b64
           rm -rf tools/phase12_chunks
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A application/admin/controller/general/Config.php \
-                     application/admin/view/general/config/index.html \
-                     application/common/library/update \
-                     tests/phase12_update_contract_test.php \
-                     PHASE12_RELEASE.txt ver.json public/update/ver.txt \
-                     PROJECT_STATE.json HANDOFF.md KNOWN_ISSUES.md BUILD.md CHANGELOG_DEV.md \
-                     tools/phase12_payload.b64 tools/phase12_chunks
+          git add -A application/admin/controller/general/Config.php application/admin/view/general/config/index.html application/common/library/update tests/phase12_update_contract_test.php PHASE12_RELEASE.txt ver.json public/update/ver.txt PROJECT_STATE.json HANDOFF.md KNOWN_ISSUES.md BUILD.md CHANGELOG_DEV.md tools/phase12_payload.b64 tools/phase12_chunks
           git commit -m "phase12: dual-source hardened online updater"
           git push origin HEAD:feature/phase12-dual-online-update
