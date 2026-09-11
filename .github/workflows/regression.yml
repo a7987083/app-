@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev/software-source-v1
+      - feature/phase12-dual-online-update
   pull_request:
 
 jobs:
@@ -39,6 +40,14 @@ jobs:
           php -l application/common/library/AuthorizationPolicy.php
           php -l application/common/library/AuthorizationEventLog.php
           php -l application/common/library/AuthorizationLicense.php
+          php -l application/common/library/update/UpdateSourceInterface.php
+          php -l application/common/library/update/UpdateHttpClient.php
+          php -l application/common/library/update/NuosikeUpdateSource.php
+          php -l application/common/library/update/GitHubUpdateSource.php
+          php -l application/common/library/update/UpdateSqlRunner.php
+          php -l application/common/library/update/UpdateBackup.php
+          php -l application/common/library/update/UpdateInstaller.php
+          php -l application/common/library/update/UpdateManager.php
           php -l application/common/model/Config.php
           php -l application/index/controller/App.php
           php -l application/index/controller/Index.php
@@ -47,6 +56,7 @@ jobs:
           php -l application/admin/controller/Kami.php
           php -l application/admin/controller/Black.php
           php -l application/admin/controller/Authorization.php
+          php -l application/admin/controller/general/Config.php
           php -l application/admin/model/Black.php
           php -l application/admin/model/Kami.php
           php -l tests/appstore_payload_test.php
@@ -71,13 +81,14 @@ jobs:
           php -l tests/phase10_controller_contract_test.php
           php -l tests/authorization_policy_test.php
           php -l tests/phase11_contract_test.php
+          php -l tests/phase12_update_contract_test.php
           php -l tests/legacy_controller_contract_test.php
           php -l tests/deployment_contract_test.php
           bash -n tools/trace_monitor_probe.sh
           bash -n tools/legacy_controller_access_audit.sh
           bash -n tests/legacy_controller_audit_test.sh
 
-      - name: Run appstore, category, card, trace-monitor, blacklist and deployment regression tests
+      - name: Run regression tests
         run: |
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
@@ -101,6 +112,7 @@ jobs:
           php tests/phase10_controller_contract_test.php
           php tests/authorization_policy_test.php
           php tests/phase11_contract_test.php
+          php tests/phase12_update_contract_test.php
           php tests/legacy_controller_contract_test.php
           bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
@@ -113,46 +125,65 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate Phase 11 sourcepack contract
+      - name: Validate Phase 12 sourcepack contract
         run: |
           set -euo pipefail
           test -f auto_install.json
           test -f nginx.rewrite
           test -f tools/phase11_upgrade.sql
-          test -f application/common/library/AuthorizationSchema.php
-          test -f application/common/library/AuthorizationPolicy.php
-          test -f application/common/library/AuthorizationEventLog.php
-          test -f application/common/library/AuthorizationLicense.php
-          test -f application/admin/controller/Authorization.php
-          test -f application/index/view/index/unbind.html
-          test -f application/index/view/index/license.html
+          test -f application/common/library/update/UpdateManager.php
+          test -f application/common/library/update/UpdateInstaller.php
+          test -f application/common/library/update/GitHubUpdateSource.php
+          test -f application/common/library/update/NuosikeUpdateSource.php
+          test -f application/common/library/update/UpdateBackup.php
+          test -f application/admin/view/general/config/index.html
           test ! -e application/index/controller/App-mb.php
           test ! -e application/index/controller/Index2.php
-          grep -F "Route::rule('unbind/query','index/Index/unbindQuery');" application/route.php
-          grep -F "Route::rule('license','index/Index/license');" application/route.php
-          grep -F 'transfer_count' tools/phase11_upgrade.sql
-          grep -F 'fa_card_transfer_log' tools/phase11_upgrade.sql
-          grep -F 'fa_authorization_event' tools/phase11_upgrade.sql
+          grep -F "check('nuosike')" application/admin/controller/general/Config.php
+          grep -F "check('github')" application/admin/controller/general/Config.php
+          grep -F 'GitHub 在线更新' application/admin/view/general/config/index.html
+          grep -F 'SOURCE_UPDATE_VERIFY_TLS' application/common/library/update/UpdateHttpClient.php
+          grep -F 'LOCK_EX | LOCK_NB' application/common/library/update/UpdateManager.php
+          grep -F 'application/database.php' application/common/library/update/UpdateInstaller.php
           grep -F 'BT_DB_NAME' application/database.php
           grep -F 'BT_DB_USERNAME' application/database.php
           grep -F 'BT_DB_PASSWORD' application/database.php
+          test "$(cat public/update/ver.txt)" = "20260912"
 
-      - name: Build Phase 11 sourcepack ZIP
+      - name: Build Phase 12 sourcepack ZIP
         run: |
           set -euo pipefail
-          zip -qr zonoe-source-phase11-sourcepack.zip . \
+          zip -qr zonoe-source-phase12-sourcepack.zip . \
             -x '.git/*' \
-               'zonoe-source-phase11-sourcepack.zip' \
-               'zonoe-source-phase11-sourcepack.zip.sha256'
-          sha256sum zonoe-source-phase11-sourcepack.zip > zonoe-source-phase11-sourcepack.zip.sha256
-          unzip -t zonoe-source-phase11-sourcepack.zip >/dev/null
+               'zonoe-source-phase12-sourcepack.zip' \
+               'zonoe-source-phase12-sourcepack.zip.sha256' \
+               'zonoe-online-update.zip' \
+               'zonoe-online-update.zip.sha256'
+          sha256sum zonoe-source-phase12-sourcepack.zip > zonoe-source-phase12-sourcepack.zip.sha256
+          unzip -t zonoe-source-phase12-sourcepack.zip >/dev/null
 
-      - name: Upload Phase 11 sourcepack artifact
+      - name: Build Phase 11 to 12 online-update ZIP
+        run: |
+          set -euo pipefail
+          rm -rf .phase12-online-update
+          mkdir -p .phase12-online-update/program/application/admin/controller/general
+          mkdir -p .phase12-online-update/program/application/admin/view/general/config
+          mkdir -p .phase12-online-update/program/application/common/library/update
+          cp application/admin/controller/general/Config.php .phase12-online-update/program/application/admin/controller/general/Config.php
+          cp application/admin/view/general/config/index.html .phase12-online-update/program/application/admin/view/general/config/index.html
+          cp application/common/library/update/*.php .phase12-online-update/program/application/common/library/update/
+          (cd .phase12-online-update && zip -qr ../zonoe-online-update.zip program)
+          sha256sum zonoe-online-update.zip > zonoe-online-update.zip.sha256
+          unzip -t zonoe-online-update.zip >/dev/null
+
+      - name: Upload Phase 12 artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: zonoe-source-phase11-sourcepack
+          name: zonoe-source-phase12-build
           path: |
-            zonoe-source-phase11-sourcepack.zip
-            zonoe-source-phase11-sourcepack.zip.sha256
+            zonoe-source-phase12-sourcepack.zip
+            zonoe-source-phase12-sourcepack.zip.sha256
+            zonoe-online-update.zip
+            zonoe-online-update.zip.sha256
           if-no-files-found: error
           retention-days: 30
