@@ -75,10 +75,13 @@ class CardDeviceTransfer
             }
 
             $maxEnd = CardEntitlementPolicy::activeEndTime($activeRows, $now);
+
+            // Move the complete activated-card history, not only rows whose
+            // own endtime is still active. This keeps every previously used
+            // proof card associated with the new device after stacked renewals.
             $affected = Db::table('fa_kami')
                 ->where('udid', $oldUdid)
                 ->where('jh', 1)
-                ->where('endtime', '>', $now)
                 ->update(['udid' => $newUdid]);
             if ($affected === false || (int)$affected <= 0) {
                 throw new \RuntimeException('换绑写入失败');
