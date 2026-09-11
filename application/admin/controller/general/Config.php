@@ -22,7 +22,7 @@ class Config extends Backend
      * @var \app\common\model\Config
      */
     protected $model = null;
-    protected $noNeedRight = ['check', 'rulelist', 'version_notice'];
+    protected $noNeedRight = ['check', 'rulelist', 'version_notice', 'update_status', 'update_history', 'update_rollback'];
 
     public function _initialize()
     {
@@ -217,11 +217,8 @@ class Config extends Backend
      */
     public function rulelist()
     {
-        //主键
         $primarykey = $this->request->request("keyField");
-        //主键值
         $keyValue = $this->request->request("keyValue", "");
-
         $keyValueArr = array_filter(explode(',', $keyValue));
         $regexList = \app\common\model\Config::getRegexList();
         $list = [];
@@ -265,29 +262,25 @@ class Config extends Backend
             return $this->error(__('Invalid parameters'));
         }
     }
+
     /**
-     * 原版更新源检查。保留既有入口，只把执行逻辑收口到统一更新引擎。
+     * 原版更新源检查。
      */
     public function update()
     {
         return json($this->updateManager()->check('nuosike'));
     }
 
-    /**
-     * 原版后台自动轮询入口。
-     */
     public function version_notice()
     {
         return json($this->updateManager()->check('nuosike'));
     }
 
-    /**
-     * 原版在线安装入口。URL 保持不变，避免现有前端和历史调用失效。
-     */
     public function system_update()
     {
         $force = intval($this->request->param('force', 0)) === 1;
-        return json($this->updateManager()->install('nuosike', $force));
+        $jobId = (string)$this->request->param('job_id', '');
+        return json($this->updateManager()->install('nuosike', $force, $jobId));
     }
 
     /**
@@ -298,13 +291,39 @@ class Config extends Backend
         return json($this->updateManager()->check('github'));
     }
 
-    /**
-     * GitHub 稳定 Release 在线安装。
-     */
     public function github_system_update()
     {
         $force = intval($this->request->param('force', 0)) === 1;
-        return json($this->updateManager()->install('github', $force));
+        $jobId = (string)$this->request->param('job_id', '');
+        return json($this->updateManager()->install('github', $force, $jobId));
+    }
+
+    /**
+     * 查询真实更新阶段进度。
+     */
+    public function update_status()
+    {
+        $jobId = (string)$this->request->param('job_id', '');
+        return json($this->updateManager()->status($jobId));
+    }
+
+    /**
+     * 更新/回滚历史。
+     */
+    public function update_history()
+    {
+        $limit = intval($this->request->param('limit', 20));
+        return json($this->updateManager()->history($limit));
+    }
+
+    /**
+     * 从指定成功更新记录回滚。
+     */
+    public function update_rollback()
+    {
+        $historyId = (string)$this->request->param('history_id', '');
+        $jobId = (string)$this->request->param('job_id', '');
+        return json($this->updateManager()->rollback($historyId, $jobId));
     }
 
     protected function updateManager()
