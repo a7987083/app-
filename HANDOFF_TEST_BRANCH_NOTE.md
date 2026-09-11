@@ -1,5 +1,0 @@
-# Temporary test branch
-
-Created for isolated validation after Phase 10.
-
-No main branch changes.
