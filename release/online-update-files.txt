@@ -1,0 +1,6 @@
+PHASE13_RELEASE.txt
+application/common/library/update/UpdateRuntimeStore.php
+application/common/library/update/UpdateInstaller.php
+application/common/library/update/UpdateManager.php
+application/admin/controller/general/Config.php
+public/assets/js/backend/general/config.js
