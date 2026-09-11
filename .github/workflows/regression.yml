@@ -35,6 +35,10 @@ jobs:
           php -l application/common/library/CardCodeGenerator.php
           php -l application/common/library/CardEntitlementPolicy.php
           php -l application/common/library/CardDeviceTransfer.php
+          php -l application/common/library/AuthorizationSchema.php
+          php -l application/common/library/AuthorizationPolicy.php
+          php -l application/common/library/AuthorizationEventLog.php
+          php -l application/common/library/AuthorizationLicense.php
           php -l application/common/model/Config.php
           php -l application/index/controller/App.php
           php -l application/index/controller/Index.php
@@ -42,6 +46,7 @@ jobs:
           php -l application/admin/controller/Monitor.php
           php -l application/admin/controller/Kami.php
           php -l application/admin/controller/Black.php
+          php -l application/admin/controller/Authorization.php
           php -l application/admin/model/Black.php
           php -l application/admin/model/Kami.php
           php -l tests/appstore_payload_test.php
@@ -64,6 +69,8 @@ jobs:
           php -l tests/card_entitlement_policy_test.php
           php -l tests/card_device_transfer_contract_test.php
           php -l tests/phase10_controller_contract_test.php
+          php -l tests/authorization_policy_test.php
+          php -l tests/phase11_contract_test.php
           php -l tests/legacy_controller_contract_test.php
           php -l tests/deployment_contract_test.php
           bash -n tools/trace_monitor_probe.sh
@@ -92,6 +99,8 @@ jobs:
           php tests/card_entitlement_policy_test.php
           php tests/card_device_transfer_contract_test.php
           php tests/phase10_controller_contract_test.php
+          php tests/authorization_policy_test.php
+          php tests/phase11_contract_test.php
           php tests/legacy_controller_contract_test.php
           bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
@@ -104,43 +113,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate Phase 10 sourcepack contract
+      - name: Validate Phase 11 sourcepack contract
         run: |
           set -euo pipefail
           test -f auto_install.json
           test -f nginx.rewrite
-          test -f application/common/library/SourceAppRecord.php
-          test -f application/common/library/SourceHttpClient.php
-          test -f application/common/library/SourceResponse.php
-          test -f application/common/library/CardEntitlementPolicy.php
-          test -f application/common/library/CardDeviceTransfer.php
+          test -f tools/phase11_upgrade.sql
+          test -f application/common/library/AuthorizationSchema.php
+          test -f application/common/library/AuthorizationPolicy.php
+          test -f application/common/library/AuthorizationEventLog.php
+          test -f application/common/library/AuthorizationLicense.php
+          test -f application/admin/controller/Authorization.php
           test -f application/index/view/index/unbind.html
+          test -f application/index/view/index/license.html
           test ! -e application/index/controller/App-mb.php
           test ! -e application/index/controller/Index2.php
-          grep -F "Route::rule('unbind','index/Index/unbind');" application/route.php
+          grep -F "Route::rule('unbind/query','index/Index/unbindQuery');" application/route.php
+          grep -F "Route::rule('license','index/Index/license');" application/route.php
+          grep -F 'transfer_count' tools/phase11_upgrade.sql
+          grep -F 'fa_card_transfer_log' tools/phase11_upgrade.sql
+          grep -F 'fa_authorization_event' tools/phase11_upgrade.sql
           grep -F 'BT_DB_NAME' application/database.php
           grep -F 'BT_DB_USERNAME' application/database.php
           grep -F 'BT_DB_PASSWORD' application/database.php
-          grep -F 'SOURCE_HTTP_VERIFY_TLS' application/common/library/SourceHttpClient.php
-          grep -F 'CardEntitlementPolicy::activationState' application/index/controller/App.php
-          grep -F 'CardDeviceTransfer::transfer' application/index/controller/Index.php
 
-      - name: Build Phase 10 sourcepack ZIP
+      - name: Build Phase 11 sourcepack ZIP
         run: |
           set -euo pipefail
-          zip -qr zonoe-source-phase10-sourcepack.zip . \
+          zip -qr zonoe-source-phase11-sourcepack.zip . \
             -x '.git/*' \
-               'zonoe-source-phase10-sourcepack.zip' \
-               'zonoe-source-phase10-sourcepack.zip.sha256'
-          sha256sum zonoe-source-phase10-sourcepack.zip > zonoe-source-phase10-sourcepack.zip.sha256
-          unzip -t zonoe-source-phase10-sourcepack.zip >/dev/null
+               'zonoe-source-phase11-sourcepack.zip' \
+               'zonoe-source-phase11-sourcepack.zip.sha256'
+          sha256sum zonoe-source-phase11-sourcepack.zip > zonoe-source-phase11-sourcepack.zip.sha256
+          unzip -t zonoe-source-phase11-sourcepack.zip >/dev/null
 
-      - name: Upload Phase 10 sourcepack artifact
+      - name: Upload Phase 11 sourcepack artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zonoe-source-phase10-sourcepack
+          name: zonoe-source-phase11-sourcepack
           path: |
-            zonoe-source-phase10-sourcepack.zip
-            zonoe-source-phase10-sourcepack.zip.sha256
+            zonoe-source-phase11-sourcepack.zip
+            zonoe-source-phase11-sourcepack.zip.sha256
           if-no-files-found: error
           retention-days: 30
