@@ -1,0 +1,39 @@
+name: Phase12 Apply Payload
+
+on:
+  push:
+    branches:
+      - feature/phase12-dual-online-update
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply verified Phase 12 payload
+        run: |
+          set -euo pipefail
+          if [ ! -f tools/phase12_payload.b64 ]; then
+            echo "Phase 12 payload already applied"
+            exit 0
+          fi
+          base64 -d tools/phase12_payload.b64 > /tmp/phase12_payload.tar.gz
+          echo "8629580b20ed9416ab46c3df75f97e2525eecbf9653ff58e2c9a8576abde7fd4  /tmp/phase12_payload.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/phase12_payload.tar.gz -C .
+          rm tools/phase12_payload.b64
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add application/admin/controller/general/Config.php \
+                  application/admin/view/general/config/index.html \
+                  application/common/library/update \
+                  tests/phase12_update_contract_test.php \
+                  PHASE12_RELEASE.txt ver.json public/update/ver.txt \
+                  PROJECT_STATE.json HANDOFF.md KNOWN_ISSUES.md BUILD.md CHANGELOG_DEV.md \
+                  tools/phase12_payload.b64
+          git commit -m "phase12: dual-source hardened online updater"
+          git push origin HEAD:feature/phase12-dual-online-update
