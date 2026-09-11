@@ -10,12 +10,14 @@ class UpdateInstaller
     protected $root;
     protected $http;
     protected $sqlRunner;
+    protected $progress;
 
-    public function __construct($root, UpdateHttpClient $http = null)
+    public function __construct($root, UpdateHttpClient $http = null, $progress = null)
     {
         $this->root = rtrim($root, '/\\') . DIRECTORY_SEPARATOR;
         $this->http = $http ?: new UpdateHttpClient();
         $this->sqlRunner = new UpdateSqlRunner();
+        $this->progress = is_callable($progress) ? $progress : null;
     }
 
     public function install(array $package, $requiresSha256)
@@ -30,6 +32,7 @@ class UpdateInstaller
             throw new \RuntimeException('GitHub 更新包缺少有效 SHA256');
         }
 
+        $this->notify('download', 12, '正在下载更新包', ['target_version' => $version]);
         $workBase = $this->root . 'public' . DIRECTORY_SEPARATOR . 'update' . DIRECTORY_SEPARATOR;
         $runId = date('Ymd_His') . '_' . substr(md5(uniqid('', true)), 0, 8);
         $workDir = $workBase . 'cache' . DIRECTORY_SEPARATOR . $runId . DIRECTORY_SEPARATOR;
@@ -42,11 +45,14 @@ class UpdateInstaller
             $this->removeTree($workDir);
             throw new \RuntimeException('升级程序包下载失败');
         }
+
+        $this->notify('sha256', 23, '正在校验更新包 SHA256');
         if ($sha256 !== '' && hash_file('sha256', $zipFile) !== $sha256) {
             $this->removeTree($workDir);
             throw new \RuntimeException('更新包 SHA256 校验失败');
         }
 
+        $this->notify('extract', 33, '正在进行更新包安全检查并解压');
         $extractDir = $workDir . 'extract' . DIRECTORY_SEPARATOR;
         if (!$this->safeExtract($zipFile, $extractDir)) {
             $this->removeTree($workDir);
@@ -64,43 +70,78 @@ class UpdateInstaller
 
         $backup = new UpdateBackup($this->root, $backupDir);
         $backupCreated = false;
+        $databaseMigrated = false;
         try {
+            $this->notify('backup', 45, '正在备份程序文件和数据库');
             $backup->create(is_dir($programDir) ? $programDir : $this->emptyProgramDir($workDir));
             $backupCreated = true;
+
             if (is_dir($mysqlDir)) {
+                $sqlFiles = glob(rtrim($mysqlDir, '/\\') . DIRECTORY_SEPARATOR . '*.sql');
+                $databaseMigrated = is_array($sqlFiles) && count($sqlFiles) > 0;
+                $this->notify('database', 58, $databaseMigrated ? '正在执行数据库迁移' : '本次更新无需数据库迁移', ['database_migrated' => $databaseMigrated]);
                 $this->sqlRunner->runDirectory($mysqlDir);
+            } else {
+                $this->notify('database', 58, '本次更新无需数据库迁移', ['database_migrated' => false]);
             }
+
             if (is_dir($programDir)) {
+                $this->notify('files', 70, '正在覆盖程序文件');
                 $this->copyProgram($programDir, $this->root);
+                $this->notify('verify', 82, '正在校验更新后的程序文件');
                 if (!$this->verifyProgram($programDir, $this->root)) {
                     throw new \RuntimeException('文件覆盖完整性校验失败');
                 }
             }
+
+            $this->notify('config', 90, '正在同步站点配置');
             try {
                 SiteConfigSync::mergeMissingFromDb();
             } catch (\Exception $e) {
                 throw new \RuntimeException('站点配置同步失败: ' . $e->getMessage());
             }
+
+            $this->notify('version', 96, '正在写入新版本号');
             $this->writeVersion($version);
             if (function_exists('rmdirs') && defined('CACHE_PATH')) {
                 @rmdirs(CACHE_PATH, false);
             }
             $this->removeTree($workDir);
+            $this->notify('package_complete', 99, '更新包安装完成', [
+                'backup' => str_replace('\\', '/', $backupDir),
+                'database_migrated' => $databaseMigrated,
+                'sha256_verified' => $sha256 !== '',
+                'files_verified' => true,
+            ]);
             return [
                 'version' => $version,
                 'backup' => str_replace('\\', '/', $backupDir),
+                'sha256' => $sha256,
+                'sha256_verified' => $sha256 !== '',
+                'files_verified' => true,
+                'database_migrated' => $databaseMigrated,
             ];
         } catch (\Exception $e) {
             $rollbackError = '';
             if ($backupCreated) {
+                $this->notify('rollback', 92, '更新失败，正在自动回滚', ['rollback' => false]);
                 try {
                     $backup->rollback();
+                    $this->notify('rollback', 98, '自动回滚完成', ['rollback' => true]);
                 } catch (\Exception $rollbackException) {
                     $rollbackError = '; 自动回滚失败: ' . $rollbackException->getMessage();
+                    $this->notify('rollback_failed', 98, '自动回滚失败', ['rollback' => false, 'rollback_error' => $rollbackException->getMessage()]);
                 }
             }
             $this->removeTree($workDir);
             throw new \RuntimeException($e->getMessage() . $rollbackError);
+        }
+    }
+
+    protected function notify($stage, $progress, $message, array $extra = [])
+    {
+        if ($this->progress) {
+            call_user_func($this->progress, $stage, intval($progress), (string)$message, $extra);
         }
     }
 
