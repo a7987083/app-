@@ -1,0 +1,49 @@
+Phase 12 - Dual Online Update
+============================
+
+Baseline
+--------
+Phase 11 user-approved stable baseline.
+Main branch is not modified.
+
+Scope
+-----
+1. Preserve the original Nuosike online update entry and endpoint behavior.
+2. Add a separate "GitHub 在线更新" button beside the original update button.
+3. Both sources use one UpdateManager / UpdateInstaller pipeline.
+4. GitHub stable release contract:
+   - stable release only (draft/prerelease ignored)
+   - tag contains a numeric version such as source-v20260913
+   - asset: zonoe-online-update.zip
+   - asset: zonoe-online-update.zip.sha256
+5. Harden both sources:
+   - HTTPS/TLS verification enabled by default
+   - GitHub SHA256 mandatory; Nuosike SHA256 verified when supplied
+   - non-blocking update lock
+   - ZIP path traversal and symlink checks
+   - protected paths: application/database.php, .env, uploads, public/uploads, runtime
+   - database backup before install
+   - overwritten-file backup before install
+   - SQL exceptions stop the update
+   - automatic file/database rollback on install failure
+   - all program files are SHA256-verified after copy
+   - version number written only after SQL/file/config-sync succeeds
+
+Compatibility
+-------------
+Original endpoints remain:
+  general/config/update
+  general/config/version_notice
+  general/config/system_update
+
+New GitHub endpoints:
+  general/config/github_update
+  general/config/github_system_update
+
+Emergency TLS compatibility only:
+  SOURCE_UPDATE_VERIFY_TLS=0
+Default is strict TLS verification.
+
+Release note
+------------
+The repository currently has no stable GitHub online-update Release asset. In that state the GitHub button returns "GitHub 暂无可用稳定更新"; it does not fall back to the Nuosike source.

@@ -78,3 +78,9 @@ Transport/cookie defaults outside the source encryption HTTP client remain legac
 
 ### Physical Category schema migration
 Semantic aliases now exist, so a future physical rename of `bt1a/bt1b/bt2a/bt2b` is possible. It is not currently justified because it would require database migration and wider compatibility testing without adding user-visible value.
+
+## Phase 12 online updater
+
+- The GitHub update channel intentionally has no stable package until a stable GitHub Release is published with `zonoe-online-update.zip` and matching `.sha256`; the button should report no stable update in that state.
+- Strict update TLS depends on the server CA store. `SOURCE_UPDATE_VERIFY_TLS=0` exists only as an emergency diagnostic/compatibility switch while the CA chain is repaired.
+- Database backup/rollback is implemented in PHP for BaoTa compatibility and can take longer on very large databases; do not interrupt an update while the update lock is active.

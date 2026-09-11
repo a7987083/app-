@@ -166,3 +166,7 @@ For an existing Phase 10 database, automatic bootstrap runs on authorization pat
 ```bash
 mysql -u <user> -p <database> < tools/phase11_upgrade.sql
 ```
+
+## Phase 12 online-update artifact
+
+CI is pinned to PHP 7.0. A successful Phase 12 build produces both a full sourcepack and an incremental online-update package. The incremental package contains `program/` only for this phase (no schema migration) and is named `zonoe-online-update.zip` with `zonoe-online-update.zip.sha256`. For a future GitHub stable update, publish both files as assets of a non-draft, non-prerelease Release whose tag contains a numeric version, e.g. `source-v20260913`. The deployed updater ignores drafts/prereleases and refuses GitHub packages without a valid SHA256 asset.

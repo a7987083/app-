@@ -157,7 +157,8 @@
                                     <button type="submit" class="btn btn-success btn-embossed">{:__('OK')}</button>
                                      {if $index == 'basic'}
                                     <button type="reset" class="btn btn-default btn-embossed">{:__('Reset')}</button>
-                                    <button type="submit" onclick="update()" class="btn btn-danger btn-embossed">检查更新</button>
+                                    <button type="button" onclick="update()" class="btn btn-danger btn-embossed">检查更新</button>
+                                    <button type="button" onclick="githubUpdate()" class="btn btn-info btn-embossed"><i class="fa fa-github"></i> GitHub 在线更新</button>
                                     {/if}
                                     {if $index == 'uinfo'}
                                     <button type="submit" onclick="sc()" class="btn btn-danger btn-embossed">生成动态库</button>
@@ -269,7 +270,22 @@ function sc(){
     window.open('https://control.v-team.cn/panel/login');
     return false;
 }
-function runSystemUpdate(force){
+function updateSourceConfig(source){
+    if(source === 'github'){
+        return {
+            checkUrl: 'general/config/github_update',
+            installUrl: 'general/config/github_system_update',
+            title: 'GitHub 在线更新'
+        };
+    }
+    return {
+        checkUrl: 'general/config/update',
+        installUrl: 'general/config/system_update',
+        title: '原版在线更新'
+    };
+}
+function runSystemUpdate(source, force){
+    var cfg = updateSourceConfig(source);
     layer.msg('正在更新..', {
         icon: 16
         ,shade: 0.3
@@ -277,11 +293,11 @@ function runSystemUpdate(force){
     });
     $.ajax({
         type: 'POST',
-        url: 'general/config/system_update',
+        url: cfg.installUrl,
         dataType: 'json',
         data: force ? {force: 1} : {},
         success: function (str) {
-            layer.alert(str.msg, { icon: str.code == 200 ? 1 : 2, closeBtn: 0 }, function () {
+            layer.alert(str.msg || '', { icon: str.code == 200 ? 1 : 2, closeBtn: 0 }, function () {
                 layer.closeAll();
                 if (str.code == 200) {
                     location.reload();
@@ -289,49 +305,62 @@ function runSystemUpdate(force){
             });
         },
         error: function () {
-            layer.alert('更新请求失败', {icon: 2});
+            layer.alert(cfg.title + '请求失败', {icon: 2});
         }
     });
 }
 function updateConfirmHtml(str){
     var changelog = (str.data && str.data.changelog) ? String(str.data.changelog) : '';
     var content = '<div style="text-align:left;line-height:1.6;"><p>' + $('<div/>').text(str.msg || '服务器有新版本').html() + '</p>';
+    if (str.data && str.data.sha256) {
+        content += '<p style="font-size:12px;color:#777;word-break:break-all;">SHA256: ' + $('<div/>').text(str.data.sha256).html() + '</p>';
+    }
     if (changelog) {
         content += '<pre style="white-space:pre-wrap;word-break:break-word;background:#f5f5f5;padding:8px;margin-top:8px;max-height:240px;overflow:auto;">' + $('<div/>').text(changelog).html() + '</pre>';
     }
     content += '</div>';
     return content;
 }
-function update(){
-     $.ajax({
+function checkOnlineUpdate(source){
+    var cfg = updateSourceConfig(source);
+    $.ajax({
         type: 'POST',
-        url: 'general/config/update',
+        url: cfg.checkUrl,
         dataType: 'json',
         success: function (str) {
             if(str.code == 200){
                 var incomplete = str.data && str.data.incomplete;
                 layer.confirm(updateConfirmHtml(str), {
-                  title: incomplete ? '更新未生效' : '发现新版本',
+                  title: incomplete ? '更新未生效' : cfg.title,
                   area: ['520px', 'auto'],
                   btn: [incomplete ? '关闭防篡改并重新安装' : '确认更新', '取消']
                 }, function(){
-                    runSystemUpdate(!!incomplete);
+                    runSystemUpdate(source, !!incomplete);
                 });
             }else if(str.code == 204 && str.data && str.data.can_reinstall){
                 var tip = updateConfirmHtml(str);
-                tip += '<p style="text-align:left;color:#a94442;margin-top:8px;">若网站开了防篡改导致文件没更新成功，可重新下载安装当前版本。</p>';
+                tip += '<p style="text-align:left;color:#a94442;margin-top:8px;">如文件被防篡改恢复，可重新下载安装当前版本。</p>';
                 layer.confirm(tip, {
-                  title: '已经是最新版本',
+                  title: cfg.title + ' - 已是最新版',
                   area: ['520px', 'auto'],
                   btn: ['重新下载并安装', '关闭']
                 }, function(){
-                    runSystemUpdate(true);
+                    runSystemUpdate(source, true);
                 });
             }else{
-                layer.alert(str.msg)
+                layer.alert(str.msg || '检查更新失败');
             }
+        },
+        error: function () {
+            layer.alert(cfg.title + '检查失败', {icon: 2});
         }
-    }); 
+    });
+}
+function update(){
+    checkOnlineUpdate('nuosike');
+}
+function githubUpdate(){
+    checkOnlineUpdate('github');
 }
     
 </script>

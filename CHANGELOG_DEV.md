@@ -159,3 +159,12 @@ Development branch: `dev/software-source-v1`
 - Added legacy-equivalence/payload tests.
 - Fixed dylib missing-card null access.
 - Removed homepage child-category N+1 queries while retaining external behavior.
+
+## 2026-09-12 — Refactor Phase 12
+
+- Preserved the original Nuosike online updater and added a separate GitHub online-update button beside it.
+- Replaced duplicated/unsafe controller update internals with one shared UpdateManager/UpdateInstaller pipeline for both sources.
+- Enabled strict update TLS by default with emergency-only `SOURCE_UPDATE_VERIFY_TLS=0`.
+- Added mandatory SHA256 for GitHub Release updates, update locking, ZIP traversal/symlink checks and protected-path enforcement.
+- Added pre-update database + overwritten-file backups, fail-fast SQL execution, post-copy SHA256 verification and automatic rollback.
+- Added Phase 12 update contract tests and fixed project CI to PHP 7.0 only.
