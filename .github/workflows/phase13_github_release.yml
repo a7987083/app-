@@ -12,6 +12,7 @@ on:
       - 'release/sql/**'
       - 'tools/build_online_update.php'
       - 'tests/phase13_github_online_update_e2e.php'
+      - 'tests/phase13_update_runtime_test.php'
       - '.github/workflows/phase13_github_release.yml'
   workflow_dispatch:
 
@@ -37,6 +38,7 @@ jobs:
           set -euo pipefail
           php -l tools/build_online_update.php
           php -l tests/phase13_github_online_update_e2e.php
+          php -l tests/phase13_update_runtime_test.php
           php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
@@ -75,6 +77,7 @@ jobs:
           php tests/authorization_policy_test.php
           php tests/phase11_contract_test.php
           php tests/phase12_update_contract_test.php
+          php tests/phase13_update_runtime_test.php
           php tests/legacy_controller_contract_test.php
           bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
