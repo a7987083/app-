@@ -1,5 +1,51 @@
 # Development Changelog
 
+## 2026-09-11 — Refactor Phase 10
+
+### 10A — source HTTP transport hardening
+- Added `SourceHttpClient` for the existing external encryption POST requests.
+- TLS peer/hostname verification now defaults on; connect/total timeouts default to 5s/20s.
+- cURL/HTTP failures are logged while the existing response envelope is preserved.
+- Existing `api.nuosike.com/api.php` and `api.nuosike.com/encrypt.php` endpoints are unchanged.
+- `SOURCE_HTTP_VERIFY_TLS=0` is available only as an emergency compatibility rollback until strict-TLS live smoke is complete.
+
+### 10B — semantic source-app fields
+- Added `SourceAppRecord` to map semantic names such as `download_url`, `button_color`, `file_size`, and `paid` onto legacy `bt1a/bt1b/bt2a/bt2b` columns.
+- `AppStorePayload` and the public source query now use the semantic layer.
+- No database column rename or schema migration was introduced.
+
+### 10C — unified source response body
+- Added `SourceResponse` for plain output, encrypted wrapper output and final send path.
+- Existing plain runtime-field stripping, `@@@ -> \\n`, `appstore`, `appstore_v2` and transport-failure body semantics are covered by tests.
+- Legacy header/status behavior is intentionally preserved.
+
+### Stackable authorization
+- Added `CardEntitlementPolicy`.
+- Every unused card remains one-time activation, but its duration is now added after `max(now, furthest active endtime)` for the same UDID.
+- Remaining authorization is never discarded by an early renewal.
+- Existing day/week/month/quarter/year durations remain 1/7/30/90/360 days.
+
+### Self-service device replacement
+- Added public `/unbind` page.
+- Customer provides a previously bound card, old UDID and new UDID.
+- Transfer requires the old device to still have active authorization, rejects active blacklist states and an already-active target UDID, and keeps the same final expiration.
+- On success the activated-card history moves to the new UDID so stacked entitlement and proof-card association follow the replacement device.
+
+### Tests / CI
+- Added semantic mapping, response, HTTP/TLS contract, stackable entitlement, device-transfer and controller-architecture tests.
+- Existing AppStore golden/equivalence tests were updated to load the semantic helper.
+- GitHub Actions Run `34546582035` passed PHP 7.0 / 8.2 / 8.4.
+
+## 2026-09-11 — Refactor Phase 9
+
+### Stable closure
+- User reported Phase 8 production/deployment behavior working correctly.
+- User completed the production access-log audit for `App-mb.php` and `Index2.php`, then completed server cleanup.
+- Both stale duplicate controllers were formally removed from `dev/software-source-v1`.
+- CI contracts were inverted to require the retired controllers to remain absent.
+- GitHub Actions Run `34545630620` passed PHP 7.0 / 8.2 / 8.4 after the deletion-aware CI update.
+- A Phase 9 final BaoTa ZIP was produced as the rollback/stable closure baseline.
+
 ## 2026-09-11 — Refactor Phase 8
 
 Baseline: `main@598235962ea328c6558fe4935fe19ba552c1490d`
@@ -17,7 +63,7 @@ Development branch: `dev/software-source-v1`
 - Existing legacy `1..31` values require no DB migration: the next hit treats them as an old date and rewrites the row to `YYYYMMDD`.
 - First hit on a new date still sets `cs=1`; subsequent same-day hits increment it.
 - Counter writes use a transaction and row lock to protect concurrent updates.
-- The retained `Index2.php` compatibility path was pointed at the same helper while production access usage is audited.
+- The retained `Index2.php` compatibility path was pointed at the same helper while production access usage was audited; Phase 9 later retired that controller after the production gate passed.
 
 ### Card maintenance
 - Added `CardCodeGenerator` using `random_bytes(6)` while preserving the visible uppercase prefix + 12 hexadecimal character format.
@@ -33,9 +79,9 @@ Development branch: `dev/software-source-v1`
 - Expired rows are retained and shown as `已过期`; permanent and unused semantics remain unchanged.
 
 ### Legacy controller cleanup gate
-- Static route/reference audit still finds no application use of `App-mb.php` or `Index2.php`.
-- Because the requested condition is to confirm production access first, Phase 8 does not delete them without BaoTa access logs.
-- Added `tools/legacy_controller_access_audit.sh` and `LEGACY_CONTROLLER_AUDIT.md`. The script refuses deletion when a hit is found or when logs are missing; `--delete` only acts after a zero-hit scan.
+- Static route/reference audit found no application use of `App-mb.php` or `Index2.php`.
+- Added `tools/legacy_controller_access_audit.sh` and `LEGACY_CONTROLLER_AUDIT.md`; the script refuses deletion when a hit is found or logs are missing.
+- The production gate was later completed by the user in Phase 9.
 
 ### Tests / CI
 - Added/extended Category list UI contract coverage.
@@ -46,14 +92,14 @@ Development branch: `dev/software-source-v1`
 - GitHub Actions Run `34542868818` passed the full PHP 7.0 / 8.2 / 8.4 matrix on the Phase 8 code bundle before documentation follow-up commits.
 
 ### Compatibility boundary
-- `/appstore`, `appstore`, `appstore_v2`, external encryption behavior, source keys, lock semantics, trace semantics and BaoTa DB/rewrite contract are unchanged.
+- `/appstore`, `appstore`, `appstore_v2`, external encryption behavior, source keys, lock semantics, trace semantics and BaoTa DB/rewrite contract were unchanged in Phase 8.
 
 ## 2026-09-11 — Refactor Phase 7
 
 - Replaced Category full-list client rendering with true server-side pagination.
 - Default page size is 1000, with 200/500/1000 choices.
 - Quick search now queries the complete database by application name.
-- Type tabs filter on the server and reset to page 1.
+- Type tabs filter on the server and reset page 1.
 - `软件说明 / 备注 / 应用图标 / 权重` are hidden by default but remain selectable.
 - Category list AJAX no longer builds the complete Tree; parent list is deferred to add/edit.
 - List query returns only fields needed by the table and column chooser.
