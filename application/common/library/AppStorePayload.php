@@ -5,8 +5,8 @@ namespace app\common\library;
 /**
  * Pure AppStore payload mapper.
  *
- * Keeps protocol field names and legacy serialization semantics in one place,
- * so controllers only coordinate database / activation / encryption flows.
+ * Public protocol keys stay here, while SourceAppRecord translates the legacy
+ * physical fa_category columns into semantic names.
  */
 class AppStorePayload
 {
@@ -20,17 +20,11 @@ class AppStorePayload
         'unlockURL',
     ];
 
-    /**
-     * Resolve the response wrapper expected by legacy clients.
-     */
     public static function appType($headerValue)
     {
         return $headerValue === 'v2' ? 'appstore_v2' : 'appstore';
     }
 
-    /**
-     * Preserve legacy config semantics: a missing field serializes as null.
-     */
     public static function siteInfo(array $configRows)
     {
         $info = array_fill_keys(self::SITE_KEYS, null);
@@ -43,44 +37,38 @@ class AppStorePayload
         return $info;
     }
 
-    /**
-     * Map fa_category rows into the public software-source schema.
-     *
-     * $mode:
-     * - licensed: only lock === '1' is treated as locked, and access depends on $allowLockedDownload.
-     * - guest: preserve old PHP truthiness behavior for bt2b.
-     */
     public static function apps(array $rows, $mode, $allowLockedDownload = false)
     {
         $data = [];
         foreach ($rows as $key => $row) {
-            $type = isset($row['type']) && $row['type'] === 'default' ? 0 : (isset($row['type']) ? $row['type'] : null);
-            $lock = isset($row['bt2b']) ? $row['bt2b'] : null;
-            $download = isset($row['bt1a']) ? $row['bt1a'] : null;
+            $rawType = SourceAppRecord::value($row, 'type');
+            $type = $rawType === 'default' ? 0 : $rawType;
+            $lock = SourceAppRecord::value($row, 'paid');
+            $download = SourceAppRecord::value($row, 'download_url');
 
             if ($mode === 'licensed') {
                 if ($lock === '1' && !$allowLockedDownload) {
                     $download = '';
                 }
             } else {
-                // Legacy no-license branch used `$row['bt2b'] ? '' : $row['bt1a']`.
+                // Preserve legacy guest truthiness for the paid flag.
                 if ($lock) {
                     $download = '';
                 }
             }
 
             $data[$key] = [
-                'name' => isset($row['name']) ? $row['name'] : null,
+                'name' => SourceAppRecord::value($row, 'name'),
                 'type' => $type,
-                'version' => isset($row['nickname']) ? $row['nickname'] : null,
-                'versionDate' => date('Y-m-d\TH:i:s\+08:00', isset($row['updatetime']) ? $row['updatetime'] : 0),
-                'versionDescription' => str_replace('\\n', '@@@', isset($row['keywords']) ? $row['keywords'] : ''),
+                'version' => SourceAppRecord::value($row, 'version'),
+                'versionDate' => date('Y-m-d\TH:i:s\+08:00', (int)SourceAppRecord::value($row, 'updated_at', 0)),
+                'versionDescription' => str_replace('\\n', '@@@', (string)SourceAppRecord::value($row, 'description', '')),
                 'lock' => $lock,
                 'downloadURL' => $download,
-                'isLanZouCloud' => isset($row['flag']) ? $row['flag'] : null,
-                'iconURL' => isset($row['image']) ? $row['image'] : null,
-                'tintColor' => isset($row['bt1b']) ? $row['bt1b'] : null,
-                'size' => isset($row['bt2a']) ? $row['bt2a'] : null,
+                'isLanZouCloud' => SourceAppRecord::value($row, 'cloud_flag'),
+                'iconURL' => SourceAppRecord::value($row, 'icon_url'),
+                'tintColor' => SourceAppRecord::value($row, 'button_color'),
+                'size' => SourceAppRecord::value($row, 'file_size'),
             ];
         }
         return $data;
@@ -135,9 +123,6 @@ class AppStorePayload
         return $payload;
     }
 
-    /**
-     * Legacy source JSON uses @@@ as an internal newline placeholder.
-     */
     public static function encodeSourceJson(array $payload, $flags = 320)
     {
         return str_replace('@@@', '\\n', json_encode($payload, $flags));
