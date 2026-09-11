@@ -1,0 +1,138 @@
+name: Phase12.1 Release
+
+on:
+  push:
+    branches:
+      - feature/phase12.1-hotfix
+
+jobs:
+  php70-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: Lint Phase 12.1 files
+        run: |
+          set -euo pipefail
+          php -l application/common/library/update/UpdateManager.php
+          php -l application/common/library/AuthorizationSchema.php
+          php -l application/common/library/AuthorizationPolicy.php
+          php -l application/common/library/CardDeviceTransfer.php
+          php -l application/index/controller/App.php
+          php -l application/admin/controller/Kami.php
+          php -l application/admin/controller/Authorization.php
+          php -l tests/authorization_policy_test.php
+          php -l tests/card_device_transfer_contract_test.php
+          php -l tests/phase11_contract_test.php
+          php -l tests/phase12_update_contract_test.php
+      - name: Run full regression
+        run: |
+          set -euo pipefail
+          php tests/appstore_payload_test.php
+          php tests/appstore_equivalence_test.php
+          php tests/appstore_semantic_equivalence_test.php
+          php tests/source_app_record_test.php
+          php tests/source_http_client_contract_test.php
+          php tests/source_response_test.php
+          php tests/source_config_repository_test.php
+          php tests/blacklist_policy_test.php
+          php tests/blacklist_persistence_contract_test.php
+          php tests/blacklist_maintenance_test.php
+          php tests/trace_monitor_policy_test.php
+          php tests/trace_monitor_contract_test.php
+          php tests/category_listing_contract_test.php
+          php tests/category_daily_stat_test.php
+          php tests/category_statistics_contract_test.php
+          php tests/card_code_generator_test.php
+          php tests/card_maintenance_contract_test.php
+          php tests/card_entitlement_policy_test.php
+          php tests/card_device_transfer_contract_test.php
+          php tests/phase10_controller_contract_test.php
+          php tests/authorization_policy_test.php
+          php tests/phase11_contract_test.php
+          php tests/phase12_update_contract_test.php
+          php tests/legacy_controller_contract_test.php
+          bash tests/legacy_controller_audit_test.sh
+          php tests/deployment_contract_test.php
+
+  package-release:
+    needs: php70-regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Phase 12.1 release contract
+        run: |
+          set -euo pipefail
+          test "$(cat public/update/ver.txt)" = "2026091201"
+          grep -F '"version":"2026091201"' ver.json
+          grep -F 'localManifest' application/common/library/update/UpdateManager.php
+          grep -F 'runtime' application/admin/controller/Authorization.php
+          grep -F "update_backup" application/admin/controller/Authorization.php
+          grep -F "value=\"100\"" application/admin/view/kami/add.html
+          grep -F 'name="row[transfer_count]"' application/admin/view/kami/edit.html
+          grep -F 'DEFAULT_MAX_TRANSFERS = 100' application/common/library/AuthorizationPolicy.php
+          grep -F "100-\`transfer_count\`" tools/phase12_1_upgrade.sql
+          grep -F "DEFAULT '100'" tools/phase12_1_upgrade.sql
+          grep -F 'BT_DB_NAME' application/database.php
+          test ! -e application/index/controller/App-mb.php
+          test ! -e application/index/controller/Index2.php
+      - name: Build Phase 12.1 sourcepack
+        run: |
+          set -euo pipefail
+          zip -qr zonoe-source-phase12.1-sourcepack.zip . \
+            -x '.git/*' \
+               'zonoe-source-phase12.1-sourcepack.zip' \
+               'zonoe-source-phase12.1-sourcepack.zip.sha256' \
+               'zonoe-phase12-to-phase12.1-incremental.zip' \
+               'zonoe-phase12-to-phase12.1-incremental.zip.sha256' \
+               'zonoe-online-update.zip' \
+               'zonoe-online-update.zip.sha256'
+          sha256sum zonoe-source-phase12.1-sourcepack.zip > zonoe-source-phase12.1-sourcepack.zip.sha256
+          unzip -t zonoe-source-phase12.1-sourcepack.zip >/dev/null
+      - name: Build Phase 12 to 12.1 incremental packages
+        run: |
+          set -euo pipefail
+          rm -rf .phase12_1_update
+          mkdir -p .phase12_1_update/program/application/common/library/update
+          mkdir -p .phase12_1_update/program/application/common/library
+          mkdir -p .phase12_1_update/program/application/index/controller
+          mkdir -p .phase12_1_update/program/application/admin/controller
+          mkdir -p .phase12_1_update/program/application/admin/view/kami
+          mkdir -p .phase12_1_update/program/application/admin/view/authorization
+          mkdir -p .phase12_1_update/program/application/index/view/index
+          mkdir -p .phase12_1_update/mysql
+          cp application/common/library/update/UpdateManager.php .phase12_1_update/program/application/common/library/update/
+          cp application/common/library/AuthorizationSchema.php .phase12_1_update/program/application/common/library/
+          cp application/common/library/AuthorizationPolicy.php .phase12_1_update/program/application/common/library/
+          cp application/common/library/CardDeviceTransfer.php .phase12_1_update/program/application/common/library/
+          cp application/index/controller/App.php .phase12_1_update/program/application/index/controller/
+          cp application/admin/controller/Kami.php .phase12_1_update/program/application/admin/controller/
+          cp application/admin/controller/Authorization.php .phase12_1_update/program/application/admin/controller/
+          cp application/admin/view/kami/add.html .phase12_1_update/program/application/admin/view/kami/
+          cp application/admin/view/kami/edit.html .phase12_1_update/program/application/admin/view/kami/
+          cp application/admin/view/authorization/index.html .phase12_1_update/program/application/admin/view/authorization/
+          cp application/admin/view/authorization/transfers.html .phase12_1_update/program/application/admin/view/authorization/
+          cp application/index/view/index/unbind.html .phase12_1_update/program/application/index/view/index/
+          cp tools/phase12_1_upgrade.sql .phase12_1_update/mysql/001_phase12_1.sql
+          (cd .phase12_1_update && zip -qr ../zonoe-phase12-to-phase12.1-incremental.zip program mysql)
+          cp zonoe-phase12-to-phase12.1-incremental.zip zonoe-online-update.zip
+          sha256sum zonoe-phase12-to-phase12.1-incremental.zip > zonoe-phase12-to-phase12.1-incremental.zip.sha256
+          sha256sum zonoe-online-update.zip > zonoe-online-update.zip.sha256
+          unzip -t zonoe-phase12-to-phase12.1-incremental.zip >/dev/null
+          unzip -t zonoe-online-update.zip >/dev/null
+      - name: Upload Phase 12.1 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zonoe-source-phase12.1-build
+          path: |
+            zonoe-source-phase12.1-sourcepack.zip
+            zonoe-source-phase12.1-sourcepack.zip.sha256
+            zonoe-phase12-to-phase12.1-incremental.zip
+            zonoe-phase12-to-phase12.1-incremental.zip.sha256
+            zonoe-online-update.zip
+            zonoe-online-update.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
