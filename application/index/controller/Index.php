@@ -5,6 +5,7 @@ namespace app\index\controller;
 use app\common\controller\Frontend;
 use app\common\library\BlacklistPolicy;
 use app\common\library\CategoryDailyStat;
+use app\common\library\CardDeviceTransfer;
 use app\common\library\SourceConfigRepository;
 use think\Db;
 
@@ -80,6 +81,20 @@ class Index extends Frontend
 
         echo json_encode(['msg' => 'ok'], JSON_UNESCAPED_UNICODE);
         die;
+    }
+
+    public function unbind()
+    {
+        $result = null;
+        if ($this->request->isPost()) {
+            $result = CardDeviceTransfer::transfer(
+                $this->request->post('code', ''),
+                $this->request->post('old_udid', ''),
+                $this->request->post('new_udid', '')
+            );
+        }
+        $this->view->assign('transferResult', $result);
+        return $this->view->fetch('index/unbind');
     }
 
     public function index()
