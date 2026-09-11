@@ -22,7 +22,7 @@ jobs:
             echo "Phase 12.1 payload not ready"
             exit 0
           fi
-          cat tools/phase12_1_chunks/chunk_00 tools/phase12_1_chunks/chunk_01 tools/phase12_1_chunks/chunk_02 tools/phase12_1_chunks/chunk_03 tools/phase12_1_chunks/chunk_04 tools/phase12_1_chunks/chunk_05 tools/phase12_1_chunks/chunk_06 tools/phase12_1_chunks/chunk_07 > /tmp/phase12_1_payload.b64
+          cat tools/phase12_1_chunks/chunk_00a tools/phase12_1_chunks/chunk_00b tools/phase12_1_chunks/chunk_01 tools/phase12_1_chunks/chunk_02 tools/phase12_1_chunks/chunk_03 tools/phase12_1_chunks/chunk_04 tools/phase12_1_chunks/chunk_05 tools/phase12_1_chunks/chunk_06 tools/phase12_1_chunks/chunk_07 > /tmp/phase12_1_payload.b64
           python3 - <<'PY'
           import base64, pathlib
           b = pathlib.Path('/tmp/phase12_1_payload.b64').read_bytes()
