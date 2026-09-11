@@ -20,7 +20,7 @@ httpAssert(SourceHttpClient::envBool('SOURCE_HTTP_VERIFY_TLS', false) === true, 
 putenv('SOURCE_HTTP_VERIFY_TLS');
 
 $source = file_get_contents(dirname(__DIR__) . '/application/common/library/SourceHttpClient.php');
-foreach (array('CURLOPT_CONNECTTIMEOUT', 'CURLOPT_TIMEOUT', 'CURLOPT_SSL_VERIFYPEER', 'CURLOPT_SSL_VERIFYHOST', 'error_log') as $needle) {
+foreach (array('CURLOPT_CONNECTTIMEOUT', 'CURLOPT_TIMEOUT', 'CURLOPT_SSL_VERIFYPEER', 'CURLOPT_SSL_VERIFYHOST', 'error_log', 'CURLINFO_TOTAL_TIME', "'elapsed_ms'") as $needle) {
     httpAssert(strpos($source, $needle) !== false, 'missing HTTP hardening: ' . $needle);
 }
 

@@ -6,6 +6,8 @@ use app\common\controller\Frontend;
 use app\common\library\BlacklistPolicy;
 use app\common\library\CategoryDailyStat;
 use app\common\library\CardDeviceTransfer;
+use app\common\library\AuthorizationLicense;
+use app\common\library\AuthorizationSchema;
 use app\common\library\SourceConfigRepository;
 use think\Db;
 
@@ -85,16 +87,38 @@ class Index extends Frontend
 
     public function unbind()
     {
+        AuthorizationSchema::ensure();
         $result = null;
         if ($this->request->isPost()) {
             $result = CardDeviceTransfer::transfer(
                 $this->request->post('code', ''),
                 $this->request->post('old_udid', ''),
-                $this->request->post('new_udid', '')
+                $this->request->post('new_udid', ''),
+                $this->request->ip()
             );
         }
         $this->view->assign('transferResult', $result);
         return $this->view->fetch('index/unbind');
+    }
+
+    public function unbindQuery()
+    {
+        AuthorizationSchema::ensure();
+        return json(CardDeviceTransfer::queryStatus($this->request->request('udid', '')));
+    }
+
+    public function license()
+    {
+        AuthorizationSchema::ensure();
+        $result = null;
+        if ($this->request->isPost()) {
+            $result = AuthorizationLicense::query(
+                $this->request->post('code', ''),
+                $this->request->post('udid', '')
+            );
+        }
+        $this->view->assign('licenseResult', $result);
+        return $this->view->fetch('index/license');
     }
 
     public function index()

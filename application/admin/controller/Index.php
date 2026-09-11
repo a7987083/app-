@@ -4,6 +4,7 @@ namespace app\admin\controller;
 
 use app\admin\model\AdminLog;
 use app\common\controller\Backend;
+use app\common\library\AuthorizationSchema;
 use think\Config;
 use think\Hook;
 use think\Validate;
@@ -22,6 +23,7 @@ class Index extends Backend
     public function _initialize()
     {
         parent::_initialize();
+        AuthorizationSchema::ensureAdmin();
         //移除HTML标签
         $this->request->filter('trim,strip_tags,htmlspecialchars');
     }

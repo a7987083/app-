@@ -4,6 +4,8 @@ namespace app\admin\controller;
 
 use app\common\controller\Backend;
 use app\common\library\BlacklistPolicy;
+use app\common\library\AuthorizationEventLog;
+use app\common\library\AuthorizationSchema;
 use think\Db;
 
 /**
@@ -38,6 +40,7 @@ class Monitor extends Backend
             $this->error(__('No Results were found'));
         }
 
+        AuthorizationSchema::ensure();
         Db::startTrans();
         try {
             $inserted = Db::table('fa_black')->insert(BlacklistPolicy::insertData($res['udid']));
@@ -45,6 +48,13 @@ class Monitor extends Backend
                 throw new \RuntimeException('黑名单添加失败');
             }
             Db::table('fa_monitor')->where(['id' => $id])->delete();
+            if (!AuthorizationEventLog::record('blacklist_add', [
+                'udid' => $res['udid'],
+                'ip' => $this->request->ip(),
+                'detail' => '异常监控转入黑名单',
+            ])) {
+                throw new \RuntimeException('授权事件写入失败');
+            }
             Db::commit();
         } catch (\Exception $e) {
             Db::rollback();

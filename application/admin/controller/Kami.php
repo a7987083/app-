@@ -4,6 +4,7 @@ namespace app\admin\controller;
 
 use app\common\controller\Backend;
 use app\common\library\CardCodeGenerator;
+use app\common\library\AuthorizationSchema;
 use think\Db;
 
 class Kami extends Backend
@@ -13,6 +14,7 @@ class Kami extends Backend
     public function _initialize()
     {
         parent::_initialize();
+        AuthorizationSchema::ensure();
         $this->model = new \app\admin\model\Kami;
     }
 
@@ -58,6 +60,7 @@ class Kami extends Backend
                             'addtime' => $createdAt,
                             'usetime' => 0,
                             'endtime' => 0,
+                            'transfer_count' => 0,
                         ]);
                         if ($inserted !== 1) {
                             throw new \RuntimeException('卡密写入失败');

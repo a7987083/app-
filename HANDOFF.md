@@ -119,3 +119,8 @@ Phase 10 code CI Run `34546582035` passed PHP 7.0 / 8.2 / 8.4. It covers previou
 4. No physical Category DB field migration during 10B.
 5. Each card remains one-time consumption even though entitlement time stacks.
 6. BaoTa release ZIP must retain root `auto_install.json`, `import.sql`, `nginx.rewrite` and `BT_DB_*` placeholders.
+
+
+## Phase 11 handoff
+
+Phase 10 is the user-verified rollback baseline. Phase 11 adds authorization operations without changing appstore/appstore_v2 protocol keys. Core files: `AuthorizationSchema.php`, `AuthorizationPolicy.php`, `AuthorizationEventLog.php`, `AuthorizationLicense.php`, `CardDeviceTransfer.php`, admin `Authorization.php`, `/unbind`, `/unbind/query`, and `/license`. Default transfer policy is 3 total transfers, 1 successful transfer/day, 3600-second cooldown, 10 attempts/IP/hour; all are configurable in `fa_config`. `fa_kami.transfer_count` is inherited by newly stacked active cards so buying another card cannot reset transfer budget.

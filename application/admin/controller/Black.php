@@ -4,6 +4,8 @@ namespace app\admin\controller;
 
 use app\common\controller\Backend;
 use app\common\library\BlacklistPolicy;
+use app\common\library\AuthorizationEventLog;
+use app\common\library\AuthorizationSchema;
 use think\Db;
 
 /**
@@ -50,6 +52,7 @@ class Black extends Backend
             }
 
             try {
+                AuthorizationSchema::ensure();
                 $result = Db::table('fa_black')->insert(BlacklistPolicy::insertData($udid, time(), $endtime));
             } catch (\Exception $e) {
                 $this->error($e->getMessage());
@@ -59,6 +62,12 @@ class Black extends Backend
             if ($result !== 1) {
                 $this->error('黑名单添加失败');
             }
+            AuthorizationEventLog::record('blacklist_add', [
+                'udid' => $udid,
+                'endtime' => $endtime,
+                'ip' => $this->request->ip(),
+                'detail' => '管理员加入黑名单',
+            ]);
             $this->success();
         }
 

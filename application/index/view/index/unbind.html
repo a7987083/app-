@@ -1,49 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-    <title>设备自助换绑</title>
-    <style>
-        *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#1f2937;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}.wrap{max-width:560px;margin:48px auto;padding:0 18px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px;box-shadow:0 8px 28px rgba(0,0,0,.06)}h1{font-size:24px;margin:0 0 8px}.sub{color:#6b7280;font-size:14px;line-height:1.6;margin-bottom:24px}.field{margin:16px 0}label{display:block;font-size:14px;font-weight:600;margin-bottom:7px}input{width:100%;height:44px;border:1px solid #d1d5db;border-radius:9px;padding:0 12px;font-size:15px;outline:none}input:focus{border-color:#6b7280}.btn{width:100%;height:46px;border:0;border-radius:9px;background:#111827;color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px}.msg{padding:12px 14px;border-radius:9px;margin:0 0 18px;font-size:14px;line-height:1.55}.ok{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}.err{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}.note{font-size:12px;color:#9ca3af;line-height:1.7;margin-top:18px}.expire{font-weight:600}
-    </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>设备自助换绑</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#1f2937;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}.wrap{max-width:560px;margin:42px auto;padding:0 18px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:26px;box-shadow:0 8px 28px rgba(0,0,0,.06)}h1{font-size:24px;margin:0 0 8px}.sub{color:#6b7280;font-size:14px;line-height:1.7;margin-bottom:22px}.field{margin:15px 0}label{display:block;font-size:14px;font-weight:600;margin-bottom:7px}input{width:100%;height:44px;border:1px solid #d1d5db;border-radius:9px;padding:0 12px;font-size:15px;outline:none}.btn{width:100%;height:46px;border:0;border-radius:9px;background:#111827;color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px}.btn2{background:#2563eb}.msg{padding:12px 14px;border-radius:9px;margin:0 0 18px;font-size:14px;line-height:1.6}.ok{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}.err{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}.note{font-size:12px;color:#9ca3af;line-height:1.7;margin-top:18px}.sep{border:0;border-top:1px solid #e5e7eb;margin:28px 0}.query-result{margin-top:12px}</style>
 </head>
-<body>
-<div class="wrap">
-    <div class="card">
-        <h1>设备自助换绑</h1>
-        <div class="sub">设备更换后，输入曾经绑定过旧设备的任一卡密、旧 UDID 和新 UDID。只要旧设备当前仍有有效授权，系统会把叠加授权和已激活卡密记录整体转移到新设备。</div>
-
-        {if condition="$transferResult"}
-            {if condition="$transferResult.ok"}
-            <div class="msg ok">
-                {$transferResult.message|htmlentities}
-                {if condition="$transferResult.endtime"}
-                <br>有效期至：<span class="expire">{:date('Y-m-d H:i:s',$transferResult.endtime)}</span>
-                {/if}
-            </div>
-            {else /}
-            <div class="msg err">{$transferResult.message|htmlentities}</div>
-            {/if}
-        {/if}
-
-        <form method="post" action="">
-            <div class="field">
-                <label>卡密</label>
-                <input type="text" name="code" autocomplete="off" required placeholder="请输入已经绑定旧设备的卡密">
-            </div>
-            <div class="field">
-                <label>旧 UDID</label>
-                <input type="text" name="old_udid" autocomplete="off" required placeholder="原设备 UDID">
-            </div>
-            <div class="field">
-                <label>新 UDID</label>
-                <input type="text" name="new_udid" autocomplete="off" required placeholder="新设备 UDID">
-            </div>
-            <button class="btn" type="submit">确认换绑</button>
-        </form>
-        <div class="note">旧设备必须仍有有效授权；作为验证的卡密可以是该设备以前使用过的任一卡密。新设备已有有效授权，或新旧设备存在有效黑名单时，将拒绝自助换绑并提示联系客服。</div>
-    </div>
-</div>
-</body>
-</html>
+<body><div class="wrap"><div class="card">
+<h1>设备自助换绑</h1><div class="sub">设备更换后，输入曾经绑定过旧设备的任一卡密、旧 UDID 和新 UDID。系统会迁移当前有效授权；每次成功换绑会消耗 1 次换绑额度。</div>
+{if condition="$transferResult"}{if condition="$transferResult.ok"}<div class="msg ok">{$transferResult.message|htmlentities}<br>剩余换绑次数：{$transferResult.remaining}{if condition="$transferResult.endtime"}<br>有效期至：{:date('Y-m-d H:i:s',$transferResult.endtime)}{/if}</div>{else /}<div class="msg err">{$transferResult.message|htmlentities}</div>{/if}{/if}
+<form method="post" action=""><div class="field"><label>卡密</label><input type="text" name="code" required placeholder="请输入已经绑定旧设备的卡密"></div><div class="field"><label>旧 UDID</label><input type="text" name="old_udid" required placeholder="原设备 UDID"></div><div class="field"><label>新 UDID</label><input type="text" name="new_udid" required placeholder="新设备 UDID"></div><button class="btn" type="submit">确认换绑</button></form>
+<div class="note">旧设备必须仍有有效授权；新设备已有有效授权或新旧设备存在有效黑名单时会拒绝换绑。换绑总次数、每日限制和冷却时间由站点后台控制。</div>
+<hr class="sep"><h3 style="margin:0 0 8px">查询换绑</h3><div class="sub">输入当前设备 UDID，查询总换绑次数、已用次数和剩余次数。</div><div class="field"><label>UDID</label><input id="query-udid" type="text" placeholder="请输入当前设备 UDID"></div><button id="query-btn" class="btn btn2" type="button">查询剩余次数</button><div id="query-result" class="query-result"></div>
+</div></div>
+<script>(function(){var b=document.getElementById('query-btn'),i=document.getElementById('query-udid'),r=document.getElementById('query-result');b.onclick=function(){var u=i.value.trim();if(!u){r.innerHTML='<div class="msg err">请输入UDID</div>';return;}b.disabled=true;b.textContent='查询中...';fetch('/unbind/query?udid='+encodeURIComponent(u),{credentials:'same-origin'}).then(function(x){return x.json()}).then(function(d){if(d.ok){var extra=d.next_allowed_at?'<br>下次可换绑：'+new Date(d.next_allowed_at*1000).toLocaleString():'';r.innerHTML='<div class="msg '+(d.remaining>0?'ok':'err')+'">'+d.message+'<br>已用：'+d.used+' / '+d.max+'<br><strong>剩余：'+d.remaining+' 次</strong>'+extra+'</div>';}else{r.innerHTML='<div class="msg err">'+d.message+'</div>';}}).catch(function(){r.innerHTML='<div class="msg err">查询失败，请稍后重试</div>';}).finally(function(){b.disabled=false;b.textContent='查询剩余次数';});};})();</script>
+</body></html>

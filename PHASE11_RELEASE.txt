@@ -1,0 +1,25 @@
+ZONOE SOFTWARE SOURCE - PHASE 11 CANDIDATE
+Repository: a7987083/app-
+Branch: dev/software-source-v1
+Phase 10 status: user verified / frozen rollback baseline
+Date: 2026-09-12
+
+Included:
+- Transfer total/daily/cooldown/IP anti-abuse limits
+- Card transfer_count display and inheritance across stacked active authorization
+- /unbind remaining-count query by current UDID
+- Transfer audit log and authorization event log
+- /license customer authorization lookup
+- Backend Authorization Center overview / transfer logs / events / diagnostics
+- DB/PHP/extensions/HTTPS/TLS/write-path/disk/backup/external endpoint diagnostics
+- Idempotent runtime schema bootstrap + explicit tools/phase11_upgrade.sql
+
+Default limits:
+- total transfers: 3
+- successful transfers/day: 1
+- transfer cooldown: 3600 seconds
+- attempts/IP/hour: 10
+
+Compatibility:
+- Phase 10 appstore/appstore_v2 transport and response contract retained
+- Phase 10 is the rollback baseline until Phase 11 real-device verification passes

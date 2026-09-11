@@ -5,6 +5,9 @@ namespace app\index\controller;
 use app\common\library\AppStorePayload;
 use app\common\library\BlacklistPolicy;
 use app\common\library\CardEntitlementPolicy;
+use app\common\library\AuthorizationEventLog;
+use app\common\library\AuthorizationPolicy;
+use app\common\library\AuthorizationSchema;
 use app\common\library\SourceAppRecord;
 use app\common\library\SourceConfigRepository;
 use app\common\library\SourceHttpClient;
@@ -184,6 +187,7 @@ class App
      */
     protected function activateCode($kcode, $udid, $now = null)
     {
+        AuthorizationSchema::ensure();
         $now = $now === null ? time() : (int)$now;
         if ($udid === '') {
             return json(['code' => 0, 'msg' => '未获取设备UDID']);
@@ -208,18 +212,35 @@ class App
             $existing = Db::table('fa_kami')
                 ->where('udid', $udid)
                 ->where('jh', 1)
+                ->where('endtime', '>', $now)
                 ->lock(true)
                 ->select();
+            $wasStacked = CardEntitlementPolicy::activeEndTime($existing, $now) > $now;
             $state = CardEntitlementPolicy::activationState((int)$kdata['kmyp'], $existing, $now);
+            $transferCount = AuthorizationPolicy::usedTransfers($existing);
 
             $updated = Db::table('fa_kami')->where('id', $kdata['id'])->update([
                 'udid' => $udid,
                 'usetime' => $state['usetime'],
                 'endtime' => $state['endtime'],
                 'jh' => 1,
+                'transfer_count' => $transferCount,
             ]);
             if ($updated === false || (int)$updated <= 0) {
                 throw new \RuntimeException('卡密激活写入失败');
+            }
+
+            if (!AuthorizationEventLog::record($wasStacked ? 'stack' : 'activate', [
+                'kami_id' => $kdata['id'],
+                'kami' => $kcode,
+                'udid' => $udid,
+                'duration' => CardEntitlementPolicy::durationSeconds((int)$kdata['kmyp']),
+                'endtime' => $state['endtime'],
+                'ip' => isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '',
+                'detail' => $wasStacked ? '卡密叠加授权' : '卡密首次激活',
+                'addtime' => $now,
+            ])) {
+                throw new \RuntimeException('授权事件写入失败');
             }
 
             Db::commit();

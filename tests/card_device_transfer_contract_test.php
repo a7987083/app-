@@ -20,12 +20,14 @@ $transfer = file_get_contents($root . '/application/common/library/CardDeviceTra
 $index = file_get_contents($root . '/application/index/controller/Index.php');
 $route = file_get_contents($root . '/application/route.php');
 $view = file_get_contents($root . '/application/index/view/index/unbind.html');
-foreach (array("where('kami', \$code)", "where('udid', \$oldUdid)", "where('endtime', '>', \$now)", "update(['udid' => \$newUdid])", 'BlacklistPolicy::findActive') as $needle) {
+foreach (["where('kami', \$code)", "where('udid', \$oldUdid)", "where('endtime', '>', \$now)", "'udid' => \$newUdid", "'transfer_count' => \$newCount", 'BlacklistPolicy::findActive', 'AuthorizationPolicy::maxTransfers', 'successCountForUdid', 'ipAttempts'] as $needle) {
     transferAssert(strpos($transfer, $needle) !== false, 'transfer contract missing: ' . $needle);
 }
 transferAssert(strpos($index, 'CardDeviceTransfer::transfer') !== false, 'Index unbind action missing transfer service');
+transferAssert(strpos($index, 'CardDeviceTransfer::queryStatus') !== false, 'Index unbind query missing');
 transferAssert(strpos($route, "Route::rule('unbind','index/Index/unbind');") !== false, 'unbind route missing');
-foreach (array('name="code"', 'name="old_udid"', 'name="new_udid"') as $needle) {
+transferAssert(strpos($route, "Route::rule('unbind/query','index/Index/unbindQuery');") !== false, 'unbind query route missing');
+foreach (['name="code"', 'name="old_udid"', 'name="new_udid"', 'query-udid', 'query-btn'] as $needle) {
     transferAssert(strpos($view, $needle) !== false, 'unbind form missing: ' . $needle);
 }
 

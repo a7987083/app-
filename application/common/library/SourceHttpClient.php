@@ -46,6 +46,7 @@ class SourceHttpClient
         $errno = curl_errno($curl);
         $error = curl_error($curl);
         $status = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $elapsedMs = (int)round(((float)curl_getinfo($curl, CURLINFO_TOTAL_TIME)) * 1000);
         curl_close($curl);
 
         $transportOk = $body !== false && $errno === 0;
@@ -71,6 +72,7 @@ class SourceHttpClient
             'error' => $error,
             'body' => $body,
             'verify_tls' => $verifyTls,
+            'elapsed_ms' => $elapsedMs,
         ];
     }
 

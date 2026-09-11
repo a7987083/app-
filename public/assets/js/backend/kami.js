@@ -29,6 +29,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {field: 'udid', title: __('Udid')},
 						{field: 'kmyp', title: __('Kmyp'),searchList: {1: '月卡', 2: '季卡', 3: '年卡', 4: '日卡', 5: '周卡'},formatter: Table.api.formatter.flag},
                         {field: 'jh', title: __('Jh'),searchList: {0: '未激活', 1: '已激活'}, formatter: Table.api.formatter.label},
+                        {field: 'transfer_count', title: '换绑次数', operate: false},
                         {field: 'addtime', title: __('Addtime'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
                         {field: 'usetime', title: __('Usetime'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
                         {field: 'endtime', title: __('Endtime'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},

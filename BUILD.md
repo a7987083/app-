@@ -144,3 +144,25 @@ unzip -p zonoe-source-phase10-bt.zip application/index/view/index/unbind.html | 
 ## Promotion rule
 
 Phase 8/9 is the confirmed rollback baseline. Do not promote Phase 10 to `main` solely from CI: first complete real `appstore`, `appstore_v2`, stacked activation and `/unbind` smoke tests on a compatible deployment.
+
+
+## Phase 11 validation
+
+Before production promotion verify:
+
+1. Existing Phase 10 database upgrades without data loss (`AuthorizationSchema` or `tools/phase11_upgrade.sql`).
+2. Card list shows `换绑次数`; unused/new cards start at 0.
+3. Stack two or more active cards and confirm the new card inherits the current transfer count while expiration continues to stack.
+4. `/unbind/query` returns used / max / remaining counts for the current UDID.
+5. Each successful `/unbind` consumes exactly one transfer; exhausted budget blocks further transfer.
+6. Daily/cooldown/IP abuse controls reject requests without consuming transfer budget.
+7. Backend Authorization Center shows transfer audit history and authorization events.
+8. `/license` requires card + UDID and reports active/expired status plus remaining transfer budget.
+9. System diagnostics reports DB/PHP/extensions/HTTPS/TLS/write paths/disk/backup and optional upstream probes.
+10. Plain/appstore/appstore_v2 remain client-compatible.
+
+For an existing Phase 10 database, automatic bootstrap runs on authorization paths. The explicit fallback/manual upgrade is:
+
+```bash
+mysql -u <user> -p <database> < tools/phase11_upgrade.sql
+```

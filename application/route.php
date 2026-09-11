@@ -13,6 +13,8 @@ use think\Route;
 Route::rule('appstore','index/App/list');
 Route::rule('log','index/App/log');
 Route::rule('unbind','index/Index/unbind');
+Route::rule('unbind/query','index/Index/unbindQuery');
+Route::rule('license','index/Index/license');
 return [
     '__alias__'   => [
     ],

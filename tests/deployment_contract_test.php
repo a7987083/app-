@@ -10,6 +10,7 @@ $root = dirname(__DIR__);
 $autoFile = $root . '/auto_install.json';
 $dbFile = $root . '/application/database.php';
 $nginxRewriteFile = $root . '/nginx.rewrite';
+$phase11Upgrade = $root . '/tools/phase11_upgrade.sql';
 
 if (!is_file($autoFile)) {
     deployFail('missing auto_install.json');
@@ -19,6 +20,9 @@ if (!is_file($dbFile)) {
 }
 if (!is_file($nginxRewriteFile)) {
     deployFail('missing nginx.rewrite');
+}
+if (!is_file($phase11Upgrade)) {
+    deployFail('missing tools/phase11_upgrade.sql');
 }
 
 $auto = json_decode(file_get_contents($autoFile), true);
@@ -66,6 +70,13 @@ if (strpos($rewrite, 'if (!-e $request_filename)') === false) {
 }
 if (strpos($rewrite, 'rewrite ^(.*)$ /index.php?s=$1 last; break;') === false) {
     deployFail('nginx.rewrite missing ThinkPHP rewrite target');
+}
+
+$upgrade = file_get_contents($phase11Upgrade);
+foreach (array('transfer_count', 'fa_card_transfer_log', 'fa_authorization_event', 'unbind_max_count') as $needle) {
+    if (strpos($upgrade, $needle) === false) {
+        deployFail('phase11 upgrade missing ' . $needle);
+    }
 }
 
 echo "OK deployment_contract_test\n";

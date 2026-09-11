@@ -1,5 +1,19 @@
 # Development Changelog
 
+## 2026-09-12 — Phase 11 Authorization Operations
+
+- Phase 10 was user-verified and frozen as the production rollback baseline.
+- Added configurable self-service transfer budget: total count, daily limit, cooldown and per-IP hourly attempt limit.
+- Added `transfer_count` to card records; newly stacked cards inherit the active entitlement chain transfer count.
+- Added `/unbind/query` UDID-only remaining-transfer lookup and updated `/unbind` UI with a remaining-count query section.
+- Added `fa_card_transfer_log` audit history for successful and failed device transfers.
+- Added `fa_authorization_event` history for activation, stacking, transfer and blacklist events.
+- Added `/license` public authorization lookup requiring card + UDID.
+- Added backend Authorization Center with overview, transfer logs, event logs and system diagnostics.
+- Diagnostics cover DB, PHP/extensions, HTTPS/TLS, writable runtime/log/uploads, disk space, backup freshness and optional external encryption endpoint probes.
+- Added idempotent runtime schema bootstrap plus `tools/phase11_upgrade.sql` for explicit in-place upgrades.
+- Added Phase 11 regression/contract tests and BaoTa deployment artifact workflow.
+
 ## 2026-09-11 — Refactor Phase 10
 
 ### 10A — source HTTP transport hardening

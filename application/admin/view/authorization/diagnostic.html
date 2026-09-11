@@ -1,0 +1,29 @@
+<div class="panel panel-default panel-intro">
+    {:build_heading()}
+    <div class="panel-body">
+        <table class="table table-bordered" style="max-width:760px;">
+            <tr><th>PHP版本</th><td>{$diag.php_version}</td></tr>
+            <tr><th>数据库</th><td>{if condition="$diag.db_ok"}<span class="text-success">正常</span>{else /}<span class="text-danger">异常</span>{/if}</td></tr>
+            <tr><th>HTTPS</th><td>{if condition="$diag.https"}<span class="text-success">已启用</span>{else /}<span class="text-warning">当前请求非HTTPS</span>{/if}</td></tr>
+            <tr><th>TLS证书验证</th><td>{if condition="$diag.tls_verify"}<span class="text-success">开启</span>{else /}<span class="text-danger">关闭（兼容模式）</span>{/if}</td></tr>
+            <tr><th>runtime可写</th><td>{$diag.runtime_writable?'是':'否'}</td></tr>
+            <tr><th>日志目录可写</th><td>{$diag.log_writable?'是':'否'}</td></tr>
+            <tr><th>uploads可写</th><td>{$diag.uploads_writable?'是':'否'}</td></tr>
+            <tr><th>PHP扩展</th><td>{if condition="empty($diag.missing_extensions)"}<span class="text-success">所需扩展齐全</span>{else /}<span class="text-danger">缺少：{:implode(', ', $diag.missing_extensions)}</span>{/if}</td></tr>
+            <tr><th>数据库备份</th><td>{if condition="$diag.latest_backup"}{$diag.latest_backup.file} / {:date('Y-m-d H:i:s',$diag.latest_backup.mtime)} {if condition="$diag.latest_backup.recent"}<span class="text-success">7天内</span>{else /}<span class="text-warning">超过7天</span>{/if}{else /}<span class="text-warning">未在 {$diag.backup_dir} 检测到备份；可用 ZONOE_DB_BACKUP_DIR 指定目录</span>{/if}</td></tr>
+            <tr><th>磁盘剩余</th><td>{$diag.disk_free_gb===null?'-':$diag.disk_free_gb.' GB'}</td></tr>
+        </table>
+        <a class="btn btn-primary" href="{:url('authorization/diagnostic',['probe'=>1])}">运行外部加密接口检测</a>
+        {if condition="$diag.external"}
+        <h4 style="margin-top:20px;">外部接口</h4>
+        <table class="table table-bordered" style="max-width:900px;">
+            <thead><tr><th>接口</th><th>传输</th><th>HTTP</th><th>状态码</th><th>耗时</th><th>TLS验证</th></tr></thead>
+            <tbody>
+            {foreach name="$diag.external" item="item" key="name"}
+            <tr><td>{$name}</td><td>{$item.transport_ok?'正常':'失败'}</td><td>{$item.http_ok?'正常':'异常'}</td><td>{$item.status}</td><td>{$item.elapsed_ms} ms</td><td>{$item.verify_tls?'开启':'关闭'}</td></tr>
+            {/foreach}
+            </tbody>
+        </table>
+        {/if}
+    </div>
+</div>
