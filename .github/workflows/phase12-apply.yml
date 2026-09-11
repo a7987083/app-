@@ -22,20 +22,13 @@ jobs:
             echo "Phase 12 payload already applied"
             exit 0
           fi
-          wc -c tools/phase12_chunks/*
-          sha256sum tools/phase12_chunks/*
-          cat tools/phase12_chunks/00 tools/phase12_chunks/01 tools/phase12_chunks/02 tools/phase12_chunks/03 tools/phase12_chunks/04 tools/phase12_chunks/05 > /tmp/phase12_payload.b64
+          cat tools/phase12_chunks/00 tools/phase12_chunks/01 tools/phase12_chunks/02 tools/phase12_chunks/03a tools/phase12_chunks/03b tools/phase12_chunks/04 tools/phase12_chunks/05 > /tmp/phase12_payload.b64
           python3 - <<'PY'
           import base64, pathlib
-          p=pathlib.Path('/tmp/phase12_payload.b64')
-          b=p.read_bytes()
-          print('combined bytes', len(b), 'mod4', len(b)%4)
-          try:
-              out=base64.b64decode(b, validate=True)
-          except Exception as e:
-              print('BASE64_ERROR', repr(e))
-              raise
-          pathlib.Path('/tmp/phase12_payload.tar.gz').write_bytes(out)
+          b=pathlib.Path('/tmp/phase12_payload.b64').read_bytes()
+          if len(b) != 40392:
+              raise SystemExit('unexpected base64 length: %d' % len(b))
+          pathlib.Path('/tmp/phase12_payload.tar.gz').write_bytes(base64.b64decode(b, validate=True))
           PY
           echo "8629580b20ed9416ab46c3df75f97e2525eecbf9653ff58e2c9a8576abde7fd4  /tmp/phase12_payload.tar.gz" | sha256sum -c -
           tar -xzf /tmp/phase12_payload.tar.gz -C .
