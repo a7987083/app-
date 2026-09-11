@@ -4,7 +4,11 @@ namespace app\index\controller;
 
 use app\common\library\AppStorePayload;
 use app\common\library\BlacklistPolicy;
+use app\common\library\CardEntitlementPolicy;
+use app\common\library\SourceAppRecord;
 use app\common\library\SourceConfigRepository;
+use app\common\library\SourceHttpClient;
+use app\common\library\SourceResponse;
 use app\common\library\TraceMonitorPolicy;
 use think\Db;
 
@@ -25,9 +29,10 @@ class App
         }
 
         $opencry = array_key_exists('opencry', $configValues) ? $configValues['opencry'] : null;
-        $udid = isset($_GET['udid']) ? $_GET['udid'] : '';
-        $kcode = isset($_GET['code']) ? $_GET['code'] : '';
-        $nowtime = date('Y-m-d H:i:s');
+        $udid = isset($_GET['udid']) ? trim((string)$_GET['udid']) : '';
+        $kcode = isset($_GET['code']) ? trim((string)$_GET['code']) : '';
+        $now = time();
+        $nowtime = date('Y-m-d H:i:s', $now);
 
         $black = $this->activeBlacklist($udid);
         if ($black) {
@@ -42,12 +47,16 @@ class App
         }
 
         if ($kcode !== '') {
-            return $this->activateCode($kcode, $udid);
+            return $this->activateCode($kcode, $udid, $now);
         }
 
-        $kamiRows = Db::table('fa_kami')->where('udid', $udid)->order('id desc')->select();
+        $kamiRows = $udid === ''
+            ? []
+            : Db::table('fa_kami')->where('udid', $udid)->order('id desc')->select();
         $mode = $kamiRows ? 'licensed' : 'guest';
-        $allowLockedDownload = $kamiRows ? !(time() > $kamiRows[0]['endtime']) : false;
+        $allowLockedDownload = $kamiRows
+            ? CardEntitlementPolicy::activeEndTime($kamiRows, $now) > $now
+            : false;
 
         $payload = $this->buildSourcePayload($configRows, $udid, $nowtime, $mode, $allowLockedDownload);
         if (is_object($payload)) {
@@ -57,9 +66,6 @@ class App
         $this->emitPayload($payload, $opencry, $appType, 320, true);
     }
 
-    /**
-     * Handle the legacy base64 "添加者|破解者" tracking payload.
-     */
     protected function processTraceValue($traceValue, $openblack, $openblack2)
     {
         foreach (TraceMonitorPolicy::entries($traceValue) as $entry) {
@@ -130,17 +136,17 @@ class App
         }
     }
 
-    /**
-     * Build the exact public source payload from current fa_config/fa_category rows.
-     * Returns a ThinkPHP JSON response object when the old controller would do so.
-     */
     protected function buildSourcePayload(array $config, $udid, $nowtime, $mode, $allowLockedDownload)
     {
         if (empty($config)) {
             return json(['code' => 0, 'msg' => '暂无站点数据']);
         }
 
-        $list = Db::table('fa_category')->where('status', 'normal')->order('weigh desc')->select();
+        $list = Db::table('fa_category')
+            ->field(implode(',', SourceAppRecord::publicSourceColumns()))
+            ->where('status', 'normal')
+            ->order('weigh desc')
+            ->select();
         if (empty($list)) {
             return json(['code' => 0, 'msg' => '暂无app数据']);
         }
@@ -150,95 +156,82 @@ class App
         return AppStorePayload::source($info, $udid, $nowtime, $apps);
     }
 
-    /**
-     * Preserve legacy plaintext/encrypted response envelopes and JSON flags.
-     */
     protected function emitPayload(array $payload, $opencry, $appType, $jsonFlags, $replaceMarkers)
     {
         if ($opencry == '1') {
             $native = ['content' => base64_encode(json_encode($payload, $jsonFlags))];
-            if ($appType === 'appstore_v2') {
-                $res = $this->curl('https://api.nuosike.com/encrypt.php', $native);
-                $return = ['appstore_v2' => $res];
-            } else {
-                $res = $this->curl('https://api.nuosike.com/api.php', $native);
-                $return = ['appstore' => $res];
+            $url = $appType === 'appstore_v2'
+                ? 'https://api.nuosike.com/encrypt.php'
+                : 'https://api.nuosike.com/api.php';
+            $result = SourceHttpClient::postForm($url, $native);
+
+            // Legacy curl_exec() failures serialized as boolean false. Preserve
+            // that envelope while logging/timeout/TLS handling is improved.
+            $encrypted = $result['transport_ok'] ? $result['body'] : false;
+            SourceResponse::send(
+                SourceResponse::encryptedBody($appType, $encrypted, $replaceMarkers)
+            );
+        }
+
+        SourceResponse::send(
+            SourceResponse::plainBody($payload, $jsonFlags, $replaceMarkers)
+        );
+    }
+
+    /**
+     * Activate one unused card. If the same UDID already has active time, the
+     * new duration is appended to the furthest active expiration.
+     */
+    protected function activateCode($kcode, $udid, $now = null)
+    {
+        $now = $now === null ? time() : (int)$now;
+        if ($udid === '') {
+            return json(['code' => 0, 'msg' => '未获取设备UDID']);
+        }
+
+        Db::startTrans();
+        try {
+            $kdata = Db::table('fa_kami')
+                ->where('kami', $kcode)
+                ->order('id desc')
+                ->lock(true)
+                ->find();
+            if (!$kdata) {
+                Db::rollback();
+                return json(['code' => 0, 'msg' => '解锁码不存在']);
             }
-            $json = json_encode($return);
-            echo $replaceMarkers ? str_replace('@@@', '\\n', $json) : $json;
-            die;
-        }
-
-        $payload = AppStorePayload::withoutRuntimeFields($payload);
-        $json = json_encode($payload, $jsonFlags);
-        echo $replaceMarkers ? str_replace('@@@', '\\n', $json) : $json;
-        die;
-    }
-
-    protected function activateCode($kcode, $udid)
-    {
-        $codes = Db::table('fa_kami')->where('kami', $kcode)->order('id desc')->select();
-        if (!$codes) {
-            return json(['code' => 0, 'msg' => '解锁码不存在']);
-        }
-
-        $kdata = $codes[0];
-        if (intval($kdata['jh'])) {
-            return json(['code' => 0, 'msg' => '解锁码已使用']);
-        }
-
-        $existing = Db::table('fa_kami')->where('udid', $udid)->select();
-        if (!empty($existing)) {
-            foreach ($existing as $row) {
-                if ($row['endtime'] < time()) {
-                    Db::table('fa_kami')->where('id', $row['id'])->delete();
-                }
+            if (intval($kdata['jh'])) {
+                Db::rollback();
+                return json(['code' => 0, 'msg' => '解锁码已使用']);
             }
+
+            $existing = Db::table('fa_kami')
+                ->where('udid', $udid)
+                ->where('jh', 1)
+                ->lock(true)
+                ->select();
+            $state = CardEntitlementPolicy::activationState((int)$kdata['kmyp'], $existing, $now);
+
+            $updated = Db::table('fa_kami')->where('id', $kdata['id'])->update([
+                'udid' => $udid,
+                'usetime' => $state['usetime'],
+                'endtime' => $state['endtime'],
+                'jh' => 1,
+            ]);
+            if ($updated === false || (int)$updated <= 0) {
+                throw new \RuntimeException('卡密激活写入失败');
+            }
+
+            Db::commit();
+            return json(['code' => 0, 'msg' => 'ok，解锁成功']);
+        } catch (\InvalidArgumentException $e) {
+            Db::rollback();
+            return json(['code' => 0, 'msg' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            Db::rollback();
+            error_log('[App::activateCode] ' . $e->getMessage());
+            return json(['code' => 0, 'msg' => '激活失败，请稍后重试']);
         }
-
-        $startTime = time();
-        list($useTime, $endTime) = $this->codeTimes(intval($kdata['kmyp']), $startTime);
-        Db::table('fa_kami')->where('id', $kdata['id'])->update([
-            'udid' => $udid,
-            'usetime' => $useTime,
-            'endtime' => $endTime,
-            'jh' => 1,
-        ]);
-        return json(['code' => 0, 'msg' => 'ok，解锁成功']);
-    }
-
-    protected function codeTimes($type, $startTime)
-    {
-        switch ($type) {
-            case 1:
-                return [$startTime, $startTime + (86400 * 30)];
-            case 2:
-                return [$startTime, $startTime + (86400 * 30 * 3)];
-            case 3:
-                return [$startTime, $startTime + (86400 * 30 * 12)];
-            case 4:
-                return [$startTime, $startTime + 86400];
-            case 5:
-                return [$startTime, $startTime + (86400 * 7)];
-            default:
-                return [null, null];
-        }
-    }
-
-    public function curl($url, $native)
-    {
-        $postData = http_build_query($native);
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_POST, true);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
-        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-        $data = curl_exec($curl);
-        curl_close($curl);
-        return $data;
     }
 
     public function log()
