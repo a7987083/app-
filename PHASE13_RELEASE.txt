@@ -1,12 +1,18 @@
-ZONOE Source Phase 13.1 / 13.2
-Version: 2026091202
-Base: Phase 12.1 / feature/phase12.1-hotfix
+ZONOE 软件源 Phase 13.3 / 13.4 / 13.5 / 13.6
+版本：2026091203
+基线：Phase 13.2 / 2026091202
 
-Scope:
-1. GitHub Actions automatically builds zonoe-online-update.zip and zonoe-online-update.zip.sha256 after PHP 7.0 regression passes.
-2. The workflow publishes or refreshes stable GitHub Release tag source-v2026091202.
-3. The Release keeps the exact asset names consumed by GitHubUpdateSource.
-4. A post-release end-to-end test starts from local version 2026091201, checks GitHub, downloads the real Release asset over HTTPS, verifies SHA256, creates updater backups, installs program files, writes version 2026091202, then verifies a second check reports no update.
-5. This first live GitHub update package is intentionally low-risk: it adds PHASE13_RELEASE.txt only and performs no database migration or public appstore protocol change.
+更新内容：
+1. 新增中文在线更新面板，显示当前版本、最新版本、更新说明和 SHA256。
+2. 新增真实阶段进度：读取更新源、下载、SHA256、安全解压、备份、数据库迁移、文件覆盖、完整性校验、配置同步、写入版本、最终验证。
+3. 更新成功后明确显示版本变化、SHA256、文件校验、数据库迁移和备份结果；失败时显示失败原因和自动回滚状态。
+4. 新增“更新历史”入口，记录成功/失败更新和回滚记录，可从成功更新记录直接恢复更新前的程序、数据库和版本号。
+5. GitHub Release 更新说明统一使用中文。
+6. 完成更新器自升级：在线更新包包含 UpdateManager、UpdateInstaller、UpdateRuntimeStore 和后台更新入口本身，并通过真实 Release 自覆盖验证。
+7. 固定后续发布流程：PHP 7.0 全回归 → 根据发布清单构建在线更新包 → SHA256 → Stable Release → 真实 GitHub 在线升级 E2E。
 
-No changes to appstore/appstore_v2, authorization duration, UDID format, blacklist rules, card quota semantics, or Nuosike updater behavior.
+兼容性：
+- 不修改 appstore / appstore_v2 公共协议。
+- 不修改授权时长、UDID 格式、黑名单和卡密换绑次数语义。
+- 保留原 Nuosike 在线更新入口。
+- GitHub 在线更新仍强制 HTTPS + SHA256。
