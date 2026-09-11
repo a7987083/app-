@@ -62,6 +62,17 @@ ok_phase12(strpos($http, "SOURCE_UPDATE_VERIFY_TLS") !== false, 'emergency TLS c
 
 $manager = file_get_contents(__DIR__ . '/../application/common/library/update/UpdateManager.php');
 ok_phase12(strpos($manager, 'LOCK_EX | LOCK_NB') !== false, 'update lock missing');
+ok_phase12(strpos($manager, 'localManifest') !== false, 'local update manifest reader missing');
+ok_phase12(strpos($manager, '$localManifest[\'file_sign\']') !== false, 'integrity check must use local ver.json file_sign');
+ok_phase12(strpos($manager, '$latest[\'file_sign\']') === false, 'remote file_sign must not be used for local tamper detection');
+
+
+$authorization = file_get_contents(__DIR__ . '/../application/admin/controller/Authorization.php');
+ok_phase12(strpos($authorization, "runtime' . DS . 'update_backup") !== false, 'diagnostic default backup path must stay inside site open_basedir');
+ok_phase12(strpos($authorization, '@is_dir($directory)') !== false, 'diagnostic backup probe must tolerate open_basedir restrictions');
+$upgrade121 = file_get_contents(__DIR__ . '/../tools/phase12_1_upgrade.sql');
+ok_phase12(strpos($upgrade121, "100-`transfer_count`") !== false, 'Phase 12.1 transfer quota migration missing');
+ok_phase12(strpos($upgrade121, "DEFAULT '100'") !== false, 'Phase 12.1 transfer quota default missing');
 
 $backup = file_get_contents(__DIR__ . '/../application/common/library/update/UpdateBackup.php');
 ok_phase12(strpos($backup, 'database.sql') !== false, 'database backup missing');

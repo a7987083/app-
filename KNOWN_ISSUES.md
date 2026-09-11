@@ -15,9 +15,8 @@
 ## P1 — still open
 
 ### Public self-service transfer abuse controls
-- `/unbind` requires card + old UDID + new UDID, validates active entitlement/blacklist/target state, and performs an atomic transfer.
-- It does not yet include a dedicated CAPTCHA, per-IP rate limit or persistent transfer-audit table.
-- Add these only if public abuse becomes a real operational problem; avoid a schema/security redesign before the initial live workflow is validated.
+- `/unbind` now has persistent transfer audit logs, per-IP hourly attempt limits, daily success limits and cooldowns.
+- CAPTCHA is still intentionally absent; add it only if real public abuse warrants the added friction.
 
 ### Card DB uniqueness is application-enforced
 - Card generation uses `random_bytes` and checks candidates against existing `fa_kami.kami`.

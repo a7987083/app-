@@ -2,7 +2,7 @@
 SET @db := DATABASE();
 SET @has_transfer_count := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db AND TABLE_NAME='fa_kami' AND COLUMN_NAME='transfer_count');
 SET @sql := IF(@has_transfer_count=0,
-  "ALTER TABLE `fa_kami` ADD COLUMN `transfer_count` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '换绑次数' AFTER `kmyp`",
+  "ALTER TABLE `fa_kami` ADD COLUMN `transfer_count` int(10) unsigned NOT NULL DEFAULT '100' COMMENT '剩余换绑次数' AFTER `kmyp`",
   "SELECT 1");
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `fa_authorization_event` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='授权事件日志';
 
 INSERT INTO `fa_config` (`name`,`group`,`title`,`tip`,`type`,`value`,`content`,`rule`,`extend`)
-SELECT 'unbind_max_count','basic','换绑总次数','每个连续有效授权最多自助换绑次数','number','3','','',''
+SELECT 'unbind_max_count','basic','新卡默认换绑次数','新生成卡密默认可换绑次数','number','100','','',''
 WHERE NOT EXISTS (SELECT 1 FROM `fa_config` WHERE `name`='unbind_max_count');
 INSERT INTO `fa_config` (`name`,`group`,`title`,`tip`,`type`,`value`,`content`,`rule`,`extend`)
 SELECT 'unbind_daily_limit','basic','每日换绑次数','同一授权链每天最多成功换绑次数','number','1','','',''

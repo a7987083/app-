@@ -217,14 +217,18 @@ class App
                 ->select();
             $wasStacked = CardEntitlementPolicy::activeEndTime($existing, $now) > $now;
             $state = CardEntitlementPolicy::activationState((int)$kdata['kmyp'], $existing, $now);
-            $transferCount = AuthorizationPolicy::usedTransfers($existing);
+            $configValues = SourceConfigRepository::mapRows(SourceConfigRepository::rows());
+            $defaultQuota = AuthorizationPolicy::maxTransfers($configValues);
+            $transferQuota = $wasStacked
+                ? AuthorizationPolicy::remainingQuota($existing, $defaultQuota)
+                : max(0, isset($kdata['transfer_count']) ? (int)$kdata['transfer_count'] : $defaultQuota);
 
             $updated = Db::table('fa_kami')->where('id', $kdata['id'])->update([
                 'udid' => $udid,
                 'usetime' => $state['usetime'],
                 'endtime' => $state['endtime'],
                 'jh' => 1,
-                'transfer_count' => $transferCount,
+                'transfer_count' => $transferQuota,
             ]);
             if ($updated === false || (int)$updated <= 0) {
                 throw new \RuntimeException('卡密激活写入失败');

@@ -122,7 +122,9 @@ class Authorization extends Backend
         }
         $backupDir = getenv('ZONOE_DB_BACKUP_DIR');
         if ($backupDir === false || trim((string)$backupDir) === '') {
-            $backupDir = '/www/backup/database';
+            // BaoTa 通常启用 open_basedir，直接探测 /www/backup/database 会触发
+            // ThinkPHP ErrorException。默认改查本站 updater 自己的备份目录。
+            $backupDir = ROOT_PATH . 'runtime' . DS . 'update_backup';
         }
         $latestBackup = $this->latestBackupFile($backupDir);
         $diag = [
@@ -158,7 +160,7 @@ class Authorization extends Backend
     }
     protected function latestBackupFile($directory)
     {
-        if (!is_dir($directory) || !is_readable($directory)) {
+        if (!@is_dir($directory) || !@is_readable($directory)) {
             return null;
         }
         $latest = null;
@@ -172,16 +174,24 @@ class Authorization extends Backend
                 continue;
             }
             $path = rtrim($directory, '/\\') . DIRECTORY_SEPARATOR . $item;
-            if (!is_file($path)) {
+            $candidate = null;
+            if (@is_file($path)) {
+                $candidate = $path;
+            } elseif (@is_dir($path) && @is_file($path . DIRECTORY_SEPARATOR . 'database.sql')) {
+                $candidate = $path . DIRECTORY_SEPARATOR . 'database.sql';
+            }
+            if ($candidate === null) {
                 continue;
             }
-            $mtime = @filemtime($path);
+            $mtime = @filemtime($candidate);
             if ($mtime && $mtime > $latestTime) {
                 $latestTime = $mtime;
-                $latest = ['file' => basename($path), 'mtime' => $mtime, 'recent' => $mtime >= time() - 7 * 86400];
+                $relative = ltrim(str_replace('\\', '/', substr($candidate, strlen(rtrim($directory, '/\\')))), '/');
+                $latest = ['file' => $relative, 'mtime' => $mtime, 'recent' => $mtime >= time() - 7 * 86400];
             }
         }
         return $latest;
     }
+
 
 }

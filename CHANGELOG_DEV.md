@@ -168,3 +168,11 @@ Development branch: `dev/software-source-v1`
 - Added mandatory SHA256 for GitHub Release updates, update locking, ZIP traversal/symlink checks and protected-path enforcement.
 - Added pre-update database + overwritten-file backups, fail-fast SQL execution, post-copy SHA256 verification and automatic rollback.
 - Added Phase 12 update contract tests and fixed project CI to PHP 7.0 only.
+
+## 2026-09-12 — Phase 12.1 hotfix
+
+- Fixed false “website anti-tamper restored files” warning: local integrity is now checked against local `ver.json.file_sign`, not a remote provider signature.
+- Fixed Authorization diagnostics on BaoTa/open_basedir by using the site-local updater backup directory and guarded filesystem probes.
+- `fa_kami.transfer_count` now means remaining self-service transfer quota. New cards default to 100, admin can edit/top-up it, and each successful transfer consumes one.
+- Existing Phase 11/12 used-count values migrate once (`0 -> 100`, `1 -> 99`, etc.) and the schema default becomes 100.
+- Stacked active cards share one remaining quota; editing an active card synchronizes the active chain.

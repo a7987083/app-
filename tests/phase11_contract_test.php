@@ -41,7 +41,19 @@ foreach (['transfer_count', 'fa_card_transfer_log', 'fa_authorization_event', 'u
     p11Assert(strpos($upgrade, $needle) !== false, 'phase11 upgrade missing ' . $needle);
 }
 $app = file_get_contents($root . '/application/index/controller/App.php');
-p11Assert(strpos($app, "'transfer_count' => \$transferCount") !== false, 'stacked cards do not inherit transfer count');
+p11Assert(strpos($app, "'transfer_count' => \$transferQuota") !== false, 'stacked cards do not inherit remaining transfer quota');
 p11Assert(strpos($app, "AuthorizationEventLog::record(\$wasStacked ? 'stack' : 'activate'") !== false, 'activation event logging missing');
+
+$kamiController = file_get_contents($root . '/application/admin/controller/Kami.php');
+p11Assert(strpos($kamiController, "'transfer_count' => \$transferQuota") !== false, 'new cards must persist configured transfer quota');
+p11Assert(strpos($kamiController, "1000000") !== false, 'card transfer quota validation missing');
+$kamiAdd = file_get_contents($root . '/application/admin/view/kami/add.html');
+p11Assert(strpos($kamiAdd, 'name="row[transfer_count]"') !== false, 'new-card transfer quota input missing');
+p11Assert(strpos($kamiAdd, 'value="100"') !== false, 'new-card transfer quota default must be 100');
+$kamiEdit = file_get_contents($root . '/application/admin/view/kami/edit.html');
+p11Assert(strpos($kamiEdit, 'name="row[transfer_count]"') !== false, 'card transfer quota must be editable');
+$policy = file_get_contents($root . '/application/common/library/AuthorizationPolicy.php');
+p11Assert(strpos($policy, 'DEFAULT_MAX_TRANSFERS = 100') !== false, 'default transfer quota must be 100');
+p11Assert(strpos($policy, 'remainingQuota') !== false, 'remaining transfer quota helper missing');
 
 echo "OK phase11_contract_test\n";

@@ -128,3 +128,8 @@ Phase 10 is the user-verified rollback baseline. Phase 11 adds authorization ope
 ## Phase 12 handoff — dual online updater
 
 Phase 12 is isolated on `feature/phase12-dual-online-update`; `main` is untouched. The original Nuosike update button/endpoints are retained. A second `GitHub 在线更新` button is added beside it. Both sources now delegate to `application/common/library/update/UpdateManager.php` and the same installer pipeline. The shared pipeline enables strict TLS by default, non-blocking update locking, GitHub SHA256 enforcement, ZIP traversal/symlink rejection, protected path blocking (`application/database.php`, `.env`, uploads, runtime), database and overwritten-file backups, SQL fail-fast behavior, SHA256 post-copy verification, late version writes, and automatic rollback on install failure. GitHub source accepts only stable Releases with `zonoe-online-update.zip` and `zonoe-online-update.zip.sha256`. Until a stable Release is published, the GitHub button should report `GitHub 暂无可用稳定更新`; it must never silently fall back to Nuosike.
+
+
+## Phase 12.1 handoff — updater/diagnostic/card-quota hotfix
+
+Branch: `feature/phase12.1-hotfix`. Base is the Phase 12 candidate; `main` and `dev/software-source-v1` are unchanged. The three user-reported issues are fixed together: local integrity no longer compares against Nuosike’s older remote fingerprint, Authorization diagnostics no longer probes `/www/backup/database` by default (avoiding BaoTa open_basedir ErrorException), and card `transfer_count` is now an editable remaining quota with default 100. Phase 11/12 rows are converted once based on the column default (`used -> remaining`), and successful device transfer decrements the shared active-chain quota by one.

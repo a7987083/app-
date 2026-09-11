@@ -20,6 +20,14 @@
         </div>
     </div>
 
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">换绑次数:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-transfer-count" data-rule="required;integer;range(0~1000000)" class="form-control" name="row[transfer_count]" type="number" min="0" max="1000000" value="100">
+            <span class="help-block">默认100次；设为0表示禁止自助换绑，后续可在卡密编辑中补充。</span>
+        </div>
+    </div>
+
 	<div class="form-group" style="margin-top:36px;">
         <label class="control-label col-xs-12 col-sm-2">最近一次生成的卡密列表:</label>
         <div class="col-xs-12 col-sm-8" style="overflow-y:scroll;height:256px;">

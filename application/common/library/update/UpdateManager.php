@@ -18,10 +18,11 @@ class UpdateManager
     public function check($sourceName)
     {
         $source = $this->source($sourceName);
-        $local = $this->localVersion();
-        if ($local === false) {
+        $localManifest = $this->localManifest();
+        if ($localManifest === false) {
             return ['code' => 406, 'msg' => '本地版本记录文件获取失败', 'data' => ''];
         }
+        $local = (string)$localManifest['version'];
         $latest = $source->latest();
         if ($latest === false) {
             return ['code' => 406, 'msg' => $source->name() === 'github' ? 'GitHub 更新源访问失败' : '服务器最新版号接口获取失败', 'data' => ''];
@@ -29,18 +30,25 @@ class UpdateManager
         if ($latest === null) {
             return ['code' => 204, 'msg' => $source->name() === 'github' ? 'GitHub 暂无可用稳定更新' : '未获取到版号信息', 'data' => ['has_update' => false, 'source' => $source->name()]];
         }
+
+        // 文件完整性只能和“当前本地版本记录”比较。远程更新源的 file_sign
+        // 属于远程版本，不能拿来判断经过二次开发的本地版本是否被防篡改还原。
         $incomplete = false;
-        if (!empty($latest['file_sign'])) {
-            $incomplete = UpdateIntegrity::signFromRoot($this->root) !== $latest['file_sign'];
+        if (!empty($localManifest['file_sign'])) {
+            $incomplete = UpdateIntegrity::signFromRoot($this->root) !== $localManifest['file_sign'];
         }
-        $hasUpdate = intval($latest['version']) > intval($local) || $incomplete;
+
+        $latestVersion = (string)$latest['version'];
+        $hasNewer = intval($latestVersion) > intval($local);
+        $canReinstall = intval($latestVersion) >= intval($local);
+        $hasUpdate = $hasNewer || ($incomplete && $canReinstall);
         $data = [
             'source' => $source->name(),
             'has_update' => $hasUpdate,
             'incomplete' => $incomplete,
-            'can_reinstall' => intval($latest['version']) >= intval($local),
-            'last_version' => (string)$latest['version'],
-            'local_version' => (string)$local,
+            'can_reinstall' => $canReinstall,
+            'last_version' => $latestVersion,
+            'local_version' => $local,
             'changelog' => isset($latest['desc']) ? (string)$latest['desc'] : '',
             'vn' => isset($latest['vn']) ? (string)$latest['vn'] : '',
             'sha256' => isset($latest['sha256']) ? (string)$latest['sha256'] : '',
@@ -48,9 +56,9 @@ class UpdateManager
         if ($hasUpdate) {
             return [
                 'code' => 200,
-                'msg' => $incomplete && intval($latest['version']) <= intval($local)
-                    ? '检测到文件与版本号不一致，可能被网站防篡改还原。请关闭防篡改后重新安装。'
-                    : (($source->name() === 'github' ? 'GitHub 有新版本 ' : '服务器有新版本 ') . $latest['version']),
+                'msg' => $incomplete && !$hasNewer && $canReinstall
+                    ? '检测到当前版本文件与本地版本记录不一致，可重新安装当前版本。'
+                    : (($source->name() === 'github' ? 'GitHub 有新版本 ' : '服务器有新版本 ') . $latestVersion),
                 'data' => $data,
             ];
         }
@@ -104,6 +112,12 @@ class UpdateManager
 
     protected function localVersion()
     {
+        $manifest = $this->localManifest();
+        return $manifest === false ? false : (string)$manifest['version'];
+    }
+
+    protected function localManifest()
+    {
         $file = $this->root . 'ver.json';
         $raw = @file_get_contents($file);
         if ($raw === false) {
@@ -113,7 +127,10 @@ class UpdateManager
         if (!is_array($json) || !isset($json['version'])) {
             return false;
         }
-        return trim((string)$json['version']);
+        return [
+            'version' => trim((string)$json['version']),
+            'file_sign' => isset($json['file_sign']) ? trim((string)$json['file_sign']) : '',
+        ];
     }
 
     protected function acquireLock()

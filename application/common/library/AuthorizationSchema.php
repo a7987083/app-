@@ -21,7 +21,15 @@ class AuthorizationSchema
 
         $column = Db::query("SHOW COLUMNS FROM `fa_kami` LIKE 'transfer_count'");
         if (!$column) {
-            Db::execute("ALTER TABLE `fa_kami` ADD COLUMN `transfer_count` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '换绑次数' AFTER `kmyp`");
+            Db::execute("ALTER TABLE `fa_kami` ADD COLUMN `transfer_count` int(10) unsigned NOT NULL DEFAULT '100' COMMENT '剩余换绑次数' AFTER `kmyp`");
+        } else {
+            $default = isset($column[0]['Default']) ? (int)$column[0]['Default'] : 0;
+            if ($default === 0) {
+                // Phase 11 中 transfer_count 表示“已用次数”。Phase 12.1 起改为
+                // “剩余次数”，并把旧数据一次性转换：0->100、1->99...。
+                Db::execute("UPDATE `fa_kami` SET `transfer_count`=GREATEST(0,100-`transfer_count`)");
+                Db::execute("ALTER TABLE `fa_kami` MODIFY COLUMN `transfer_count` int(10) unsigned NOT NULL DEFAULT '100' COMMENT '剩余换绑次数'");
+            }
         }
 
         Db::execute("CREATE TABLE IF NOT EXISTS `fa_card_transfer_log` (
@@ -62,7 +70,12 @@ class AuthorizationSchema
             KEY `idx_kami` (`kami`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='授权事件日志'");
 
-        self::ensureConfig('unbind_max_count', '换绑总次数', '每个连续有效授权最多自助换绑次数', 'number', '3');
+        self::ensureConfig('unbind_max_count', '新卡默认换绑次数', '新生成卡密默认可换绑次数', 'number', '100');
+        Db::table('fa_config')->where('name', 'unbind_max_count')->where('value', '3')->update([
+            'title' => '新卡默认换绑次数',
+            'tip' => '新生成卡密默认可换绑次数',
+            'value' => '100',
+        ]);
         self::ensureConfig('unbind_daily_limit', '每日换绑次数', '同一授权链每天最多成功换绑次数', 'number', '1');
         self::ensureConfig('unbind_cooldown_seconds', '换绑冷却秒数', '成功换绑后再次换绑的最短间隔', 'number', '3600');
         self::ensureConfig('unbind_ip_hour_limit', 'IP每小时尝试次数', '同一IP每小时最多提交换绑请求次数', 'number', '10');

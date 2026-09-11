@@ -36,9 +36,8 @@ class CardDeviceTransfer
         }
 
         $values = SourceConfigRepository::mapRows(SourceConfigRepository::rows());
-        $max = AuthorizationPolicy::maxTransfers($values);
-        $used = AuthorizationPolicy::usedTransfers($rows);
-        $remaining = AuthorizationPolicy::remainingTransfers($used, $max);
+        $defaultQuota = AuthorizationPolicy::maxTransfers($values);
+        $remaining = AuthorizationPolicy::remainingQuota($rows, $defaultQuota);
         $dailyLimit = AuthorizationPolicy::dailyTransfers($values);
         $cooldown = AuthorizationPolicy::cooldownSeconds($values);
         $today = strtotime(date('Y-m-d 00:00:00', $now));
@@ -50,8 +49,8 @@ class CardDeviceTransfer
         return [
             'ok' => true,
             'message' => $remaining > 0 ? ($canTransfer ? '当前可换绑' : '仍有次数，但当前处于限制期') : '换绑次数已用完',
-            'used' => $used,
-            'max' => $max,
+            'used' => null,
+            'max' => null,
             'remaining' => $remaining,
             'daily_used' => $dailyUsed,
             'daily_limit' => $dailyLimit,
@@ -120,11 +119,11 @@ class CardDeviceTransfer
                 return self::fail('旧UDID当前没有有效授权');
             }
 
-            $used = AuthorizationPolicy::usedTransfers($activeRows);
-            $max = AuthorizationPolicy::maxTransfers($values);
-            if ($used >= $max) {
+            $defaultQuota = AuthorizationPolicy::maxTransfers($values);
+            $remaining = AuthorizationPolicy::remainingQuota($activeRows, $defaultQuota);
+            if ($remaining <= 0) {
                 Db::rollback();
-                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '换绑次数已用完', 0, $used, $now);
+                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '换绑次数已用完', 0, 0, $now);
                 return self::fail('换绑次数已用完');
             }
 
@@ -132,7 +131,7 @@ class CardDeviceTransfer
             $today = strtotime(date('Y-m-d 00:00:00', $now));
             if (self::successCountForUdid($oldUdid, $today) >= $dailyLimit) {
                 Db::rollback();
-                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '今日换绑次数已达上限', 0, $used, $now);
+                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '今日换绑次数已达上限', 0, $remaining, $now);
                 return self::fail('今日换绑次数已达上限，请明天再试');
             }
 
@@ -140,7 +139,7 @@ class CardDeviceTransfer
             $lastSuccess = self::lastSuccessForUdid($oldUdid);
             if ($cooldown > 0 && $lastSuccess > 0 && $lastSuccess + $cooldown > $now) {
                 Db::rollback();
-                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '换绑冷却中', 0, $used, $now);
+                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '换绑冷却中', 0, $remaining, $now);
                 return self::fail('换绑冷却中，请稍后再试');
             }
 
@@ -152,17 +151,17 @@ class CardDeviceTransfer
                 ->find();
             if ($newActive) {
                 Db::rollback();
-                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '新UDID已有有效授权', 0, $used, $now);
+                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '新UDID已有有效授权', 0, $remaining, $now);
                 return self::fail('新UDID已有有效授权，请联系客服处理');
             }
 
             $maxEnd = CardEntitlementPolicy::activeEndTime($activeRows, $now);
-            $newCount = $used + 1;
+            $newRemaining = max(0, $remaining - 1);
             $moved = 0;
             foreach ($activeRows as $row) {
                 $updated = Db::table('fa_kami')->where('id', $row['id'])->update([
                     'udid' => $newUdid,
-                    'transfer_count' => $newCount,
+                    'transfer_count' => $newRemaining,
                 ]);
                 if ($updated === false) {
                     throw new \RuntimeException('换绑写入失败');
@@ -173,7 +172,7 @@ class CardDeviceTransfer
                 throw new \RuntimeException('换绑写入失败');
             }
 
-            if (!self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 1, '换绑成功', $maxEnd, $newCount, $now)) {
+            if (!self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 1, '换绑成功', $maxEnd, $newRemaining, $now)) {
                 throw new \RuntimeException('换绑日志写入失败');
             }
             if (!AuthorizationEventLog::record('transfer', [
@@ -183,7 +182,7 @@ class CardDeviceTransfer
                 'related_udid' => $oldUdid,
                 'endtime' => $maxEnd,
                 'ip' => $ip,
-                'detail' => '设备换绑成功，第' . $newCount . '次',
+                'detail' => '设备换绑成功，剩余' . $newRemaining . '次',
                 'addtime' => $now,
             ])) {
                 throw new \RuntimeException('授权事件写入失败');
@@ -195,8 +194,8 @@ class CardDeviceTransfer
                 'message' => '换绑成功',
                 'moved' => $moved,
                 'endtime' => $maxEnd,
-                'transfer_count' => $newCount,
-                'remaining' => AuthorizationPolicy::remainingTransfers($newCount, $max),
+                'transfer_count' => $newRemaining,
+                'remaining' => $newRemaining,
             ];
         } catch (\Exception $e) {
             Db::rollback();

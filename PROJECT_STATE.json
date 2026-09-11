@@ -3,8 +3,8 @@
   "development_branch": "dev/software-source-v1",
   "stable_branch": "main",
   "stable_baseline_commit": "598235962ea328c6558fe4935fe19ba552c1490d",
-  "refactor_phase": 12,
-  "status": "phase_12_dual_online_update_local_verified_ci_pending",
+  "refactor_phase": "12.1",
+  "status": "phase_12_1_hotfix_local_verified_ci_pending",
   "runtime_changes": true,
   "architecture": {
     "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
@@ -59,7 +59,11 @@
     "Phase 12 adds a separate GitHub online-update button without replacing the original update source",
     "Both update sources share strict TLS, update locking, ZIP path checks, protected-path enforcement, backup, SQL failure handling, file verification and automatic rollback",
     "GitHub stable-release packages require zonoe-online-update.zip plus zonoe-online-update.zip.sha256",
-    "CI is fixed to PHP 7.0 only for this project"
+    "CI is fixed to PHP 7.0 only for this project",
+    "Phase 12.1 fixes update-integrity false positives by comparing current files against local ver.json file_sign instead of a remote-provider file_sign",
+    "Phase 12.1 diagnostics default backup probing to runtime/update_backup and tolerate open_basedir restrictions",
+    "Phase 12.1 changes fa_kami.transfer_count to remaining editable quota; new cards default to 100 and successful transfer decrements by one",
+    "Phase 12.1 migrates Phase 11/12 used-count values once by column-default marker and keeps stacked active rows on one remaining quota chain"
   ],
   "validation": {
     "phase_8_real_baota_test": "user_reported_success",
@@ -86,8 +90,10 @@
     "phase_11_real_license_query": "not_run",
     "phase_11_real_diagnostics": "not_run",
     "phase_12_local_contract_tests": "passed_php_8_4_23",
-    "phase_12_ci": "pending",
-    "phase_12_real_online_update": "not_run"
+    "phase_12_ci": "passed_run_34637588239_php_7_0_and_packaging",
+    "phase_12_real_online_update": "not_run",
+    "phase_12_1_local_contract_tests": "passed_php_8_4_23_source_contracts",
+    "phase_12_1_ci": "pending"
   },
   "performance_findings": {
     "appstore_plain_ttfb_seconds_observed": 0.102178,
@@ -107,6 +113,7 @@
     "GitHub updater consumes only stable non-draft/non-prerelease releases with mandatory SHA256",
     "SOURCE_UPDATE_VERIFY_TLS=0 is emergency compatibility only; strict update TLS is default"
   ],
-  "next_task": "Run Phase 12 PHP 7.0 CI, build sourcepack/BaoTa package, deploy candidate, then smoke-test both original and GitHub update checks before publishing the first stable GitHub online-update Release.",
-  "phase12_branch": "feature/phase12-dual-online-update"
+  "next_task": "Run Phase 12.1 PHP 7.0 CI, assemble BaoTa full package and direct incremental/online-update packages, then user-smoke update check, diagnostic page, and editable 100-count card transfer quota.",
+  "phase12_branch": "feature/phase12-dual-online-update",
+  "phase12_1_branch": "feature/phase12.1-hotfix"
 }

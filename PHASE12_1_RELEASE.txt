@@ -1,0 +1,16 @@
+ZONOE Source Phase 12.1 Hotfix
+Version: 2026091201
+Base: Phase 12 / feature/phase12-dual-online-update
+
+Fixes:
+1. Update integrity check now compares local files with local ver.json file_sign.
+   Remote provider file_sign is no longer used to accuse a newer local fork of tampering.
+2. Authorization diagnostic defaults to runtime/update_backup and tolerates open_basedir.
+3. Card transfer_count is now remaining quota, editable by admin.
+   New cards default to 100. Existing Phase 11/12 used-count values migrate once:
+   0 -> 100, 1 -> 99, etc. Column default 100 is the idempotency marker.
+4. Active stacked cards inherit one remaining quota chain; successful transfer consumes 1.
+5. Manual edit of an active card synchronizes the remaining quota across active stacked rows.
+
+No changes to appstore/appstore_v2 payload protocol, blacklist semantics, UDID format rules,
+or existing authorization duration stacking.

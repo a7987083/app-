@@ -20,7 +20,7 @@ $transfer = file_get_contents($root . '/application/common/library/CardDeviceTra
 $index = file_get_contents($root . '/application/index/controller/Index.php');
 $route = file_get_contents($root . '/application/route.php');
 $view = file_get_contents($root . '/application/index/view/index/unbind.html');
-foreach (["where('kami', \$code)", "where('udid', \$oldUdid)", "where('endtime', '>', \$now)", "'udid' => \$newUdid", "'transfer_count' => \$newCount", 'BlacklistPolicy::findActive', 'AuthorizationPolicy::maxTransfers', 'successCountForUdid', 'ipAttempts'] as $needle) {
+foreach (["where('kami', \$code)", "where('udid', \$oldUdid)", "where('endtime', '>', \$now)", "'udid' => \$newUdid", "'transfer_count' => \$newRemaining", 'BlacklistPolicy::findActive', 'AuthorizationPolicy::maxTransfers', 'AuthorizationPolicy::remainingQuota', 'successCountForUdid', 'ipAttempts'] as $needle) {
     transferAssert(strpos($transfer, $needle) !== false, 'transfer contract missing: ' . $needle);
 }
 transferAssert(strpos($index, 'CardDeviceTransfer::transfer') !== false, 'Index unbind action missing transfer service');
