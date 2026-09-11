@@ -1,21 +1,25 @@
-name: Phase13 GitHub Release E2E
+name: ZONOE Source Release
 
 on:
   push:
     branches:
       - feature/phase13-github-release
     paths:
-      - 'PHASE13_RELEASE.txt'
-      - 'tests/phase13_github_online_update_e2e.php'
-      - 'ver.json'
       - 'public/update/ver.txt'
+      - 'ver.json'
+      - 'release/RELEASE_NOTES.md'
+      - 'release/online-update-files.txt'
+      - 'release/sql/**'
+      - 'tools/build_online_update.php'
+      - 'tests/phase13_github_online_update_e2e.php'
       - '.github/workflows/phase13_github_release.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: phase13-github-release
+  group: zonoe-source-release
   cancel-in-progress: false
 
 jobs:
@@ -28,14 +32,16 @@ jobs:
           php-version: '7.0'
           coverage: none
           extensions: curl, zip
-      - name: Lint Phase 13 files
+      - name: Lint release and updater files
         run: |
           set -euo pipefail
+          php -l tools/build_online_update.php
           php -l tests/phase13_github_online_update_e2e.php
-          php -l application/common/library/update/GitHubUpdateSource.php
-          php -l application/common/library/update/UpdateManager.php
+          php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
-      - name: Run full regression
+          php -l application/common/library/update/UpdateManager.php
+          php -l application/admin/controller/general/Config.php
+      - name: Run full PHP 7.0 regression
         run: |
           set -euo pipefail
           php tests/appstore_payload_test.php
@@ -68,52 +74,60 @@ jobs:
   package-and-release:
     needs: php70-regression
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Phase 13 release contract
+      - id: meta
+        name: Validate release metadata
         run: |
           set -euo pipefail
-          test "$(cat public/update/ver.txt)" = "2026091202"
-          grep -F '"version":"2026091202"' ver.json
-          grep -F 'Version: 2026091202' PHASE13_RELEASE.txt
-          grep -F "const UPDATE_ASSET = 'zonoe-online-update.zip'" application/common/library/update/GitHubUpdateSource.php
-          grep -F "const SHA_ASSET = 'zonoe-online-update.zip.sha256'" application/common/library/update/GitHubUpdateSource.php
-          test ! -e application/index/controller/App-mb.php
-          test ! -e application/index/controller/Index2.php
-      - name: Build GitHub online-update release assets
+          VERSION="$(tr -d '\r\n ' < public/update/ver.txt)"
+          [[ "$VERSION" =~ ^20[0-9]{6,12}$ ]]
+          grep -F "ZONOE 软件源 ${VERSION}" release/RELEASE_NOTES.md
+          grep -F "版本：${VERSION}" PHASE13_RELEASE.txt
+          grep -F 'UpdateRuntimeStore.php' release/online-update-files.txt
+          grep -F 'UpdateInstaller.php' release/online-update-files.txt
+          grep -F 'UpdateManager.php' release/online-update-files.txt
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Build release assets from manifest
         run: |
           set -euo pipefail
-          rm -rf .phase13_online
-          mkdir -p .phase13_online/program
-          cp PHASE13_RELEASE.txt .phase13_online/program/PHASE13_RELEASE.txt
-          (cd .phase13_online && zip -qr ../zonoe-online-update.zip program)
-          sha256sum zonoe-online-update.zip > zonoe-online-update.zip.sha256
+          php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
           unzip -t zonoe-online-update.zip >/dev/null
-          test "$(unzip -Z1 zonoe-online-update.zip | sort)" = $'program/\nprogram/PHASE13_RELEASE.txt'
-      - name: Publish stable GitHub Release
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateRuntimeStore.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateInstaller.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateManager.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Config.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/general/config.js'
+          test -s zonoe-online-update.zip.sha256
+      - name: Publish or refresh stable GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.meta.outputs.version }}
         run: |
           set -euo pipefail
-          TAG='source-v2026091202'
-          TITLE='ZONOE Source Phase 13.2 - GitHub Online Update E2E'
+          TAG="source-v${VERSION}"
+          TITLE="ZONOE 软件源 ${VERSION}"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" zonoe-online-update.zip zonoe-online-update.zip.sha256 --clobber
+            gh release edit "$TAG" --title "$TITLE" --notes-file release/RELEASE_NOTES.md --target "$GITHUB_SHA"
           else
             gh release create "$TAG" zonoe-online-update.zip zonoe-online-update.zip.sha256 \
               --target "$GITHUB_SHA" \
               --title "$TITLE" \
-              --notes-file PHASE13_RELEASE.txt
+              --notes-file release/RELEASE_NOTES.md
           fi
           gh release view "$TAG" --json tagName,isDraft,isPrerelease,url
       - name: Upload CI copy of release assets
         uses: actions/upload-artifact@v4
         with:
-          name: zonoe-phase13-github-online-update
+          name: zonoe-source-${{ steps.meta.outputs.version }}-online-update
           path: |
             zonoe-online-update.zip
             zonoe-online-update.zip.sha256
-            PHASE13_RELEASE.txt
+            release/RELEASE_NOTES.md
+            release/online-update-files.txt
           if-no-files-found: error
           retention-days: 30
 
@@ -127,7 +141,20 @@ jobs:
           php-version: '7.0'
           coverage: none
           extensions: curl, zip
+      - name: Resolve previous stable release
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.package-and-release.outputs.version }}
+        run: |
+          set -euo pipefail
+          OLD="$(gh release list --limit 50 --json tagName --jq '.[].tagName' | sed -n 's/^source-v\([0-9][0-9]*\)$/\1/p' | awk -v target="$VERSION" '$1 < target' | sort -n | tail -1)"
+          if [ -z "$OLD" ]; then OLD=0; fi
+          echo "old=$OLD" >> "$GITHUB_OUTPUT"
+          echo "previous release version: $OLD"
       - name: Real GitHub Release online-update E2E
+        env:
+          ZONOE_E2E_OLD_VERSION: ${{ steps.previous.outputs.old }}
         run: |
           set -euo pipefail
           php tests/phase13_github_online_update_e2e.php
