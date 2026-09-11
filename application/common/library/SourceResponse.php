@@ -22,12 +22,10 @@ class SourceResponse
         return $replaceMarkers ? str_replace('@@@', '\\n', $json) : $json;
     }
 
-    public static function send($body, $status = 200)
+    public static function send($body)
     {
-        if (!headers_sent()) {
-            header('Content-Type: application/json;charset=utf-8');
-            http_response_code((int)$status);
-        }
+        // Preserve legacy header/status behavior; this layer centralizes body
+        // encoding only so existing clients see the same wire contract.
         echo $body;
         die;
     }
