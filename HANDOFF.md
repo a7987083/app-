@@ -4,124 +4,118 @@
 - Repository: `a7987083/app-`
 - Development branch: `dev/software-source-v1`
 - Stable branch: `main`
-- Stable baseline commit: `598235962ea328c6558fe4935fe19ba552c1490d`
+- Original stable baseline: `598235962ea328c6558fe4935fe19ba552c1490d`
 - `main` remains untouched.
 
-## Architecture
-- ThinkPHP 5.0.24 / FastAdmin-style application.
-- Public source route: `/appstore` -> `application/index/controller/App.php::list()`.
-- Runtime source tables: `fa_config`, `fa_category`, `fa_kami`, `fa_black`, `fa_monitor`.
-- Public source mapping: `application/common/library/AppStorePayload.php`.
+## Current architecture
+- Framework: ThinkPHP 5.0.24 / FastAdmin-style.
+- Public source: `/appstore` -> `application/index/controller/App.php::list()`.
+- Self-service device transfer: `/unbind` -> `application/index/controller/Index.php::unbind()`.
+- Public payload mapper: `application/common/library/AppStorePayload.php`.
+- Legacy Category field semantic layer: `application/common/library/SourceAppRecord.php`.
+- External source HTTP client: `application/common/library/SourceHttpClient.php`.
+- Public source response encoder: `application/common/library/SourceResponse.php`.
 - Shared config cache: `application/common/library/SourceConfigRepository.php`.
 - Blacklist semantics: `application/common/library/BlacklistPolicy.php`.
 - Trace semantics: `application/common/library/TraceMonitorPolicy.php`.
 - Daily Category stats: `application/common/library/CategoryDailyStat.php`.
-- Card code generation: `application/common/library/CardCodeGenerator.php`.
+- Card generation: `application/common/library/CardCodeGenerator.php`.
+- Card duration/stacking: `application/common/library/CardEntitlementPolicy.php`.
+- Device transfer: `application/common/library/CardDeviceTransfer.php`.
 
-## Protocol compatibility boundary
-The public source contract remains unchanged. Source keys remain `name`, `message`, `identifier`, `sourceURL`, `sourceicon`, `payURL`, `unlockURL`, `apps`; app keys remain `name`, `type`, `version`, `versionDate`, `versionDescription`, `lock`, `downloadURL`, `isLanZouCloud`, `iconURL`, `tintColor`, `size`.
+## Compatibility boundary
+Public source keys remain `name`, `message`, `identifier`, `sourceURL`, `sourceicon`, `payURL`, `unlockURL`, `apps`; app keys remain `name`, `type`, `version`, `versionDate`, `versionDescription`, `lock`, `downloadURL`, `isLanZouCloud`, `iconURL`, `tintColor`, `size`.
 
-`APPSTORE: v2` still selects `appstore_v2`; other values still use `appstore`. Plain/encrypted UDID/Time behavior, guest/licensed lock semantics, multiline description behavior and external encryption endpoints remain unchanged.
+`APPSTORE: v2` still selects `appstore_v2`; all other header values use `appstore`. Plain output still strips runtime `UDID/Time`; encrypted output still retains them before encryption. Guest truthy-lock and licensed strict-`lock === "1"` behavior are preserved. The external endpoints remain `https://api.nuosike.com/api.php` and `https://api.nuosike.com/encrypt.php`.
 
-## Phase history
-### Phase 1-3
-- Extracted AppStore mapping and equivalence tests.
-- Fixed dylib null access and homepage child-category N+1.
-- Centralized Category write/display rules.
-- Made Monitor blacklist move and Kami generation transactional.
-- Added `SourceConfigRepository` 60-second shared config cache with invalidation.
-- CI matrix expanded to PHP 7.0 / 8.2 / 8.4.
+## Phase 1-8 summary
+- Extracted source payload mapping and compatibility tests.
+- Fixed dylib null access, homepage child N+1, config caching, BaoTa DB placeholders and root Nginx rewrite packaging.
+- Centralized blacklist/trace behavior and made relevant writes transactional.
+- Added true Category server paging, full-database search, top+bottom pagination, lightweight default columns and add-without-parent-refresh.
+- Fixed `cs/cstime` daily identity using `YYYYMMDD` with transaction + row lock.
+- Replaced weak card generation with `random_bytes` while preserving visible card format.
+- Added active-blacklist duplicate prevention and expired-history display.
+- User reported Phase 8 deployment/admin behavior working correctly.
 
-### Phase 4-6
-- Fixed BaoTa release DB placeholder packaging (`BT_DB_NAME`, `BT_DB_USERNAME`, `BT_DB_PASSWORD`).
-- Added root `nginx.rewrite`; real BaoTa deployment/blacklist behavior was user-reported successful.
-- Added `BlacklistPolicy`, complete NOT NULL blacklist writes, expiration and first-hit `usetime` behavior.
-- Added `TraceMonitorPolicy`, clarified 添加者/破解者 monitor UI labels, test/probe tooling and removed inherited 2022 monitor observations from fresh release seed.
+## Phase 9 — final closure
+- User completed the production access-log audit for stale `App-mb.php` / `Index2.php` paths and then completed server cleanup.
+- Both stale duplicate controllers were formally removed from `dev/software-source-v1`.
+- Regression contracts now require both files to remain absent.
+- Phase 9 closure CI Run `34545630620` passed PHP 7.0 / 8.2 / 8.4.
+- A final Phase 9 BaoTa package is kept as the rollback/stable closure artifact.
 
-### Phase 7 — 5000-App admin performance
-- Category admin switched from full client-side list to true server-side pagination.
-- Default page size `1000`; choices `200 / 500 / 1000`.
-- Quick search queries the full database by application name.
-- Type tabs filter server-side and reset page number.
-- `软件说明 / 备注 / 应用图标 / 权重` are hidden by default but remain available through the column chooser.
-- List AJAX no longer constructs the full Category Tree; parent tree is deferred to add/edit.
-- List query returns only table fields.
-- User subsequently showed a real page with `4713` total rows and `1000` rows per page, confirming the paging path is active.
+## Phase 10A — HTTP / TLS / timeout / error handling
+`SourceHttpClient` now owns the external encryption POST transport:
+- TLS peer verification defaults ON.
+- TLS hostname verification defaults to `2`.
+- Connect timeout defaults to 5 seconds.
+- Overall timeout defaults to 20 seconds.
+- HTTP/cURL failures are logged with status/errno/error.
+- Existing external endpoints and form body remain unchanged.
+- Emergency compatibility rollback: `SOURCE_HTTP_VERIFY_TLS=0` restores the old peer-verification-off behavior without reverting code.
+- Optional timeout overrides: `SOURCE_HTTP_CONNECT_TIMEOUT`, `SOURCE_HTTP_TIMEOUT`.
 
-### Phase 8 — admin, statistics and maintenance bundle
-#### Category UI
-- Native BootstrapTable `paginationVAlign: 'both'` shows paging controls at the top and bottom.
-- Successful Category add closes the add layer without triggering the parent 1000-row table refresh; manual refresh remains available.
-- New Category/App form defaults `是否付费` to `付费`; edit continues to use stored values.
+Important: the two real encryption endpoints still require a live smoke test with strict TLS before Phase 10 is promoted to production stable. The historical encrypted request was ~10.48s, so the default total timeout is intentionally above that observed latency.
 
-#### Category `cs/cstime`
-- Removed the write-on-read reset from `Category::index()`; simply opening/refreshing the admin list no longer updates every stale Category row.
-- Added `CategoryDailyStat` and changed the daily identity from `date('d')` to integer `YYYYMMDD` (`20260911`), which fits the existing `int(11)` column and fixes same-day-number cross-month collisions.
-- Existing legacy `cstime` values `1..31` require no migration: the next hit is treated as a new day and lazily rewrites the row to `YYYYMMDD`.
-- Same-day semantics remain: first hit of a new date sets `cs=1`; later hits increment `cs`.
-- Recording uses a transaction plus row lock to avoid concurrent lost increments/resets.
-- Both `Index.php` and the retained `Index2.php` compatibility path call the same helper.
+## Phase 10B — semantic Category field layer
+`SourceAppRecord` maps business names to legacy physical columns without changing the database:
+- `download_url -> bt1a`
+- `button_color -> bt1b`
+- `file_size -> bt2a`
+- `paid -> bt2b`
+- plus version/description/icon/cloud/status/etc.
 
-#### Card maintenance
-- Visible card format remains uppercase prefix + 12 uppercase hexadecimal characters.
-- Generator changed from MD5/time/`rand()` to `random_bytes(6)`.
-- A generated batch is unique in memory and checked against existing `fa_kami.kami`; collisions are regenerated with a bounded retry.
-- Card type must be one of day/week/month/quarter/year IDs `1..5`.
-- Each insert result is checked; inserts remain one-by-one in the existing transaction to avoid changing failure semantics.
-- Empty `addtime/usetime/endtime` model values now normalize to `0`, matching the existing NOT NULL schema.
-- No DB unique index is added in this phase because existing production duplicate history has not been migrated/audited.
+`AppStorePayload` and the public source query use this semantic layer. No `ALTER TABLE`, column rename or data migration is required.
 
-#### Blacklist maintenance
-- Manual admin add refuses another active blacklist row for the same UDID.
-- An expired-only history does not prevent creating a new active row.
-- Existing duplicate history is not destructively rewritten.
-- Expired rows remain as audit history and display `已过期`; `endtime=0` remains `永久`, `usetime=0` remains `未使用`.
+## Phase 10C — source response layer
+`SourceResponse` centralizes:
+- plain-body runtime-field stripping and `@@@ -> \\n` behavior;
+- `appstore` / `appstore_v2` wrapper serialization;
+- final output path.
 
-#### App-mb.php / Index2.php cleanup boundary
-- Static repository audit found no application route/reference to `App-mb.php` or `Index2.php`; `application/route.php` only maps `/appstore` to `index/App/list` and `/log` to `index/App/log`.
-- **The two files are intentionally still present.** The requested rule was "confirm no production access before removal", and this chat has no SSH/access to BaoTa `/www/wwwlogs`.
-- Bundled guard:
-  ```bash
-  bash tools/legacy_controller_access_audit.sh /www/wwwlogs
-  ```
-- To remove only after a zero-hit audit:
-  ```bash
-  bash tools/legacy_controller_access_audit.sh \
-    --delete /www/wwwroot/app3.zonoeios.xyz \
-    /www/wwwlogs
-  ```
-- A matching access record exits `2` and refuses deletion; missing logs exit `3` and also refuse deletion.
+Header/status behavior was deliberately left as the legacy controller behavior to minimize client compatibility risk. Existing payload/equivalence tests plus new response tests lock the body contract.
 
-## CI / tests
-Phase 8 code CI run `34542868818` passed the full PHP `7.0 / 8.2 / 8.4` matrix. Coverage now includes prior AppStore/config/trace/blacklist/deployment tests plus:
-- `category_listing_contract_test.php`
-- `category_daily_stat_test.php`
-- `category_statistics_contract_test.php`
-- `card_code_generator_test.php`
-- `card_maintenance_contract_test.php`
-- `blacklist_maintenance_test.php`
-- `legacy_controller_contract_test.php`
-- `legacy_controller_audit_test.sh`
+## Stackable card authorization
+Each card code is still one-time use (`jh=1` remains consumed), but unused new cards can be activated at any time while the same UDID has remaining authorization.
 
-## Performance finding retained
-Observed on the server:
-- `opencry=0`: TTFB `0.102178s`, total `0.110784s`.
-- `opencry=1`: TTFB `10.464952s`, total `10.476304s`.
-The dominant public `/appstore` latency is the existing whole-payload external encryption call. The user chose to keep current `appstore/appstore_v2` encryption behavior, so Phase 8 does not change it.
+Activation base is:
+`max(now, furthest active endtime for this UDID)`.
 
-## Validation still required
-- Real Phase 8 BaoTa deployment / admin smoke test.
-- Verify top+bottom pager, add-without-parent-refresh and paid default.
-- Exercise one `cs/cstime` hit across a new date condition if practical.
-- Generate and activate test cards.
-- Test duplicate active blacklist add and expired display.
-- Run the production access-log audit before deleting `App-mb.php` / `Index2.php`.
-- Production regression is not claimed until these live checks are done.
+The new card duration is appended after that base, so repeated day/week/month/quarter/year cards can extend authorization without losing remaining time. Existing durations remain day=1d, week=7d, month=30d, quarter=90d, year=360d.
+
+## Self-service device transfer
+Public page: `/unbind`.
+
+Customer submits:
+- a card previously bound to the old device;
+- old UDID;
+- new UDID.
+
+Rules:
+- old/new UDID must use the existing supported 25/40-character format;
+- the proof card must already belong to the old UDID;
+- old device must currently have active authorization;
+- active blacklist on either old/new device blocks self-service transfer;
+- new UDID must not already have active authorization;
+- on success, activated card history is moved to the new UDID so stacked entitlement and future proof-card use follow the replacement device;
+- effective expiration does not change during transfer.
+
+## CI
+Phase 10 code CI Run `34546582035` passed PHP 7.0 / 8.2 / 8.4. It covers previous suites plus semantic source fields, unified response body, HTTP/TLS contract, stackable entitlement policy, transfer contract and Phase 10 controller architecture checks.
+
+## Live validation still required for Phase 10
+1. Plain `/appstore` regression.
+2. Encrypted `appstore` with strict TLS.
+3. Encrypted `appstore_v2` with strict TLS.
+4. Activate a first test card, then activate at least two more before expiry and confirm endtime keeps extending from the prior furthest expiry.
+5. Visit `/unbind`, transfer one active stacked test entitlement from old to new UDID and verify old loses access/new gains access with unchanged final expiration.
+6. Verify blacklisted old/new devices and already-active target device are refused.
 
 ## Stability rules
-1. Keep `main` unchanged until explicitly promoted.
-2. Do not change public source protocol/encryption semantics without a dedicated compatibility phase.
-3. Keep schema migrations separate from compatibility maintenance unless required and tested.
-4. BaoTa ZIP must have root `auto_install.json`, `import.sql`, `nginx.rewrite`; `application/database.php` must contain only the `BT_DB_*` placeholders before installation.
-5. Fresh release SQL must not preload runtime `fa_monitor` observations.
-6. Never delete legacy controllers solely from static analysis; production access logs are the deletion gate.
+1. Do not modify `main` until explicit promotion.
+2. Keep the Phase 9 closure ZIP as rollback baseline while Phase 10 receives live validation.
+3. Do not change the public encryption protocol/provider while validating 10A.
+4. No physical Category DB field migration during 10B.
+5. Each card remains one-time consumption even though entitlement time stacks.
+6. BaoTa release ZIP must retain root `auto_install.json`, `import.sql`, `nginx.rewrite` and `BT_DB_*` placeholders.
