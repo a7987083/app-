@@ -104,11 +104,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate BaoTa release contract
+      - name: Validate Phase 10 sourcepack contract
         run: |
           set -euo pipefail
           test -f auto_install.json
-          test -f import.sql
           test -f nginx.rewrite
           test -f application/common/library/SourceAppRecord.php
           test -f application/common/library/SourceHttpClient.php
@@ -126,22 +125,22 @@ jobs:
           grep -F 'CardEntitlementPolicy::activationState' application/index/controller/App.php
           grep -F 'CardDeviceTransfer::transfer' application/index/controller/Index.php
 
-      - name: Build BaoTa deployment ZIP
+      - name: Build Phase 10 sourcepack ZIP
         run: |
           set -euo pipefail
-          zip -qr zonoe-source-phase10-bt.zip . \
+          zip -qr zonoe-source-phase10-sourcepack.zip . \
             -x '.git/*' \
-               'zonoe-source-phase10-bt.zip' \
-               'zonoe-source-phase10-bt.zip.sha256'
-          sha256sum zonoe-source-phase10-bt.zip > zonoe-source-phase10-bt.zip.sha256
-          unzip -t zonoe-source-phase10-bt.zip >/dev/null
+               'zonoe-source-phase10-sourcepack.zip' \
+               'zonoe-source-phase10-sourcepack.zip.sha256'
+          sha256sum zonoe-source-phase10-sourcepack.zip > zonoe-source-phase10-sourcepack.zip.sha256
+          unzip -t zonoe-source-phase10-sourcepack.zip >/dev/null
 
-      - name: Upload BaoTa release artifact
+      - name: Upload Phase 10 sourcepack artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zonoe-source-phase10-bt
+          name: zonoe-source-phase10-sourcepack
           path: |
-            zonoe-source-phase10-bt.zip
-            zonoe-source-phase10-bt.zip.sha256
+            zonoe-source-phase10-sourcepack.zip
+            zonoe-source-phase10-sourcepack.zip.sha256
           if-no-files-found: error
           retention-days: 30
