@@ -41,6 +41,14 @@ jobs:
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
           php -l application/admin/controller/general/Config.php
+      - name: Verify source integrity manifest
+        run: |
+          set -euo pipefail
+          SIGN="$(php -r "require 'application/common/library/UpdateIntegrity.php'; echo app\\common\\library\\UpdateIntegrity::signFromRoot(getcwd());")"
+          MANIFEST_SIGN="$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo isset($j["file_sign"]) ? $j["file_sign"] : "";')"
+          echo "SOURCE_FILE_SIGN=$SIGN"
+          test -n "$MANIFEST_SIGN"
+          test "$SIGN" = "$MANIFEST_SIGN"
       - name: Run full PHP 7.0 regression
         run: |
           set -euo pipefail
