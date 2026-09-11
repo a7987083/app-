@@ -25,11 +25,16 @@ jobs:
       - name: Lint changed application PHP
         run: |
           php -l application/common/library/AppStorePayload.php
+          php -l application/common/library/SourceAppRecord.php
+          php -l application/common/library/SourceHttpClient.php
+          php -l application/common/library/SourceResponse.php
           php -l application/common/library/SourceConfigRepository.php
           php -l application/common/library/BlacklistPolicy.php
           php -l application/common/library/TraceMonitorPolicy.php
           php -l application/common/library/CategoryDailyStat.php
           php -l application/common/library/CardCodeGenerator.php
+          php -l application/common/library/CardEntitlementPolicy.php
+          php -l application/common/library/CardDeviceTransfer.php
           php -l application/common/model/Config.php
           php -l application/index/controller/App.php
           php -l application/index/controller/Index.php
@@ -39,6 +44,12 @@ jobs:
           php -l application/admin/controller/Black.php
           php -l application/admin/model/Black.php
           php -l application/admin/model/Kami.php
+          php -l tests/appstore_payload_test.php
+          php -l tests/appstore_equivalence_test.php
+          php -l tests/appstore_semantic_equivalence_test.php
+          php -l tests/source_app_record_test.php
+          php -l tests/source_http_client_contract_test.php
+          php -l tests/source_response_test.php
           php -l tests/source_config_repository_test.php
           php -l tests/blacklist_policy_test.php
           php -l tests/blacklist_persistence_contract_test.php
@@ -50,6 +61,9 @@ jobs:
           php -l tests/category_statistics_contract_test.php
           php -l tests/card_code_generator_test.php
           php -l tests/card_maintenance_contract_test.php
+          php -l tests/card_entitlement_policy_test.php
+          php -l tests/card_device_transfer_contract_test.php
+          php -l tests/phase10_controller_contract_test.php
           php -l tests/legacy_controller_contract_test.php
           php -l tests/deployment_contract_test.php
           bash -n tools/trace_monitor_probe.sh
@@ -60,6 +74,10 @@ jobs:
         run: |
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
+          php tests/appstore_semantic_equivalence_test.php
+          php tests/source_app_record_test.php
+          php tests/source_http_client_contract_test.php
+          php tests/source_response_test.php
           php tests/source_config_repository_test.php
           php tests/blacklist_policy_test.php
           php tests/blacklist_persistence_contract_test.php
@@ -71,6 +89,9 @@ jobs:
           php tests/category_statistics_contract_test.php
           php tests/card_code_generator_test.php
           php tests/card_maintenance_contract_test.php
+          php tests/card_entitlement_policy_test.php
+          php tests/card_device_transfer_contract_test.php
+          php tests/phase10_controller_contract_test.php
           php tests/legacy_controller_contract_test.php
           bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
