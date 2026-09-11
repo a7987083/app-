@@ -1,0 +1,12 @@
+ZONOE Source Phase 13.1 / 13.2
+Version: 2026091202
+Base: Phase 12.1 / feature/phase12.1-hotfix
+
+Scope:
+1. GitHub Actions automatically builds zonoe-online-update.zip and zonoe-online-update.zip.sha256 after PHP 7.0 regression passes.
+2. The workflow publishes or refreshes stable GitHub Release tag source-v2026091202.
+3. The Release keeps the exact asset names consumed by GitHubUpdateSource.
+4. A post-release end-to-end test starts from local version 2026091201, checks GitHub, downloads the real Release asset over HTTPS, verifies SHA256, creates updater backups, installs program files, writes version 2026091202, then verifies a second check reports no update.
+5. This first live GitHub update package is intentionally low-risk: it adds PHASE13_RELEASE.txt only and performs no database migration or public appstore protocol change.
+
+No changes to appstore/appstore_v2, authorization duration, UDID format, blacklist rules, card quota semantics, or Nuosike updater behavior.
