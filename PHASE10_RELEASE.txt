@@ -1,0 +1,30 @@
+ZONOE SOFTWARE SOURCE - PHASE 10 CANDIDATE
+Repository: a7987083/app-
+Branch: dev/software-source-v1
+Phase 9 rollback/closure CI: 34545630620
+Phase 10 runtime CI: 34546582035
+Phase 10 runtime CI head: 692fe7f7ca131b5a4746485942dac89bc877460a
+Date: 2026-09-11
+
+Included:
+- Phase 9 closure: App-mb.php / Index2.php retired from future packages
+- 10A SourceHttpClient: TLS verify default ON, connect/total timeout, error logging
+- 10B SourceAppRecord semantic layer for legacy Category fields
+- 10C SourceResponse unified public source body encoding
+- Stackable card authorization: new unused cards extend the furthest active expiration
+- /unbind self-service device transfer using card + old UDID + new UDID
+
+Compatibility:
+- appstore/appstore_v2 provider and response keys are unchanged
+- no physical Category schema rename/migration
+- each individual card remains one-time use
+- legacy day/week/month/quarter/year durations are unchanged
+
+Live smoke required before stable promotion:
+- strict TLS for both external encryption endpoints
+- appstore + appstore_v2 with real client
+- 2+ stacked card activations
+- /unbind old-to-new device transfer
+
+Emergency upstream TLS fallback only:
+SOURCE_HTTP_VERIFY_TLS=0
