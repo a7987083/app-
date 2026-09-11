@@ -1,0 +1,133 @@
+name: Phase13 GitHub Release E2E
+
+on:
+  push:
+    branches:
+      - feature/phase13-github-release
+    paths:
+      - 'PHASE13_RELEASE.txt'
+      - 'tests/phase13_github_online_update_e2e.php'
+      - 'ver.json'
+      - 'public/update/ver.txt'
+      - '.github/workflows/phase13_github_release.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase13-github-release
+  cancel-in-progress: false
+
+jobs:
+  php70-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, zip
+      - name: Lint Phase 13 files
+        run: |
+          set -euo pipefail
+          php -l tests/phase13_github_online_update_e2e.php
+          php -l application/common/library/update/GitHubUpdateSource.php
+          php -l application/common/library/update/UpdateManager.php
+          php -l application/common/library/update/UpdateInstaller.php
+      - name: Run full regression
+        run: |
+          set -euo pipefail
+          php tests/appstore_payload_test.php
+          php tests/appstore_equivalence_test.php
+          php tests/appstore_semantic_equivalence_test.php
+          php tests/source_app_record_test.php
+          php tests/source_http_client_contract_test.php
+          php tests/source_response_test.php
+          php tests/source_config_repository_test.php
+          php tests/blacklist_policy_test.php
+          php tests/blacklist_persistence_contract_test.php
+          php tests/blacklist_maintenance_test.php
+          php tests/trace_monitor_policy_test.php
+          php tests/trace_monitor_contract_test.php
+          php tests/category_listing_contract_test.php
+          php tests/category_daily_stat_test.php
+          php tests/category_statistics_contract_test.php
+          php tests/card_code_generator_test.php
+          php tests/card_maintenance_contract_test.php
+          php tests/card_entitlement_policy_test.php
+          php tests/card_device_transfer_contract_test.php
+          php tests/phase10_controller_contract_test.php
+          php tests/authorization_policy_test.php
+          php tests/phase11_contract_test.php
+          php tests/phase12_update_contract_test.php
+          php tests/legacy_controller_contract_test.php
+          bash tests/legacy_controller_audit_test.sh
+          php tests/deployment_contract_test.php
+
+  package-and-release:
+    needs: php70-regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Phase 13 release contract
+        run: |
+          set -euo pipefail
+          test "$(cat public/update/ver.txt)" = "2026091202"
+          grep -F '"version":"2026091202"' ver.json
+          grep -F 'Version: 2026091202' PHASE13_RELEASE.txt
+          grep -F "const UPDATE_ASSET = 'zonoe-online-update.zip'" application/common/library/update/GitHubUpdateSource.php
+          grep -F "const SHA_ASSET = 'zonoe-online-update.zip.sha256'" application/common/library/update/GitHubUpdateSource.php
+          test ! -e application/index/controller/App-mb.php
+          test ! -e application/index/controller/Index2.php
+      - name: Build GitHub online-update release assets
+        run: |
+          set -euo pipefail
+          rm -rf .phase13_online
+          mkdir -p .phase13_online/program
+          cp PHASE13_RELEASE.txt .phase13_online/program/PHASE13_RELEASE.txt
+          (cd .phase13_online && zip -qr ../zonoe-online-update.zip program)
+          sha256sum zonoe-online-update.zip > zonoe-online-update.zip.sha256
+          unzip -t zonoe-online-update.zip >/dev/null
+          test "$(unzip -Z1 zonoe-online-update.zip | sort)" = $'program/\nprogram/PHASE13_RELEASE.txt'
+      - name: Publish stable GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG='source-v2026091202'
+          TITLE='ZONOE Source Phase 13.2 - GitHub Online Update E2E'
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" zonoe-online-update.zip zonoe-online-update.zip.sha256 --clobber
+          else
+            gh release create "$TAG" zonoe-online-update.zip zonoe-online-update.zip.sha256 \
+              --target "$GITHUB_SHA" \
+              --title "$TITLE" \
+              --notes-file PHASE13_RELEASE.txt
+          fi
+          gh release view "$TAG" --json tagName,isDraft,isPrerelease,url
+      - name: Upload CI copy of release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: zonoe-phase13-github-online-update
+          path: |
+            zonoe-online-update.zip
+            zonoe-online-update.zip.sha256
+            PHASE13_RELEASE.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  e2e-online-upgrade:
+    needs: package-and-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, zip
+      - name: Real GitHub Release online-update E2E
+        run: |
+          set -euo pipefail
+          php tests/phase13_github_online_update_e2e.php
