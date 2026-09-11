@@ -1,4 +1,5 @@
 <?php
+require __DIR__ . '/../application/common/library/SourceAppRecord.php';
 require __DIR__ . '/../application/common/library/AppStorePayload.php';
 
 use app\common\library\AppStorePayload;
