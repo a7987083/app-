@@ -88,8 +88,11 @@ namespace {
         @rmdir($path);
     }
 
-    $targetVersion = '2026091203';
-    $oldVersion = '2026091202';
+    $targetVersion = trim((string)file_get_contents($rootRepo . '/public/update/ver.txt'));
+    $oldVersion = getenv('ZONOE_E2E_OLD_VERSION');
+    if ($oldVersion === false || $oldVersion === '') {
+        $oldVersion = '0';
+    }
     $site = sys_get_temp_dir() . '/zonoe_phase13_e2e_' . uniqid('', true);
     mkdir($site, 0755, true);
 
@@ -161,11 +164,12 @@ namespace {
     p13assert(!empty($status['data']['integrity_verified']), 'final integrity status missing');
 
     $installed = isset($result['data']['installed']) && is_array($result['data']['installed']) ? $result['data']['installed'] : [];
-    p13assert(count($installed) === 1, 'expected exactly one installed release package');
-    p13assert(!empty($installed[0]['sha256_verified']), 'installed release SHA256 was not verified');
-    p13assert(!empty($installed[0]['files_verified']), 'installed release files were not verified');
-    p13assert(empty($installed[0]['database_migrated']), 'Phase 13.3-13.6 must not require DB migration');
-    $backup = isset($installed[0]['backup']) ? $installed[0]['backup'] : '';
+    p13assert(count($installed) >= 1, 'expected at least one installed release package');
+    $lastInstalled = $installed[count($installed) - 1];
+    p13assert(!empty($lastInstalled['sha256_verified']), 'installed release SHA256 was not verified');
+    p13assert(!empty($lastInstalled['files_verified']), 'installed release files were not verified');
+    p13assert(empty($lastInstalled['database_migrated']), 'Phase 13.3-13.6 must not require DB migration');
+    $backup = isset($lastInstalled['backup']) ? $lastInstalled['backup'] : '';
     p13assert($backup !== '' && is_dir($backup), 'updater backup directory missing');
     p13assert(is_file(rtrim($backup, '/\\') . '/database.sql'), 'database backup file missing');
     p13assert(is_file(rtrim($backup, '/\\') . '/created.json'), 'file backup manifest missing');
@@ -182,5 +186,5 @@ namespace {
     p13assert(isset($checkAfter['data']['local_version']) && (string)$checkAfter['data']['local_version'] === $targetVersion, 'post-install local version mismatch');
 
     p13rm($site);
-    fwrite(STDOUT, "OK phase13_github_online_update_e2e real_release={$targetVersion} self_update=passed progress=passed history=passed\n");
+    fwrite(STDOUT, "OK phase13_github_online_update_e2e real_release={$targetVersion} base={$oldVersion} self_update=passed progress=passed history=passed\n");
 }
