@@ -3,73 +3,78 @@
 ## P0 — compatibility boundaries
 
 ### Legacy framework
-- Runtime remains ThinkPHP 5.0.24.
-- Framework modernization is high-risk and should wait for broader HTTP integration/golden coverage.
+- Runtime remains ThinkPHP 5.0.24 / FastAdmin-style.
+- Framework upgrade is still deferred until broader HTTP/integration coverage exists.
 
-### External encryption / TLS
-- Existing `appstore/appstore_v2` whole-payload encryption is intentionally unchanged.
-- Real measurement showed plain `/appstore` around 0.11s total and encrypted around 10.48s total; the external encryption call is the dominant latency.
-- Legacy HTTP code still disables TLS peer verification. Hardening it may break deployed integrations and belongs in a separate tested phase.
+### External encryption service remains the dominant latency
+- Observed plain `/appstore` total was about `0.11s`; encrypted total was about `10.48s`.
+- Phase 10A adds bounded timeout/error handling and strict TLS defaults, but does not change the provider or protocol.
+- Strict TLS against both real provider endpoints must be smoke-tested before Phase 10 is promoted.
+- Emergency rollback only: `SOURCE_HTTP_VERIFY_TLS=0` restores legacy peer-verification-off behavior.
 
 ## P1 — still open
 
-### Legacy duplicate controllers require production-log gate
-- `application/index/controller/App-mb.php` and `Index2.php` are stale duplicate controllers.
-- Static route/reference audit found no application use.
-- They remain until actual BaoTa production access logs are checked.
-- Phase 8 provides `tools/legacy_controller_access_audit.sh`; it refuses deletion on a hit or when logs are unavailable.
+### Public self-service transfer abuse controls
+- `/unbind` requires card + old UDID + new UDID, validates active entitlement/blacklist/target state, and performs an atomic transfer.
+- It does not yet include a dedicated CAPTCHA, per-IP rate limit or persistent transfer-audit table.
+- Add these only if public abuse becomes a real operational problem; avoid a schema/security redesign before the initial live workflow is validated.
+
+### Card DB uniqueness is application-enforced
+- Card generation uses `random_bytes` and checks candidates against existing `fa_kami.kami`.
+- The database still has no unique index on `kami`; historical duplicate data has not been migrated/audited.
+- Add a unique index only after a production duplicate audit and migration plan.
 
 ### Existing blacklist duplicate history
-- Phase 8 prevents a new manual active duplicate for the same UDID.
-- Existing historical duplicates are intentionally not deduplicated destructively.
-- Runtime compatibility remains: any active permanent/future row keeps the UDID blocked.
-
-### Card DB uniqueness is enforced in application code, not schema
-- Phase 8 replaces the old MD5/time/`rand()` generator with `random_bytes` and checks candidate codes against existing DB codes.
-- `fa_kami.kami` still has no unique index. A DB unique constraint should only be added after auditing/migrating possible historical duplicates.
-- Card inserts remain one-by-one inside one transaction to preserve current insertion/failure behavior.
+- Manual admin add refuses another active row for the same UDID.
+- Existing historical duplicates are intentionally retained.
+- Any active permanent/future row continues to block that UDID.
 
 ### Expired blacklist retention
-- Expired rows are ignored at runtime and now display `已过期` in admin.
-- They are retained as history; no automatic purge/archive job exists.
+- Expired rows are ignored at runtime and display `已过期` in admin.
+- No automatic archive/purge job exists; history is retained deliberately.
 
 ## Completed P1 cleanup
 
+### Legacy duplicate controllers
+- Production access-log audit was completed by the user.
+- `application/index/controller/App-mb.php` and `Index2.php` were removed from the development branch in Phase 9.
+- CI now fails if either retired controller returns.
+
 ### Category large-list administration
-- Phase 7 added true server-side pagination with default 1000 rows, full-database app-name search, server-side type tabs, deferred parent tree construction and lightweight default columns.
-- Phase 8 adds top+bottom pagination, prevents parent-list auto refresh after a successful add, and defaults new apps to paid.
+- True server-side pagination, default 1000 rows, full-database app-name search, server type filtering, deferred parent-tree construction and lightweight default columns are active.
+- Pagination appears both above and below the list.
+- Category add no longer refreshes the entire parent list automatically and new apps default to paid.
 
 ### Category daily statistics
-- Phase 8 removes the admin list write-on-read reset.
-- Daily date identity is now `YYYYMMDD` through `CategoryDailyStat`, fixing cross-month same-day collisions.
-- Existing `cstime=1..31` values migrate lazily on the next hit.
-- Transaction + row lock protects concurrent increments/reset transitions.
+- Admin write-on-read reset was removed.
+- `CategoryDailyStat` uses `YYYYMMDD` with a transaction + row lock; legacy `1..31` values migrate lazily on next hit.
 
-### Card generation safety
-- Phase 8 uses cryptographic random bytes while preserving uppercase prefix + 12-hex visible format.
-- Generated batches are unique, checked against existing DB codes, and insert return values/type values are validated.
-- Blank `addtime/usetime/endtime` normalize to `0` to match NOT NULL columns.
+### Card generation / stacking
+- Card generation uses cryptographic random bytes while preserving uppercase prefix + 12-hex format.
+- New unused cards can stack after the furthest active expiration without discarding existing remaining time.
+- Individual codes remain one-time use.
+- Existing day/week/month/quarter/year duration rules are retained.
 
-### Shared config reads
-- Phase 3 added `SourceConfigRepository` with shared 60-second cache and invalidation after config writes/deletes.
+### Semantic source app fields
+- Phase 10B introduces `SourceAppRecord`; runtime source mapping no longer spreads raw `bt1a/bt1b/bt2a/bt2b` knowledge through payload code.
+- Physical database fields are unchanged.
 
-### Blacklist persistence / monitor safety
-- Phase 5 fixed incomplete `fa_black` inserts, false-success, active/expired evaluation and first-hit use time.
-- Monitor -> blacklist remains transactional.
-- Phase 8 adds active duplicate prevention for manual admin add and explicit expired-history display.
+### Source response / HTTP transport
+- Phase 10A centralizes external POST transport with TLS verification, timeout and error logging.
+- Phase 10C centralizes plain/encrypted response-body encoding while preserving the existing public body contract and legacy final-output behavior.
 
 ### BaoTa deployment contract
-- Phase 4 fixed `BT_DB_*` credential substitution after a real MySQL 1045 installation failure.
-- Phase 5 added root `nginx.rewrite`.
+- `BT_DB_NAME`, `BT_DB_USERNAME`, `BT_DB_PASSWORD` placeholders remain authoritative.
+- Root `nginx.rewrite` remains required.
 - Fresh release SQL does not preload inherited runtime monitor observations.
 
-## P2 — maintainability
+## P2 — future maintainability
 
-### Cryptic legacy schema fields
-`fa_category` still exposes names such as `bt1a`, `bt1b`, `bt2a`, `bt2b`. Introduce semantic accessors/DTO names before considering a physical DB migration.
-
-### Mixed response styles
-Controllers mix `echo + die` with ThinkPHP `json()` responses. Standardize only after HTTP behavior is fully golden-tested because headers/body formatting are part of client compatibility.
+### Framework-to-service separation
+Core policies/repositories have been extracted, but controllers still contain orchestration and direct DB access. Continue moving behavior behind service/repository boundaries only when a concrete feature requires it.
 
 ### Security headers/cookies
-Cookie and transport defaults are legacy. Harden per deployment environment rather than changing defaults blindly.
+Transport/cookie defaults outside the source encryption HTTP client remain legacy. Harden by deployment context rather than globally changing old framework defaults.
+
+### Physical Category schema migration
+Semantic aliases now exist, so a future physical rename of `bt1a/bt1b/bt2a/bt2b` is possible. It is not currently justified because it would require database migration and wider compatibility testing without adding user-visible value.
