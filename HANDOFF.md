@@ -10,8 +10,8 @@
 - Stable CI: Run `34654867771` — SUCCESS
 - Current development branch: `refactor/phase14-production-hardening`
 - Current Phase: `14.1 Production Hardening`
-- Phase14 code commit before documentation sync: `5eb58fd53ec1155d688d4f46ece2aac69b286f27`
-- Phase14 CI: Run `34663080449` — SUCCESS on PHP 7.0 full regression.
+- Current verified code commit: `3600ceb25190ca93deb85689a94d44aea57c709d`
+- Phase14 CI: Run `34663424209` — SUCCESS on PHP 7.0 full regression.
 - `main` is not the active development baseline and must not be changed implicitly.
 
 ## Current architecture
@@ -102,6 +102,9 @@ Detailed historical changes remain in `CHANGELOG_DEV.md`; release-specific summa
 3. **Update ZIP/extracted cache lived below Web Root.**
    Temporary update cache moved from `public/update/cache` to `runtime/update/cache`.
 
+4. **Update history order was nondeterministic for records created in the same second.**
+   `UpdateRuntimeStore::recordHistory()` previously used only second-resolution filenames and `history()` relied on lexicographic file order. Fast update+rollback could therefore return the older row first. History filenames now include a monotonic microsecond sort key and the entry stores `created_at_us`.
+
 ### New regression coverage
 
 `tests/phase14_update_atomicity_test.php` verifies:
@@ -109,9 +112,10 @@ Detailed historical changes remain in `CHANGELOG_DEV.md`; release-specific summa
 - second-package failure rolls back both current and previous package backups in reverse order;
 - overwritten files restore and update-created files are removed;
 - rollback I/O failure cannot be silently marked successful;
-- update cache is outside `public`.
+- update cache is outside `public`;
+- same-second history returns the most recently recorded item first with monotonic microsecond order.
 
-Phase14 CI Run `34663080449` passed the existing Phase 1-13 regression suite plus the new test under PHP 7.0.
+Phase14 CI Run `34663424209` passed the existing Phase 1-13 regression suite plus the new/extended test under PHP 7.0.
 
 ## Open issues / deliberate non-changes
 
@@ -127,12 +131,12 @@ Current `CardDeviceTransfer::transfer()` moves only currently active rows (`endt
 
 `App::activateCode()` owns DB transaction, card locking, stack calculation, transfer quota selection and event logging. Candidate future extraction: `CardActivationService`, but only after a DB-backed behavioral test is added.
 
-### P1 — admin scale issues
+### P1 — admin/update scale issues
 
 - Authorization dashboard loads all blacklist rows and counts active rows in PHP.
 - Authorization transfer/event lists use fixed 300-row caps, not server pagination.
 - GitHubUpdateSource may request a SHA asset for each qualifying Release during a check.
-- UpdateRuntimeStore history is unbounded file storage and `historyById()` scans linearly.
+- UpdateRuntimeStore history is still unbounded file storage; same-second order is fixed, but retention/indexing remains open.
 - PHP DB backup uses repeated LIMIT/OFFSET and may become expensive on very large databases.
 
 ### P1 — database uniqueness
@@ -141,16 +145,16 @@ Current `CardDeviceTransfer::transfer()` moves only currently active rows (`endt
 
 ## Build / validation
 
-Authoritative new Phase14 CI workflow: `.github/workflows/phase14_refactor.yml`.
+Authoritative Phase14 CI workflow: `.github/workflows/phase14_refactor.yml`.
 
 Current verified run:
 
-- Run: `34663080449`
-- Head code commit: `5eb58fd53ec1155d688d4f46ece2aac69b286f27`
+- Run: `34663424209`
+- Head code commit: `3600ceb25190ca93deb85689a94d44aea57c709d`
 - PHP: 7.0
 - Result: SUCCESS
 
-This proves static/contract behavior and the new update atomicity fixtures. It does **not** replace a real BaoTa/MySQL/browser production smoke.
+This proves static/contract behavior and the new update atomicity/history-order fixtures. It does **not** replace a real BaoTa/MySQL/browser production smoke.
 
 ## Next Task — Phase 14.2
 

@@ -6,8 +6,8 @@
 - Version: `2026091203`
 - Release CI: `34654867771` — SUCCESS
 - Current hardening branch: `refactor/phase14-production-hardening`
-- Phase14 code commit before documentation sync: `5eb58fd53ec1155d688d4f46ece2aac69b286f27`
-- Phase14 CI: `34663080449` — SUCCESS
+- Current verified code commit: `3600ceb25190ca93deb85689a94d44aea57c709d`
+- Phase14 CI: `34663424209` — SUCCESS
 - Authoritative compatibility runtime for release/refactor regression: PHP 7.0.
 
 ## Standard PHP regression
@@ -56,6 +56,9 @@ Phase13 stable release workflow: `.github/workflows/phase13_github_release.yml`.
 3. A normal backup rollback restores overwritten files.
 4. Files created only by the failed update are removed.
 5. Rollback file I/O failure throws and cannot be reported as successful.
+6. Multiple history rows written in the same second are returned newest-first deterministically; `created_at_us` must be monotonic for same-process writes.
+
+`phase13_update_runtime_test.php` also verifies update/rollback history behavior and is expected to remain stable under fast CI execution.
 
 ## Phase13/14 online update contract
 
@@ -87,6 +90,8 @@ UpdateManager lock
 
 On any package-chain failure, all available backups for the current update job must be restored in reverse order.
 
+History filenames use a human-readable second prefix plus monotonic microsecond suffix. Do not revert to second-only filenames because update+rollback may occur within one second and `history()` relies on filename order.
+
 ## Phase14.2 real smoke — required before promotion
 
 Use a disposable BaoTa-compatible deployment with database backup enabled.
@@ -95,15 +100,7 @@ Use a disposable BaoTa-compatible deployment with database backup enabled.
 
 1. Start on `2026091202`.
 2. GitHub online update to `2026091203`.
-3. Verify:
-   - latest/local version
-   - release SHA256
-   - target files
-   - DB migration result
-   - `ver.json.file_sign`
-   - `public/update/ver.txt`
-   - update history
-   - `runtime/update_backup/*`
+3. Verify latest/local version, Release SHA256, target files, DB result, `ver.json.file_sign`, `public/update/ver.txt`, update history and `runtime/update_backup/*`.
 4. Roll back from successful update history to `2026091202`.
 5. Verify program files, DB, `ver.json`, `public/update/ver.txt` and integrity.
 6. Re-run GitHub update to `2026091203`.
@@ -120,7 +117,7 @@ At minimum test:
 - backup directory not writable
 - update lock already held
 - insufficient disk before/while backup where reproducible
-- second package failure after first package succeeds (covered by unit/contract test; add a real staged fixture if available)
+- second package failure after first package succeeds
 
 The required outcome is never “partially updated but reported failed/successful ambiguously”.
 

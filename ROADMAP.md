@@ -15,15 +15,18 @@
 
 开发分支：`refactor/phase14-production-hardening`
 基线：Phase 13.6 / `d13ccb9ced56ca655a27cf13b5be0d6a33e724e2`
+当前已验证代码 Commit：`3600ceb25190ca93deb85689a94d44aea57c709d`
+CI Run：`34663424209` — SUCCESS
 
-### 14.1 更新事务和回滚可靠性 — 已完成代码与 CI
+### 14.1 更新事务、回滚和历史可靠性 — 已完成代码与 CI
 
 - 多包连续升级从“单包回滚”提升为“整条更新链逆序回滚”。
 - 当前失败包已创建备份时，也纳入 Manager 级全链回滚。
 - 回滚文件复制、目录创建、新建文件删除失败不再被静默忽略。
 - 更新下载和解压缓存由 `public/update/cache` 移到 `runtime/update/cache`，不再位于 Web Root。
-- 新增 `tests/phase14_update_atomicity_test.php`：覆盖第二包失败时回滚前一包、回滚 I/O 失败不得假成功、缓存目录不得位于 public。
-- CI Run `34663080449`：SUCCESS，PHP 7.0 全回归通过。
+- 修复 `UpdateRuntimeStore` 同秒历史记录排序不确定：历史文件加入单调微秒级排序键，确保刚产生的 rollback/update 记录稳定排在前面。
+- 新增/扩展 `tests/phase14_update_atomicity_test.php`：覆盖第二包失败时回滚前一包、回滚 I/O 失败不得假成功、缓存目录不得位于 public、同秒历史顺序稳定。
+- PHP 7.0 全回归通过。
 
 ### 14.2 真实生产升级/回滚闭环 — Next Task
 
@@ -54,7 +57,7 @@
 - Authorization 主页 active blacklist 统计改为数据库条件查询，避免全表载入 PHP。
 - transfers/events 从固定 300 行改为服务器分页。
 - 优化 GitHubUpdateSource 检查路径，避免为所有历史 Release 逐个请求 SHA256。
-- UpdateRuntimeStore 历史记录加入保留/索引机制，避免 `historyById()` 长期线性扫描。
+- UpdateRuntimeStore 历史记录加入保留/索引机制；Phase14.1 已修同秒排序，但历史总量仍可能长期增长。
 - 大数据库备份评估 OFFSET 扫描成本和更适合 BaoTa 的备份方式。
 
 ## Phase 17 — 选择性结构收口

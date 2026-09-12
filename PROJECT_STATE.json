@@ -12,9 +12,9 @@
   "current_development": {
     "branch": "refactor/phase14-production-hardening",
     "phase": "14.1",
-    "code_commit": "5eb58fd53ec1155d688d4f46ece2aac69b286f27",
+    "code_commit": "3600ceb25190ca93deb85689a94d44aea57c709d",
     "status": "phase14_1_code_and_ci_passed",
-    "ci_run": 34663080449,
+    "ci_run": 34663424209,
     "ci_result": "success"
   },
   "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
@@ -38,8 +38,9 @@
     "The currently failing package backup is included in manager-level rollback when available",
     "Rollback file/directory/delete failures are no longer silently reported as success",
     "Update download/extract cache moved from public/update/cache to runtime/update/cache",
-    "Added phase14_update_atomicity_test.php",
-    "Phase14 PHP 7.0 full regression passed in CI run 34663080449"
+    "UpdateRuntimeStore same-second history ordering is deterministic via a monotonic microsecond sort key",
+    "Added and extended phase14_update_atomicity_test.php",
+    "Phase14 PHP 7.0 full regression passed in CI run 34663424209"
   ],
   "compatibility_boundaries": [
     "Do not change appstore/appstore_v2 public keys or encoding behavior",
@@ -57,18 +58,18 @@
     "App::activateCode still owns a large transaction and should eventually move behind a service boundary",
     "Authorization dashboard counts active blacklist rows in PHP after loading the full table",
     "GitHubUpdateSource requests SHA256 for each qualifying release during releasePackages",
-    "UpdateRuntimeStore history is file-based, unbounded, and historyById scans linearly",
+    "UpdateRuntimeStore history is file-based and unbounded; same-second ordering is fixed but retention/indexing is still open",
     "fa_kami.kami uniqueness is application-enforced; production duplicate audit is required before adding a unique index"
   ],
   "validation": {
     "phase13_release_ci": "passed_run_34654867771",
-    "phase14_1_ci": "passed_run_34663080449_php_7_0",
+    "phase14_1_ci": "passed_run_34663424209_php_7_0",
     "appstore_equivalence": "passed",
     "source_response_contract": "passed",
     "authorization_contracts": "passed",
     "phase12_update_contract": "passed",
-    "phase13_update_runtime": "passed",
-    "phase14_update_atomicity": "passed",
+    "phase13_update_runtime": "passed_after_history_order_fix",
+    "phase14_update_atomicity": "passed_chain_rollback_backup_io_private_cache_history_order",
     "phase14_real_production_upgrade_rollback": "not_run"
   },
   "next_task": "Phase 14.2: run real 2026091202 -> 2026091203 GitHub online upgrade, rollback to 2026091202, re-upgrade to 2026091203, then failure-injection tests before promoting Phase14 hardening.",

@@ -12,7 +12,13 @@ Development branch: `refactor/phase14-production-hardening`
 - `UpdateInstaller` now exposes the current backup directory to the Manager for chain-level failure recovery.
 - Added `tests/phase14_update_atomicity_test.php` for second-package failure, reverse-order chain rollback, normal file restore/removal, rollback I/O failure and private cache path.
 - Added `.github/workflows/phase14_refactor.yml` running PHP 7.0 lint plus the full existing regression suite and the new Phase14 test.
-- GitHub Actions Run `34663080449` passed on code commit `5eb58fd53ec1155d688d4f46ece2aac69b286f27`.
+- Initial Phase14 code CI Run `34663080449` passed.
+- During documentation-sync regression, `phase13_update_runtime_test.php` exposed a real same-second history-order race: history files used only second-resolution names, so a rollback record created in the same second as its update could sort behind the older entry.
+- Fixed `UpdateRuntimeStore::recordHistory()` with a monotonic microsecond sort key (`created_at_us`) while retaining a readable second prefix and compatibility with old history files.
+- Extended `phase14_update_atomicity_test.php` to prove same-second history is newest-first and monotonic.
+- Added `UpdateRuntimeStore.php` to Phase14 lint coverage.
+- Final verified code commit: `3600ceb25190ca93deb85689a94d44aea57c709d`.
+- Final Phase14 PHP 7.0 full-regression CI Run `34663424209` passed.
 - Added `ROADMAP.md` and synchronized Phase14 state/handoff/build/known-issue documentation.
 
 Compatibility: no public `appstore/appstore_v2` protocol changes, no authorization duration/quota changes, no Category schema migration, no Nuosike removal.
