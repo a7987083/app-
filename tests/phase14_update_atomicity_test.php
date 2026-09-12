@@ -18,6 +18,7 @@ namespace {
 
     use app\common\library\update\UpdateBackup;
     use app\common\library\update\UpdateManager;
+    use app\common\library\update\UpdateRuntimeStore;
 
     function p14_assert($condition, $message)
     {
@@ -129,6 +130,16 @@ namespace {
     p14_assert(isset($result['data']['rollback']) && $result['data']['rollback'] === true, 'manager must report successful full-chain rollback');
     p14_assert($manager->restored === ['backup_two', 'backup_one'], 'manager must rollback current and previous packages in reverse order');
 
+    $historySite = sys_get_temp_dir() . '/zonoe_phase14_history_' . uniqid('', true);
+    mkdir($historySite . '/runtime', 0755, true);
+    $historyStore = new UpdateRuntimeStore($historySite);
+    $firstHistoryId = $historyStore->recordHistory(['id' => 'history_first_01', 'type' => 'update', 'status' => 'success']);
+    $secondHistoryId = $historyStore->recordHistory(['id' => 'history_second_02', 'type' => 'rollback', 'status' => 'success']);
+    p14_assert($firstHistoryId === 'history_first_01' && $secondHistoryId === 'history_second_02', 'history fixtures must be recorded');
+    $historyRows = $historyStore->history(2);
+    p14_assert(isset($historyRows[0]['id']) && $historyRows[0]['id'] === 'history_second_02', 'same-second history must return the most recently recorded entry first');
+    p14_assert(isset($historyRows[0]['created_at_us'], $historyRows[1]['created_at_us']) && $historyRows[0]['created_at_us'] > $historyRows[1]['created_at_us'], 'history microsecond order must be monotonic');
+
     $backupSite = sys_get_temp_dir() . '/zonoe_phase14_backup_' . uniqid('', true);
     mkdir($backupSite . '/runtime/update_backup/case/files', 0755, true);
     file_put_contents($backupSite . '/demo.txt', 'new');
@@ -157,7 +168,8 @@ namespace {
     p14_assert($rollbackFailed, 'rollback I/O failure must be reported instead of silently succeeding');
 
     p14_rm($site);
+    p14_rm($historySite);
     p14_rm($backupSite);
     p14_rm($brokenSite);
-    fwrite(STDOUT, "OK phase14_update_atomicity_test chain_rollback=passed backup_io=passed private_cache=passed\n");
+    fwrite(STDOUT, "OK phase14_update_atomicity_test chain_rollback=passed backup_io=passed private_cache=passed history_order=passed\n");
 }
