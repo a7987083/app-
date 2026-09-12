@@ -23,6 +23,7 @@ jobs:
           php -l application/common/library/update/UpdateBackup.php
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
+          php -l application/common/library/update/UpdateRuntimeStore.php
           php -l tests/phase13_update_runtime_test.php
           php -l tests/phase14_update_atomicity_test.php
 
