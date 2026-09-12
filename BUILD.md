@@ -1,10 +1,19 @@
 # Build and Validation
 
-This is a legacy ThinkPHP 5.0.24 / FastAdmin-style application. Validation uses PHP CLI lint, standalone contract tests and a PHP 7.0 / 8.2 / 8.4 GitHub Actions matrix.
+## Current baseline
 
-## Standard regression suite
+- Stable candidate: `feature/phase13-github-release@d13ccb9ced56ca655a27cf13b5be0d6a33e724e2`
+- Version: `2026091203`
+- Release CI: `34654867771` — SUCCESS
+- Current hardening branch: `refactor/phase14-production-hardening`
+- Current verified code commit: `3600ceb25190ca93deb85689a94d44aea57c709d`
+- Phase14 CI: `34663424209` — SUCCESS
+- Authoritative compatibility runtime for release/refactor regression: PHP 7.0.
+
+## Standard PHP regression
 
 ```bash
+set -euo pipefail
 php tests/appstore_payload_test.php
 php tests/appstore_equivalence_test.php
 php tests/appstore_semantic_equivalence_test.php
@@ -25,91 +34,123 @@ php tests/card_maintenance_contract_test.php
 php tests/card_entitlement_policy_test.php
 php tests/card_device_transfer_contract_test.php
 php tests/phase10_controller_contract_test.php
+php tests/authorization_policy_test.php
+php tests/phase11_contract_test.php
+php tests/phase12_update_contract_test.php
+php tests/phase13_update_runtime_test.php
+php tests/phase14_update_atomicity_test.php
 php tests/legacy_controller_contract_test.php
 bash tests/legacy_controller_audit_test.sh
 php tests/deployment_contract_test.php
 ```
 
-Also lint all touched application/helper/test PHP files and the shell tools. `.github/workflows/regression.yml` is the authoritative command list.
+Phase14 workflow: `.github/workflows/phase14_refactor.yml`.
+Phase13 stable release workflow: `.github/workflows/phase13_github_release.yml`.
 
-Validated CI:
-- Phase 9 final legacy-controller closure: Run `34545630620`, PHP 7.0 / 8.2 / 8.4 passed.
-- Phase 10 transport/semantic/response/stack/transfer code: Run `34546582035`, PHP 7.0 / 8.2 / 8.4 passed.
+## Phase14.1 regression contract
 
-## Phase 9 stable closure contract
+`tests/phase14_update_atomicity_test.php` must keep proving all of the following:
 
-`application/index/controller/App-mb.php` and `application/index/controller/Index2.php` must be absent. Production access-log audit was completed before repository retirement; regression tests now prevent them from returning.
+1. Update cache lives in `runtime/update/cache`, never `public/update/cache`.
+2. If package 1 succeeds and package 2 fails, Manager-level rollback restores package 2 backup and package 1 backup in reverse order.
+3. A normal backup rollback restores overwritten files.
+4. Files created only by the failed update are removed.
+5. Rollback file I/O failure throws and cannot be reported as successful.
+6. Multiple history rows written in the same second are returned newest-first deterministically; `created_at_us` must be monotonic for same-process writes.
 
-Keep the Phase 9 BaoTa ZIP as the rollback baseline while Phase 10 is live-tested.
+`phase13_update_runtime_test.php` also verifies update/rollback history behavior and is expected to remain stable under fast CI execution.
 
-## Phase 10A HTTP/TLS smoke
+## Phase13/14 online update contract
 
-Default behavior:
-
-```text
-SOURCE_HTTP_VERIFY_TLS = true
-SOURCE_HTTP_CONNECT_TIMEOUT = 5 seconds
-SOURCE_HTTP_TIMEOUT = 20 seconds
-```
-
-Test both external encryption paths from the actual deployment:
-
-```bash
-curl -k -sS -o /tmp/appstore-default.out \
-  -w 'HTTP=%{http_code} TTFB=%{time_starttransfer} Total=%{time_total}\n' \
-  'https://YOUR-DOMAIN/appstore'
-
-curl -k -sS -H 'APPSTORE: v2' -o /tmp/appstore-v2.out \
-  -w 'HTTP=%{http_code} TTFB=%{time_starttransfer} Total=%{time_total}\n' \
-  'https://YOUR-DOMAIN/appstore'
-```
-
-Use the real client as the authoritative encrypted-protocol smoke because the endpoint may return a valid encrypted wrapper that is not human-readable.
-
-If the server CA/OpenSSL environment rejects the upstream certificate, emergency rollback is:
-
-```bash
-export SOURCE_HTTP_VERIFY_TLS=0
-```
-
-or equivalent PHP-FPM environment configuration. This is a temporary compatibility fallback, not the preferred final state. Do not change the provider/protocol in the same incident.
-
-## Stackable-card smoke
-
-Use a disposable test UDID and at least three fresh card codes:
-
-1. Activate first card and record its `endtime`.
-2. Before it expires, activate the second card on the same UDID.
-3. Confirm second card `endtime = previous furthest endtime + second-card duration`.
-4. Activate a third card and confirm it extends again from the new furthest endtime.
-5. Confirm all three individual cards have `jh=1` and cannot be reused.
-6. Confirm `/appstore?udid=...` keeps locked downloads available through the final furthest endtime.
-
-Legacy duration seconds are unchanged: day `86400`, week `604800`, month `2592000`, quarter `7776000`, year `31104000`.
-
-## Self-service `/unbind` smoke
-
-Open:
+GitHub stable Release must contain exactly named assets consumed by `GitHubUpdateSource`:
 
 ```text
-https://YOUR-DOMAIN/unbind
+zonoe-online-update.zip
+zonoe-online-update.zip.sha256
 ```
 
-Test:
-1. old UDID has active stacked authorization;
-2. enter a card previously used by that old UDID + old UDID + unused new UDID;
-3. success page reports the unchanged final expiration;
-4. old UDID loses the activated-card records and new UDID receives them;
-5. new UDID validates normally through `/appstore` / authorization flow;
-6. old or new active blacklist rejects transfer;
-7. target UDID with an existing active authorization rejects transfer;
-8. invalid card/old-UDID pairing rejects transfer.
+Release must be non-draft and non-prerelease. GitHub update packages require SHA256. Initial and redirected network behavior remains HTTPS/TLS verified by default.
 
-The proof card can be an older card whose own row has expired, as long as it belongs to the old UDID and the old UDID still has another active stacked entitlement. Successful transfer moves all activated-card history to the new UDID.
+Update pipeline:
 
-## BaoTa one-click release contract
+```text
+UpdateManager lock
+  -> UpdateSource package list
+  -> UpdateHttpClient download
+  -> SHA256
+  -> ZIP path/symlink/protected-path validation
+  -> runtime/update/cache extraction
+  -> UpdateBackup (program + DB + version files)
+  -> SQL migration
+  -> file copy + SHA256 post-copy verification
+  -> SiteConfigSync
+  -> write public/update/ver.txt + ver.json
+  -> UpdateRuntimeStore status/history
+```
 
-ZIP root must contain:
+On any package-chain failure, all available backups for the current update job must be restored in reverse order.
+
+History filenames use a human-readable second prefix plus monotonic microsecond suffix. Do not revert to second-only filenames because update+rollback may occur within one second and `history()` relies on filename order.
+
+## Phase14.2 real smoke — required before promotion
+
+Use a disposable BaoTa-compatible deployment with database backup enabled.
+
+### Normal loop
+
+1. Start on `2026091202`.
+2. GitHub online update to `2026091203`.
+3. Verify latest/local version, Release SHA256, target files, DB result, `ver.json.file_sign`, `public/update/ver.txt`, update history and `runtime/update_backup/*`.
+4. Roll back from successful update history to `2026091202`.
+5. Verify program files, DB, `ver.json`, `public/update/ver.txt` and integrity.
+6. Re-run GitHub update to `2026091203`.
+
+### Failure injection
+
+At minimum test:
+
+- wrong SHA256
+- corrupt ZIP
+- invalid/protected ZIP path
+- SQL execution failure
+- target file not writable
+- backup directory not writable
+- update lock already held
+- insufficient disk before/while backup where reproducible
+- second package failure after first package succeeds
+
+The required outcome is never “partially updated but reported failed/successful ambiguously”.
+
+## Public source compatibility smoke
+
+After any production hardening deployment verify with the real client:
+
+- plain `/appstore`
+- encrypted default `appstore`
+- encrypted `APPSTORE: v2`
+- guest locked app behavior
+- licensed locked app behavior
+- blacklisted UDID response
+- activation and stacked authorization
+
+External encryption currently dominates latency; historical measurement was approximately 10.48s encrypted versus 0.11s plain.
+
+## Authorization smoke
+
+- Activate first card, then at least two more before expiry; final expiration must extend from the furthest previous expiration.
+- Each individual card remains `jh=1` and cannot be reused.
+- `/unbind/query` reports remaining quota.
+- Successful transfer decrements remaining quota exactly once.
+- daily/cooldown/IP limits reject correctly without unintended quota consumption.
+- `/license` requires card + UDID and reports current state.
+
+### Important unresolved transfer-history semantic
+
+Current implementation transfers only currently active `fa_kami` rows to the new UDID. Older documentation said all activated history follows the device. Do not create a smoke expectation for expired rows until the intended stable behavior is explicitly selected.
+
+## BaoTa deployment contract
+
+Package root must retain:
 
 ```text
 auto_install.json
@@ -117,7 +158,7 @@ import.sql
 nginx.rewrite
 ```
 
-`auto_install.json` must point at `application/database.php` and use run path `/public`. The archived database file must retain:
+`application/database.php` must retain:
 
 ```text
 BT_DB_NAME
@@ -125,48 +166,20 @@ BT_DB_USERNAME
 BT_DB_PASSWORD
 ```
 
-Do not restore the historical `user / dbname / pwd` template. Root `nginx.rewrite` remains the ThinkPHP pseudo-static source. Fresh `import.sql` must not preload historical runtime `fa_monitor` observations.
+Run path remains `/public`. Fresh SQL must not preload historical runtime monitor observations. `App-mb.php` and `Index2.php` must remain absent.
 
-## Phase 10 archive inspection
+## Emergency compatibility switches
 
-```bash
-unzip -t zonoe-source-phase10-bt.zip
-unzip -l zonoe-source-phase10-bt.zip | grep -E 'App-mb.php|Index2.php' && exit 1 || true
-unzip -p zonoe-source-phase10-bt.zip application/database.php | grep -E 'BT_DB_NAME|BT_DB_USERNAME|BT_DB_PASSWORD'
-unzip -p zonoe-source-phase10-bt.zip application/route.php | grep "Route::rule('unbind'"
-unzip -p zonoe-source-phase10-bt.zip application/common/library/SourceHttpClient.php | grep CURLOPT_SSL_VERIFYPEER
-unzip -p zonoe-source-phase10-bt.zip application/common/library/SourceAppRecord.php | grep download_url
-unzip -p zonoe-source-phase10-bt.zip application/common/library/SourceResponse.php | grep encryptedBody
-unzip -p zonoe-source-phase10-bt.zip application/common/library/CardEntitlementPolicy.php | grep stackBaseTime
-unzip -p zonoe-source-phase10-bt.zip application/index/view/index/unbind.html | grep '设备自助换绑'
+External source encryption HTTP:
+
+```text
+SOURCE_HTTP_VERIFY_TLS=0
 ```
 
-## Promotion rule
+Online updater HTTP:
 
-Phase 8/9 is the confirmed rollback baseline. Do not promote Phase 10 to `main` solely from CI: first complete real `appstore`, `appstore_v2`, stacked activation and `/unbind` smoke tests on a compatible deployment.
-
-
-## Phase 11 validation
-
-Before production promotion verify:
-
-1. Existing Phase 10 database upgrades without data loss (`AuthorizationSchema` or `tools/phase11_upgrade.sql`).
-2. Card list shows `换绑次数`; unused/new cards start at 0.
-3. Stack two or more active cards and confirm the new card inherits the current transfer count while expiration continues to stack.
-4. `/unbind/query` returns used / max / remaining counts for the current UDID.
-5. Each successful `/unbind` consumes exactly one transfer; exhausted budget blocks further transfer.
-6. Daily/cooldown/IP abuse controls reject requests without consuming transfer budget.
-7. Backend Authorization Center shows transfer audit history and authorization events.
-8. `/license` requires card + UDID and reports active/expired status plus remaining transfer budget.
-9. System diagnostics reports DB/PHP/extensions/HTTPS/TLS/write paths/disk/backup and optional upstream probes.
-10. Plain/appstore/appstore_v2 remain client-compatible.
-
-For an existing Phase 10 database, automatic bootstrap runs on authorization paths. The explicit fallback/manual upgrade is:
-
-```bash
-mysql -u <user> -p <database> < tools/phase11_upgrade.sql
+```text
+SOURCE_UPDATE_VERIFY_TLS=0
 ```
 
-## Phase 12 online-update artifact
-
-CI is pinned to PHP 7.0. A successful Phase 12 build produces both a full sourcepack and an incremental online-update package. The incremental package contains `program/` only for this phase (no schema migration) and is named `zonoe-online-update.zip` with `zonoe-online-update.zip.sha256`. For a future GitHub stable update, publish both files as assets of a non-draft, non-prerelease Release whose tag contains a numeric version, e.g. `source-v20260913`. The deployed updater ignores drafts/prereleases and refuses GitHub packages without a valid SHA256 asset.
+Both are diagnostic/emergency compatibility fallbacks only. Do not leave TLS disabled as the normal production state.

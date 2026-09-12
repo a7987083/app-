@@ -1,135 +1,169 @@
 # Software Source Development Handoff
 
-## Repository / baseline
+## Repository / current baseline
+
 - Repository: `a7987083/app-`
-- Development branch: `dev/software-source-v1`
-- Stable branch: `main`
-- Original stable baseline: `598235962ea328c6558fe4935fe19ba552c1490d`
-- `main` remains untouched.
+- Stable candidate branch: `feature/phase13-github-release`
+- Stable candidate phase/version: `Phase 13.6 / 2026091203`
+- Stable candidate commit: `d13ccb9ced56ca655a27cf13b5be0d6a33e724e2`
+- Stable Release: `source-v2026091203`
+- Stable CI: Run `34654867771` — SUCCESS
+- Current development branch: `refactor/phase14-production-hardening`
+- Current Phase: `14.1 Production Hardening`
+- Current verified code commit: `3600ceb25190ca93deb85689a94d44aea57c709d`
+- Phase14 CI: Run `34663424209` — SUCCESS on PHP 7.0 full regression.
+- `main` is not the active development baseline and must not be changed implicitly.
 
 ## Current architecture
-- Framework: ThinkPHP 5.0.24 / FastAdmin-style.
-- Public source: `/appstore` -> `application/index/controller/App.php::list()`.
-- Self-service device transfer: `/unbind` -> `application/index/controller/Index.php::unbind()`.
-- Public payload mapper: `application/common/library/AppStorePayload.php`.
-- Legacy Category field semantic layer: `application/common/library/SourceAppRecord.php`.
-- External source HTTP client: `application/common/library/SourceHttpClient.php`.
-- Public source response encoder: `application/common/library/SourceResponse.php`.
-- Shared config cache: `application/common/library/SourceConfigRepository.php`.
-- Blacklist semantics: `application/common/library/BlacklistPolicy.php`.
-- Trace semantics: `application/common/library/TraceMonitorPolicy.php`.
-- Daily Category stats: `application/common/library/CategoryDailyStat.php`.
-- Card generation: `application/common/library/CardCodeGenerator.php`.
-- Card duration/stacking: `application/common/library/CardEntitlementPolicy.php`.
-- Device transfer: `application/common/library/CardDeviceTransfer.php`.
 
-## Compatibility boundary
-Public source keys remain `name`, `message`, `identifier`, `sourceURL`, `sourceicon`, `payURL`, `unlockURL`, `apps`; app keys remain `name`, `type`, `version`, `versionDate`, `versionDescription`, `lock`, `downloadURL`, `isLanZouCloud`, `iconURL`, `tintColor`, `size`.
+Framework: ThinkPHP 5.0.24 / FastAdmin-style.
 
-`APPSTORE: v2` still selects `appstore_v2`; all other header values use `appstore`. Plain output still strips runtime `UDID/Time`; encrypted output still retains them before encryption. Guest truthy-lock and licensed strict-`lock === "1"` behavior are preserved. The external endpoints remain `https://api.nuosike.com/api.php` and `https://api.nuosike.com/encrypt.php`.
+### Public software-source path
 
-## Phase 1-8 summary
-- Extracted source payload mapping and compatibility tests.
-- Fixed dylib null access, homepage child N+1, config caching, BaoTa DB placeholders and root Nginx rewrite packaging.
-- Centralized blacklist/trace behavior and made relevant writes transactional.
-- Added true Category server paging, full-database search, top+bottom pagination, lightweight default columns and add-without-parent-refresh.
-- Fixed `cs/cstime` daily identity using `YYYYMMDD` with transaction + row lock.
-- Replaced weak card generation with `random_bytes` while preserving visible card format.
-- Added active-blacklist duplicate prevention and expired-history display.
-- User reported Phase 8 deployment/admin behavior working correctly.
+`/appstore` -> `application/index/controller/App.php::list()`
 
-## Phase 9 — final closure
-- User completed the production access-log audit for stale `App-mb.php` / `Index2.php` paths and then completed server cleanup.
-- Both stale duplicate controllers were formally removed from `dev/software-source-v1`.
-- Regression contracts now require both files to remain absent.
-- Phase 9 closure CI Run `34545630620` passed PHP 7.0 / 8.2 / 8.4.
-- A final Phase 9 BaoTa package is kept as the rollback/stable closure artifact.
+Data flow:
 
-## Phase 10A — HTTP / TLS / timeout / error handling
-`SourceHttpClient` now owns the external encryption POST transport:
-- TLS peer verification defaults ON.
-- TLS hostname verification defaults to `2`.
-- Connect timeout defaults to 5 seconds.
-- Overall timeout defaults to 20 seconds.
-- HTTP/cURL failures are logged with status/errno/error.
-- Existing external endpoints and form body remain unchanged.
-- Emergency compatibility rollback: `SOURCE_HTTP_VERIFY_TLS=0` restores the old peer-verification-off behavior without reverting code.
-- Optional timeout overrides: `SOURCE_HTTP_CONNECT_TIMEOUT`, `SOURCE_HTTP_TIMEOUT`.
+`request/trace/header/UDID/code`
+-> `SourceConfigRepository`
+-> trace / blacklist checks
+-> optional card activation
+-> `fa_category` query through `SourceAppRecord` semantic columns
+-> `AppStorePayload`
+-> `SourceResponse`
+-> plain response or `SourceHttpClient` external appstore/appstore_v2 encryption.
 
-Important: the two real encryption endpoints still require a live smoke test with strict TLS before Phase 10 is promoted to production stable. The historical encrypted request was ~10.48s, so the default total timeout is intentionally above that observed latency.
+Public payload compatibility is protected by `appstore_payload_test`, `appstore_equivalence_test`, `appstore_semantic_equivalence_test` and `source_response_test`.
 
-## Phase 10B — semantic Category field layer
-`SourceAppRecord` maps business names to legacy physical columns without changing the database:
-- `download_url -> bt1a`
-- `button_color -> bt1b`
-- `file_size -> bt2a`
-- `paid -> bt2b`
-- plus version/description/icon/cloud/status/etc.
+### Authorization path
 
-`AppStorePayload` and the public source query use this semantic layer. No `ALTER TABLE`, column rename or data migration is required.
+- Card activation: currently orchestrated by `App::activateCode()` using `CardEntitlementPolicy`, `AuthorizationPolicy`, `AuthorizationSchema`, `AuthorizationEventLog` and `fa_kami`.
+- `/unbind` + `/unbind/query`: `CardDeviceTransfer`.
+- `/license`: `AuthorizationLicense`.
+- `/dylib` and `/apiface`: `Index.php` legacy-compatible authorization checks.
+- Admin Authorization Center: `application/admin/controller/Authorization.php`.
 
-## Phase 10C — source response layer
-`SourceResponse` centralizes:
-- plain-body runtime-field stripping and `@@@ -> \\n` behavior;
-- `appstore` / `appstore_v2` wrapper serialization;
-- final output path.
+### Admin data path
 
-Header/status behavior was deliberately left as the legacy controller behavior to minimize client compatibility risk. Existing payload/equivalence tests plus new response tests lock the body contract.
+- Category: server-side pagination/search/filter; parent Tree only built for add/edit.
+- Kami: cryptographic card generation via `CardCodeGenerator`; remaining transfer quota editable and synchronized for active stacked rows.
+- Black/Monitor: shared `BlacklistPolicy` and `TraceMonitorPolicy` semantics, but persistence/query orchestration is not fully centralized.
 
-## Stackable card authorization
-Each card code is still one-time use (`jh=1` remains consumed), but unused new cards can be activated at any time while the same UDID has remaining authorization.
+### Online update path
 
-Activation base is:
-`max(now, furthest active endtime for this UDID)`.
+`admin/general/Config`
+-> `UpdateManager`
+-> `NuosikeUpdateSource` or `GitHubUpdateSource`
+-> `UpdateHttpClient`
+-> `UpdateInstaller`
+-> `UpdateBackup` + `UpdateSqlRunner`
+-> file/database/config/version update
+-> `UpdateRuntimeStore` status/history
+-> manual or automatic rollback.
 
-The new card duration is appended after that base, so repeated day/week/month/quarter/year cards can extend authorization without losing remaining time. Existing durations remain day=1d, week=7d, month=30d, quarter=90d, year=360d.
+GitHub stable updates require `zonoe-online-update.zip` plus matching SHA256. Strict HTTPS/TLS remains the default.
 
-## Self-service device transfer
-Public page: `/unbind`.
+## Stable compatibility boundaries
 
-Customer submits:
-- a card previously bound to the old device;
-- old UDID;
-- new UDID.
+Do not change during refactoring unless separately approved and tested:
 
-Rules:
-- old/new UDID must use the existing supported 25/40-character format;
-- the proof card must already belong to the old UDID;
-- old device must currently have active authorization;
-- active blacklist on either old/new device blocks self-service transfer;
-- new UDID must not already have active authorization;
-- on success, activated card history is moved to the new UDID so stacked entitlement and future proof-card use follow the replacement device;
-- effective expiration does not change during transfer.
+1. `appstore / appstore_v2` public keys and wrapper behavior.
+2. Guest truthy-lock and licensed strict `lock === "1"` semantics.
+3. External encryption endpoints/protocol.
+4. Card duration: day/week/month/quarter/year = 1/7/30/90/360 days.
+5. Each card remains one-time consumed; authorization time may stack.
+6. `transfer_count` means remaining device-transfer quota.
+7. UDID accepted format remains the existing 25/40-character rule.
+8. BaoTa package contract: `auto_install.json`, `import.sql`, `nginx.rewrite`, `BT_DB_*` placeholders.
+9. Retired `App-mb.php` and `Index2.php` must remain absent.
+10. No physical migration of legacy Category fields `bt1a/bt1b/bt2a/bt2b` without a dedicated migration plan.
 
-## CI
-Phase 10 code CI Run `34546582035` passed PHP 7.0 / 8.2 / 8.4. It covers previous suites plus semantic source fields, unified response body, HTTP/TLS contract, stackable entitlement policy, transfer contract and Phase 10 controller architecture checks.
+## Phase 1-13 summary
 
-## Live validation still required for Phase 10
-1. Plain `/appstore` regression.
-2. Encrypted `appstore` with strict TLS.
-3. Encrypted `appstore_v2` with strict TLS.
-4. Activate a first test card, then activate at least two more before expiry and confirm endtime keeps extending from the prior furthest expiry.
-5. Visit `/unbind`, transfer one active stacked test entitlement from old to new UDID and verify old loses access/new gains access with unchanged final expiration.
-6. Verify blacklisted old/new devices and already-active target device are refused.
+- Phase 1-8: source payload extraction, duplicate/N+1 cleanup, config cache, blacklist/trace policy, Category server pagination, daily statistics fix, cryptographic card generation and deployment contract fixes.
+- Phase 9: production audit completed and stale `App-mb.php` / `Index2.php` removed.
+- Phase 10: source HTTP/TLS hardening, semantic Category fields, unified response layer, stacked authorization and `/unbind`.
+- Phase 11: transfer quota/policies, audit logs, `/license`, Authorization Center and diagnostics.
+- Phase 12/12.1: shared Nuosike/GitHub updater, SHA256, update lock, ZIP/path protections, DB/file backup and rollback; updater/diagnostic/quota hotfixes.
+- Phase 13.1-13.6: stable GitHub Release pipeline, real staged progress, update history/rollback, updater self-update, local integrity manifest, real Release E2E and rollback runtime regression.
 
-## Stability rules
-1. Do not modify `main` until explicit promotion.
-2. Keep the Phase 9 closure ZIP as rollback baseline while Phase 10 receives live validation.
-3. Do not change the public encryption protocol/provider while validating 10A.
-4. No physical Category DB field migration during 10B.
-5. Each card remains one-time consumption even though entitlement time stacks.
-6. BaoTa release ZIP must retain root `auto_install.json`, `import.sql`, `nginx.rewrite` and `BT_DB_*` placeholders.
+Detailed historical changes remain in `CHANGELOG_DEV.md`; release-specific summaries remain in `PHASE*_RELEASE.txt`.
 
+## Phase 14.1 review findings and implemented changes
 
-## Phase 11 handoff
+### P0 fixed on `refactor/phase14-production-hardening`
 
-Phase 10 is the user-verified rollback baseline. Phase 11 adds authorization operations without changing appstore/appstore_v2 protocol keys. Core files: `AuthorizationSchema.php`, `AuthorizationPolicy.php`, `AuthorizationEventLog.php`, `AuthorizationLicense.php`, `CardDeviceTransfer.php`, admin `Authorization.php`, `/unbind`, `/unbind/query`, and `/license`. Default transfer policy is 3 total transfers, 1 successful transfer/day, 3600-second cooldown, 10 attempts/IP/hour; all are configurable in `fa_config`. `fa_kami.transfer_count` is inherited by newly stacked active cards so buying another card cannot reset transfer budget.
+1. **Multi-package update was not transactionally atomic across packages.**
+   Previously, package N could rollback itself while packages 1..N-1 remained applied. `UpdateManager` now gathers all package backups and restores the chain in reverse order on failure.
 
-## Phase 12 handoff — dual online updater
+2. **Rollback could report success while file restore/delete silently failed.**
+   `UpdateBackup` now checks restore directory creation, file copy and created-file deletion, still attempts DB restore, and throws if rollback is incomplete.
 
-Phase 12 is isolated on `feature/phase12-dual-online-update`; `main` is untouched. The original Nuosike update button/endpoints are retained. A second `GitHub 在线更新` button is added beside it. Both sources now delegate to `application/common/library/update/UpdateManager.php` and the same installer pipeline. The shared pipeline enables strict TLS by default, non-blocking update locking, GitHub SHA256 enforcement, ZIP traversal/symlink rejection, protected path blocking (`application/database.php`, `.env`, uploads, runtime), database and overwritten-file backups, SQL fail-fast behavior, SHA256 post-copy verification, late version writes, and automatic rollback on install failure. GitHub source accepts only stable Releases with `zonoe-online-update.zip` and `zonoe-online-update.zip.sha256`. Until a stable Release is published, the GitHub button should report `GitHub 暂无可用稳定更新`; it must never silently fall back to Nuosike.
+3. **Update ZIP/extracted cache lived below Web Root.**
+   Temporary update cache moved from `public/update/cache` to `runtime/update/cache`.
 
+4. **Update history order was nondeterministic for records created in the same second.**
+   `UpdateRuntimeStore::recordHistory()` previously used only second-resolution filenames and `history()` relied on lexicographic file order. Fast update+rollback could therefore return the older row first. History filenames now include a monotonic microsecond sort key and the entry stores `created_at_us`.
 
-## Phase 12.1 handoff — updater/diagnostic/card-quota hotfix
+### New regression coverage
 
-Branch: `feature/phase12.1-hotfix`. Base is the Phase 12 candidate; `main` and `dev/software-source-v1` are unchanged. The three user-reported issues are fixed together: local integrity no longer compares against Nuosike’s older remote fingerprint, Authorization diagnostics no longer probes `/www/backup/database` by default (avoiding BaoTa open_basedir ErrorException), and card `transfer_count` is now an editable remaining quota with default 100. Phase 11/12 rows are converted once based on the column default (`used -> remaining`), and successful device transfer decrements the shared active-chain quota by one.
+`tests/phase14_update_atomicity_test.php` verifies:
+
+- second-package failure rolls back both current and previous package backups in reverse order;
+- overwritten files restore and update-created files are removed;
+- rollback I/O failure cannot be silently marked successful;
+- update cache is outside `public`;
+- same-second history returns the most recently recorded item first with monotonic microsecond order.
+
+Phase14 CI Run `34663424209` passed the existing Phase 1-13 regression suite plus the new/extended test under PHP 7.0.
+
+## Open issues / deliberate non-changes
+
+### P1 — transfer-history semantic mismatch
+
+Current `CardDeviceTransfer::transfer()` moves only currently active rows (`endtime > now`) to the new UDID. Older handoff/build text says all activated-card history moves. Existing contract tests only lock the active-row implementation. Do **not** change either direction without an explicit stable-behavior decision and a real DB regression fixture.
+
+### P1 — duplicated blacklist persistence/query behavior
+
+`App.php` and `Index.php` each contain active blacklist lookup + first-hit `usetime` update; `CardDeviceTransfer` also performs its own blacklist queries. Candidate future extraction: `BlacklistRepository/BlacklistService`. Not part of Phase14.1 because current behavior is stable and covered only partially by integration tests.
+
+### P1 — card activation still in controller
+
+`App::activateCode()` owns DB transaction, card locking, stack calculation, transfer quota selection and event logging. Candidate future extraction: `CardActivationService`, but only after a DB-backed behavioral test is added.
+
+### P1 — admin/update scale issues
+
+- Authorization dashboard loads all blacklist rows and counts active rows in PHP.
+- Authorization transfer/event lists use fixed 300-row caps, not server pagination.
+- GitHubUpdateSource may request a SHA asset for each qualifying Release during a check.
+- UpdateRuntimeStore history is still unbounded file storage; same-second order is fixed, but retention/indexing remains open.
+- PHP DB backup uses repeated LIMIT/OFFSET and may become expensive on very large databases.
+
+### P1 — database uniqueness
+
+`fa_kami.kami` uniqueness is still enforced by generation/check logic rather than a DB unique index. Production duplicate audit + migration plan must precede any UNIQUE INDEX.
+
+## Build / validation
+
+Authoritative Phase14 CI workflow: `.github/workflows/phase14_refactor.yml`.
+
+Current verified run:
+
+- Run: `34663424209`
+- Head code commit: `3600ceb25190ca93deb85689a94d44aea57c709d`
+- PHP: 7.0
+- Result: SUCCESS
+
+This proves static/contract behavior and the new update atomicity/history-order fixtures. It does **not** replace a real BaoTa/MySQL/browser production smoke.
+
+## Next Task — Phase 14.2
+
+1. Real `2026091202 -> 2026091203` GitHub online upgrade.
+2. Validate version, SHA256, files, DB, history and backup.
+3. Manual rollback to `2026091202` from update history.
+4. Validate program + DB + manifest + version restoration.
+5. Re-upgrade to `2026091203`.
+6. Failure-injection tests: SHA mismatch, corrupt ZIP, SQL failure, unwritable target, backup failure, lock conflict and low disk.
+7. Only after the real loop passes should Phase14 hardening be considered promotable.
+
+See `ROADMAP.md` for Phase 15-17 planning.

@@ -11,6 +11,7 @@ class UpdateInstaller
     protected $http;
     protected $sqlRunner;
     protected $progress;
+    protected $lastBackupDir = '';
 
     public function __construct($root, UpdateHttpClient $http = null, $progress = null)
     {
@@ -22,6 +23,7 @@ class UpdateInstaller
 
     public function install(array $package, $requiresSha256)
     {
+        $this->lastBackupDir = '';
         $version = isset($package['version']) ? trim((string)$package['version']) : '';
         $url = isset($package['download']) ? trim((string)$package['download']) : '';
         $sha256 = isset($package['sha256']) ? strtolower(trim((string)$package['sha256'])) : '';
@@ -33,9 +35,9 @@ class UpdateInstaller
         }
 
         $this->notify('download', 12, '正在下载更新包', ['target_version' => $version]);
-        $workBase = $this->root . 'public' . DIRECTORY_SEPARATOR . 'update' . DIRECTORY_SEPARATOR;
+        $workBase = $this->root . 'runtime' . DIRECTORY_SEPARATOR . 'update' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR;
         $runId = date('Ymd_His') . '_' . substr(md5(uniqid('', true)), 0, 8);
-        $workDir = $workBase . 'cache' . DIRECTORY_SEPARATOR . $runId . DIRECTORY_SEPARATOR;
+        $workDir = $workBase . $runId . DIRECTORY_SEPARATOR;
         $backupDir = $this->root . 'runtime' . DIRECTORY_SEPARATOR . 'update_backup' . DIRECTORY_SEPARATOR . $runId . DIRECTORY_SEPARATOR;
         if (!is_dir($workDir) && !@mkdir($workDir, 0755, true)) {
             throw new \RuntimeException('无法创建更新缓存目录');
@@ -75,6 +77,7 @@ class UpdateInstaller
             $this->notify('backup', 45, '正在备份程序文件和数据库');
             $backup->create(is_dir($programDir) ? $programDir : $this->emptyProgramDir($workDir));
             $backupCreated = true;
+            $this->lastBackupDir = $backupDir;
 
             if (is_dir($mysqlDir)) {
                 $sqlFiles = glob(rtrim($mysqlDir, '/\\') . DIRECTORY_SEPARATOR . '*.sql');
@@ -136,6 +139,11 @@ class UpdateInstaller
             $this->removeTree($workDir);
             throw new \RuntimeException($e->getMessage() . $rollbackError);
         }
+    }
+
+    public function lastBackup()
+    {
+        return $this->lastBackupDir;
     }
 
     protected function notify($stage, $progress, $message, array $extra = [])

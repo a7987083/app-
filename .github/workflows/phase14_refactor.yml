@@ -1,0 +1,60 @@
+name: Phase14 Production Hardening
+
+on:
+  push:
+    branches:
+      - refactor/phase14-production-hardening
+  pull_request:
+
+jobs:
+  php70-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, zip
+
+      - name: Lint Phase14 files
+        run: |
+          set -euo pipefail
+          php -l application/common/library/update/UpdateBackup.php
+          php -l application/common/library/update/UpdateInstaller.php
+          php -l application/common/library/update/UpdateManager.php
+          php -l application/common/library/update/UpdateRuntimeStore.php
+          php -l tests/phase13_update_runtime_test.php
+          php -l tests/phase14_update_atomicity_test.php
+
+      - name: Run full regression
+        run: |
+          set -euo pipefail
+          php tests/appstore_payload_test.php
+          php tests/appstore_equivalence_test.php
+          php tests/appstore_semantic_equivalence_test.php
+          php tests/source_app_record_test.php
+          php tests/source_http_client_contract_test.php
+          php tests/source_response_test.php
+          php tests/source_config_repository_test.php
+          php tests/blacklist_policy_test.php
+          php tests/blacklist_persistence_contract_test.php
+          php tests/blacklist_maintenance_test.php
+          php tests/trace_monitor_policy_test.php
+          php tests/trace_monitor_contract_test.php
+          php tests/category_listing_contract_test.php
+          php tests/category_daily_stat_test.php
+          php tests/category_statistics_contract_test.php
+          php tests/card_code_generator_test.php
+          php tests/card_maintenance_contract_test.php
+          php tests/card_entitlement_policy_test.php
+          php tests/card_device_transfer_contract_test.php
+          php tests/phase10_controller_contract_test.php
+          php tests/authorization_policy_test.php
+          php tests/phase11_contract_test.php
+          php tests/phase12_update_contract_test.php
+          php tests/phase13_update_runtime_test.php
+          php tests/phase14_update_atomicity_test.php
+          php tests/legacy_controller_contract_test.php
+          bash tests/legacy_controller_audit_test.sh
+          php tests/deployment_contract_test.php

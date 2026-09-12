@@ -8,6 +8,7 @@ class UpdateRuntimeStore
     protected $base;
     protected $statusDir;
     protected $historyDir;
+    protected static $lastHistoryMicros = 0;
 
     public function __construct($root)
     {
@@ -111,7 +112,19 @@ class UpdateRuntimeStore
         if (!$this->ensureDir($this->historyDir)) {
             return false;
         }
-        return $this->atomicWrite($this->historyDir . date('Ymd_His') . '_' . $id . '.json', $entry) ? $id : false;
+
+        $micros = self::nextHistoryMicros();
+        $seconds = (int)floor($micros / 1000000);
+        $microPart = (int)($micros % 1000000);
+        $entry['created_at_us'] = $micros;
+
+        // Keep the human-readable second prefix for operators, then add a
+        // lexicographically sortable high-resolution suffix. The leading "z"
+        // ensures new-format entries sort after legacy same-second filenames.
+        $filename = date('Ymd_His', $seconds)
+            . '_z' . sprintf('%06d', $microPart)
+            . '_' . $id . '.json';
+        return $this->atomicWrite($this->historyDir . $filename, $entry) ? $id : false;
     }
 
     public function history($limit = 20)
@@ -169,6 +182,16 @@ class UpdateRuntimeStore
             $random = substr(md5(uniqid('', true)), 0, 12);
         }
         return preg_replace('/[^A-Za-z0-9_-]/', '', $prefix) . '_' . date('YmdHis') . '_' . $random;
+    }
+
+    protected static function nextHistoryMicros()
+    {
+        $micros = (int)floor(microtime(true) * 1000000);
+        if ($micros <= self::$lastHistoryMicros) {
+            $micros = self::$lastHistoryMicros + 1;
+        }
+        self::$lastHistoryMicros = $micros;
+        return $micros;
     }
 
     protected function writeStatus($jobId, array $data)

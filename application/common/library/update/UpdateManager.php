@@ -84,6 +84,7 @@ class UpdateManager
 
         $installed = [];
         $targetVersion = '';
+        $installer = null;
         try {
             $source = $this->source($sourceName);
             $local = $this->localVersion();
@@ -108,7 +109,7 @@ class UpdateManager
             $progress = function ($stage, $percent, $message, $extra = []) use ($runtime, $jobId) {
                 $runtime->progress($jobId, $stage, $percent, $message, is_array($extra) ? $extra : []);
             };
-            $installer = new UpdateInstaller($this->root, $this->http, $progress);
+            $installer = $this->createInstaller($progress);
             foreach ($packages as $package) {
                 $installed[] = $installer->install($package, $source->requiresSha256());
             }
@@ -116,7 +117,7 @@ class UpdateManager
             $backups = [];
             foreach ($installed as $row) {
                 if (!empty($row['backup'])) {
-                    $backups[] = basename(rtrim(str_replace('\\', '/', $row['backup']), '/'));
+                    $backups[] = $this->backupIdFromPath($row['backup']);
                 }
             }
             $manifest = $this->localManifest();
@@ -154,8 +155,35 @@ class UpdateManager
             ];
         } catch (\Exception $e) {
             error_log('[UpdateManager] install failed source=' . $sourceName . ' error=' . $e->getMessage());
-            $status = $this->runtime->status($jobId);
-            $rolledBack = is_array($status) && !empty($status['rollback']);
+            $rollbackIds = [];
+            foreach ($installed as $row) {
+                if (!empty($row['backup'])) {
+                    $rollbackIds[] = $this->backupIdFromPath($row['backup']);
+                }
+            }
+            if ($installer && method_exists($installer, 'lastBackup')) {
+                $lastBackup = $installer->lastBackup();
+                if ($lastBackup !== '') {
+                    $rollbackIds[] = $this->backupIdFromPath($lastBackup);
+                }
+            }
+
+            $rolledBack = false;
+            $rollbackError = '';
+            if ($rollbackIds) {
+                try {
+                    $this->restoreBackupIds($rollbackIds, $jobId, 86, 12);
+                    $rolledBack = true;
+                } catch (\Exception $rollbackException) {
+                    $rollbackError = '; 全链路回滚失败: ' . $rollbackException->getMessage();
+                    error_log('[UpdateManager] chain rollback failed source=' . $sourceName . ' error=' . $rollbackException->getMessage());
+                }
+            } else {
+                $status = $this->runtime->status($jobId);
+                $rolledBack = is_array($status) && !empty($status['rollback']);
+            }
+
+            $message = $e->getMessage() . $rollbackError;
             $historyId = $this->runtime->recordHistory([
                 'type' => 'update',
                 'status' => 'failed',
@@ -164,10 +192,10 @@ class UpdateManager
                 'to_version' => $targetVersion,
                 'installed' => $installed,
                 'rollback' => $rolledBack,
-                'error' => $e->getMessage(),
+                'error' => $message,
             ]);
-            $this->runtime->fail($jobId, $e->getMessage(), $rolledBack, ['history_id' => $historyId]);
-            return ['code' => 406, 'msg' => $e->getMessage(), 'data' => ['source' => $sourceName, 'job_id' => $jobId, 'history_id' => $historyId, 'rollback' => $rolledBack]];
+            $this->runtime->fail($jobId, $message, $rolledBack, ['history_id' => $historyId]);
+            return ['code' => 406, 'msg' => $message, 'data' => ['source' => $sourceName, 'job_id' => $jobId, 'history_id' => $historyId, 'rollback' => $rolledBack]];
         } finally {
             $this->releaseLock($lock);
         }
@@ -210,20 +238,7 @@ class UpdateManager
             return ['code' => 409, 'msg' => '当前已有升级任务进行中，请稍后再试', 'data' => ['job_id' => $jobId]];
         }
         try {
-            $reversed = array_reverse($backups);
-            $count = count($reversed);
-            foreach ($reversed as $index => $backupId) {
-                if (!preg_match('/^[A-Za-z0-9_-]+$/', (string)$backupId)) {
-                    throw new \RuntimeException('备份标识无效');
-                }
-                $dir = $this->root . 'runtime' . DIRECTORY_SEPARATOR . 'update_backup' . DIRECTORY_SEPARATOR . $backupId . DIRECTORY_SEPARATOR;
-                if (!is_dir($dir)) {
-                    throw new \RuntimeException('备份目录不存在: ' . $backupId);
-                }
-                $progress = 20 + intval((($index + 1) / max(1, $count)) * 60);
-                $this->runtime->progress($jobId, 'rollback', $progress, '正在恢复备份 ' . ($index + 1) . '/' . $count);
-                (new UpdateBackup($this->root, $dir))->rollback();
-            }
+            $this->restoreBackupIds($backups, $jobId, 20, 60);
             $after = $this->localVersion();
             if ($target !== '' && (string)$after !== $target) {
                 throw new \RuntimeException('回滚后的版本号与目标版本不一致');
@@ -249,6 +264,51 @@ class UpdateManager
         } finally {
             $this->releaseLock($lock);
         }
+    }
+
+    protected function createInstaller($progress)
+    {
+        return new UpdateInstaller($this->root, $this->http, $progress);
+    }
+
+    protected function restoreBackupIds(array $backupIds, $jobId, $progressStart, $progressSpan)
+    {
+        $normalized = [];
+        foreach ($backupIds as $backupId) {
+            $backupId = $this->backupIdFromPath($backupId);
+            if (!in_array($backupId, $normalized, true)) {
+                $normalized[] = $backupId;
+            }
+        }
+        $reversed = array_reverse($normalized);
+        $count = count($reversed);
+        foreach ($reversed as $index => $backupId) {
+            $progress = intval($progressStart) + intval((($index + 1) / max(1, $count)) * intval($progressSpan));
+            $this->runtime->progress($jobId, 'rollback', min(99, $progress), '正在恢复备份 ' . ($index + 1) . '/' . $count, ['rollback' => false]);
+            $this->restoreBackup($backupId);
+        }
+        if ($count > 0) {
+            $this->runtime->progress($jobId, 'rollback', min(99, intval($progressStart) + intval($progressSpan)), '备份恢复完成', ['rollback' => true]);
+        }
+    }
+
+    protected function restoreBackup($backupId)
+    {
+        $backupId = $this->backupIdFromPath($backupId);
+        $dir = $this->root . 'runtime' . DIRECTORY_SEPARATOR . 'update_backup' . DIRECTORY_SEPARATOR . $backupId . DIRECTORY_SEPARATOR;
+        if (!is_dir($dir)) {
+            throw new \RuntimeException('备份目录不存在: ' . $backupId);
+        }
+        (new UpdateBackup($this->root, $dir))->rollback();
+    }
+
+    protected function backupIdFromPath($path)
+    {
+        $backupId = basename(rtrim(str_replace('\\', '/', (string)$path), '/'));
+        if (!preg_match('/^[A-Za-z0-9_-]+$/', $backupId)) {
+            throw new \RuntimeException('备份标识无效');
+        }
+        return $backupId;
     }
 
     protected function source($name)
