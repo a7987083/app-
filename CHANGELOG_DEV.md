@@ -1,5 +1,32 @@
 # Development Changelog
 
+## 2026-09-12 — Phase 14.1 Production Hardening
+
+Baseline: `feature/phase13-github-release@d13ccb9ced56ca655a27cf13b5be0d6a33e724e2`
+Development branch: `refactor/phase14-production-hardening`
+
+- Fixed multi-package updater atomicity: if a later package fails, `UpdateManager` now restores the current package backup and every previously successful package backup in reverse order.
+- Refactored manual update-history rollback and failed-install rollback to share Manager-level backup restoration helpers.
+- Hardened `UpdateBackup::rollback()` so failed directory creation, file restore or update-created-file deletion cannot be silently reported as success; database restore is still attempted and incomplete rollback is surfaced explicitly.
+- Moved update ZIP/extraction work cache from `public/update/cache` to `runtime/update/cache` so temporary packages and extracted PHP are not under Web Root.
+- `UpdateInstaller` now exposes the current backup directory to the Manager for chain-level failure recovery.
+- Added `tests/phase14_update_atomicity_test.php` for second-package failure, reverse-order chain rollback, normal file restore/removal, rollback I/O failure and private cache path.
+- Added `.github/workflows/phase14_refactor.yml` running PHP 7.0 lint plus the full existing regression suite and the new Phase14 test.
+- GitHub Actions Run `34663080449` passed on code commit `5eb58fd53ec1155d688d4f46ece2aac69b286f27`.
+- Added `ROADMAP.md` and synchronized Phase14 state/handoff/build/known-issue documentation.
+
+Compatibility: no public `appstore/appstore_v2` protocol changes, no authorization duration/quota changes, no Category schema migration, no Nuosike removal.
+
+## 2026-09-12 — Phase 13.1-13.6 GitHub Release / updater closure
+
+- Added stable GitHub Release publishing for `zonoe-online-update.zip` and mandatory `.sha256`.
+- Added real staged online-update progress and Chinese update panel/result details.
+- Added update history and manual rollback from successful update records.
+- Added updater self-update coverage so UpdateManager/Installer/RuntimeStore and admin update entry can update through the same release package.
+- Added local `ver.json.file_sign` synchronization and release-time integrity verification.
+- Added real GitHub Release E2E plus rollback runtime regression.
+- Stable candidate: version `2026091203`, commit `d13ccb9ced56ca655a27cf13b5be0d6a33e724e2`, Release `source-v2026091203`, CI Run `34654867771` SUCCESS.
+
 ## 2026-09-12 — Phase 11 Authorization Operations
 
 - Phase 10 was user-verified and frozen as the production rollback baseline.
@@ -43,7 +70,7 @@
 - Added public `/unbind` page.
 - Customer provides a previously bound card, old UDID and new UDID.
 - Transfer requires the old device to still have active authorization, rejects active blacklist states and an already-active target UDID, and keeps the same final expiration.
-- On success the activated-card history moves to the new UDID so stacked entitlement and proof-card association follow the replacement device.
+- On success the activated-card history was documented as moving to the new UDID. A Phase14 audit found current implementation moves only currently active rows; this semantic mismatch is now tracked and must not be changed without an explicit decision.
 
 ### Tests / CI
 - Added semantic mapping, response, HTTP/TLS contract, stackable entitlement, device-transfer and controller-architecture tests.

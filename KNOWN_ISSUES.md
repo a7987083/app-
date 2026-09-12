@@ -1,85 +1,95 @@
 # Known Issues and Refactor Backlog
 
-## P0 — compatibility boundaries
+## P0 — Phase 14.1 已修复
 
-### Legacy framework
-- Runtime remains ThinkPHP 5.0.24 / FastAdmin-style.
-- Framework upgrade is still deferred until broader HTTP/integration coverage exists.
+### 多包升级不是全链原子回滚
+- 原实现每个 `UpdateInstaller` 只回滚当前失败包；如果前一个包已成功、后一个包失败，前一个包会残留。
+- Phase14 分支由 `UpdateManager` 统一收集备份并按逆序恢复整条更新链。
+- `tests/phase14_update_atomicity_test.php` 覆盖第二包失败场景。
 
-### External encryption service remains the dominant latency
-- Observed plain `/appstore` total was about `0.11s`; encrypted total was about `10.48s`.
-- Phase 10A adds bounded timeout/error handling and strict TLS defaults, but does not change the provider or protocol.
-- Strict TLS against both real provider endpoints must be smoke-tested before Phase 10 is promoted.
-- Emergency rollback only: `SOURCE_HTTP_VERIFY_TLS=0` restores legacy peer-verification-off behavior.
+### 回滚 I/O 失败可能被静默吞掉
+- 原 `UpdateBackup::rollback()` 对文件恢复和新建文件删除使用 `@copy/@unlink`，不检查结果。
+- Phase14 分支会收集文件/目录/删除错误，仍尝试数据库恢复，最后明确抛出不完整回滚错误。
 
-## P1 — still open
+### 更新临时文件位于 Web Root
+- 原缓存位于 `public/update/cache`。
+- Phase14 分支已迁移到 `runtime/update/cache`。
 
-### Public self-service transfer abuse controls
-- `/unbind` now has persistent transfer audit logs, per-IP hourly attempt limits, daily success limits and cooldowns.
-- CAPTCHA is still intentionally absent; add it only if real public abuse warrants the added friction.
+## P0 — 兼容性边界
 
-### Card DB uniqueness is application-enforced
-- Card generation uses `random_bytes` and checks candidates against existing `fa_kami.kami`.
-- The database still has no unique index on `kami`; historical duplicate data has not been migrated/audited.
-- Add a unique index only after a production duplicate audit and migration plan.
+- Runtime remains ThinkPHP 5.0.24 / FastAdmin-style；框架升级延期。
+- 不改变 `appstore / appstore_v2` 公共协议和外部加密 provider/protocol。
+- 不改变授权时长、一次性卡密消费、25/40 字符 UDID、`transfer_count` 剩余次数语义。
+- 不恢复 `App-mb.php` / `Index2.php`。
+- 不无计划迁移 `fa_category` 物理字段 `bt1a/bt1b/bt2a/bt2b`。
 
-### Existing blacklist duplicate history
-- Manual admin add refuses another active row for the same UDID.
-- Existing historical duplicates are intentionally retained.
-- Any active permanent/future row continues to block that UDID.
+## P1 — 仍需处理
 
-### Expired blacklist retention
-- Expired rows are ignored at runtime and display `已过期` in admin.
-- No automatic archive/purge job exists; history is retained deliberately.
+### `/unbind` 历史迁移语义不一致
+- 当前 `CardDeviceTransfer::transfer()` 仅移动 `endtime > now` 的当前有效卡密行。
+- 旧 HANDOFF/BUILD 曾写“全部已激活卡历史随新 UDID 迁移”。
+- 当前合同测试只锁定有效行实现，并没有证明全部历史迁移。
+- 在明确稳定语义和增加真实 DB fixture 前禁止修改。
 
-## Completed P1 cleanup
+### 黑名单持久化/查询重复
+- `App.php` 与 `Index.php` 都包含 active blacklist 查询和首次命中 `usetime` 写入。
+- `CardDeviceTransfer` 也直接查询 `fa_black`。
+- 后续候选：`BlacklistRepository/BlacklistService`，但必须先补 DB-backed equivalence test。
 
-### Legacy duplicate controllers
-- Production access-log audit was completed by the user.
-- `application/index/controller/App-mb.php` and `Index2.php` were removed from the development branch in Phase 9.
-- CI now fails if either retired controller returns.
+### Card activation orchestration 仍在 Controller
+- `App::activateCode()` 同时负责锁行、叠加授权、quota、写卡密、事件日志和事务。
+- 后续候选：`CardActivationService`；当前不为“整洁”而拆。
 
-### Category large-list administration
-- True server-side pagination, default 1000 rows, full-database app-name search, server type filtering, deferred parent-tree construction and lightweight default columns are active.
-- Pagination appears both above and below the list.
-- Category add no longer refreshes the entire parent list automatically and new apps default to paid.
+### Authorization 后台规模化
+- 首页 active blacklist 目前全表读入 PHP 再统计，应改为 SQL 条件统计。
+- transfers/events 当前固定最多 300 行，应改服务器分页。
 
-### Category daily statistics
-- Admin write-on-read reset was removed.
-- `CategoryDailyStat` uses `YYYYMMDD` with a transaction + row lock; legacy `1..31` values migrate lazily on next hit.
+### GitHub 更新检查 N+1
+- `GitHubUpdateSource::releasePackages()` 会对每个符合条件的 Release 再请求一次 SHA256 asset。
+- 更新检查只需要最新相关 Release，可在不改变选择语义前提下减少 SHA 请求。
 
-### Card generation / stacking
-- Card generation uses cryptographic random bytes while preserving uppercase prefix + 12-hex format.
-- New unused cards can stack after the furthest active expiration without discarding existing remaining time.
-- Individual codes remain one-time use.
-- Existing day/week/month/quarter/year duration rules are retained.
+### UpdateRuntimeStore 长期增长
+- status/history 使用 runtime JSON 文件。
+- history 没有保留策略；`historyById()` 线性扫描文件。
+- Phase14.3 应增加安全清理/索引机制。
 
-### Semantic source app fields
-- Phase 10B introduces `SourceAppRecord`; runtime source mapping no longer spreads raw `bt1a/bt1b/bt2a/bt2b` knowledge through payload code.
-- Physical database fields are unchanged.
+### Card DB uniqueness 仅应用层保证
+- Card generation 使用 `random_bytes` 并查询现有 `fa_kami.kami`。
+- 数据库仍无 UNIQUE INDEX；历史重复数据未做生产审计。
+- 必须先审计、迁移、回滚方案，再加唯一索引。
 
-### Source response / HTTP transport
-- Phase 10A centralizes external POST transport with TLS verification, timeout and error logging.
-- Phase 10C centralizes plain/encrypted response-body encoding while preserving the existing public body contract and legacy final-output behavior.
+### 黑名单历史增长
+- 过期黑名单保留用于审计，运行时忽略。
+- 尚无归档/清理策略。
 
-### BaoTa deployment contract
-- `BT_DB_NAME`, `BT_DB_USERNAME`, `BT_DB_PASSWORD` placeholders remain authoritative.
-- Root `nginx.rewrite` remains required.
-- Fresh release SQL does not preload inherited runtime monitor observations.
+### 大数据库 PHP 备份成本
+- `UpdateBackup` 对各表使用 500 行分批 + OFFSET 扫描。
+- 大表下 OFFSET 可能变慢；需要结合 BaoTa/MySQL 实际数据量评估替代方案。
 
-## P2 — future maintainability
+## P2 — 未来维护
 
 ### Framework-to-service separation
-Core policies/repositories have been extracted, but controllers still contain orchestration and direct DB access. Continue moving behavior behind service/repository boundaries only when a concrete feature requires it.
+- 已抽离 Source payload/config/response、Policy、Authorization、Updater 等核心组件。
+- Controllers 仍存在直接 DB orchestration，但只在具体 Bug/功能触发且有测试时继续抽离。
 
-### Security headers/cookies
-Transport/cookie defaults outside the source encryption HTTP client remain legacy. Harden by deployment context rather than globally changing old framework defaults.
+### Security headers / cookies
+- 框架级 transport/cookie defaults 仍为 legacy。
+- 按部署环境单独强化，不在现阶段全局改变默认行为。
 
 ### Physical Category schema migration
-Semantic aliases now exist, so a future physical rename of `bt1a/bt1b/bt2a/bt2b` is possible. It is not currently justified because it would require database migration and wider compatibility testing without adding user-visible value.
+- `SourceAppRecord` 已提供语义层。
+- 物理改名当前没有用户价值，迁移风险大，继续延期。
 
-## Phase 12 online updater
+## 已完成的重要清理
 
-- The GitHub update channel intentionally has no stable package until a stable GitHub Release is published with `zonoe-online-update.zip` and matching `.sha256`; the button should report no stable update in that state.
-- Strict update TLS depends on the server CA store. `SOURCE_UPDATE_VERIFY_TLS=0` exists only as an emergency diagnostic/compatibility switch while the CA chain is repaired.
-- Database backup/rollback is implemented in PHP for BaoTa compatibility and can take longer on very large databases; do not interrupt an update while the update lock is active.
+- Phase 9 删除 `App-mb.php` / `Index2.php` 并由 CI 防止回归。
+- Category 使用服务器分页、数据库搜索、轻量字段、add/edit 才构建完整父树。
+- `CategoryDailyStat` 使用 `YYYYMMDD` + transaction/row lock。
+- Card generation 改为 cryptographic random；授权可叠加但单卡仍一次使用。
+- `SourceAppRecord` 隔离 legacy Category 物理字段。
+- `SourceResponse` / `SourceHttpClient` 收口公开源输出与外部加密 HTTP。
+- Nuosike/GitHub updater 共用 hardened pipeline，GitHub 强制 HTTPS + SHA256。
+
+## 性能已知事实
+
+历史实测：plain `/appstore` 总时间约 `0.11s`；encrypted `/appstore` 约 `10.48s`。主要耗时仍来自外部整包加密服务，而不是本地 payload mapping。除非更换协议/provider，否则不要把本地微优化当成该 10s 延迟的根治方案。
