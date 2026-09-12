@@ -33,26 +33,36 @@ class UpdateBackup
 
     public function rollback()
     {
+        $errors = [];
         $filesDir = $this->backupDir . 'files' . DIRECTORY_SEPARATOR;
         if (is_dir($filesDir)) {
-            $this->restoreFiles($filesDir, $filesDir);
+            $errors = array_merge($errors, $this->restoreFiles($filesDir, $filesDir));
         }
+
         $createdRaw = @file_get_contents($this->backupDir . 'created.json');
         $created = $createdRaw !== false ? json_decode($createdRaw, true) : [];
         if (is_array($created)) {
             foreach ($created as $relative) {
                 $target = $this->root . str_replace('/', DIRECTORY_SEPARATOR, $relative);
-                if (is_file($target)) {
-                    @unlink($target);
+                if (is_file($target) && !@unlink($target)) {
+                    $errors[] = '无法删除更新中新建的文件: ' . $relative;
                 }
             }
         }
+
         $db = $this->backupDir . 'database.sql';
         if (is_file($db)) {
-            (new UpdateSqlRunner())->runFile($db);
+            try {
+                (new UpdateSqlRunner())->runFile($db);
+            } catch (\Exception $e) {
+                $errors[] = '数据库恢复失败: ' . $e->getMessage();
+            }
+        }
+
+        if ($errors) {
+            throw new \RuntimeException('回滚未完全成功: ' . implode('; ', $errors));
         }
     }
-
 
     protected function backupSpecialFile($relative, array &$created)
     {
@@ -99,19 +109,25 @@ class UpdateBackup
 
     protected function restoreFiles($dir, $base)
     {
+        $errors = [];
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
         foreach ($iterator as $file) {
             if (!$file->isFile()) {
                 continue;
             }
             $relative = substr($file->getPathname(), strlen($base));
+            $displayRelative = ltrim(str_replace('\\', '/', $relative), '/');
             $target = $this->root . $relative;
             $parent = dirname($target);
-            if (!is_dir($parent)) {
-                @mkdir($parent, 0755, true);
+            if (!is_dir($parent) && !@mkdir($parent, 0755, true)) {
+                $errors[] = '无法创建回滚目录: ' . dirname($displayRelative);
+                continue;
             }
-            @copy($file->getPathname(), $target);
+            if (!@copy($file->getPathname(), $target)) {
+                $errors[] = '文件恢复失败: ' . $displayRelative;
+            }
         }
+        return $errors;
     }
 
     protected function dumpDatabase($file)
