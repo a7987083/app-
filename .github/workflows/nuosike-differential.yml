@@ -1,0 +1,36 @@
+name: Nuosike Differential Probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'Branch/ref containing the differential probe code'
+        required: true
+        default: 'feature/nuosike-local-compat-v1'
+
+jobs:
+  legacy-appstore-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_ref }}
+
+      - name: Run finite differential probe in PHP 7.0 container
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            php:7.0-cli \
+            sh -lc '
+              apt-get update >/dev/null
+              apt-get install -y --no-install-recommends libcurl4-openssl-dev >/dev/null
+              docker-php-ext-install curl >/dev/null
+              php -v
+              php -r "echo OPENSSL_VERSION_TEXT, PHP_EOL;"
+              php -l tools/nuosike_diff.php
+              php tools/nuosike_diff.php
+            '
