@@ -1,0 +1,37 @@
+name: Nuosike Local Compatibility
+
+on:
+  push:
+    branches:
+      - feature/nuosike-local-compat-v1
+  pull_request:
+    paths:
+      - 'application/common/library/SourceEncryptionProvider.php'
+      - 'tests/source_encryption_provider_test.php'
+      - '.github/workflows/nuosike-local-compat.yml'
+
+jobs:
+  php70-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 7.0
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+
+      - name: Show OpenSSL runtime
+        run: |
+          php -v
+          php -r 'echo OPENSSL_VERSION_TEXT, PHP_EOL; print_r(array_values(array_filter(openssl_get_cipher_methods(true), function ($v) { return stripos($v, "des-cbc") !== false; })));'
+
+      - name: Lint
+        run: |
+          php -l application/common/library/SourceEncryptionProvider.php
+          php -l tests/source_encryption_provider_test.php
+
+      - name: Verify golden vectors
+        run: php tests/source_encryption_provider_test.php
