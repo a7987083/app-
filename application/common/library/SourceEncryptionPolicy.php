@@ -5,17 +5,18 @@ namespace app\common\library;
 /**
  * Provider selection policy for encrypted software-source responses.
  *
- * Default remains Nuosike so deploying this code does not change production
- * behavior until SOURCE_ENCRYPTION_PROVIDER is explicitly configured.
+ * Default mode is local_fallback so an updated site immediately prefers the
+ * self-hosted DES-compatible provider while retaining Nuosike as a transport
+ * fallback if local encryption is unavailable at runtime.
  *
  * Supported modes:
- *   nuosike        - always use the legacy external service
+ *   nuosike        - always use the external service
  *   local          - use the local DES-compatible provider; fail closed
  *   local_fallback - prefer local, fall back to Nuosike on local failure
  *
- * appstore_v2 remains external by default because its wire compatibility has
- * not yet been verified against the local implementation. It can be enabled
- * explicitly with SOURCE_ENCRYPTION_LOCAL_V2=1 after differential testing.
+ * Both appstore and appstore_v2 are allowed to use the local provider by
+ * default. SOURCE_ENCRYPTION_LOCAL_V2=0 can be used as an emergency kill
+ * switch for v2 without changing code.
  */
 class SourceEncryptionPolicy
 {
@@ -27,8 +28,11 @@ class SourceEncryptionPolicy
     {
         $value = getenv('SOURCE_ENCRYPTION_PROVIDER');
         $mode = strtolower(trim($value === false ? '' : (string)$value));
+        if ($mode === '') {
+            return self::MODE_LOCAL_FALLBACK;
+        }
         if (!in_array($mode, [self::MODE_NUOSIKE, self::MODE_LOCAL, self::MODE_LOCAL_FALLBACK], true)) {
-            return self::MODE_NUOSIKE;
+            return self::MODE_LOCAL_FALLBACK;
         }
         return $mode;
     }
@@ -48,7 +52,7 @@ class SourceEncryptionPolicy
         if ($appType !== 'appstore_v2') {
             return true;
         }
-        return self::envBool('SOURCE_ENCRYPTION_LOCAL_V2', false);
+        return self::envBool('SOURCE_ENCRYPTION_LOCAL_V2', true);
     }
 
     public static function nuosikeUrl($appType)
