@@ -11,7 +11,9 @@ on:
       - 'application/common/library/SourceEncryptionProvider.php'
       - 'tests/source_encryption_policy_test.php'
       - 'tests/source_encryption_provider_test.php'
+      - 'tools/nuosike_diff.php'
       - '.github/workflows/nuosike-local-compat.yml'
+      - '.github/workflows/nuosike-differential.yml'
 
 jobs:
   baota-php70-compat:
@@ -36,6 +38,7 @@ jobs:
               php -l application/index/controller/App.php
               php -l tests/source_encryption_policy_test.php
               php -l tests/source_encryption_provider_test.php
+              php -l tools/nuosike_diff.php
               php tests/source_encryption_policy_test.php
               php tests/source_encryption_provider_test.php
             '
