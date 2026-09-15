@@ -4,3 +4,6 @@ application/common/library/update/UpdateInstaller.php
 application/common/library/update/UpdateManager.php
 application/admin/controller/general/Config.php
 public/assets/js/backend/general/config.js
+application/index/controller/App.php
+application/common/library/SourceEncryptionPolicy.php
+application/common/library/SourceEncryptionProvider.php
