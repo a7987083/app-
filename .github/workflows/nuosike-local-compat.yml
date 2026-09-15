@@ -6,7 +6,10 @@ on:
       - feature/nuosike-local-compat-v1
   pull_request:
     paths:
+      - 'application/index/controller/App.php'
+      - 'application/common/library/SourceEncryptionPolicy.php'
       - 'application/common/library/SourceEncryptionProvider.php'
+      - 'tests/source_encryption_policy_test.php'
       - 'tests/source_encryption_provider_test.php'
       - '.github/workflows/nuosike-local-compat.yml'
 
@@ -28,8 +31,12 @@ jobs:
               php -v
               php -r "echo OPENSSL_VERSION_TEXT, PHP_EOL;"
               php -r '\''$r=openssl_encrypt("test","DES-CBC","esign_so",OPENSSL_RAW_DATA,"urce_enc"); var_dump($r, openssl_error_string()); if ($r === false) { exit(1); }'\''
+              php -l application/common/library/SourceEncryptionPolicy.php
               php -l application/common/library/SourceEncryptionProvider.php
+              php -l application/index/controller/App.php
+              php -l tests/source_encryption_policy_test.php
               php -l tests/source_encryption_provider_test.php
+              php tests/source_encryption_policy_test.php
               php tests/source_encryption_provider_test.php
             '
 
