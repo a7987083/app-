@@ -5,18 +5,13 @@ namespace app\common\library;
 /**
  * Provider selection policy for encrypted software-source responses.
  *
- * Default mode is local_fallback so an updated site immediately prefers the
- * self-hosted DES-compatible provider while retaining Nuosike as a transport
- * fallback if local encryption is unavailable at runtime.
+ * New releases prefer the local compatibility provider for both appstore and
+ * appstore_v2. Nuosike remains as an emergency fallback and rollback path.
  *
  * Supported modes:
- *   nuosike        - always use the external service
+ *   nuosike        - always use the legacy external service
  *   local          - use the local DES-compatible provider; fail closed
  *   local_fallback - prefer local, fall back to Nuosike on local failure
- *
- * Both appstore and appstore_v2 are allowed to use the local provider by
- * default. SOURCE_ENCRYPTION_LOCAL_V2=0 can be used as an emergency kill
- * switch for v2 without changing code.
  */
 class SourceEncryptionPolicy
 {
