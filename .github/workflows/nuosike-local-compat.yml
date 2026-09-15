@@ -11,8 +11,31 @@ on:
       - '.github/workflows/nuosike-local-compat.yml'
 
 jobs:
-  php70-compat:
+  baota-php70-compat:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify BaoTa-like PHP 7.0 runtime in Docker
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            php:7.0-cli \
+            sh -lc '
+              php -v
+              php -r "echo OPENSSL_VERSION_TEXT, PHP_EOL;"
+              php -r '\''$r=openssl_encrypt("test","DES-CBC","esign_so",OPENSSL_RAW_DATA,"urce_enc"); var_dump($r, openssl_error_string()); if ($r === false) { exit(1); }'\''
+              php -l application/common/library/SourceEncryptionProvider.php
+              php -l tests/source_encryption_provider_test.php
+              php tests/source_encryption_provider_test.php
+            '
+
+  github-runner-observation:
+    runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,15 +46,8 @@ jobs:
           php-version: '7.0'
           coverage: none
 
-      - name: Show OpenSSL runtime
+      - name: Observe GitHub runner OpenSSL behavior
         run: |
           php -v
-          php -r 'echo OPENSSL_VERSION_TEXT, PHP_EOL; print_r(array_values(array_filter(openssl_get_cipher_methods(true), function ($v) { return stripos($v, "des-cbc") !== false; })));'
-
-      - name: Lint
-        run: |
-          php -l application/common/library/SourceEncryptionProvider.php
-          php -l tests/source_encryption_provider_test.php
-
-      - name: Verify golden vectors
-        run: php tests/source_encryption_provider_test.php
+          php -r 'echo OPENSSL_VERSION_TEXT, PHP_EOL;'
+          php -r '$r=openssl_encrypt("test","DES-CBC","esign_so",OPENSSL_RAW_DATA,"urce_enc"); var_dump($r, openssl_error_string());'
