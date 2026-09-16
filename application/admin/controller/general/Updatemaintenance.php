@@ -5,30 +5,30 @@ namespace app\admin\controller\general;
 use app\common\controller\Backend;
 use app\common\library\UpdateIntegrity;
 use app\common\library\update\UpdateOps;
-use app\common\library\update\SiteStorageManager;
+use app\common\library\update\FastStorageManager;
 
 /**
  * Update operations diagnostics and whole-site storage management.
+ * Phase 15.3 keeps the panel request fast: index() only reads cached storage
+ * data. Heavy scan/cleanup work is delegated to a PHP CLI worker which uses
+ * system GNU find and exposes progress through storageStatus().
  */
 class Updatemaintenance extends Backend
 {
-    protected $noNeedRight = ['index', 'panel'];
+    protected $noNeedRight = ['index', 'panel', 'storageStatus'];
 
-    /**
-     * JSON diagnostics endpoint.
-     */
     public function index()
     {
         $ops = new UpdateOps(ROOT_PATH);
         $data = $ops->snapshot();
-        $storage = new SiteStorageManager(ROOT_PATH);
+        $storage = new FastStorageManager(ROOT_PATH);
         $data['site_storage'] = $storage->snapshot();
+        $data['storage_jobs'] = $storage->statuses();
 
         $manifest = $this->localManifest();
         $version = is_array($manifest) ? $manifest['version'] : '';
         $expected = is_array($manifest) ? $manifest['file_sign'] : '';
         $actual = UpdateIntegrity::signFromRoot(ROOT_PATH);
-
         $data['release'] = [
             'version' => $version,
             'tag' => $version !== '' ? 'source-v' . $version : '',
@@ -36,7 +36,6 @@ class Updatemaintenance extends Backend
             'actual_file_sign' => $actual,
             'integrity_verified' => $expected !== '' ? hash_equals($expected, $actual) : null,
         ];
-
         return json(['code' => 200, 'msg' => 'ok', 'data' => $data]);
     }
 
@@ -45,9 +44,31 @@ class Updatemaintenance extends Backend
         return $this->view->fetch();
     }
 
+    /** Poll-only endpoint for scan and cleanup progress bars. */
+    public function storageStatus()
+    {
+        $storage = new FastStorageManager(ROOT_PATH);
+        return json(['code' => 200, 'msg' => 'ok', 'data' => $storage->statuses()]);
+    }
+
+    /** Start a non-blocking system-level whole-site scan. */
+    public function scan()
+    {
+        if (!$this->request->isPost()) {
+            return json(['code' => 405, 'msg' => '仅允许 POST 请求', 'data' => '']);
+        }
+        $storage = new FastStorageManager(ROOT_PATH);
+        $result = $storage->startScan();
+        return json([
+            'code' => $result['started'] ? 200 : ($result['status']['running'] ? 200 : 503),
+            'msg' => $result['message'],
+            'data' => $result,
+        ]);
+    }
+
     /**
-     * Whole-site safe cleanup. Default is dry-run; apply=1 deletes only
-     * explicitly regenerable/temp files after the minimum age.
+     * apply=0: instant preview from the last completed index.
+     * apply=1: start non-blocking cleanup worker; progress is polled separately.
      */
     public function cleanup()
     {
@@ -55,20 +76,18 @@ class Updatemaintenance extends Backend
             return json(['code' => 405, 'msg' => '仅允许 POST 请求', 'data' => '']);
         }
         $apply = intval($this->request->param('apply', 0)) === 1;
-        $storage = new SiteStorageManager(ROOT_PATH);
-        $result = $storage->cleanupSafe(!$apply);
+        $storage = new FastStorageManager(ROOT_PATH);
+        if (!$apply) {
+            return json(['code' => 200, 'msg' => '自动安全清理预览完成', 'data' => $storage->previewSafe()]);
+        }
+        $result = $storage->startCleanup();
         return json([
-            'code' => 200,
-            'msg' => $apply ? '全站安全清理完成' : '全站安全清理预览完成',
+            'code' => $result['started'] ? 200 : ($result['status']['running'] ? 200 : 503),
+            'msg' => $result['message'],
             'data' => $result,
         ]);
     }
 
-    /**
-     * Manual deletion for review-only backup/unknown files. The server
-     * reclassifies every path before deleting, so protected files cannot be
-     * removed by a forged request.
-     */
     public function cleanupSelected()
     {
         if (!$this->request->isPost()) {
@@ -81,7 +100,7 @@ class Updatemaintenance extends Backend
         if (count($paths) > 200) {
             return json(['code' => 400, 'msg' => '单次最多删除 200 个文件', 'data' => '']);
         }
-        $storage = new SiteStorageManager(ROOT_PATH);
+        $storage = new FastStorageManager(ROOT_PATH);
         $result = $storage->deleteSelected($paths, false);
         return json(['code' => 200, 'msg' => '人工确认清理完成', 'data' => $result]);
     }
@@ -90,13 +109,9 @@ class Updatemaintenance extends Backend
     {
         $file = ROOT_PATH . 'ver.json';
         $raw = @file_get_contents($file);
-        if ($raw === false) {
-            return false;
-        }
+        if ($raw === false) return false;
         $json = json_decode($raw, true);
-        if (!is_array($json) || !isset($json['version'])) {
-            return false;
-        }
+        if (!is_array($json) || !isset($json['version'])) return false;
         return [
             'version' => trim((string)$json['version']),
             'file_sign' => isset($json['file_sign']) ? trim((string)$json['file_sign']) : '',
