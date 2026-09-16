@@ -18,6 +18,7 @@ on:
       - 'tests/card_access_policy_test.php'
       - 'tests/appstore_card_scope_test.php'
       - 'tests/phase16_card_scope_contract_test.php'
+      - 'tests/phase16_mysql57_migration_test.php'
       - '.github/workflows/phase13_github_release.yml'
   workflow_dispatch:
 
@@ -49,6 +50,7 @@ jobs:
           php -l tests/card_access_policy_test.php
           php -l tests/appstore_card_scope_test.php
           php -l tests/phase16_card_scope_contract_test.php
+          php -l tests/phase16_mysql57_migration_test.php
           php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
@@ -112,8 +114,42 @@ jobs:
           bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
 
+  mysql57-migration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Run real MySQL 5.7 migration twice
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php -l tests/phase16_mysql57_migration_test.php
+          php tests/phase16_mysql57_migration_test.php
+
   package-and-release:
-    needs: php70-regression
+    needs: [php70-regression, mysql57-migration]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
