@@ -6,6 +6,7 @@ on:
       - feature/phase13-github-release
       - feature/phase17-2-auth-integrity-v1
       - feature/phase17-3-renewal-entry-v1
+      - hotfix/phase17-4-admin-actions-v1
       - 'release/**'
     paths:
       - 'VERSION'
@@ -29,6 +30,8 @@ on:
       - 'tests/phase17_unlock_signing_mysql57_test.php'
       - 'tests/phase17_3_renewal_entry_contract_test.php'
       - 'tests/phase17_3_renewal_entry_mysql57_test.php'
+      - 'tests/phase17_4_admin_hotfix_contract_test.php'
+      - 'tests/phase17_4_admin_hotfix_mysql57_test.php'
       - '.github/workflows/phase13_github_release.yml'
   workflow_dispatch:
 
@@ -65,6 +68,8 @@ jobs:
           php -l tests/phase17_unlock_signing_mysql57_test.php
           php -l tests/phase17_3_renewal_entry_contract_test.php
           php -l tests/phase17_3_renewal_entry_mysql57_test.php
+          php -l tests/phase17_4_admin_hotfix_contract_test.php
+          php -l tests/phase17_4_admin_hotfix_mysql57_test.php
           php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
@@ -79,6 +84,7 @@ jobs:
           php -l application/index/controller/Index.php
           php -l application/admin/controller/Kami.php
           php -l application/admin/controller/Authorization.php
+          php -l application/admin/controller/Category.php
           php -l application/admin/controller/Integrity.php
           php -l application/admin/controller/general/Config.php
           php -l application/admin/controller/general/Updatemaintenance.php
@@ -100,6 +106,7 @@ jobs:
           php tests/phase16_card_scope_contract_test.php
           php tests/phase17_unlock_signing_contract_test.php
           php tests/phase17_3_renewal_entry_contract_test.php
+          php tests/phase17_4_admin_hotfix_contract_test.php
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
           php tests/appstore_semantic_equivalence_test.php
@@ -169,6 +176,8 @@ jobs:
           php tests/phase17_unlock_signing_mysql57_test.php
           php -l tests/phase17_3_renewal_entry_mysql57_test.php
           php tests/phase17_3_renewal_entry_mysql57_test.php
+          php -l tests/phase17_4_admin_hotfix_mysql57_test.php
+          php tests/phase17_4_admin_hotfix_mysql57_test.php
 
   package-and-release:
     needs: [php70-regression, mysql57-migration]
@@ -201,6 +210,7 @@ jobs:
           grep -F 'application/index/controller/App.php' release/online-update-files.txt
           grep -F 'application/index/controller/Index.php' release/online-update-files.txt
           grep -F 'application/admin/controller/Authorization.php' release/online-update-files.txt
+          grep -F 'application/admin/controller/Category.php' release/online-update-files.txt
           grep -F 'application/admin/view/authorization/index.html' release/online-update-files.txt
           grep -F 'application/admin/view/authorization/transfers.html' release/online-update-files.txt
           grep -F 'application/admin/view/authorization/events.html' release/online-update-files.txt
@@ -215,6 +225,7 @@ jobs:
           test -s release/sql/2026091611_card_scope.sql
           test -s release/sql/2026091701_unlock_signing.sql
           test -s release/sql/2026091704_renewal_entry.sql
+          test -s release/sql/2026091705_renewal_entry_repair.sql
           ! grep -F 'FastStorageManager.php' release/online-update-files.txt
           ! grep -F 'FastStorageManagerCompat.php' release/online-update-files.txt
           ! grep -F 'SiteStorageManager.php' release/online-update-files.txt
@@ -237,6 +248,7 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/index/controller/App.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/index/controller/Index.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Authorization.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Category.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/authorization/index.html'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/authorization/transfers.html'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/authorization/events.html'
@@ -249,6 +261,7 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026091611_card_scope.sql'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026091701_unlock_signing.sql'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026091704_renewal_entry.sql'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026091705_renewal_entry_repair.sql'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Config.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Updatemaintenance.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/general/updatemaintenance/panel.html'
@@ -287,6 +300,7 @@ jobs:
             release/sql/2026091611_card_scope.sql
             release/sql/2026091701_unlock_signing.sql
             release/sql/2026091704_renewal_entry.sql
+            release/sql/2026091705_renewal_entry_repair.sql
           if-no-files-found: error
           retention-days: 30
 
