@@ -1,19 +1,18 @@
-ZONOE 软件源 Release 2026091602
-版本：2026091602
-基线：2026091203
+ZONOE 软件源 Release 2026091603
+版本：2026091603
+基线：2026091602
 
 更新内容：
-1. 修正 2026091601 的 DES-CBC 协议误判，按 zonoe/QNQ 客户端真实解码协议实现 Nuosike wire-compatible 加密。
-2. appstore：动态 bkey + RC4 + Base64；bkey 按客户端逻辑从 Nuosike update.json / key.json 解析。
-3. appstore_v2：15 字符 RC4 key + RSA PKCS#1 v1.5 + 0xFEEDFACF 容器 + Nuosike 自定义变宽字符编码。
-4. 新增 public/api.php 与 public/encrypt.php，分别兼容 Nuosike api.php / encrypt.php 的 POST content 调用方式与直接密文响应。
-5. /appstore 继续保留现有 appstore / appstore_v2 外层字段和 Header 分流；UDID、卡密、授权时长、黑名单与换绑次数语义不变。
-6. 默认本地优先、Nuosike 故障回退；PHP 7.0 CI 验证 RC4/RSA/v2 容器协议。
-7. 在线更新包包含本次协议修复与两个公开 API 入口，并继续使用现有备份、回滚和 SHA256 校验。
+1. Phase 14.2：强化在线更新失败保护，增加低磁盘预检，并覆盖 SHA256 错误、损坏 ZIP、SQL 失败、文件写入失败、备份失败、更新锁冲突等故障注入场景。
+2. 更新失败时继续使用现有自动回滚机制，保护程序文件、数据库与版本状态。
+3. Phase 14.3：新增更新运维诊断，显示备份、history、status、cache 占用以及更新锁、运行中/疑似中断任务。
+4. 新增更新运维中心页面 general/updatemaintenance/panel，可查看当前版本、文件完整性、最近更新与最近回滚。
+5. 新增安全清理预览与确认执行流程；运行中任务、仍可回滚的成功更新记录及其引用备份不会被自动清理。
+6. 系统配置 / GitHub 在线更新页面新增“更新运维中心”入口，可直接在后台打开运维面板。
+7. 软件源加密、UDID、卡密、授权时长、黑名单、换绑次数及 appstore/appstore_v2 协议保持 2026091602 行为不变。
 
 兼容性：
 - 兼容宝塔 PHP 7.0。
 - 不修改现有数据库结构和已有卡密数据。
-- appstore / appstore_v2 响应外层字段保持不变。
-- legacy appstore 为保持现有客户端 1:1 协议仍读取 Nuosike 动态 key 链。
-- GitHub 在线更新继续强制 HTTPS + SHA256。
+- 保留现有 GitHub 在线更新、SHA256、备份与回滚机制。
+- 软件源 Nuosike 兼容加密逻辑不变。
