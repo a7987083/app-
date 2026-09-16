@@ -5,6 +5,7 @@ application/common/library/update/UpdateManager.php
 application/common/library/update/UpdateOps.php
 application/common/library/update/SiteStorageManager.php
 application/common/library/update/FastStorageManager.php
+application/common/library/update/FastStorageManagerCompat.php
 application/admin/controller/general/Config.php
 application/admin/controller/general/Updatemaintenance.php
 application/admin/view/general/updatemaintenance/panel.html
