@@ -271,6 +271,17 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         });
     }
 
+    function openUpdateOperations() {
+        layer.open({
+            type: 2,
+            title: '更新运维中心',
+            area: ['92%', '88%'],
+            maxmin: true,
+            shadeClose: false,
+            content: 'general/updatemaintenance/panel'
+        });
+    }
+
     var Controller = {
         index: function () {
             Table.api.init({
@@ -361,7 +372,12 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             if (githubButton.length && !$('#zonoe-update-history').length) {
                 githubButton.after(' <button type="button" id="zonoe-update-history" class="btn btn-default btn-embossed"><i class="fa fa-history"></i> 更新历史</button>');
             }
+            var historyButton = $('#zonoe-update-history');
+            if (historyButton.length && !$('#zonoe-update-ops').length) {
+                historyButton.after(' <button type="button" id="zonoe-update-ops" class="btn btn-primary btn-embossed"><i class="fa fa-dashboard"></i> 更新运维中心</button>');
+            }
             $(document).off('click.zonoeHistory').on('click.zonoeHistory', '#zonoe-update-history', openHistory);
+            $(document).off('click.zonoeOps').on('click.zonoeOps', '#zonoe-update-ops', openUpdateOperations);
             $(document).off('click.zonoeRollback').on('click.zonoeRollback', '.zonoe-rollback', function () {
                 var id = $(this).data('id');
                 layer.confirm('将恢复该次更新前的程序文件、数据库和版本号。确定继续吗？', {icon: 3, title: '确认回滚'}, function (idx) {
