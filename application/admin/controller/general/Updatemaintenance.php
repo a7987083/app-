@@ -11,7 +11,7 @@ use app\common\library\update\UpdateOps;
  */
 class Updatemaintenance extends Backend
 {
-    protected $noNeedRight = ['index', 'panel', 'cleanup'];
+    protected $noNeedRight = ['index', 'panel'];
 
     /**
      * JSON diagnostics endpoint.
@@ -46,9 +46,13 @@ class Updatemaintenance extends Backend
 
     /**
      * Safe cleanup endpoint. Default is dry-run; apply=1 performs deletion.
+     * Destructive cleanup is intentionally permission-checked and POST-only.
      */
     public function cleanup()
     {
+        if (!$this->request->isPost()) {
+            return json(['code' => 405, 'msg' => '仅允许 POST 请求', 'data' => '']);
+        }
         $apply = intval($this->request->param('apply', 0)) === 1;
         $ops = new UpdateOps(ROOT_PATH);
         $result = $ops->cleanup(!$apply);
