@@ -55,8 +55,10 @@ class SourceAppRecord
 
     public static function publicSourceColumns()
     {
+        // id is used internally for per-App permission checks. AppStorePayload
+        // does not expose it as a new public protocol field.
         return self::columns([
-            'type', 'name', 'version', 'description', 'download_url',
+            'id', 'type', 'name', 'version', 'description', 'download_url',
             'button_color', 'file_size', 'paid', 'cloud_flag', 'icon_url',
             'updated_at',
         ]);
