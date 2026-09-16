@@ -7,3 +7,5 @@ public/assets/js/backend/general/config.js
 application/index/controller/App.php
 application/common/library/SourceEncryptionPolicy.php
 application/common/library/SourceEncryptionProvider.php
+public/api.php
+public/encrypt.php
