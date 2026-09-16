@@ -6,6 +6,7 @@ on:
       - feature/phase16-card-scope-v1
     paths:
       - 'application/common/library/CardAccessPolicy.php'
+      - 'application/common/library/CardDeviceTransfer.php'
       - 'application/common/library/AppStorePayload.php'
       - 'application/common/library/SourceAppRecord.php'
       - 'application/common/library/AuthorizationSchema.php'
@@ -15,6 +16,7 @@ on:
       - 'public/assets/js/backend/kami.js'
       - 'release/sql/2026091611_card_scope.sql'
       - 'tests/card_access_policy_test.php'
+      - 'tests/card_device_transfer_contract_test.php'
       - 'tests/appstore_card_scope_test.php'
       - 'tests/phase16_card_scope_contract_test.php'
       - '.github/workflows/phase16_card_scope.yml'
@@ -33,12 +35,14 @@ jobs:
         run: |
           set -euo pipefail
           php -l application/common/library/CardAccessPolicy.php
+          php -l application/common/library/CardDeviceTransfer.php
           php -l application/common/library/AppStorePayload.php
           php -l application/common/library/SourceAppRecord.php
           php -l application/common/library/AuthorizationSchema.php
           php -l application/index/controller/App.php
           php -l application/admin/controller/Kami.php
           php -l tests/card_access_policy_test.php
+          php -l tests/card_device_transfer_contract_test.php
           php -l tests/appstore_card_scope_test.php
           php -l tests/phase16_card_scope_contract_test.php
           node --check public/assets/js/backend/kami.js
