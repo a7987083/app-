@@ -19,6 +19,7 @@ on:
       - 'tests/card_device_transfer_contract_test.php'
       - 'tests/appstore_card_scope_test.php'
       - 'tests/phase16_card_scope_contract_test.php'
+      - 'tests/phase16_mysql57_migration_test.php'
       - '.github/workflows/phase16_card_scope.yml'
   workflow_dispatch:
 
@@ -45,6 +46,7 @@ jobs:
           php -l tests/card_device_transfer_contract_test.php
           php -l tests/appstore_card_scope_test.php
           php -l tests/phase16_card_scope_contract_test.php
+          php -l tests/phase16_mysql57_migration_test.php
           node --check public/assets/js/backend/kami.js
       - name: Run Phase16 tests and compatibility regressions
         run: |
@@ -61,3 +63,37 @@ jobs:
           php tests/source_app_record_test.php
           php tests/authorization_policy_test.php
           php tests/phase12_update_contract_test.php
+
+  mysql57-migration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Run real MySQL 5.7 migration twice
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php -l tests/phase16_mysql57_migration_test.php
+          php tests/phase16_mysql57_migration_test.php
