@@ -9,19 +9,22 @@ use app\common\library\update\FastStorageManager;
 
 /**
  * Update operations diagnostics and whole-site storage management.
- * Phase 15.3 keeps the panel request fast: index() only reads cached storage
- * data. Heavy scan/cleanup work is delegated to a PHP CLI worker which uses
- * system GNU find and exposes progress through storageStatus().
+ * Phase 15.3 keeps the panel request fast: index() reads cached storage data;
+ * heavy scan/cleanup work is delegated to the CLI worker.
  */
 class Updatemaintenance extends Backend
 {
-    protected $noNeedRight = ['index', 'panel', 'storageStatus'];
+    protected $noNeedRight = ['index', 'panel'];
 
     public function index()
     {
+        $storage = new FastStorageManager(ROOT_PATH);
+        if (intval($this->request->param('status_only', 0)) === 1) {
+            return json(['code' => 200, 'msg' => 'ok', 'data' => ['storage_jobs' => $storage->statuses()]]);
+        }
+
         $ops = new UpdateOps(ROOT_PATH);
         $data = $ops->snapshot();
-        $storage = new FastStorageManager(ROOT_PATH);
         $data['site_storage'] = $storage->snapshot();
         $data['storage_jobs'] = $storage->statuses();
 
@@ -44,13 +47,6 @@ class Updatemaintenance extends Backend
         return $this->view->fetch();
     }
 
-    /** Poll-only endpoint for scan and cleanup progress bars. */
-    public function storageStatus()
-    {
-        $storage = new FastStorageManager(ROOT_PATH);
-        return json(['code' => 200, 'msg' => 'ok', 'data' => $storage->statuses()]);
-    }
-
     /** Start a non-blocking system-level whole-site scan. */
     public function scan()
     {
@@ -67,8 +63,8 @@ class Updatemaintenance extends Backend
     }
 
     /**
-     * apply=0: instant preview from the last completed index.
-     * apply=1: start non-blocking cleanup worker; progress is polled separately.
+     * apply=0: instant preview from last completed index.
+     * apply=1: start non-blocking cleanup worker.
      */
     public function cleanup()
     {
