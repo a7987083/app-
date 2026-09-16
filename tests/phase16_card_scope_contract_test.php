@@ -30,7 +30,8 @@ p16Assert(strpos($app, 'CardAccessPolicy::sourceAccess') !== false, 'source acce
 p16Assert(strpos($app, 'CardAccessPolicy::hasSourceCard') !== false, 'verify-only guest isolation missing');
 p16Assert(strpos($app, 'stackRowsForScope') !== false, 'scope-aware stacking missing');
 p16Assert(strpos($app, '该指定App卡未配置授权App') !== false, 'empty App target guard missing');
-p16Assert(strpos($payload, 'CardAccessPolicy::allowsApp') !== false, 'per-App URL gate missing');
+p16Assert(strpos($payload, "in_array(\$appId, \$appIds, true)") !== false, 'per-App URL gate missing');
+p16Assert(strpos($payload, "'unlock_all'") !== false, 'whole-source permission gate missing');
 
 p16Assert(strpos($controller, "'card_scope' => \$scope") !== false, 'new cards do not persist scope');
 p16Assert(strpos($controller, 'replaceTargetApps') !== false, 'App mapping persistence missing');
