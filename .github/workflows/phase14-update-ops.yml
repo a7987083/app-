@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - 'application/common/library/update/UpdateOps.php'
-      - 'application/admin/controller/general/Updateops.php'
+      - 'application/admin/controller/general/Updatemaintenance.php'
       - 'tests/phase14_update_ops_test.php'
       - '.github/workflows/phase14-update-ops.yml'
 
@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           php -l application/common/library/update/UpdateOps.php
-          php -l application/admin/controller/general/Updateops.php
+          php -l application/admin/controller/general/Updatemaintenance.php
           php -l tests/phase14_update_ops_test.php
 
       - name: Run update operations regression
