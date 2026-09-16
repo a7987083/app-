@@ -9,6 +9,7 @@ application/admin/view/general/updatemaintenance/panel.html
 public/assets/js/backend/general/config.js
 public/assets/js/backend/general/updatemaintenance.js
 application/index/controller/App.php
+application/index/controller/Index.php
 application/common/library/SourceAppRecord.php
 application/common/library/AppStorePayload.php
 application/common/library/CardAccessPolicy.php
