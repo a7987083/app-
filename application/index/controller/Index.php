@@ -81,7 +81,18 @@ class Index extends Frontend
             }
         }
 
-        echo json_encode(['msg' => 'ok'], JSON_UNESCAPED_UNICODE);
+        try {
+            $secretKey = $this->unlockSignKey();
+        } catch (\Exception $e) {
+            error_log('[Index::unlockSignKey] signing key unavailable');
+            echo json_encode(['msg' => '解锁签名配置不可用'], JSON_UNESCAPED_UNICODE);
+            die;
+        }
+
+        echo json_encode(
+            $this->signedApifacePayload($udid, $res['endtime'], $secretKey),
+            JSON_UNESCAPED_UNICODE
+        );
         die;
     }
 
@@ -150,6 +161,69 @@ class Index extends Frontend
         if (!empty($black['id']) && empty($black['usetime'])) {
             Db::name('black')->where('id', $black['id'])->update(['usetime' => time()]);
         }
+    }
+
+    /**
+     * Resolve the same server-side HMAC key used by App::activateCode().
+     * The key is never returned or logged. A blank key is generated once.
+     */
+    protected function unlockSignKey()
+    {
+        $key = (string)SourceConfigRepository::get('unlock_sign_key', '', false);
+        if ($key !== '') {
+            return $key;
+        }
+
+        $generated = bin2hex(random_bytes(32));
+        $row = Db::name('config')->where('name', 'unlock_sign_key')->find();
+        if ($row) {
+            $current = isset($row['value']) ? (string)$row['value'] : '';
+            if ($current === '') {
+                Db::name('config')
+                    ->where('id', (int)$row['id'])
+                    ->where('value', $current)
+                    ->update(['value' => $generated]);
+            }
+        } else {
+            try {
+                Db::name('config')->insert([
+                    'name' => 'unlock_sign_key',
+                    'group' => 'basic',
+                    'title' => '解锁签名KEY',
+                    'tip' => '用于解锁响应HMAC-SHA256签名；留空时系统自动生成',
+                    'type' => 'string',
+                    'value' => $generated,
+                    'content' => '',
+                    'rule' => '',
+                    'extend' => 'autocomplete="off"',
+                ]);
+            } catch (\Exception $e) {
+                // A concurrent request may have inserted the unique config row first.
+            }
+        }
+
+        SourceConfigRepository::forget();
+        $key = (string)SourceConfigRepository::get('unlock_sign_key', '', false);
+        if ($key === '') {
+            throw new \RuntimeException('解锁签名KEY不可用');
+        }
+        return $key;
+    }
+
+    protected function signedApifacePayload($udid, $expire, $secretKey)
+    {
+        $expire = (int)$expire;
+        $ts = time();
+        $nonce = bin2hex(random_bytes(8));
+        $signData = $udid . '|' . $expire . '|' . $ts . '|' . $nonce;
+
+        return [
+            'msg' => 'ok',
+            'expire' => $expire,
+            'ts' => $ts,
+            'nonce' => $nonce,
+            'sign' => hash_hmac('sha256', $signData, $secretKey),
+        ];
     }
 
     protected function dylibConfig()
