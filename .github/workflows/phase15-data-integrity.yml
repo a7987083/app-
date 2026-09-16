@@ -1,0 +1,40 @@
+name: Phase15 Data Integrity
+
+on:
+  push:
+    branches:
+      - feature/phase15-data-integrity-v1
+  pull_request:
+    paths:
+      - 'application/common/library/DataIntegrityAudit.php'
+      - 'application/common/library/AuthorizationSchema.php'
+      - 'application/common/library/CardDeviceTransfer.php'
+      - 'application/admin/controller/Integrity.php'
+      - 'application/admin/view/authorization/integrity.html'
+      - 'tests/phase15_data_integrity_contract_test.php'
+      - '.github/workflows/phase15-data-integrity.yml'
+
+jobs:
+  php70-data-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: Lint Phase15 files
+        run: |
+          set -euo pipefail
+          php -l application/common/library/DataIntegrityAudit.php
+          php -l application/common/library/AuthorizationSchema.php
+          php -l application/common/library/CardDeviceTransfer.php
+          php -l application/admin/controller/Integrity.php
+          php -l tests/phase15_data_integrity_contract_test.php
+      - name: Run Phase15 contract
+        run: php tests/phase15_data_integrity_contract_test.php
+      - name: Re-run authorization regressions
+        run: |
+          php tests/authorization_policy_test.php
+          php tests/card_device_transfer_contract_test.php
+          php tests/phase11_contract_test.php
