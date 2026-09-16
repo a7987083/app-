@@ -18,6 +18,8 @@ application/common/library/SourceEncryptionPolicy.php
 application/common/library/SourceEncryptionProvider.php
 application/common/library/AuthorizationSchema.php
 application/common/library/DataIntegrityAudit.php
+application/admin/controller/Authorization.php
+application/admin/view/authorization/index.html
 application/admin/controller/Kami.php
 application/admin/view/kami/add.html
 application/admin/view/kami/edit.html
