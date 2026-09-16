@@ -11,5 +11,9 @@ public/assets/js/backend/general/updatemaintenance.js
 application/index/controller/App.php
 application/common/library/SourceEncryptionPolicy.php
 application/common/library/SourceEncryptionProvider.php
+application/common/library/AuthorizationSchema.php
+application/common/library/DataIntegrityAudit.php
+application/admin/controller/Integrity.php
+application/admin/view/authorization/integrity.html
 public/api.php
 public/encrypt.php
