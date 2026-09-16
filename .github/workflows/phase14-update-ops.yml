@@ -1,0 +1,41 @@
+name: Phase14.3 Update Operations
+
+on:
+  push:
+    branches:
+      - feature/phase14-3-update-ops-v2
+  pull_request:
+    paths:
+      - 'application/common/library/update/UpdateOps.php'
+      - 'application/admin/controller/general/Updatemaintenance.php'
+      - 'tests/phase14_update_ops_test.php'
+      - '.github/workflows/phase14-update-ops.yml'
+
+jobs:
+  php70-update-ops:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+
+      - name: Lint Phase14.3 files
+        run: |
+          set -euo pipefail
+          php -l application/common/library/update/UpdateOps.php
+          php -l application/admin/controller/general/Updatemaintenance.php
+          php -l tests/phase14_update_ops_test.php
+
+      - name: Run update operations regression
+        run: |
+          set -euo pipefail
+          php tests/phase14_update_ops_test.php
+
+      - name: Re-run updater hardening regression
+        run: |
+          set -euo pipefail
+          php tests/phase14_2_failure_injection_test.php
+          php tests/phase13_update_runtime_test.php
+          php tests/phase14_update_atomicity_test.php
