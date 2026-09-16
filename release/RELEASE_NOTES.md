@@ -1,18 +1,14 @@
-# ZONOE 软件源 2026091603
+# ZONOE 软件源 2026091604
 
 ## 更新内容
 
-- Phase 14.2 更新器故障防护：新增低磁盘空间预检，并覆盖 SHA256 错误、损坏 ZIP、SQL 执行失败、目标文件写入失败、备份失败、更新锁冲突等失败场景。
-- 保留现有自动回滚机制，更新中途失败时继续保护程序文件、数据库与版本状态。
-- Phase 14.3 新增更新运维诊断：统计备份、history、status、cache 占用，并显示真实更新锁、运行中任务和疑似中断任务。
-- 新增后台“更新运维中心”页面 `general/updatemaintenance/panel`，可查看当前版本、文件完整性、最近一次更新、最近一次回滚及存储占用。
-- 新增安全清理预览和二次确认执行流程；运行中任务、成功且仍可回滚的更新历史，以及被历史记录引用的备份不会被自动删除。
-- 在现有系统配置 / GitHub 在线更新区域新增“更新运维中心”入口，可直接以内嵌后台窗口打开运维面板。
-- PHP 7.0、JavaScript 语法、Phase 14.2 故障注入、Phase 13 runtime、Phase 14 atomicity 与 Phase 14.3 UI contract 回归均已通过。
+- 修复 2026091603 后台“更新运维中心”点击后出现 404 的问题。
+- 将运维中心入口从 `layer.open(type: 2, content: 'general/updatemaintenance/panel')` 改为 FastAdmin 原生 `Fast.api.open(...)`，由框架统一解析后台入口与路由地址，兼容自定义后台入口路径。
+- `general/updatemaintenance/panel` 页面、运维诊断、安全清理、Phase 14.2 更新器故障防护保持不变。
+- 软件源 `appstore` / `appstore_v2`、Nuosike 兼容加密、UDID、卡密、黑名单、授权时长与换绑次数行为保持不变。
 
 ## 兼容性
 
 - 目标环境继续兼容宝塔 PHP 7.0。
 - 不修改现有数据库结构和已有卡密数据。
-- `appstore` / `appstore_v2`、Nuosike 兼容加密、UDID、卡密、黑名单、授权时长与换绑次数语义保持 2026091602 行为不变。
-- GitHub 在线更新继续使用 HTTPS、SHA256、备份和回滚机制。
+- GitHub 在线更新继续使用 HTTPS、SHA256、备份、文件校验和回滚机制。
