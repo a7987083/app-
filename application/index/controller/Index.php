@@ -5,6 +5,7 @@ namespace app\index\controller;
 use app\common\controller\Frontend;
 use app\common\library\BlacklistPolicy;
 use app\common\library\CategoryDailyStat;
+use app\common\library\CardAccessPolicy;
 use app\common\library\CardDeviceTransfer;
 use app\common\library\AuthorizationLicense;
 use app\common\library\AuthorizationSchema;
@@ -61,6 +62,7 @@ class Index extends Frontend
 
     public function apiface()
     {
+        AuthorizationSchema::ensure();
         if (empty($_REQUEST['udid'])) {
             echo json_encode(['msg' => '未获取设备udid'], JSON_UNESCAPED_UNICODE);
             die;
@@ -74,13 +76,13 @@ class Index extends Frontend
         }
 
         $now = time();
-        $active = Db::name('kami')
+        $activeRows = Db::name('kami')
             ->where('udid', $udid)
             ->where('jh', 1)
             ->where('endtime', '>', $now)
             ->order('endtime desc')
-            ->find();
-        if (!$active) {
+            ->select();
+        if (!$activeRows) {
             echo json_encode(['msg' => '解锁已到期'], JSON_UNESCAPED_UNICODE);
             die;
         }
@@ -93,8 +95,10 @@ class Index extends Frontend
             die;
         }
 
+        $expire = (int)$activeRows[0]['endtime'];
+        $authorizations = $this->authorizationSummaries($activeRows);
         echo json_encode(
-            $this->signedApiPayload($udid, (int)$active['endtime'], $secretKey),
+            $this->signedApiPayload($udid, $expire, $secretKey, $authorizations),
             JSON_UNESCAPED_UNICODE
         );
         die;
@@ -210,14 +214,14 @@ class Index extends Frontend
         return $key;
     }
 
-    protected function signedApiPayload($udid, $expire, $secretKey)
+    protected function signedApiPayload($udid, $expire, $secretKey, array $authorizations = [])
     {
         $expire = (int)$expire;
         $ts = time();
         $nonce = bin2hex(random_bytes(8));
         $signData = $udid . '|' . $expire . '|' . $ts . '|' . $nonce;
 
-        return [
+        $payload = [
             'code' => 1,
             'msg' => 'ok',
             'expire' => $expire,
@@ -225,6 +229,37 @@ class Index extends Frontend
             'nonce' => $nonce,
             'sign' => hash_hmac('sha256', $signData, $secretKey),
         ];
+        if ($authorizations) {
+            // Keep all legacy fields and their order unchanged. New scope detail
+            // is intentionally appended after sign for backward compatibility.
+            $payload['authorizations'] = $authorizations;
+        }
+        return $payload;
+    }
+
+    protected function authorizationSummaries(array $rows)
+    {
+        $expires = [];
+        foreach ($rows as $row) {
+            $scope = CardAccessPolicy::scopeForRow($row);
+            $endtime = isset($row['endtime']) ? (int)$row['endtime'] : 0;
+            if (!isset($expires[$scope]) || $endtime > $expires[$scope]) {
+                $expires[$scope] = $endtime;
+            }
+        }
+
+        $result = [];
+        foreach ([CardAccessPolicy::SCOPE_SOURCE, CardAccessPolicy::SCOPE_VERIFY, CardAccessPolicy::SCOPE_APPS] as $scope) {
+            if (!isset($expires[$scope])) {
+                continue;
+            }
+            $result[] = [
+                'scope' => $scope,
+                'type' => CardAccessPolicy::scopeName($scope),
+                'expire' => (int)$expires[$scope],
+            ];
+        }
+        return $result;
     }
 
     protected function dylibConfig()
