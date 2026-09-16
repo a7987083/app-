@@ -117,10 +117,10 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
     }
 
     function pollStatus() {
-        $.getJSON('general/updatemaintenance/storageStatus', function(ret){
+        $.getJSON('general/updatemaintenance/index?status_only=1', function(ret){
             if (!ret || ret.code !== 200 || !ret.data) return;
-            var scan = ret.data.scan || {}, cleanup = ret.data.cleanup || {};
-            renderJobStatuses(ret.data);
+            var jobs = ret.data.storage_jobs || {}, scan = jobs.scan || {}, cleanup = jobs.cleanup || {};
+            renderJobStatuses(jobs);
             if (!scan.running && scan.status === 'success' && !cleanup.running) loadSnapshot(true);
             if (!cleanup.running && cleanup.status === 'success' && !scan.running) loadSnapshot(true);
         });
