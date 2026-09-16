@@ -35,8 +35,7 @@ class SourceEncryptionProvider
 
     public static function localAvailable()
     {
-        return function_exists('curl_init')
-            && function_exists('openssl_pkey_get_private')
+        return function_exists('openssl_pkey_get_private')
             && function_exists('openssl_private_decrypt')
             && function_exists('openssl_pkey_get_public')
             && function_exists('openssl_public_encrypt');
@@ -156,7 +155,7 @@ class SourceEncryptionProvider
 
     protected static function loadLegacyBKey()
     {
-        if (!self::localAvailable()) {
+        if (!self::localAvailable() || !function_exists('curl_init')) {
             throw new \RuntimeException('Required curl/OpenSSL functions are unavailable');
         }
 
