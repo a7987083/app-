@@ -1,17 +1,19 @@
-ZONOE 软件源 Release 2026091601
-版本：2026091601
+ZONOE 软件源 Release 2026091602
+版本：2026091602
 基线：2026091203
 
 更新内容：
-1. appstore 与 appstore_v2 软件源加密默认改为本地兼容实现。
-2. 保留 Nuosike 故障回退，支持整体回退和单独关闭 v2 本地加密。
-3. 保持现有软件源协议字段、请求头识别方式、UDID、卡密、授权时长、黑名单与换绑次数语义不变。
-4. 新增 SourceEncryptionProvider 与 SourceEncryptionPolicy，并接入 App.php 软件源主链路。
-5. 新增 PHP 7.0 / DES-CBC 兼容测试和差分探针工具。
-6. 在线更新包包含本次加密与认证链路所需文件，并继续使用现有备份、回滚和 SHA256 校验。
+1. 修正 2026091601 的 DES-CBC 协议误判，按 zonoe/QNQ 客户端真实解码协议实现 Nuosike wire-compatible 加密。
+2. appstore：动态 bkey + RC4 + Base64；bkey 按客户端逻辑从 Nuosike update.json / key.json 解析。
+3. appstore_v2：15 字符 RC4 key + RSA PKCS#1 v1.5 + 0xFEEDFACF 容器 + Nuosike 自定义变宽字符编码。
+4. 新增 public/api.php 与 public/encrypt.php，分别兼容 Nuosike api.php / encrypt.php 的 POST content 调用方式与直接密文响应。
+5. /appstore 继续保留现有 appstore / appstore_v2 外层字段和 Header 分流；UDID、卡密、授权时长、黑名单与换绑次数语义不变。
+6. 默认本地优先、Nuosike 故障回退；PHP 7.0 CI 验证 RC4/RSA/v2 容器协议。
+7. 在线更新包包含本次协议修复与两个公开 API 入口，并继续使用现有备份、回滚和 SHA256 校验。
 
 兼容性：
 - 兼容宝塔 PHP 7.0。
 - 不修改现有数据库结构和已有卡密数据。
 - appstore / appstore_v2 响应外层字段保持不变。
+- legacy appstore 为保持现有客户端 1:1 协议仍读取 Nuosike 动态 key 链。
 - GitHub 在线更新继续强制 HTTPS + SHA256。
