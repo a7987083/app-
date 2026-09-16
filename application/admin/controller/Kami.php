@@ -27,7 +27,11 @@ class Kami extends Backend
                 $count = isset($params['kami']) ? intval($params['kami']) : 0;
                 $prefix = isset($params['udid']) ? trim($params['udid']) : '';
                 $type = isset($params['Kmyp']) ? intval($params['Kmyp']) : 0;
-                $scope = CardAccessPolicy::normalizeScope(isset($params['card_scope']) ? $params['card_scope'] : CardAccessPolicy::SCOPE_SOURCE);
+                $rawScope = isset($params['card_scope']) ? intval($params['card_scope']) : CardAccessPolicy::SCOPE_SOURCE;
+                if (!in_array($rawScope, [CardAccessPolicy::SCOPE_SOURCE, CardAccessPolicy::SCOPE_VERIFY, CardAccessPolicy::SCOPE_APPS], true)) {
+                    $this->error('请选择有效的卡密用途');
+                }
+                $scope = $rawScope;
                 $appIds = isset($params['app_ids']) && is_array($params['app_ids'])
                     ? CardAccessPolicy::normalizeAppIds($params['app_ids'])
                     : [];
@@ -38,9 +42,6 @@ class Kami extends Backend
                 }
                 if (!in_array($type, [1, 2, 3, 4, 5], true)) {
                     $this->error('请选择有效的卡密类型');
-                }
-                if (!in_array($scope, [CardAccessPolicy::SCOPE_SOURCE, CardAccessPolicy::SCOPE_VERIFY, CardAccessPolicy::SCOPE_APPS], true)) {
-                    $this->error('请选择有效的卡密用途');
                 }
                 if ($transferQuota < 0 || $transferQuota > 1000000) {
                     $this->error('换绑次数需在0到1000000之间');
@@ -111,8 +112,9 @@ class Kami extends Backend
     }
 
     /**
-     * 卡密换绑次数表示“剩余次数”。管理员编辑一个正在生效的授权时，
-     * 同一 UDID 当前有效的叠加卡同步为相同额度，确保补次数立即生效。
+     * transfer_count is the remaining quota of one entitlement chain.
+     * Phase 16 keeps quotas isolated between whole-source, verification-only,
+     * and individual App-set chains on the same UDID.
      */
     public function edit($ids = null)
     {
@@ -129,7 +131,11 @@ class Kami extends Backend
             $params = $this->request->post('row/a');
             if ($params) {
                 $params = $this->preExcludeFields($params);
-                $scope = CardAccessPolicy::normalizeScope(isset($params['card_scope']) ? $params['card_scope'] : $row['card_scope']);
+                $rawScope = isset($params['card_scope']) ? intval($params['card_scope']) : (int)$row['card_scope'];
+                if (!in_array($rawScope, [CardAccessPolicy::SCOPE_SOURCE, CardAccessPolicy::SCOPE_VERIFY, CardAccessPolicy::SCOPE_APPS], true)) {
+                    $this->error('请选择有效的卡密用途');
+                }
+                $scope = $rawScope;
                 $appIds = isset($params['app_ids']) && is_array($params['app_ids'])
                     ? CardAccessPolicy::normalizeAppIds($params['app_ids'])
                     : [];
@@ -159,15 +165,7 @@ class Kami extends Backend
                     $result = $row->allowField(true)->save($params);
                     $this->replaceTargetApps((int)$row['id'], $appIds);
                     if ($quotaChanged) {
-                        $udid = trim((string)$row['udid']);
-                        $now = time();
-                        if ($udid !== '' && (int)$row['jh'] === 1 && (int)$row['endtime'] > $now) {
-                            Db::table('fa_kami')
-                                ->where('udid', $udid)
-                                ->where('jh', 1)
-                                ->where('endtime', '>', $now)
-                                ->update(['transfer_count' => $quota]);
-                        }
+                        $this->syncQuotaForChain($row, $quota, time());
                     }
                     Db::commit();
                 } catch (\Exception $e) {
@@ -251,6 +249,32 @@ class Kami extends Backend
             if ($inserted !== 1) {
                 throw new \RuntimeException('指定App授权写入失败');
             }
+        }
+    }
+
+    protected function syncQuotaForChain($row, $quota, $now)
+    {
+        $udid = trim((string)$row['udid']);
+        if ($udid === '' || (int)$row['jh'] !== 1 || (int)$row['endtime'] <= $now) {
+            return;
+        }
+        $scope = CardAccessPolicy::scopeForRow($row->toArray());
+        $targetApps = $scope === CardAccessPolicy::SCOPE_APPS
+            ? $this->targetAppIds((int)$row['id'])
+            : [];
+        $activeRows = Db::table('fa_kami')
+            ->where('udid', $udid)
+            ->where('jh', 1)
+            ->where('endtime', '>', $now)
+            ->select();
+        foreach ($activeRows as $active) {
+            if (CardAccessPolicy::scopeForRow($active) !== $scope) {
+                continue;
+            }
+            if ($scope === CardAccessPolicy::SCOPE_APPS && !CardAccessPolicy::sameAppSet($this->targetAppIds((int)$active['id']), $targetApps)) {
+                continue;
+            }
+            Db::table('fa_kami')->where('id', (int)$active['id'])->update(['transfer_count' => (int)$quota]);
         }
     }
 }
