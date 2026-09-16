@@ -1,77 +1,35 @@
 <style>
-    .zonoe-ops-card {border:1px solid #e7eaec;border-radius:4px;background:#fff;padding:14px;margin-bottom:14px;min-height:128px;}
+    .zonoe-ops-card {border:1px solid #e7eaec;border-radius:4px;background:#fff;padding:14px;margin-bottom:14px;min-height:118px;}
     .zonoe-ops-card h4 {margin:0 0 10px;font-weight:600;}
     .zonoe-ops-number {font-size:24px;font-weight:700;line-height:1.2;}
     .zonoe-ops-sub {color:#888;margin-top:4px;word-break:break-all;}
     .zonoe-ops-good {color:#18bc9c;}.zonoe-ops-warn {color:#f39c12;}.zonoe-ops-bad {color:#d9534f;}
     .zonoe-ops-table td {vertical-align:middle!important;word-break:break-all;}
-    .zonoe-progress-box {display:none;margin:12px 0;padding:12px;border:1px solid #e7eaec;border-radius:4px;background:#fafafa;}
-    .zonoe-progress-box .progress {margin:8px 0 4px;height:18px;}
-    .zonoe-progress-text {font-size:12px;color:#666;word-break:break-all;}
-    .zonoe-engine {font-size:12px;margin-left:8px;}
 </style>
 <div class="panel panel-default panel-intro">
     <div class="panel-heading">
-        <div class="panel-lead"><em>更新运维中心</em>高速全站储存管理：系统级 find 扫描、源码目录指纹短路、缓存索引和异步任务。</div>
+        <div class="panel-lead"><em>更新运维中心</em>仅管理在线更新系统自身产生的数据，不再扫描网站目录。</div>
     </div>
     <div class="panel-body">
         <div class="row">
             <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-code-fork"></i> 当前版本</h4><div id="ops-version" class="zonoe-ops-number">-</div><div id="ops-integrity" class="zonoe-ops-sub">正在检测完整性</div></div></div>
-            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-hdd-o"></i> 网站总占用</h4><div id="site-total-bytes" class="zonoe-ops-number">-</div><div id="site-total-files" class="zonoe-ops-sub">等待索引</div></div></div>
-            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-trash"></i> 自动安全可清理</h4><div id="site-safe-bytes" class="zonoe-ops-number">-</div><div id="site-safe-files" class="zonoe-ops-sub">等待索引</div></div></div>
-            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-exclamation-triangle"></i> 需人工确认</h4><div id="site-review-bytes" class="zonoe-ops-number">-</div><div id="site-review-files" class="zonoe-ops-sub">等待索引</div></div></div>
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-archive"></i> 更新备份</h4><div id="ops-backups" class="zonoe-ops-number">-</div><div id="ops-backups-size" class="zonoe-ops-sub">-</div></div></div>
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-history"></i> 更新历史</h4><div id="ops-history-count" class="zonoe-ops-number">-</div><div class="zonoe-ops-sub">升级与回滚记录</div></div></div>
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-tasks"></i> 更新任务</h4><div id="ops-running-count" class="zonoe-ops-number">-</div><div id="ops-stale-count" class="zonoe-ops-sub">-</div></div></div>
         </div>
 
         <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>扫描引擎</strong>
-                <span id="site-engine" class="zonoe-engine text-muted">检测中...</span>
-            </div>
+            <div class="panel-heading"><strong>更新文件储存</strong> <span class="text-muted">只统计在线更新器自己的备份、历史、状态和缓存。</span></div>
+            <div class="panel-body" id="ops-storage">正在读取...</div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>安全清理更新数据</strong> <span class="text-muted">只按保留期清理更新器自身数据；运行中任务和仍被回滚记录引用的备份不会删除。</span></div>
             <div class="panel-body">
-                <div id="site-index-meta" class="text-muted">尚未读取索引状态</div>
-                <div id="scan-progress-box" class="zonoe-progress-box">
-                    <strong><i class="fa fa-spinner fa-spin"></i> 正在扫描</strong>
-                    <div class="progress progress-striped active">
-                        <div id="scan-progress-bar" class="progress-bar progress-bar-info" role="progressbar" style="width:0%">0%</div>
-                    </div>
-                    <div id="scan-progress-text" class="zonoe-progress-text">准备中...</div>
-                </div>
-                <button type="button" id="ops-refresh" class="btn btn-info"><i class="fa fa-refresh"></i> 重新扫描全站</button>
-            </div>
-        </div>
-
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>全站储存分类</strong> <span class="text-muted">页面直接读取上一次完成的索引，不再等待全站扫描。</span></div>
-            <div class="panel-body" id="site-storage-summary">尚未建立储存索引</div>
-        </div>
-
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>自动安全清理</strong> <span class="text-muted">只删除已索引且再次经服务端安全规则确认的可重建缓存/临时文件；至少保留 1 小时。</span></div>
-            <div class="panel-body">
-                <button type="button" id="ops-preview" class="btn btn-default"><i class="fa fa-search"></i> 预览自动安全清理</button>
-                <button type="button" id="ops-clean" class="btn btn-danger"><i class="fa fa-trash"></i> 执行自动安全清理</button>
-                <div id="cleanup-progress-box" class="zonoe-progress-box">
-                    <strong><i class="fa fa-cog fa-spin"></i> 正在安全清理</strong>
-                    <div class="progress progress-striped active">
-                        <div id="cleanup-progress-bar" class="progress-bar progress-bar-danger" role="progressbar" style="width:0%">0%</div>
-                    </div>
-                    <div id="cleanup-progress-text" class="zonoe-progress-text">准备中...</div>
-                </div>
+                <button type="button" id="ops-preview" class="btn btn-default"><i class="fa fa-search"></i> 预览可清理项</button>
+                <button type="button" id="ops-clean" class="btn btn-danger"><i class="fa fa-trash"></i> 执行安全清理</button>
                 <div id="ops-cleanup-result" style="margin-top:12px;"></div>
             </div>
-        </div>
-
-        <div class="panel panel-warning">
-            <div class="panel-heading"><strong>备份 / 未识别文件</strong> <span class="text-muted">全部纳入储存统计，但不会自动删除；确认无用后再手工勾选。</span></div>
-            <div class="panel-body">
-                <div id="site-review-list">等待索引...</div>
-                <button type="button" id="ops-delete-selected" class="btn btn-warning"><i class="fa fa-check-square-o"></i> 删除已勾选文件</button>
-            </div>
-        </div>
-
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>最大文件 TOP 50</strong></div>
-            <div class="panel-body" id="site-largest">等待索引...</div>
         </div>
 
         <div class="row">
@@ -82,6 +40,11 @@
         <div class="panel panel-default">
             <div class="panel-heading"><strong>运行中 / 疑似中断更新任务</strong></div>
             <div class="panel-body" id="ops-jobs">暂无任务</div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>更新锁状态</strong></div>
+            <div class="panel-body" id="ops-lock">正在读取...</div>
         </div>
     </div>
 </div>
