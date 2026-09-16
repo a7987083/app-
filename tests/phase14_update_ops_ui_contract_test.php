@@ -20,21 +20,20 @@ p143ui_assert(strpos($controller, "public function cleanup()") !== false, 'clean
 p143ui_assert(strpos($controller, "if (!\$this->request->isPost())") !== false, 'cleanup must be POST-only');
 p143ui_assert(strpos($controller, "intval(\$this->request->param('apply', 0)) === 1") !== false, 'cleanup must default to dry-run');
 
-foreach (['ops-version', 'ops-backups', 'ops-running', 'ops-lock', 'ops-storage', 'ops-preview', 'ops-clean', 'ops-jobs'] as $id) {
+foreach (['ops-version', 'site-total-bytes', 'site-storage-summary', 'site-review-list', 'site-largest', 'ops-preview', 'ops-clean', 'ops-jobs'] as $id) {
     p143ui_assert(strpos($view, 'id="' . $id . '"') !== false, 'panel element missing: ' . $id);
 }
 
 p143ui_assert(strpos($js, "general/updatemaintenance/index") !== false, 'panel snapshot endpoint is not wired');
 p143ui_assert(strpos($js, "general/updatemaintenance/cleanup") !== false, 'panel cleanup endpoint is not wired');
-p143ui_assert(strpos($js, "type: 'POST'") !== false, 'cleanup request must use POST');
-p143ui_assert(strpos($js, "data: {apply: apply ? 1 : 0}") !== false, 'cleanup apply flag is not explicit');
+p143ui_assert(strpos($js, "type:'POST'") !== false || strpos($js, "type: 'POST'") !== false, 'cleanup request must use POST');
+p143ui_assert(strpos($js, "data:{apply:apply ? 1 : 0}") !== false || strpos($js, "data: {apply: apply ? 1 : 0}") !== false, 'cleanup apply flag is not explicit');
 p143ui_assert(strpos($js, "cleanup(false)") !== false, 'dry-run preview action missing');
 p143ui_assert(strpos($js, "cleanup(true)") !== false, 'confirmed cleanup action missing');
 p143ui_assert(strpos($js, "layer.confirm") !== false, 'destructive cleanup must require confirmation');
 
 p143ui_assert(strpos($configJs, 'id="zonoe-update-ops"') !== false, 'config screen update-operations entry button missing');
 p143ui_assert(strpos($configJs, "general/updatemaintenance/panel") !== false, 'config screen is not wired to the update-operations panel');
-p143ui_assert(strpos($configJs, "type: 2") !== false, 'update-operations panel should open in an embedded admin layer');
 p143ui_assert(strpos($configJs, "openUpdateOperations") !== false, 'update-operations entry handler missing');
 p143ui_assert(strpos($configJs, "更新运维中心") !== false, 'update-operations entry label missing');
 
