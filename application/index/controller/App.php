@@ -10,6 +10,8 @@ use app\common\library\AuthorizationPolicy;
 use app\common\library\AuthorizationSchema;
 use app\common\library\SourceAppRecord;
 use app\common\library\SourceConfigRepository;
+use app\common\library\SourceEncryptionPolicy;
+use app\common\library\SourceEncryptionProvider;
 use app\common\library\SourceHttpClient;
 use app\common\library\SourceResponse;
 use app\common\library\TraceMonitorPolicy;
@@ -162,15 +164,8 @@ class App
     protected function emitPayload(array $payload, $opencry, $appType, $jsonFlags, $replaceMarkers)
     {
         if ($opencry == '1') {
-            $native = ['content' => base64_encode(json_encode($payload, $jsonFlags))];
-            $url = $appType === 'appstore_v2'
-                ? 'https://api.nuosike.com/encrypt.php'
-                : 'https://api.nuosike.com/api.php';
-            $result = SourceHttpClient::postForm($url, $native);
-
-            // Legacy curl_exec() failures serialized as boolean false. Preserve
-            // that envelope while logging/timeout/TLS handling is improved.
-            $encrypted = $result['transport_ok'] ? $result['body'] : false;
+            $content = base64_encode(json_encode($payload, $jsonFlags));
+            $encrypted = $this->encryptedSourcePayload($content, $appType);
             SourceResponse::send(
                 SourceResponse::encryptedBody($appType, $encrypted, $replaceMarkers)
             );
@@ -179,6 +174,32 @@ class App
         SourceResponse::send(
             SourceResponse::plainBody($payload, $jsonFlags, $replaceMarkers)
         );
+    }
+
+    protected function encryptedSourcePayload($content, $appType)
+    {
+        $localRequested = SourceEncryptionPolicy::localRequested()
+            && SourceEncryptionPolicy::localAllowedForAppType($appType);
+
+        if ($localRequested) {
+            try {
+                return SourceEncryptionProvider::encryptEncodedContent($content, $appType);
+            } catch (\Exception $e) {
+                error_log('[App::encryptedSourcePayload] local encryption failed: ' . $e->getMessage());
+                if (!SourceEncryptionPolicy::fallbackAllowed()) {
+                    return false;
+                }
+            }
+        }
+
+        $result = SourceHttpClient::postForm(
+            SourceEncryptionPolicy::nuosikeUrl($appType),
+            ['content' => $content]
+        );
+
+        // Legacy curl_exec() failures serialized as boolean false. Preserve
+        // that envelope while logging/timeout/TLS handling is improved.
+        return $result['transport_ok'] ? $result['body'] : false;
     }
 
     /**

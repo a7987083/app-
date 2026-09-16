@@ -1,0 +1,67 @@
+name: Nuosike Local Compatibility
+
+on:
+  push:
+    branches:
+      - feature/nuosike-local-compat-v1
+  pull_request:
+    paths:
+      - 'application/index/controller/App.php'
+      - 'application/common/library/SourceEncryptionPolicy.php'
+      - 'application/common/library/SourceEncryptionProvider.php'
+      - 'public/api.php'
+      - 'public/encrypt.php'
+      - 'tests/source_encryption_policy_test.php'
+      - 'tests/source_encryption_provider_test.php'
+      - 'tools/nuosike_diff.php'
+      - '.github/workflows/nuosike-local-compat.yml'
+      - '.github/workflows/nuosike-differential.yml'
+
+jobs:
+  baota-php70-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify BaoTa-like PHP 7.0 runtime in Docker
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            php:7.0-cli \
+            sh -lc '
+              php -v
+              php -r "echo OPENSSL_VERSION_TEXT, PHP_EOL;"
+              php -r '\''$p=openssl_pkey_get_public("-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvgJlkLVTXIrgaUrHYshP\nUe4PjQRAaU/uwYxbTBw0HzYdF5YymH9vnvcFowTybyFHqc5Xe38PBcqZfavp5o0S\n47R8YSt1Rg7tuI9oW8KWGp0nXJz7hszcyDqtBKquzur1gaigKywNuHvRNkLvb76A\nEPkRKKa7iE7pDeRNNAZpssHO4GMhxXsR0vifXhG6vrFeJUX1Wioky8h7ckPH0Nlo\nMgNxxiVEgjNfefmpAYsOBeR3fWAYx7uM4trWr98fdqvXDhG+gNV9oI/9cF4sUDqm\nkcW1WSOw1R1asndkDYrdCqCT+xJWeKzLj+TowlP8dnV9KrEoKJ0kBk3zCMkoIjjp\nMQIDAQAB\n-----END PUBLIC KEY-----\n"); if ($p === false) exit(1); if (!openssl_public_encrypt("UthbkJctpzDlLle", $out, $p, OPENSSL_PKCS1_PADDING)) exit(1); if (strlen($out) !== 256) exit(1);'\''
+              php -l application/common/library/SourceEncryptionPolicy.php
+              php -l application/common/library/SourceEncryptionProvider.php
+              php -l application/index/controller/App.php
+              php -l public/api.php
+              php -l public/encrypt.php
+              php -l tests/source_encryption_policy_test.php
+              php -l tests/source_encryption_provider_test.php
+              php -l tools/nuosike_diff.php
+              php tests/source_encryption_policy_test.php
+              php tests/source_encryption_provider_test.php
+            '
+
+  github-runner-observation:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 7.0
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+
+      - name: Observe GitHub runner OpenSSL behavior
+        run: |
+          php -v
+          php -r 'echo OPENSSL_VERSION_TEXT, PHP_EOL;'
+          php tests/source_encryption_provider_test.php
