@@ -1,6 +1,6 @@
 # ZONOE 软件源 2026091609
 
-## 修复内容
+## 更新内容
 
 - 修复宝塔/PHP `open_basedir` 环境下高速扫描引擎初始化失败的问题。
 - 根因是 1607/1608 在检测 PHP CLI 时，对 `PHP_BINDIR/php` 使用 `is_file()` / `is_executable()`；当宝塔将站点 PHP-FPM 的 `open_basedir` 限制为网站目录与 `/tmp` 时，`/www/server/php/70/bin/php` 位于白名单之外，会直接触发 `open_basedir restriction in effect`。
