@@ -25,7 +25,7 @@ p153_assert(strpos($manager, 'startScan') !== false && strpos($manager, 'startCl
 p153_assert(strpos($manager, "nohup") !== false, 'background worker spawn missing');
 p153_assert(strpos($manager, "progress") !== false && strpos($manager, "processed") !== false && strpos($manager, "total") !== false, 'progress fields missing');
 
-p153_assert(strpos($controller, 'public function storageStatus()') !== false, 'progress polling endpoint missing');
+p153_assert(strpos($controller, "status_only") !== false, 'fast status-only polling path missing');
 p153_assert(strpos($controller, 'public function scan()') !== false, 'scan start endpoint missing');
 p153_assert(strpos($controller, 'FastStorageManager') !== false, 'controller still uses slow scanner');
 p153_assert(strpos($controller, 'snapshot()') !== false, 'cached snapshot endpoint missing');
@@ -34,7 +34,7 @@ foreach (['scan-progress-box','scan-progress-bar','scan-progress-text','cleanup-
     p153_assert(strpos($view, 'id="' . $id . '"') !== false, 'progress UI missing: ' . $id);
 }
 p153_assert(strpos($js, 'setInterval(pollStatus, 1000)') !== false, '1-second progress polling missing');
-p153_assert(strpos($js, "general/updatemaintenance/storageStatus") !== false, 'status polling route not wired');
+p153_assert(strpos($js, "index?status_only=1") !== false, 'status-only polling route not wired');
 p153_assert(strpos($js, "general/updatemaintenance/scan") !== false, 'scan route not wired');
 p153_assert(strpos($js, "apply:1") !== false, 'async cleanup start not wired');
 p153_assert(strpos($worker, "PHP_SAPI !== 'cli'") !== false, 'worker must be CLI-only');
