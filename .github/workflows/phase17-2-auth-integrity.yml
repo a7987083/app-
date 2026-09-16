@@ -1,0 +1,50 @@
+name: Phase 17.2 Authorization Integrity
+
+on:
+  pull_request:
+    paths:
+      - 'application/index/controller/App.php'
+      - 'application/index/controller/Index.php'
+      - 'application/admin/controller/Authorization.php'
+      - 'application/admin/controller/Integrity.php'
+      - 'application/admin/view/authorization/index.html'
+      - 'application/admin/view/authorization/integrity.html'
+      - 'application/common/library/DataIntegrityAudit.php'
+      - 'tests/phase17_unlock_signing_contract_test.php'
+      - 'release/online-update-files.txt'
+      - '.github/workflows/phase17-2-auth-integrity.yml'
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 7.0
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+
+      - name: Lint changed PHP
+        run: |
+          set -euo pipefail
+          php -l application/index/controller/App.php
+          php -l application/index/controller/Index.php
+          php -l application/admin/controller/Authorization.php
+          php -l application/admin/controller/Integrity.php
+          php -l application/common/library/DataIntegrityAudit.php
+          php -l tests/phase17_unlock_signing_contract_test.php
+
+      - name: Run Phase 17 contract
+        run: php tests/phase17_unlock_signing_contract_test.php
+
+      - name: Verify route and update manifest
+        run: |
+          set -euo pipefail
+          grep -F "url('integrity/index')" application/admin/view/authorization/integrity.html
+          ! grep -F "url('authorization/integrity')" application/admin/view/authorization/integrity.html
+          grep -Fx 'application/admin/controller/Authorization.php' release/online-update-files.txt
+          grep -Fx 'application/admin/view/authorization/index.html' release/online-update-files.txt
