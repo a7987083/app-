@@ -12,6 +12,7 @@ application/index/controller/App.php
 application/common/library/SourceAppRecord.php
 application/common/library/AppStorePayload.php
 application/common/library/CardAccessPolicy.php
+application/common/library/CardDeviceTransfer.php
 application/common/library/SourceEncryptionPolicy.php
 application/common/library/SourceEncryptionProvider.php
 application/common/library/AuthorizationSchema.php
