@@ -66,22 +66,37 @@ class Index extends Frontend
             die;
         }
 
-        $udid = $_REQUEST['udid'];
+        $udid = trim((string)$_REQUEST['udid']);
         $res = Db::name('kami')->where('udid', $udid)->find();
         if (!$res) {
             echo json_encode(['msg' => '未查到解锁记录'], JSON_UNESCAPED_UNICODE);
             die;
         }
 
-        if ($res['endtime'] <= time()) {
-            $res = Db::name('kami')->where('udid', $udid)->where(['endtime' => ['>', time()]])->find();
-            if (!$res) {
-                echo json_encode(['msg' => '解锁已到期'], JSON_UNESCAPED_UNICODE);
-                die;
-            }
+        $now = time();
+        $active = Db::name('kami')
+            ->where('udid', $udid)
+            ->where('jh', 1)
+            ->where('endtime', '>', $now)
+            ->order('endtime desc')
+            ->find();
+        if (!$active) {
+            echo json_encode(['msg' => '解锁已到期'], JSON_UNESCAPED_UNICODE);
+            die;
         }
 
-        echo json_encode(['msg' => 'ok'], JSON_UNESCAPED_UNICODE);
+        try {
+            $secretKey = $this->unlockSignKey();
+        } catch (\Exception $e) {
+            error_log('[Index::apiface] signing key unavailable');
+            echo json_encode(['msg' => '解锁签名配置不可用'], JSON_UNESCAPED_UNICODE);
+            die;
+        }
+
+        echo json_encode(
+            $this->signedApiPayload($udid, (int)$active['endtime'], $secretKey),
+            JSON_UNESCAPED_UNICODE
+        );
         die;
     }
 
@@ -150,6 +165,66 @@ class Index extends Frontend
         if (!empty($black['id']) && empty($black['usetime'])) {
             Db::name('black')->where('id', $black['id'])->update(['usetime' => time()]);
         }
+    }
+
+    protected function unlockSignKey()
+    {
+        $key = (string)SourceConfigRepository::get('unlock_sign_key', '', false);
+        if ($key !== '') {
+            return $key;
+        }
+
+        $generated = bin2hex(random_bytes(32));
+        $row = Db::name('config')->where('name', 'unlock_sign_key')->find();
+        if ($row) {
+            $current = isset($row['value']) ? (string)$row['value'] : '';
+            if ($current === '') {
+                Db::name('config')
+                    ->where('id', (int)$row['id'])
+                    ->where('value', $current)
+                    ->update(['value' => $generated]);
+            }
+        } else {
+            try {
+                Db::name('config')->insert([
+                    'name' => 'unlock_sign_key',
+                    'group' => 'basic',
+                    'title' => '解锁签名KEY',
+                    'tip' => '用于解锁响应HMAC-SHA256签名；留空时系统自动生成',
+                    'type' => 'string',
+                    'value' => $generated,
+                    'content' => '',
+                    'rule' => '',
+                    'extend' => 'autocomplete="off"',
+                ]);
+            } catch (\Exception $e) {
+                // A concurrent request may have inserted the unique config row first.
+            }
+        }
+
+        SourceConfigRepository::forget();
+        $key = (string)SourceConfigRepository::get('unlock_sign_key', '', false);
+        if ($key === '') {
+            throw new \RuntimeException('解锁签名KEY不可用');
+        }
+        return $key;
+    }
+
+    protected function signedApiPayload($udid, $expire, $secretKey)
+    {
+        $expire = (int)$expire;
+        $ts = time();
+        $nonce = bin2hex(random_bytes(8));
+        $signData = $udid . '|' . $expire . '|' . $ts . '|' . $nonce;
+
+        return [
+            'code' => 1,
+            'msg' => 'ok',
+            'expire' => $expire,
+            'ts' => $ts,
+            'nonce' => $nonce,
+            'sign' => hash_hmac('sha256', $signData, $secretKey),
+        ];
     }
 
     protected function dylibConfig()

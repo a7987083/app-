@@ -236,12 +236,32 @@ class App
                 Db::rollback();
                 return json(['code' => 0, 'msg' => '解锁码不存在']);
             }
+
+            $scope = CardAccessPolicy::scopeForRow($kdata);
             if (intval($kdata['jh'])) {
+                if (
+                    $scope === CardAccessPolicy::SCOPE_VERIFY &&
+                    isset($kdata['udid']) && trim((string)$kdata['udid']) === $udid &&
+                    isset($kdata['endtime']) && (int)$kdata['endtime'] > $now
+                ) {
+                    $allActive = Db::table('fa_kami')
+                        ->where('udid', $udid)
+                        ->where('jh', 1)
+                        ->where('endtime', '>', $now)
+                        ->lock(true)
+                        ->select();
+                    $verifyRows = $this->stackRowsForScope($allActive, CardAccessPolicy::SCOPE_VERIFY, []);
+                    $expire = CardEntitlementPolicy::activeEndTime($verifyRows, $now);
+                    if ($expire <= $now) {
+                        $expire = (int)$kdata['endtime'];
+                    }
+                    Db::rollback();
+                    return json($this->signedActivationPayload('ok，验证卡激活成功', $udid, $expire, $secretKey));
+                }
                 Db::rollback();
                 return json(['code' => 0, 'msg' => '解锁码已使用']);
             }
 
-            $scope = CardAccessPolicy::scopeForRow($kdata);
             $targetApps = [];
             if ($scope === CardAccessPolicy::SCOPE_APPS) {
                 $map = $this->cardAppMap([$kdata]);
