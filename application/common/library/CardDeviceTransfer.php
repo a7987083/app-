@@ -6,7 +6,9 @@ use think\Db;
 
 /**
  * Self-service active-card transfer from an old UDID to a replacement device.
- * Phase 11 adds total/daily/cooldown/IP limits and auditable transfer logs.
+ * Phase 16 transfers only the entitlement chain represented by the submitted
+ * card, preventing a verification-only/App-specific card from moving unrelated
+ * whole-source or other App entitlements.
  */
 class CardDeviceTransfer
 {
@@ -98,6 +100,11 @@ class CardDeviceTransfer
                 self::logAttempt(0, $code, $oldUdid, $newUdid, $ip, 0, '卡密与旧UDID不匹配', 0, 0, $now);
                 return self::fail('卡密与旧UDID不匹配');
             }
+            if ((int)$card['endtime'] <= $now) {
+                Db::rollback();
+                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '该卡当前授权已到期', (int)$card['endtime'], isset($card['transfer_count']) ? $card['transfer_count'] : 0, $now);
+                return self::fail('该卡当前授权已到期');
+            }
 
             $oldBlackRows = Db::table('fa_black')->where('udid', $oldUdid)->order('id desc')->select();
             $newBlackRows = Db::table('fa_black')->where('udid', $newUdid)->order('id desc')->select();
@@ -107,16 +114,19 @@ class CardDeviceTransfer
                 return self::fail('该设备存在有效黑名单，无法自助换绑');
             }
 
-            $activeRows = Db::table('fa_kami')
+            $allActiveRows = Db::table('fa_kami')
                 ->where('udid', $oldUdid)
                 ->where('jh', 1)
                 ->where('endtime', '>', $now)
                 ->lock(true)
                 ->select();
+            $scope = CardAccessPolicy::scopeForRow($card);
+            $targetApps = $scope === CardAccessPolicy::SCOPE_APPS ? self::targetAppIds((int)$card['id']) : [];
+            $activeRows = self::rowsForChain($allActiveRows, $scope, $targetApps);
             if (!$activeRows) {
                 Db::rollback();
-                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '旧UDID当前没有有效授权', 0, isset($card['transfer_count']) ? $card['transfer_count'] : 0, $now);
-                return self::fail('旧UDID当前没有有效授权');
+                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '旧UDID当前没有该卡对应的有效授权', 0, isset($card['transfer_count']) ? $card['transfer_count'] : 0, $now);
+                return self::fail('旧UDID当前没有该卡对应的有效授权');
             }
 
             $defaultQuota = AuthorizationPolicy::maxTransfers($values);
@@ -143,16 +153,16 @@ class CardDeviceTransfer
                 return self::fail('换绑冷却中，请稍后再试');
             }
 
-            $newActive = Db::table('fa_kami')
+            $newRows = Db::table('fa_kami')
                 ->where('udid', $newUdid)
                 ->where('jh', 1)
                 ->where('endtime', '>', $now)
                 ->lock(true)
-                ->find();
-            if ($newActive) {
+                ->select();
+            if (self::rowsForChain($newRows, $scope, $targetApps)) {
                 Db::rollback();
-                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '新UDID已有有效授权', 0, $remaining, $now);
-                return self::fail('新UDID已有有效授权，请联系客服处理');
+                self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 0, '新UDID已有同类有效授权', 0, $remaining, $now);
+                return self::fail('新UDID已有同类有效授权，请联系客服处理');
             }
 
             $maxEnd = CardEntitlementPolicy::activeEndTime($activeRows, $now);
@@ -175,6 +185,10 @@ class CardDeviceTransfer
             if (!self::logAttempt($card['id'], $code, $oldUdid, $newUdid, $ip, 1, '换绑成功', $maxEnd, $newRemaining, $now)) {
                 throw new \RuntimeException('换绑日志写入失败');
             }
+            $detail = '设备换绑成功，' . CardAccessPolicy::scopeName($scope) . '，剩余' . $newRemaining . '次';
+            if ($scope === CardAccessPolicy::SCOPE_APPS) {
+                $detail .= '，AppID=' . implode(',', $targetApps);
+            }
             if (!AuthorizationEventLog::record('transfer', [
                 'kami_id' => $card['id'],
                 'kami' => $code,
@@ -182,7 +196,7 @@ class CardDeviceTransfer
                 'related_udid' => $oldUdid,
                 'endtime' => $maxEnd,
                 'ip' => $ip,
-                'detail' => '设备换绑成功，剩余' . $newRemaining . '次',
+                'detail' => $detail,
                 'addtime' => $now,
             ])) {
                 throw new \RuntimeException('授权事件写入失败');
@@ -203,6 +217,37 @@ class CardDeviceTransfer
             self::logAttempt(0, $code, $oldUdid, $newUdid, $ip, 0, '换绑失败', 0, 0, $now);
             return self::fail('换绑失败，请稍后重试');
         }
+    }
+
+    protected static function rowsForChain(array $rows, $scope, array $targetApps)
+    {
+        $scope = CardAccessPolicy::normalizeScope($scope);
+        $result = [];
+        foreach ($rows as $row) {
+            if (CardAccessPolicy::scopeForRow($row) !== $scope) {
+                continue;
+            }
+            if ($scope === CardAccessPolicy::SCOPE_APPS) {
+                $rowApps = self::targetAppIds(isset($row['id']) ? (int)$row['id'] : 0);
+                if (!CardAccessPolicy::sameAppSet($rowApps, $targetApps)) {
+                    continue;
+                }
+            }
+            $result[] = $row;
+        }
+        return $result;
+    }
+
+    protected static function targetAppIds($kamiId)
+    {
+        if ((int)$kamiId <= 0) {
+            return [];
+        }
+        $ids = Db::table('fa_kami_app')
+            ->where('kami_id', (int)$kamiId)
+            ->order('app_id asc')
+            ->column('app_id');
+        return CardAccessPolicy::normalizeAppIds(is_array($ids) ? $ids : []);
     }
 
     protected static function successCountForUdid($udid, $startTime)
