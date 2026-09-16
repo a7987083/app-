@@ -9,10 +9,17 @@ application/admin/view/general/updatemaintenance/panel.html
 public/assets/js/backend/general/config.js
 public/assets/js/backend/general/updatemaintenance.js
 application/index/controller/App.php
+application/common/library/SourceAppRecord.php
+application/common/library/AppStorePayload.php
+application/common/library/CardAccessPolicy.php
 application/common/library/SourceEncryptionPolicy.php
 application/common/library/SourceEncryptionProvider.php
 application/common/library/AuthorizationSchema.php
 application/common/library/DataIntegrityAudit.php
+application/admin/controller/Kami.php
+application/admin/view/kami/add.html
+application/admin/view/kami/edit.html
+public/assets/js/backend/kami.js
 application/admin/controller/Integrity.php
 application/admin/view/authorization/integrity.html
 public/api.php
