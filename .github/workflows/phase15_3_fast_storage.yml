@@ -1,0 +1,47 @@
+name: Phase15.3 Fast Storage
+
+on:
+  push:
+    branches:
+      - feature/phase15-3-fast-storage-v1
+    paths:
+      - 'application/common/library/update/FastStorageManager.php'
+      - 'application/admin/controller/general/Updatemaintenance.php'
+      - 'application/admin/view/general/updatemaintenance/panel.html'
+      - 'public/assets/js/backend/general/updatemaintenance.js'
+      - 'tools/storage_worker.php'
+      - 'tests/phase15_3_fast_storage_*.php'
+      - '.github/workflows/phase15_3_fast_storage.yml'
+  workflow_dispatch:
+
+jobs:
+  php70-fast-storage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: Verify system scanner tools
+        run: |
+          set -euo pipefail
+          command -v find
+          command -v sort
+          command -v sha256sum
+      - name: Lint Phase15.3 files
+        run: |
+          set -euo pipefail
+          php -l application/common/library/update/FastStorageManager.php
+          php -l application/admin/controller/general/Updatemaintenance.php
+          php -l tools/storage_worker.php
+          php -l tests/phase15_3_fast_storage_contract_test.php
+          php -l tests/phase15_3_fast_storage_runtime_test.php
+          node --check public/assets/js/backend/general/updatemaintenance.js
+      - name: Run Phase15.3 regressions
+        run: |
+          set -euo pipefail
+          php tests/phase15_3_fast_storage_contract_test.php
+          php tests/phase15_3_fast_storage_runtime_test.php
+          php tests/phase14_update_ops_test.php
+          php tests/phase14_update_ops_ui_contract_test.php
