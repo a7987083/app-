@@ -10,6 +10,7 @@ function p153_assert($ok, $msg)
 
 $root = dirname(__DIR__);
 $manager = file_get_contents($root . '/application/common/library/update/FastStorageManager.php');
+$compat = file_get_contents($root . '/application/common/library/update/FastStorageManagerCompat.php');
 $controller = file_get_contents($root . '/application/admin/controller/general/Updatemaintenance.php');
 $view = file_get_contents($root . '/application/admin/view/general/updatemaintenance/panel.html');
 $js = file_get_contents($root . '/public/assets/js/backend/general/updatemaintenance.js');
@@ -25,9 +26,13 @@ p153_assert(strpos($manager, 'startScan') !== false && strpos($manager, 'startCl
 p153_assert(strpos($manager, "nohup") !== false, 'background worker spawn missing');
 p153_assert(strpos($manager, "progress") !== false && strpos($manager, "processed") !== false && strpos($manager, "total") !== false, 'progress fields missing');
 
+p153_assert(strpos($compat, 'class FastStorageManagerCompat extends FastStorageManager') !== false, 'open_basedir compatibility wrapper missing');
+p153_assert(strpos($compat, 'PHP_BINDIR') !== false, 'compat wrapper must probe the Baota PHP CLI candidate');
+p153_assert(strpos($compat, 'is_file($php)') === false && strpos($compat, 'is_executable($php)') === false, 'compat wrapper must not filesystem-probe PHP_BINDIR outside open_basedir');
+p153_assert(strpos($compat, " -r ") !== false, 'compat wrapper must validate PHP CLI by execution instead of filesystem stat');
+p153_assert(strpos($controller, 'FastStorageManagerCompat') !== false, 'controller must use open_basedir-safe manager');
 p153_assert(strpos($controller, "status_only") !== false, 'fast status-only polling path missing');
 p153_assert(strpos($controller, 'public function scan()') !== false, 'scan start endpoint missing');
-p153_assert(strpos($controller, 'FastStorageManager') !== false, 'controller still uses slow scanner');
 p153_assert(strpos($controller, 'snapshot()') !== false, 'cached snapshot endpoint missing');
 
 foreach (['scan-progress-box','scan-progress-bar','scan-progress-text','cleanup-progress-box','cleanup-progress-bar','cleanup-progress-text'] as $id) {
