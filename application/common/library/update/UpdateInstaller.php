@@ -48,6 +48,11 @@ class UpdateInstaller
             throw new \RuntimeException('升级程序包下载失败');
         }
 
+        if (!$this->hasEnoughDiskSpace($zipFile, $workBase)) {
+            $this->removeTree($workDir);
+            throw new \RuntimeException('磁盘可用空间不足，无法安全执行更新');
+        }
+
         $this->notify('sha256', 23, '正在校验更新包 SHA256');
         if ($sha256 !== '' && hash_file('sha256', $zipFile) !== $sha256) {
             $this->removeTree($workDir);
@@ -151,6 +156,24 @@ class UpdateInstaller
         if ($this->progress) {
             call_user_func($this->progress, $stage, intval($progress), (string)$message, $extra);
         }
+    }
+
+    protected function hasEnoughDiskSpace($zipFile, $path)
+    {
+        $zipBytes = is_file($zipFile) ? (int)@filesize($zipFile) : 0;
+        $minimum = max(32 * 1024 * 1024, $zipBytes * 6);
+        $free = $this->availableDiskBytes($path);
+        return $free === null || $free >= $minimum;
+    }
+
+    protected function availableDiskBytes($path)
+    {
+        $probe = is_dir($path) ? $path : dirname($path);
+        $free = @disk_free_space($probe);
+        if ($free === false) {
+            return null;
+        }
+        return (float)$free;
     }
 
     protected function emptyProgramDir($workDir)
