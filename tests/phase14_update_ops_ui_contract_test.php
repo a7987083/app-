@@ -29,8 +29,9 @@ p143ui_assert(strpos($js, "general/updatemaintenance/index") !== false, 'panel s
 p143ui_assert(strpos($js, "general/updatemaintenance/scan") === false, 'removed scan endpoint is still wired');
 p143ui_assert(strpos($js, "general/updatemaintenance/cleanup") !== false, 'panel cleanup endpoint is not wired');
 p143ui_assert(strpos($js, "type:'POST'") !== false || strpos($js, "type: 'POST'") !== false, 'destructive request must use POST');
-p143ui_assert(strpos($js, "data:{apply:0}") !== false || strpos($js, "data: {apply:0}") !== false, 'dry-run preview flag missing');
-p143ui_assert(strpos($js, "data:{apply:1}") !== false || strpos($js, "data: {apply:1}") !== false, 'confirmed cleanup flag missing');
+p143ui_assert(strpos($js, 'cleanup(false)') !== false, 'dry-run preview action missing');
+p143ui_assert(strpos($js, 'cleanup(true)') !== false, 'confirmed cleanup action missing');
+p143ui_assert(strpos($js, 'apply:apply ? 1 : 0') !== false || strpos($js, 'apply: apply ? 1 : 0') !== false, 'cleanup apply flag mapping missing');
 p143ui_assert(strpos($js, "layer.confirm") !== false, 'destructive cleanup must require confirmation');
 
 p143ui_assert(strpos($configJs, 'id="zonoe-update-ops"') !== false, 'config screen update-operations entry button missing');
