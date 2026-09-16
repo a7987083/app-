@@ -23,6 +23,7 @@ class Category extends Backend
     protected $categorylist = [];
     protected $noNeedRight = ['selectpage'];
     protected $searchFields = 'name';
+    protected $renewalEntryAvailable = false;
 
     public function _initialize()
     {
@@ -38,6 +39,8 @@ class Category extends Backend
         // add/edit 仍保留原 parentList 行为，避免改变历史的父分类选择语义。
         $action = strtolower((string)$this->request->action());
         if ($action === 'add' || $action === 'edit') {
+            $this->renewalEntryAvailable = $this->ensureRenewalEntryColumn();
+            $this->view->assign('renewalEntryAvailable', $this->renewalEntryAvailable);
             $this->view->assign("parentList", $this->buildParentList());
         }
     }
@@ -172,6 +175,9 @@ class Category extends Backend
         }
         $row['bt2a'] = round($row['bt2a'] / (1024 * 1024), 2);
         $row['keywords'] = $this->decodeKeywordsNewlines($row['keywords']);
+        if (!isset($row['renewal_entry'])) {
+            $row['renewal_entry'] = 0;
+        }
         $this->view->assign("row", $row);
         return $this->view->fetch();
     }
@@ -218,7 +224,41 @@ class Category extends Backend
                 $params['bt2a'] = $params['bt2a'] * 1024 * 1024;
             }
         }
+        if (array_key_exists('renewal_entry', $params)) {
+            if ($this->renewalEntryAvailable) {
+                $params['renewal_entry'] = (int)$params['renewal_entry'] === 1 ? 1 : 0;
+            } else {
+                unset($params['renewal_entry']);
+            }
+        }
         return $params;
+    }
+
+    /**
+     * 1704 在线升级若因数据库权限/旧安装状态漏掉 renewal_entry，
+     * 后台新增/编辑应用时尝试自修复；修复失败也只隐藏该选项，不能让整个编辑页报错。
+     */
+    protected function ensureRenewalEntryColumn()
+    {
+        try {
+            $columns = Db::query("SHOW COLUMNS FROM `fa_category` LIKE 'renewal_entry'");
+            if (!empty($columns)) {
+                return true;
+            }
+
+            $bt2b = Db::query("SHOW COLUMNS FROM `fa_category` LIKE 'bt2b'");
+            $sql = "ALTER TABLE `fa_category` ADD COLUMN `renewal_entry` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '续费入口:1是,0否'";
+            if (!empty($bt2b)) {
+                $sql .= " AFTER `bt2b`";
+            }
+            Db::execute($sql);
+
+            $columns = Db::query("SHOW COLUMNS FROM `fa_category` LIKE 'renewal_entry'");
+            return !empty($columns);
+        } catch (\Exception $e) {
+            error_log('[Category] renewal_entry schema repair failed: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
