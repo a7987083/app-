@@ -20,6 +20,10 @@ application/common/library/AuthorizationSchema.php
 application/common/library/DataIntegrityAudit.php
 application/admin/controller/Authorization.php
 application/admin/view/authorization/index.html
+application/admin/view/authorization/transfers.html
+application/admin/view/authorization/events.html
+application/admin/view/category/add.html
+application/admin/view/category/edit.html
 application/admin/controller/Kami.php
 application/admin/view/kami/add.html
 application/admin/view/kami/edit.html

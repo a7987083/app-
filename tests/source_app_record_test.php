@@ -14,15 +14,16 @@ function sourceAppAssert($condition, $message)
 $row = [
     'name' => 'Demo', 'nickname' => '1.2.3', 'keywords' => 'desc',
     'bt1a' => 'https://example.test/a.ipa', 'bt1b' => 'abcdef',
-    'bt2a' => 123, 'bt2b' => '1', 'flag' => '0', 'image' => 'icon',
+    'bt2a' => 123, 'bt2b' => '1', 'renewal_entry' => '1', 'flag' => '0', 'image' => 'icon',
     'updatetime' => 123456,
 ];
 sourceAppAssert(SourceAppRecord::value($row, 'version') === '1.2.3', 'version alias');
 sourceAppAssert(SourceAppRecord::value($row, 'download_url') === 'https://example.test/a.ipa', 'download alias');
 sourceAppAssert(SourceAppRecord::value($row, 'paid') === '1', 'paid alias');
+sourceAppAssert(SourceAppRecord::value($row, 'renewal_entry') === '1', 'renewal entry alias');
 $columns = SourceAppRecord::publicSourceColumns();
-foreach (array('nickname', 'keywords', 'bt1a', 'bt1b', 'bt2a', 'bt2b') as $column) {
-    sourceAppAssert(in_array($column, $columns, true), 'missing legacy physical column ' . $column);
+foreach (array('nickname', 'keywords', 'bt1a', 'bt1b', 'bt2a', 'bt2b', 'renewal_entry') as $column) {
+    sourceAppAssert(in_array($column, $columns, true), 'missing source physical column ' . $column);
 }
 
-echo "OK source_app_record_test\n";
+echo "OK source_app_record_test renewal_entry=passed\n";

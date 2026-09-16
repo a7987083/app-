@@ -43,6 +43,10 @@ class AppStorePayload
      * - true  => unlock all paid apps
      * - false => unlock none
      * New callers may pass ['unlock_all'=>bool, 'app_ids'=>[...]].
+     *
+     * renewal_entry=1 is a special source row used only to expose the
+     * client's existing "unlock / enter card" action. It never reveals a
+     * download URL and can never be unlocked by source/app card permissions.
      */
     public static function apps(array $rows, $mode, $sourceAccess = false)
     {
@@ -63,8 +67,14 @@ class AppStorePayload
             $lock = SourceAppRecord::value($row, 'paid');
             $download = SourceAppRecord::value($row, 'download_url');
             $appId = (int)SourceAppRecord::value($row, 'id', 0);
+            $renewalEntry = (int)SourceAppRecord::value($row, 'renewal_entry', 0) === 1;
 
-            if ($mode === 'licensed') {
+            if ($renewalEntry) {
+                // The row is a card-renewal trigger only. Keep the existing
+                // client unlock UI, but never expose or unlock an install URL.
+                $lock = '1';
+                $download = '';
+            } elseif ($mode === 'licensed') {
                 $allowed = $unlockAll || ($appId > 0 && in_array($appId, $appIds, true));
                 if ($lock === '1' && !$allowed) {
                     $download = '';

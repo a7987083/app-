@@ -65,6 +65,23 @@ class Authorization extends Backend
 
     public function transfers()
     {
+        if ($this->request->isPost()) {
+            if ((int)$this->request->post('clear', 0) !== 1) {
+                return json(['code' => 0, 'msg' => '无效的清空请求']);
+            }
+            try {
+                $deleted = Db::execute('DELETE FROM `fa_card_transfer_log`');
+                return json([
+                    'code' => 1,
+                    'msg' => '换绑记录已清空',
+                    'deleted' => (int)$deleted,
+                ]);
+            } catch (\Exception $e) {
+                error_log('[Authorization::transfers] clear failed: ' . $e->getMessage());
+                return json(['code' => 0, 'msg' => '清空换绑记录失败']);
+            }
+        }
+
         $q = trim((string)$this->request->get('q', ''));
         $query = Db::table('fa_card_transfer_log')->order('id desc');
         if ($q !== '') {
@@ -84,6 +101,23 @@ class Authorization extends Backend
 
     public function events()
     {
+        if ($this->request->isPost()) {
+            if ((int)$this->request->post('clear', 0) !== 1) {
+                return json(['code' => 0, 'msg' => '无效的清空请求']);
+            }
+            try {
+                $deleted = Db::execute('DELETE FROM `fa_authorization_event`');
+                return json([
+                    'code' => 1,
+                    'msg' => '授权事件已清空',
+                    'deleted' => (int)$deleted,
+                ]);
+            } catch (\Exception $e) {
+                error_log('[Authorization::events] clear failed: ' . $e->getMessage());
+                return json(['code' => 0, 'msg' => '清空授权事件失败']);
+            }
+        }
+
         $q = trim((string)$this->request->get('q', ''));
         $query = Db::table('fa_authorization_event')->order('id desc');
         if ($q !== '') {
