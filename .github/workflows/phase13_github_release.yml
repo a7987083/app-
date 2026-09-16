@@ -11,14 +11,10 @@ on:
       - 'release/online-update-files.txt'
       - 'release/sql/**'
       - 'tools/build_online_update.php'
-      - 'tools/storage_worker.php'
       - 'tests/phase13_github_online_update_e2e.php'
       - 'tests/phase13_update_runtime_test.php'
       - 'tests/phase15_data_integrity_contract_test.php'
-      - 'tests/phase15_2_site_storage_contract_test.php'
-      - 'tests/phase15_2_site_storage_runtime_test.php'
-      - 'tests/phase15_3_fast_storage_contract_test.php'
-      - 'tests/phase15_3_fast_storage_runtime_test.php'
+      - 'tests/phase15_4_ops_slim_contract_test.php'
       - '.github/workflows/phase13_github_release.yml'
   workflow_dispatch:
 
@@ -39,29 +35,18 @@ jobs:
           php-version: '7.0'
           coverage: none
           extensions: curl, zip
-      - name: Verify fast storage system tools
-        run: |
-          set -euo pipefail
-          command -v find
-          command -v sort
-          command -v sha256sum
       - name: Lint release and updater files
         run: |
           set -euo pipefail
           php -l tools/build_online_update.php
-          php -l tools/storage_worker.php
           php -l tests/phase13_github_online_update_e2e.php
           php -l tests/phase13_update_runtime_test.php
           php -l tests/phase15_data_integrity_contract_test.php
-          php -l tests/phase15_2_site_storage_contract_test.php
-          php -l tests/phase15_2_site_storage_runtime_test.php
-          php -l tests/phase15_3_fast_storage_contract_test.php
-          php -l tests/phase15_3_fast_storage_runtime_test.php
+          php -l tests/phase15_4_ops_slim_contract_test.php
           php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
-          php -l application/common/library/update/SiteStorageManager.php
-          php -l application/common/library/update/FastStorageManager.php
+          php -l application/common/library/update/UpdateOps.php
           php -l application/common/library/AuthorizationSchema.php
           php -l application/common/library/DataIntegrityAudit.php
           php -l application/admin/controller/Integrity.php
@@ -106,10 +91,7 @@ jobs:
           php tests/phase14_update_ops_test.php
           php tests/phase14_update_ops_ui_contract_test.php
           php tests/phase15_data_integrity_contract_test.php
-          php tests/phase15_2_site_storage_contract_test.php
-          php tests/phase15_2_site_storage_runtime_test.php
-          php tests/phase15_3_fast_storage_contract_test.php
-          php tests/phase15_3_fast_storage_runtime_test.php
+          php tests/phase15_4_ops_slim_contract_test.php
           php tests/legacy_controller_contract_test.php
           bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
@@ -132,11 +114,13 @@ jobs:
           grep -F 'UpdateRuntimeStore.php' release/online-update-files.txt
           grep -F 'UpdateInstaller.php' release/online-update-files.txt
           grep -F 'UpdateManager.php' release/online-update-files.txt
-          grep -F 'SiteStorageManager.php' release/online-update-files.txt
-          grep -F 'FastStorageManager.php' release/online-update-files.txt
-          grep -F 'storage_worker.php' release/online-update-files.txt
+          grep -F 'UpdateOps.php' release/online-update-files.txt
           grep -F 'DataIntegrityAudit.php' release/online-update-files.txt
           grep -F 'Integrity.php' release/online-update-files.txt
+          ! grep -F 'FastStorageManager.php' release/online-update-files.txt
+          ! grep -F 'FastStorageManagerCompat.php' release/online-update-files.txt
+          ! grep -F 'SiteStorageManager.php' release/online-update-files.txt
+          ! grep -F 'storage_worker.php' release/online-update-files.txt
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Build release assets from manifest
         run: |
@@ -146,9 +130,7 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateRuntimeStore.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateInstaller.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateManager.php'
-          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/SiteStorageManager.php'
-          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/FastStorageManager.php'
-          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/tools/storage_worker.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateOps.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Config.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Updatemaintenance.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/general/updatemaintenance/panel.html'
