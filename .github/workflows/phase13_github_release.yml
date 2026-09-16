@@ -14,6 +14,8 @@ on:
       - 'tests/phase13_github_online_update_e2e.php'
       - 'tests/phase13_update_runtime_test.php'
       - 'tests/phase15_data_integrity_contract_test.php'
+      - 'tests/phase15_2_site_storage_contract_test.php'
+      - 'tests/phase15_2_site_storage_runtime_test.php'
       - '.github/workflows/phase13_github_release.yml'
   workflow_dispatch:
 
@@ -41,13 +43,18 @@ jobs:
           php -l tests/phase13_github_online_update_e2e.php
           php -l tests/phase13_update_runtime_test.php
           php -l tests/phase15_data_integrity_contract_test.php
+          php -l tests/phase15_2_site_storage_contract_test.php
+          php -l tests/phase15_2_site_storage_runtime_test.php
           php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
+          php -l application/common/library/update/SiteStorageManager.php
           php -l application/common/library/AuthorizationSchema.php
           php -l application/common/library/DataIntegrityAudit.php
           php -l application/admin/controller/Integrity.php
           php -l application/admin/controller/general/Config.php
+          php -l application/admin/controller/general/Updatemaintenance.php
+          node --check public/assets/js/backend/general/updatemaintenance.js
       - name: Verify source integrity manifest
         run: |
           set -euo pipefail
@@ -83,7 +90,11 @@ jobs:
           php tests/phase11_contract_test.php
           php tests/phase12_update_contract_test.php
           php tests/phase13_update_runtime_test.php
+          php tests/phase14_update_ops_test.php
+          php tests/phase14_update_ops_ui_contract_test.php
           php tests/phase15_data_integrity_contract_test.php
+          php tests/phase15_2_site_storage_contract_test.php
+          php tests/phase15_2_site_storage_runtime_test.php
           php tests/legacy_controller_contract_test.php
           bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
@@ -106,6 +117,7 @@ jobs:
           grep -F 'UpdateRuntimeStore.php' release/online-update-files.txt
           grep -F 'UpdateInstaller.php' release/online-update-files.txt
           grep -F 'UpdateManager.php' release/online-update-files.txt
+          grep -F 'SiteStorageManager.php' release/online-update-files.txt
           grep -F 'DataIntegrityAudit.php' release/online-update-files.txt
           grep -F 'Integrity.php' release/online-update-files.txt
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -117,8 +129,11 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateRuntimeStore.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateInstaller.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateManager.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/SiteStorageManager.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Config.php'
-          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/general/config.js'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Updatemaintenance.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/general/updatemaintenance/panel.html'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/general/updatemaintenance.js'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/AuthorizationSchema.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/DataIntegrityAudit.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Integrity.php'
