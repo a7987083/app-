@@ -14,22 +14,24 @@ $view = file_get_contents($root . '/application/admin/view/general/updatemainten
 $js = file_get_contents($root . '/public/assets/js/backend/general/updatemaintenance.js');
 $configJs = file_get_contents($root . '/public/assets/js/backend/general/config.js');
 
-p143ui_assert(strpos($controller, "protected \$noNeedRight = ['index', 'panel'];") !== false, 'destructive cleanup must not bypass backend rights');
+p143ui_assert(strpos($controller, "protected \$noNeedRight = ['index', 'panel'];") !== false, 'destructive cleanup/scan must not bypass backend rights');
 p143ui_assert(strpos($controller, "public function panel()") !== false, 'visual maintenance panel action missing');
 p143ui_assert(strpos($controller, "public function cleanup()") !== false, 'cleanup endpoint missing');
-p143ui_assert(strpos($controller, "if (!\$this->request->isPost())") !== false, 'cleanup must be POST-only');
-p143ui_assert(strpos($controller, "intval(\$this->request->param('apply', 0)) === 1") !== false, 'cleanup must default to dry-run');
+p143ui_assert(strpos($controller, "public function scan()") !== false, 'scan endpoint missing');
+p143ui_assert(strpos($controller, "if (!\$this->request->isPost())") !== false, 'destructive endpoints must be POST-only');
+p143ui_assert(strpos($controller, "intval(\$this->request->param('apply', 0)) === 1") !== false, 'cleanup must default to preview mode');
 
-foreach (['ops-version', 'site-total-bytes', 'site-storage-summary', 'site-review-list', 'site-largest', 'ops-preview', 'ops-clean', 'ops-jobs'] as $id) {
+foreach (['ops-version', 'site-total-bytes', 'site-storage-summary', 'site-review-list', 'site-largest', 'ops-preview', 'ops-clean', 'ops-jobs', 'scan-progress-bar', 'cleanup-progress-bar'] as $id) {
     p143ui_assert(strpos($view, 'id="' . $id . '"') !== false, 'panel element missing: ' . $id);
 }
 
 p143ui_assert(strpos($js, "general/updatemaintenance/index") !== false, 'panel snapshot endpoint is not wired');
+p143ui_assert(strpos($js, "general/updatemaintenance/scan") !== false, 'async scan endpoint is not wired');
 p143ui_assert(strpos($js, "general/updatemaintenance/cleanup") !== false, 'panel cleanup endpoint is not wired');
-p143ui_assert(strpos($js, "type:'POST'") !== false || strpos($js, "type: 'POST'") !== false, 'cleanup request must use POST');
-p143ui_assert(strpos($js, "data:{apply:apply ? 1 : 0}") !== false || strpos($js, "data: {apply: apply ? 1 : 0}") !== false, 'cleanup apply flag is not explicit');
-p143ui_assert(strpos($js, "cleanup(false)") !== false, 'dry-run preview action missing');
-p143ui_assert(strpos($js, "cleanup(true)") !== false, 'confirmed cleanup action missing');
+p143ui_assert(strpos($js, "type:'POST'") !== false || strpos($js, "type: 'POST'") !== false, 'destructive request must use POST');
+p143ui_assert(strpos($js, "data:{apply:0}") !== false || strpos($js, "data: {apply:0}") !== false, 'dry-run preview flag missing');
+p143ui_assert(strpos($js, "data:{apply:1}") !== false || strpos($js, "data: {apply:1}") !== false, 'confirmed cleanup flag missing');
+p143ui_assert(strpos($js, "setInterval(pollStatus, 1000)") !== false, 'progress polling missing');
 p143ui_assert(strpos($js, "layer.confirm") !== false, 'destructive cleanup must require confirmation');
 
 p143ui_assert(strpos($configJs, 'id="zonoe-update-ops"') !== false, 'config screen update-operations entry button missing');
@@ -37,4 +39,4 @@ p143ui_assert(strpos($configJs, "general/updatemaintenance/panel") !== false, 'c
 p143ui_assert(strpos($configJs, "openUpdateOperations") !== false, 'update-operations entry handler missing');
 p143ui_assert(strpos($configJs, "更新运维中心") !== false, 'update-operations entry label missing');
 
-fwrite(STDOUT, "OK phase14_update_ops_ui_contract_test panel=passed diagnostics=passed cleanup_guard=passed entry_point=passed\n");
+fwrite(STDOUT, "OK phase14_update_ops_ui_contract_test panel=passed diagnostics=passed async_cleanup_guard=passed entry_point=passed\n");
