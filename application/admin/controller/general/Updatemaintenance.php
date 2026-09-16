@@ -5,7 +5,7 @@ namespace app\admin\controller\general;
 use app\common\controller\Backend;
 use app\common\library\UpdateIntegrity;
 use app\common\library\update\UpdateOps;
-use app\common\library\update\FastStorageManager;
+use app\common\library\update\FastStorageManagerCompat;
 
 /**
  * Update operations diagnostics and whole-site storage management.
@@ -21,7 +21,7 @@ class Updatemaintenance extends Backend
         $storage = null;
         $storageError = '';
         try {
-            $storage = new FastStorageManager(ROOT_PATH);
+            $storage = new FastStorageManagerCompat(ROOT_PATH);
         } catch (\Throwable $e) {
             $storageError = $e->getMessage();
         }
@@ -81,14 +81,13 @@ class Updatemaintenance extends Backend
         return $this->view->fetch();
     }
 
-    /** Start a non-blocking system-level whole-site scan. */
     public function scan()
     {
         if (!$this->request->isPost()) {
             return json(['code' => 405, 'msg' => '仅允许 POST 请求', 'data' => '']);
         }
         try {
-            $storage = new FastStorageManager(ROOT_PATH);
+            $storage = new FastStorageManagerCompat(ROOT_PATH);
             $result = $storage->startScan();
             return json([
                 'code' => $result['started'] ? 200 : ($result['status']['running'] ? 200 : 503),
@@ -100,10 +99,6 @@ class Updatemaintenance extends Backend
         }
     }
 
-    /**
-     * apply=0: instant preview from last completed index.
-     * apply=1: start non-blocking cleanup worker.
-     */
     public function cleanup()
     {
         if (!$this->request->isPost()) {
@@ -111,7 +106,7 @@ class Updatemaintenance extends Backend
         }
         $apply = intval($this->request->param('apply', 0)) === 1;
         try {
-            $storage = new FastStorageManager(ROOT_PATH);
+            $storage = new FastStorageManagerCompat(ROOT_PATH);
             if (!$apply) {
                 return json(['code' => 200, 'msg' => '自动安全清理预览完成', 'data' => $storage->previewSafe()]);
             }
@@ -139,7 +134,7 @@ class Updatemaintenance extends Backend
             return json(['code' => 400, 'msg' => '单次最多删除 200 个文件', 'data' => '']);
         }
         try {
-            $storage = new FastStorageManager(ROOT_PATH);
+            $storage = new FastStorageManagerCompat(ROOT_PATH);
             $result = $storage->deleteSelected($paths, false);
             return json(['code' => 200, 'msg' => '人工确认清理完成', 'data' => $result]);
         } catch (\Throwable $e) {
