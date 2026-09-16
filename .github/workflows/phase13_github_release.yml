@@ -54,6 +54,7 @@ jobs:
           php -l application/common/library/update/UpdateManager.php
           php -l application/common/library/update/UpdateOps.php
           php -l application/common/library/CardAccessPolicy.php
+          php -l application/common/library/CardDeviceTransfer.php
           php -l application/common/library/AppStorePayload.php
           php -l application/common/library/SourceAppRecord.php
           php -l application/common/library/AuthorizationSchema.php
@@ -131,6 +132,7 @@ jobs:
           grep -F 'UpdateManager.php' release/online-update-files.txt
           grep -F 'UpdateOps.php' release/online-update-files.txt
           grep -F 'CardAccessPolicy.php' release/online-update-files.txt
+          grep -F 'CardDeviceTransfer.php' release/online-update-files.txt
           grep -F 'AppStorePayload.php' release/online-update-files.txt
           grep -F 'SourceAppRecord.php' release/online-update-files.txt
           grep -F 'application/admin/controller/Kami.php' release/online-update-files.txt
@@ -155,6 +157,7 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateManager.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateOps.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/CardAccessPolicy.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/CardDeviceTransfer.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/AppStorePayload.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/SourceAppRecord.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/AuthorizationSchema.php'
