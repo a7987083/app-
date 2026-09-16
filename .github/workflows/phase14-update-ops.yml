@@ -8,7 +8,10 @@ on:
     paths:
       - 'application/common/library/update/UpdateOps.php'
       - 'application/admin/controller/general/Updatemaintenance.php'
+      - 'application/admin/view/general/updatemaintenance/panel.html'
+      - 'public/assets/js/backend/general/updatemaintenance.js'
       - 'tests/phase14_update_ops_test.php'
+      - 'tests/phase14_update_ops_ui_contract_test.php'
       - '.github/workflows/phase14-update-ops.yml'
 
 jobs:
@@ -27,11 +30,14 @@ jobs:
           php -l application/common/library/update/UpdateOps.php
           php -l application/admin/controller/general/Updatemaintenance.php
           php -l tests/phase14_update_ops_test.php
+          php -l tests/phase14_update_ops_ui_contract_test.php
+          node --check public/assets/js/backend/general/updatemaintenance.js
 
       - name: Run update operations regression
         run: |
           set -euo pipefail
           php tests/phase14_update_ops_test.php
+          php tests/phase14_update_ops_ui_contract_test.php
 
       - name: Re-run updater hardening regression
         run: |
