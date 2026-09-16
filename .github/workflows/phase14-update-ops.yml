@@ -10,6 +10,7 @@ on:
       - 'application/admin/controller/general/Updatemaintenance.php'
       - 'application/admin/view/general/updatemaintenance/panel.html'
       - 'public/assets/js/backend/general/updatemaintenance.js'
+      - 'public/assets/js/backend/general/config.js'
       - 'tests/phase14_update_ops_test.php'
       - 'tests/phase14_update_ops_ui_contract_test.php'
       - '.github/workflows/phase14-update-ops.yml'
@@ -32,6 +33,7 @@ jobs:
           php -l tests/phase14_update_ops_test.php
           php -l tests/phase14_update_ops_ui_contract_test.php
           node --check public/assets/js/backend/general/updatemaintenance.js
+          node --check public/assets/js/backend/general/config.js
 
       - name: Run update operations regression
         run: |
