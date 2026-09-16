@@ -1,0 +1,82 @@
+name: Phase 17.3 Renewal Entry
+
+on:
+  pull_request:
+    paths:
+      - 'application/common/library/SourceAppRecord.php'
+      - 'application/common/library/AppStorePayload.php'
+      - 'application/admin/view/category/add.html'
+      - 'application/admin/view/category/edit.html'
+      - 'application/admin/controller/Authorization.php'
+      - 'application/admin/view/authorization/transfers.html'
+      - 'application/admin/view/authorization/events.html'
+      - 'release/sql/2026091704_renewal_entry.sql'
+      - 'tests/phase17_3_renewal_entry_contract_test.php'
+      - 'tests/phase17_3_renewal_entry_mysql57_test.php'
+      - 'tests/appstore_payload_test.php'
+      - 'tests/source_app_record_test.php'
+      - '.github/workflows/phase17-3-renewal-entry.yml'
+  push:
+    branches:
+      - feature/phase17-3-renewal-entry-v1
+  workflow_dispatch:
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: Lint changed PHP
+        run: |
+          set -euo pipefail
+          php -l application/common/library/SourceAppRecord.php
+          php -l application/common/library/AppStorePayload.php
+          php -l application/admin/controller/Authorization.php
+          php -l tests/appstore_payload_test.php
+          php -l tests/source_app_record_test.php
+          php -l tests/phase17_3_renewal_entry_contract_test.php
+          php -l tests/phase17_3_renewal_entry_mysql57_test.php
+      - name: Run renewal and cleanup contracts
+        run: |
+          set -euo pipefail
+          php tests/source_app_record_test.php
+          php tests/appstore_payload_test.php
+          php tests/phase17_3_renewal_entry_contract_test.php
+
+  mysql57-renewal-migration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Run renewal migration twice on MySQL 5.7
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php -l tests/phase17_3_renewal_entry_mysql57_test.php
+          php tests/phase17_3_renewal_entry_mysql57_test.php
