@@ -40,9 +40,9 @@ phase17Assert(hash_equals($expected, $payload['sign']), 'HMAC signature mismatch
 $appSource = file_get_contents(dirname(__DIR__) . '/application/index/controller/App.php');
 phase17Assert($appSource !== false, 'App.php missing');
 phase17Assert(strpos($appSource, "SourceConfigRepository::get('unlock_sign_key'") !== false, 'unlock_sign_key is not loaded from server config');
-phase17Assert(strpos($appSource, "'expire' => $expire") !== false, 'expire response field missing');
-phase17Assert(strpos($appSource, "'ts' => $ts") !== false, 'ts response field missing');
-phase17Assert(strpos($appSource, "'nonce' => $nonce") !== false, 'nonce response field missing');
+phase17Assert(strpos($appSource, "'expire' => \$expire") !== false, 'expire response field missing');
+phase17Assert(strpos($appSource, "'ts' => \$ts") !== false, 'ts response field missing');
+phase17Assert(strpos($appSource, "'nonce' => \$nonce") !== false, 'nonce response field missing');
 phase17Assert(strpos($appSource, "hash_hmac('sha256'") !== false, 'HMAC-SHA256 call missing');
 
 fwrite(STDOUT, "OK phase17_unlock_signing_contract_test fields=passed hmac=passed config_key=passed\n");
