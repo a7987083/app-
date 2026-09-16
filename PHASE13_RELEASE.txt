@@ -1,15 +1,18 @@
-ZONOE 软件源 Release 2026091608
-版本：2026091608
-基线：2026091607
+ZONOE 软件源 Release 2026091609
+版本：2026091609
+基线：2026091608
 
 更新内容：
-1. 修复部分宝塔/PHP 7.0 环境打开更新运维中心时“读取存储状态失败”的问题。
-2. 运维首页对 FastStorageManager 初始化、索引读取、任务状态读取增加 Throwable 保护；高速扫描运行环境异常时仍返回合法 JSON，不让页面状态接口直接 500。
-3. 扫描、自动安全清理和人工删除接口增加运行时异常捕获，直接返回具体初始化错误，便于定位 exec/proc_open、CLI、目录权限等生产环境差异。
-4. 保留 1607 的 GNU find 高速扫描、目录指纹短路、持久索引、扫描进度条和安全清理进度条。
+1. 修复宝塔 PHP open_basedir 环境下高速扫描引擎初始化失败。
+2. 根因：旧实现对 /www/server/php/70/bin/php 一类 PHP_BINDIR 路径调用 is_file/is_executable，而站点 open_basedir 仅允许网站目录和 /tmp，导致 restriction in effect。
+3. 新增 FastStorageManagerCompat，不再用 PHP 文件系统函数探测站点白名单外的 PHP CLI，改为固定受控 shell 探针验证 CLI。
+4. 运维控制器的状态读取、扫描、自动安全清理和人工删除统一切换到兼容层。
+5. 新增 open_basedir 回归契约，禁止兼容层再次对 PHP_BINDIR 使用 is_file/is_executable。
+6. 保留 GNU find 高速扫描、目录指纹、持久索引、扫描进度条和安全清理进度条。
 
 兼容性：
 - 兼容宝塔 PHP 7.0。
+- 不要求关闭 open_basedir，也不要求扩大站点白名单。
 - 不修改数据库结构和授权数据。
 - 不改变 appstore/appstore_v2、Nuosike 加密、UDID、卡密时长、黑名单和 transfer_count 语义。
 - 保留 GitHub 在线更新、SHA256、备份、文件校验与回滚机制。
