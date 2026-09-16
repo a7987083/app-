@@ -1,26 +1,26 @@
 {
   "repository": "a7987083/app-",
   "stable_candidate": {
-    "branch": "feature/phase13-github-release",
-    "phase": "13.6",
-    "version": "2026091203",
-    "commit": "d13ccb9ced56ca655a27cf13b5be0d6a33e724e2",
-    "release": "source-v2026091203",
-    "ci_run": 34654867771,
-    "ci_result": "success"
+    "branch": "feature/unlock-signing-fix-v2",
+    "phase": "17.1",
+    "version": "2026091702",
+    "commit": "77a85830c3e93ac431885d7bc043edbccde33d15",
+    "release": null,
+    "ci_result": "previously_validated"
   },
   "current_development": {
-    "branch": "refactor/phase14-production-hardening",
-    "phase": "14.1",
-    "code_commit": "3600ceb25190ca93deb85689a94d44aea57c709d",
-    "status": "phase14_1_code_and_ci_passed",
-    "ci_run": 34663424209,
-    "ci_result": "success"
+    "branch": "feature/phase17-2-auth-integrity-v1",
+    "phase": "17.2",
+    "code_commit": "740afc69652c7c3510aec734e68c246948ee2a82",
+    "pull_request": 8,
+    "status": "code_complete_ci_running",
+    "version": "unchanged_pending_validation"
   },
   "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
   "runtime_changes": true,
   "architecture": {
     "public_source": "/appstore -> application/index/controller/App.php::list",
+    "authorization_probe": "/index/index/apiface -> application/index/controller/Index.php::apiface",
     "payload_mapper": "application/common/library/AppStorePayload.php",
     "source_semantics": "application/common/library/SourceAppRecord.php",
     "source_config": "application/common/library/SourceConfigRepository.php",
@@ -31,21 +31,27 @@
     "card_entitlement": "application/common/library/CardEntitlementPolicy.php",
     "card_transfer": "application/common/library/CardDeviceTransfer.php",
     "authorization": "AuthorizationSchema + AuthorizationPolicy + AuthorizationEventLog + AuthorizationLicense",
+    "integrity_audit": "application/common/library/DataIntegrityAudit.php",
     "update_pipeline": "Config controller -> UpdateManager -> UpdateSource -> UpdateInstaller -> UpdateBackup/UpdateSqlRunner -> UpdateRuntimeStore"
   },
-  "phase14_1_completed": [
-    "Multi-package update failures now rollback the entire applied package chain in reverse order",
-    "The currently failing package backup is included in manager-level rollback when available",
-    "Rollback file/directory/delete failures are no longer silently reported as success",
-    "Update download/extract cache moved from public/update/cache to runtime/update/cache",
-    "UpdateRuntimeStore same-second history ordering is deterministic via a monotonic microsecond sort key",
-    "Added and extended phase14_update_atomicity_test.php",
-    "Phase14 PHP 7.0 full regression passed in CI run 34663424209"
+  "phase17_2_completed": [
+    "All three card scopes use one-time activation codes; verification-card idempotent code reuse was removed",
+    "Ongoing client authorization remains on apiface and does not require resubmitting the card code",
+    "apiface preserves code/msg/expire/ts/nonce/sign and appends authorizations after sign",
+    "authorizations contains only currently active scope types and exposes an independent expire for each present scope",
+    "Authorization overview buttons now scroll to same-page transfer/event/diagnostic previews",
+    "Data integrity audit expanded to card state, scope, time chain, App mapping, orphan log and blacklist consistency checks",
+    "Integrity reaudit route fixed from authorization/integrity to integrity/index",
+    "Online update manifest includes Authorization controller/dashboard changes",
+    "Phase17 contract updated and a dedicated PHP 7.0 pull-request workflow added"
   ],
   "compatibility_boundaries": [
     "Do not change appstore/appstore_v2 public keys or encoding behavior",
-    "Do not change external source encryption provider/protocol while refactoring",
-    "Do not change authorization durations or one-time card consumption",
+    "All card codes are one-time activation credentials; repeated used-card submission returns 解锁码已使用",
+    "apiface owns ongoing UDID authorization checks",
+    "Keep apiface legacy fields code/msg/expire/ts/nonce/sign and legacy HMAC input unchanged",
+    "New apiface authorization type details must remain after sign for backward compatibility",
+    "Scope 1/2/3 entitlement stacking remains isolated",
     "transfer_count remains remaining transfer quota",
     "Do not restore App-mb.php or Index2.php",
     "No physical fa_category bt1a/bt1b/bt2a/bt2b migration without a separate migration plan",
@@ -53,25 +59,21 @@
     "Keep BaoTa deployment contract and BT_DB_* placeholders"
   ],
   "known_open_items": [
+    "Phase17.2 has not yet been live-smoked against the production database/server",
+    "Top-level apiface expire is retained as the furthest active expiration for legacy clients; per-scope expiration is exposed in authorizations",
     "CardDeviceTransfer implementation moves only currently active card rows; older handoff text says all activated history moves. Treat as unresolved semantic mismatch and do not change without an explicit decision.",
     "App.php and Index.php duplicate blacklist persistence/query behavior",
     "App::activateCode still owns a large transaction and should eventually move behind a service boundary",
     "Authorization dashboard counts active blacklist rows in PHP after loading the full table",
-    "GitHubUpdateSource requests SHA256 for each qualifying release during releasePackages",
-    "UpdateRuntimeStore history is file-based and unbounded; same-second ordering is fixed but retention/indexing is still open",
-    "fa_kami.kami uniqueness is application-enforced; production duplicate audit is required before adding a unique index"
+    "fa_kami.kami uniqueness remains application-enforced; production duplicate audit must be reviewed before adding a unique index"
   ],
   "validation": {
-    "phase13_release_ci": "passed_run_34654867771",
-    "phase14_1_ci": "passed_run_34663424209_php_7_0",
-    "appstore_equivalence": "passed",
-    "source_response_contract": "passed",
-    "authorization_contracts": "passed",
-    "phase12_update_contract": "passed",
-    "phase13_update_runtime": "passed_after_history_order_fix",
-    "phase14_update_atomicity": "passed_chain_rollback_backup_io_private_cache_history_order",
-    "phase14_real_production_upgrade_rollback": "not_run"
+    "phase17_2_static_diff": "passed",
+    "phase17_2_contract_source_review": "passed",
+    "phase17_2_pull_request_ci": "running_pr_8",
+    "phase17_2_live_server": "not_run",
+    "phase17_2_database_audit": "not_run"
   },
-  "next_task": "Phase 14.2: run real 2026091202 -> 2026091203 GitHub online upgrade, rollback to 2026091202, re-upgrade to 2026091203, then failure-injection tests before promoting Phase14 hardening.",
+  "next_task": "Wait for PR #8 CI result in the current validation cycle, then perform server smoke tests for one-time verification-card reuse, apiface per-scope authorizations, Authorization overview previews, and Integrity reaudit.",
   "roadmap": "ROADMAP.md"
 }
