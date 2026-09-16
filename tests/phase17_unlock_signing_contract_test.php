@@ -44,5 +44,24 @@ phase17Assert(strpos($appSource, "'expire' => \$expire") !== false, 'expire resp
 phase17Assert(strpos($appSource, "'ts' => \$ts") !== false, 'ts response field missing');
 phase17Assert(strpos($appSource, "'nonce' => \$nonce") !== false, 'nonce response field missing');
 phase17Assert(strpos($appSource, "hash_hmac('sha256'") !== false, 'HMAC-SHA256 call missing');
+phase17Assert(strpos($appSource, 'CardAccessPolicy::SCOPE_VERIFY') !== false, 'verification scope handling missing');
+phase17Assert(strpos($appSource, "trim((string)\$kdata['udid']) === \$udid") !== false, 'verification-card same-UDID idempotency missing');
+phase17Assert(strpos($appSource, "(int)\$kdata['endtime'] > \$now") !== false, 'verification-card active-expiry guard missing');
+phase17Assert(strpos($appSource, "signedActivationPayload('ok，验证卡激活成功'") !== false, 'verification-card idempotent signed success missing');
 
-fwrite(STDOUT, "OK phase17_unlock_signing_contract_test fields=passed hmac=passed config_key=passed\n");
+$indexSource = file_get_contents(dirname(__DIR__) . '/application/index/controller/Index.php');
+phase17Assert($indexSource !== false, 'Index.php missing');
+phase17Assert(strpos($indexSource, 'public function apiface()') !== false, 'apiface missing');
+phase17Assert(strpos($indexSource, "->where('jh', 1)") !== false, 'apiface must require activated cards');
+phase17Assert(strpos($indexSource, "->where('endtime', '>', \$now)") !== false, 'apiface must require active expiry');
+phase17Assert(strpos($indexSource, 'signedApiPayload') !== false, 'apiface signed payload missing');
+phase17Assert(strpos($indexSource, "'code' => 1") !== false, 'apiface success code missing');
+phase17Assert(strpos($indexSource, "'msg' => 'ok'") !== false, 'apiface success message missing');
+phase17Assert(strpos($indexSource, "hash_hmac('sha256'") !== false, 'apiface HMAC-SHA256 missing');
+
+$manifest = file_get_contents(dirname(__DIR__) . '/release/online-update-files.txt');
+phase17Assert($manifest !== false, 'online update manifest missing');
+phase17Assert(strpos($manifest, 'application/index/controller/App.php') !== false, 'App.php missing from online update manifest');
+phase17Assert(strpos($manifest, 'application/index/controller/Index.php') !== false, 'Index.php missing from online update manifest');
+
+fwrite(STDOUT, "OK phase17_unlock_signing_contract_test fields=passed hmac=passed apiface=passed verify_idempotency=passed manifest=passed\n");
