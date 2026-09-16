@@ -1,25 +1,31 @@
-ZONOE 软件源 Release 2026091702
-版本：2026091702
-基线：2026091701
+ZONOE 软件源 Release 2026091703
+版本：2026091703
+基线：2026091702
 
-修复内容：
-1. 修复 2026091701 的签名字段只接入 App::activateCode、实际设备验证接口 Index::apiface 仍只返回 {"msg":"ok"} 的问题。
-2. apiface 成功响应新增 code=1、expire、ts、nonce、sign，msg 继续为 ok。
-3. apiface 继续使用后台 unlock_sign_key 和 HMAC-SHA256，签名原文为 udid|expire|ts|nonce。
-4. apiface 只使用 jh=1 且 endtime>当前时间的有效授权，并返回当前有效授权中的最新到期时间。
-5. 仅验证卡已绑定同一 UDID 且仍有效时，重复提交改为幂等验证成功，不再提示“解锁码已使用”。
-6. 仅验证卡幂等验证不会重复加时长、不会重复执行激活写入、不会重复写授权事件日志。
-7. 不同 UDID、过期卡、全软件源卡和指定App卡继续保持原有已使用判断。
-8. 在线更新清单补入 application/index/controller/Index.php，确保 apiface 修复随 ZIP 实际升级。
-9. Phase17 契约测试增加 apiface 签名、有效授权筛选、仅验证卡幂等和更新清单检查。
+更新内容：
+1. 三种卡密统一恢复为一次性首次激活凭证；任意已激活卡密再次提交均返回“解锁码已使用”。
+2. 后续持续验证统一走 Index::apiface，不再通过重复提交仅验证卡获取新签名。
+3. apiface 保留 code/msg/expire/ts/nonce/sign 原字段和旧 HMAC 原文 udid|expire|ts|nonce。
+4. sign 后新增 authorizations，仅列当前已激活且未过期的授权类型；不存在的类型不返回。
+5. authorizations 按 card_scope=1/2/3 分别返回全软件源/仅验证/指定App的独立 expire。
+6. 授权总览“换绑记录 / 授权事件 / 系统诊断”改为本页下方预览，不再打开独立页面。
+7. 数据完整性审计扩展卡状态、scope、kmyp、时间链、指定App映射、日志孤儿记录及黑名单一致性检查。
+8. 修复数据完整性“重新审计”路由错误导致 404，现指向 integrity/index。
+9. 在线更新清单补齐 Authorization.php、authorization/index.html 等本版本文件。
+10. 新增 Phase17.2 PHP 7.0 专项 CI，并同步 Phase15 契约；相关 CI 全部通过。
 
 数据库：
 - 本版本不新增数据库结构。
-- 继续使用 2026091701 已建立的 unlock_sign_key 配置。
-- 既有幂等迁移可重复执行，不覆盖管理员当前 KEY。
+- 继续使用既有 card_scope、fa_kami_app、fa_authorization_event、fa_card_transfer_log 和 unlock_sign_key。
+- 既有迁移保持幂等，可重复执行。
+
+在线更新：
+- GitHub Release 标签：source-v2026091703。
+- 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
+- 从 2026091702 可通过后台 GitHub 在线更新直接升级到 2026091703。
+- 保留 HTTPS、SHA256、数据库/程序备份、文件覆盖校验、失败回滚和真实 Release E2E。
 
 兼容性：
 - 兼容宝塔 PHP 7.0、MySQL 5.7。
-- 首次卡密激活仍保持 code=0；apiface 验证成功使用 code=1、msg=ok。
-- 不改变卡密字符串格式、时长定义、card_scope、fa_kami_app、权限链叠加及换绑规则。
-- 保留 GitHub 在线更新、SHA256、数据库/程序备份、文件校验与失败回滚机制。
+- 不改变卡密格式、时长定义、旧 sign 字段顺序和 HMAC 原文。
+- 新增 authorizations 固定追加在 sign 后面。

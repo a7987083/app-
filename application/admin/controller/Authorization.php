@@ -11,7 +11,7 @@ use app\common\library\SourceHttpClient;
 use think\Db;
 
 /**
- * Phase 11 authorization operations dashboard.
+ * Authorization operations dashboard.
  */
 class Authorization extends Backend
 {
@@ -55,9 +55,11 @@ class Authorization extends Backend
             'cooldown' => AuthorizationPolicy::cooldownSeconds($values),
             'ip_limit' => AuthorizationPolicy::ipHourlyAttempts($values),
         ];
-        $recent = Db::table('fa_card_transfer_log')->order('id desc')->limit(8)->select();
+
         $this->view->assign('summary', $summary);
-        $this->view->assign('recentTransfers', $recent);
+        $this->view->assign('recentTransfers', Db::table('fa_card_transfer_log')->order('id desc')->limit(8)->select());
+        $this->view->assign('recentEvents', Db::table('fa_authorization_event')->order('id desc')->limit(8)->select());
+        $this->view->assign('diagPreview', $this->diagnosticSnapshot(false));
         return $this->view->fetch();
     }
 
@@ -102,6 +104,12 @@ class Authorization extends Backend
 
     public function diagnostic()
     {
+        $this->view->assign('diag', $this->diagnosticSnapshot($this->request->get('probe') === '1'));
+        return $this->view->fetch();
+    }
+
+    protected function diagnosticSnapshot($probeExternal = false)
+    {
         $dbOk = false;
         try {
             $probe = Db::query('SELECT 1 AS ok');
@@ -120,13 +128,14 @@ class Authorization extends Backend
                 $missingExtensions[] = $extension;
             }
         }
+
         $backupDir = getenv('ZONOE_DB_BACKUP_DIR');
         if ($backupDir === false || trim((string)$backupDir) === '') {
-            // BaoTa 通常启用 open_basedir，直接探测 /www/backup/database 会触发
-            // ThinkPHP ErrorException。默认改查本站 updater 自己的备份目录。
+            // BaoTa commonly enables open_basedir; keep the default probe inside
+            // this site's runtime tree instead of touching /www/backup/database.
             $backupDir = ROOT_PATH . 'runtime' . DS . 'update_backup';
         }
-        $latestBackup = $this->latestBackupFile($backupDir);
+
         $diag = [
             'php_version' => PHP_VERSION,
             'db_ok' => $dbOk,
@@ -138,11 +147,11 @@ class Authorization extends Backend
             'tls_verify' => SourceHttpClient::envBool('SOURCE_HTTP_VERIFY_TLS', true),
             'missing_extensions' => $missingExtensions,
             'backup_dir' => $backupDir,
-            'latest_backup' => $latestBackup,
+            'latest_backup' => $this->latestBackupFile($backupDir),
             'external' => null,
         ];
 
-        if ($this->request->get('probe') === '1') {
+        if ($probeExternal) {
             $payload = ['content' => base64_encode(json_encode(['probe' => 'zonoe-phase11']))];
             $diag['external'] = [
                 'appstore' => SourceHttpClient::postForm('https://api.nuosike.com/api.php', $payload, ['connect_timeout' => 3, 'timeout' => 8]),
@@ -155,9 +164,9 @@ class Authorization extends Backend
             unset($item);
         }
 
-        $this->view->assign('diag', $diag);
-        return $this->view->fetch();
+        return $diag;
     }
+
     protected function latestBackupFile($directory)
     {
         if (!@is_dir($directory) || !@is_readable($directory)) {
@@ -192,6 +201,4 @@ class Authorization extends Backend
         }
         return $latest;
     }
-
-
 }

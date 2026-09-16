@@ -23,8 +23,18 @@ foreach ($required as $path) {
 $audit = file_get_contents($root . '/application/common/library/DataIntegrityAudit.php');
 foreach ([
     'GROUP BY `kami` HAVING COUNT(*) > 1',
-    "TRIM(`kami`)='' OR `kami` IS NULL",
+    "TRIM(COALESCE(`kami`,''))=''",
     "CHAR_LENGTH(`udid`) NOT IN (25,40)",
+    'invalid_scope',
+    'activated_missing_usetime',
+    'end_before_use',
+    'orphan_kami',
+    'orphan_app',
+    'wrong_scope',
+    'app_scope_without_mapping',
+    'authorization_event_orphans',
+    'transfer_log_orphans',
+    'active_duplicate_udid_groups',
     'unique_index_ready',
     'expired_blacklist',
     'old_authorization_events',
@@ -34,7 +44,7 @@ foreach ([
 ] as $needle) {
     p15Assert(strpos($audit, $needle) !== false, 'audit contract missing ' . $needle);
 }
-p15Assert(strpos($audit, 'ALTER TABLE') === false, 'audit must not mutate schema');
+p15Assert(strpos($audit, 'ALTER TABLE') === false, 'audit must not mutate schema directly');
 p15Assert(strpos($audit, 'DELETE FROM') === false, 'audit must not delete production data');
 
 $schema = file_get_contents($root . '/application/common/library/AuthorizationSchema.php');
@@ -46,6 +56,8 @@ p15Assert(strpos($controller, 'DataIntegrityAudit::snapshot()') !== false, 'inte
 $view = file_get_contents($root . '/application/admin/view/authorization/integrity.html');
 p15Assert(strpos($view, '不会自动创建 UNIQUE INDEX') !== false, 'UI must state unique index is not automatic');
 p15Assert(strpos($view, '换绑稳定语义') !== false, 'UI must expose unbind semantics section');
+p15Assert(strpos($view, "url('integrity/index')") !== false, 'reaudit route must target Integrity::index');
+p15Assert(strpos($view, "url('authorization/integrity')") === false, 'stale reaudit 404 route remains');
 
 // Freeze the existing /unbind semantics for Phase 15: only currently active
 // entitlement rows move; expired historical rows stay on their original UDID.
