@@ -21,6 +21,7 @@ class SourceAppRecord
         'button_color' => 'bt1b',
         'file_size' => 'bt2a',
         'paid' => 'bt2b',
+        'renewal_entry' => 'renewal_entry',
         'cloud_flag' => 'flag',
         'icon_url' => 'image',
         'updated_at' => 'updatetime',
@@ -55,12 +56,13 @@ class SourceAppRecord
 
     public static function publicSourceColumns()
     {
-        // id is used internally for per-App permission checks. AppStorePayload
-        // does not expose it as a new public protocol field.
+        // id and renewal_entry are used internally for permission/renewal
+        // behavior. AppStorePayload does not expose either as a new public
+        // protocol field.
         return self::columns([
             'id', 'type', 'name', 'version', 'description', 'download_url',
-            'button_color', 'file_size', 'paid', 'cloud_flag', 'icon_url',
-            'updated_at',
+            'button_color', 'file_size', 'paid', 'renewal_entry', 'cloud_flag',
+            'icon_url', 'updated_at',
         ]);
     }
 }
