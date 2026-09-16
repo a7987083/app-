@@ -13,10 +13,11 @@ $controller = file_get_contents($root . '/application/admin/controller/general/U
 $view = file_get_contents($root . '/application/admin/view/general/updatemaintenance/panel.html');
 $js = file_get_contents($root . '/public/assets/js/backend/general/updatemaintenance.js');
 
+p143ui_assert(strpos($controller, "protected \$noNeedRight = ['index', 'panel'];") !== false, 'destructive cleanup must not bypass backend rights');
 p143ui_assert(strpos($controller, "public function panel()") !== false, 'visual maintenance panel action missing');
 p143ui_assert(strpos($controller, "public function cleanup()") !== false, 'cleanup endpoint missing');
+p143ui_assert(strpos($controller, "if (!\$this->request->isPost())") !== false, 'cleanup must be POST-only');
 p143ui_assert(strpos($controller, "intval(\$this->request->param('apply', 0)) === 1") !== false, 'cleanup must default to dry-run');
-p143ui_assert(strpos($controller, "'panel'") !== false, 'panel route must be allowed by controller');
 
 foreach (['ops-version', 'ops-backups', 'ops-running', 'ops-lock', 'ops-storage', 'ops-preview', 'ops-clean', 'ops-jobs'] as $id) {
     p143ui_assert(strpos($view, 'id="' . $id . '"') !== false, 'panel element missing: ' . $id);
@@ -24,6 +25,7 @@ foreach (['ops-version', 'ops-backups', 'ops-running', 'ops-lock', 'ops-storage'
 
 p143ui_assert(strpos($js, "general/updatemaintenance/index") !== false, 'panel snapshot endpoint is not wired');
 p143ui_assert(strpos($js, "general/updatemaintenance/cleanup") !== false, 'panel cleanup endpoint is not wired');
+p143ui_assert(strpos($js, "type: 'POST'") !== false, 'cleanup request must use POST');
 p143ui_assert(strpos($js, "data: {apply: apply ? 1 : 0}") !== false, 'cleanup apply flag is not explicit');
 p143ui_assert(strpos($js, "cleanup(false)") !== false, 'dry-run preview action missing');
 p143ui_assert(strpos($js, "cleanup(true)") !== false, 'confirmed cleanup action missing');
