@@ -26,11 +26,11 @@ $apiface = substr($source, $start, $end - $start);
 apifaceSigningAssert(strpos($apiface, 'signedApifacePayload') !== false, 'apiface does not build signed response');
 apifaceSigningAssert(strpos($apiface, "echo json_encode(['msg' => 'ok']") === false, 'legacy msg-only success response still present');
 apifaceSigningAssert(strpos($source, "SourceConfigRepository::get('unlock_sign_key'") !== false, 'unlock_sign_key not loaded from server config');
-apifaceSigningAssert(strpos($source, "'expire' => $expire") !== false, 'expire field missing');
-apifaceSigningAssert(strpos($source, "'ts' => $ts") !== false, 'ts field missing');
-apifaceSigningAssert(strpos($source, "'nonce' => $nonce") !== false, 'nonce field missing');
+apifaceSigningAssert(strpos($source, "'expire' => \$expire") !== false, 'expire field missing');
+apifaceSigningAssert(strpos($source, "'ts' => \$ts") !== false, 'ts field missing');
+apifaceSigningAssert(strpos($source, "'nonce' => \$nonce") !== false, 'nonce field missing');
 apifaceSigningAssert(strpos($source, "hash_hmac('sha256'") !== false, 'HMAC-SHA256 missing');
-apifaceSigningAssert(strpos($source, "$udid . '|' . $expire . '|' . $ts . '|' . $nonce") !== false, 'signature input format changed');
+apifaceSigningAssert(strpos($source, "\$udid . '|' . \$expire . '|' . \$ts . '|' . \$nonce") !== false, 'signature input format changed');
 
 $manifest = file_get_contents($root . '/release/online-update-files.txt');
 apifaceSigningAssert($manifest !== false, 'online update manifest missing');
