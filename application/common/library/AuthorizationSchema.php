@@ -5,8 +5,9 @@ namespace app\common\library;
 use think\Db;
 
 /**
- * Idempotent Phase 11 schema/config bootstrap. It only runs on authorization
- * related paths (and admin shell) so normal source reads do not ALTER tables.
+ * Idempotent authorization schema/config bootstrap.
+ * It only runs on authorization related paths (and admin shell) so normal
+ * source reads do not ALTER tables.
  */
 class AuthorizationSchema
 {
@@ -31,6 +32,21 @@ class AuthorizationSchema
                 Db::execute("ALTER TABLE `fa_kami` MODIFY COLUMN `transfer_count` int(10) unsigned NOT NULL DEFAULT '100' COMMENT '剩余换绑次数'");
             }
         }
+
+        $scopeColumn = Db::query("SHOW COLUMNS FROM `fa_kami` LIKE 'card_scope'");
+        if (!$scopeColumn) {
+            Db::execute("ALTER TABLE `fa_kami` ADD COLUMN `card_scope` tinyint(3) unsigned NOT NULL DEFAULT '1' COMMENT '卡密用途:1全源,2仅验证,3指定App' AFTER `transfer_count`");
+        }
+
+        Db::execute("CREATE TABLE IF NOT EXISTS `fa_kami_app` (
+            `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+            `kami_id` int(11) unsigned NOT NULL DEFAULT '0',
+            `app_id` int(11) unsigned NOT NULL DEFAULT '0',
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_kami_app` (`kami_id`,`app_id`),
+            KEY `idx_app_id` (`app_id`),
+            KEY `idx_kami_id` (`kami_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='指定App卡授权映射'");
 
         Db::execute("CREATE TABLE IF NOT EXISTS `fa_card_transfer_log` (
             `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
