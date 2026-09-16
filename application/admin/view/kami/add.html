@@ -13,7 +13,23 @@
         </div>
     </div>
 
-	<div class="form-group">
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">卡密用途:</label>
+        <div class="col-xs-12 col-sm-8">
+            {:build_radios('row[card_scope]', ['1'=>'全软件源授权', '3'=>'指定App授权', '2'=>'仅验证'], '1')}
+            <span class="help-block">全软件源授权：解锁全部付费App；指定App授权：只解锁勾选的App；仅验证：可正常激活/验证，但不会解锁任何软件源下载。</span>
+        </div>
+    </div>
+
+    <div id="card-app-targets" class="form-group" style="display:none;">
+        <label class="control-label col-xs-12 col-sm-2">授权App:</label>
+        <div class="col-xs-12 col-sm-8">
+            {:build_select('row[app_ids][]', $appOptions, null, ['class'=>'form-control selectpicker', 'multiple'=>'', 'data-live-search'=>'true', 'data-actions-box'=>'true', 'title'=>'请选择要解锁的App'])}
+            <span class="help-block">支持一张卡授权一个或多个付费App；只有这些App的下载地址会向该卡绑定的UDID开放。</span>
+        </div>
+    </div>
+
+    <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Kmyp')}:</label>
         <div class="col-xs-12 col-sm-8">
             {:build_radios('row[Kmyp]', ['4'=>'日卡', '5'=>'周卡','1'=>'月卡', '2'=>'季卡', '3'=>'年卡'])}
@@ -28,13 +44,13 @@
         </div>
     </div>
 
-	<div class="form-group" style="margin-top:36px;">
+    <div class="form-group" style="margin-top:36px;">
         <label class="control-label col-xs-12 col-sm-2">最近一次生成的卡密列表:</label>
         <div class="col-xs-12 col-sm-8" style="overflow-y:scroll;height:256px;">
             {$strLst}
         </div>
     </div>
-    
+
     <div class="form-group layer-footer">
         <label class="control-label col-xs-12 col-sm-2"></label>
         <div class="col-xs-12 col-sm-8">
