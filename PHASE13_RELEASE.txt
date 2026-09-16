@@ -1,31 +1,30 @@
-ZONOE 软件源 Release 2026091703
-版本：2026091703
-基线：2026091702
+ZONOE 软件源 Release 2026091704
+版本：2026091704
+基线：2026091703
 
 更新内容：
-1. 三种卡密统一恢复为一次性首次激活凭证；任意已激活卡密再次提交均返回“解锁码已使用”。
-2. 后续持续验证统一走 Index::apiface，不再通过重复提交仅验证卡获取新签名。
-3. apiface 保留 code/msg/expire/ts/nonce/sign 原字段和旧 HMAC 原文 udid|expire|ts|nonce。
-4. sign 后新增 authorizations，仅列当前已激活且未过期的授权类型；不存在的类型不返回。
-5. authorizations 按 card_scope=1/2/3 分别返回全软件源/仅验证/指定App的独立 expire。
-6. 授权总览“换绑记录 / 授权事件 / 系统诊断”改为本页下方预览，不再打开独立页面。
-7. 数据完整性审计扩展卡状态、scope、kmyp、时间链、指定App映射、日志孤儿记录及黑名单一致性检查。
-8. 修复数据完整性“重新审计”路由错误导致 404，现指向 integrity/index。
-9. 在线更新清单补齐 Authorization.php、authorization/index.html 等本版本文件。
-10. 新增 Phase17.2 PHP 7.0 专项 CI，并同步 Phase15 契约；相关 CI 全部通过。
+1. 新增应用属性 renewal_entry，后台新增/编辑应用可标记为“续费入口”。
+2. 续费入口复用客户端现有“解锁→输入卡密”流程，不新增客户端页面或新协议。
+3. renewal_entry=1 的应用始终输出 lock=1、downloadURL=''，游客、全软件源卡和指定App卡均不能把它解锁为可下载应用。
+4. 客户输入未使用卡密后继续使用现有 App::activateCode，根据当前客户端 UDID 一次性消费卡密并按 card_scope 叠加对应授权链时间。
+5. 修复换绑记录“清空”按钮原先只重置搜索、不删除日志的问题。
+6. 修复授权事件“清空”按钮原先只重置搜索、不删除日志的问题。
+7. 两类日志清空均改为 POST + 二次确认，成功后返回实际删除条数；清空日志不修改卡密、当前授权有效期或换绑额度。
+8. 新增 2026091704_renewal_entry.sql，兼容 MySQL 5.7，重复执行安全；旧应用默认 renewal_entry=0。
+9. 新增 Phase17.3 PHP 7.0 契约/运行时测试和 MySQL 5.7 双执行迁移测试。
+10. 在线更新清单补齐 category add/edit、authorization transfers/events 等本版本运行时文件。
 
 数据库：
-- 本版本不新增数据库结构。
-- 继续使用既有 card_scope、fa_kami_app、fa_authorization_event、fa_card_transfer_log 和 unlock_sign_key。
-- 既有迁移保持幂等，可重复执行。
+- fa_category 新增 renewal_entry tinyint(1) unsigned NOT NULL DEFAULT 0。
+- 0=普通应用，1=续费入口。
+- 迁移脚本：release/sql/2026091704_renewal_entry.sql。
 
 在线更新：
-- GitHub Release 标签：source-v2026091703。
+- GitHub Release 标签：source-v2026091704。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 从 2026091702 可通过后台 GitHub 在线更新直接升级到 2026091703。
+- 从 2026091703 可通过后台 GitHub 在线更新直接升级到 2026091704。
 - 保留 HTTPS、SHA256、数据库/程序备份、文件覆盖校验、失败回滚和真实 Release E2E。
 
 兼容性：
 - 兼容宝塔 PHP 7.0、MySQL 5.7。
-- 不改变卡密格式、时长定义、旧 sign 字段顺序和 HMAC 原文。
-- 新增 authorizations 固定追加在 sign 后面。
+- 不改变现有三种卡密用途、卡密一次性消费规则、授权时间定义、apiface 签名和授权叠加语义。
