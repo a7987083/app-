@@ -1,18 +1,18 @@
-ZONOE 软件源 Release 2026091609
-版本：2026091609
-基线：2026091608
+ZONOE 软件源 Release 2026091610
+版本：2026091610
+基线：2026091609
 
 更新内容：
-1. 修复宝塔 PHP open_basedir 环境下高速扫描引擎初始化失败。
-2. 根因：旧实现对 /www/server/php/70/bin/php 一类 PHP_BINDIR 路径调用 is_file/is_executable，而站点 open_basedir 仅允许网站目录和 /tmp，导致 restriction in effect。
-3. 新增 FastStorageManagerCompat，不再用 PHP 文件系统函数探测站点白名单外的 PHP CLI，改为固定受控 shell 探针验证 CLI。
-4. 运维控制器的状态读取、扫描、自动安全清理和人工删除统一切换到兼容层。
-5. 新增 open_basedir 回归契约，禁止兼容层再次对 PHP_BINDIR 使用 is_file/is_executable。
-6. 保留 GNU find 高速扫描、目录指纹、持久索引、扫描进度条和安全清理进度条。
+1. 移除更新运维中心的全站搜索、全站储存扫描、最大文件 TOP 50、备份/未识别文件人工删除等全站文件管理功能。
+2. 删除运维控制器的 scan、全站状态轮询、cleanupSelected 等全站扫描相关运行入口。
+3. 运维中心仅保留在线更新系统自身的备份、历史、任务状态、缓存、更新锁、最近升级/回滚和运行任务诊断。
+4. 安全清理恢复为 UpdateOps 保守清理，只处理更新器自己的终态状态、旧历史和无引用旧备份；运行中任务及被回滚历史引用的备份继续保护。
+5. 正式在线更新清单不再包含 SiteStorageManager、FastStorageManager、FastStorageManagerCompat 和 storage_worker.php。
+6. 新增 Phase 15.4 回归契约，验证全站扫描 UI/API/JS 已移除且更新运维核心能力仍可用。
 
 兼容性：
 - 兼容宝塔 PHP 7.0。
-- 不要求关闭 open_basedir，也不要求扩大站点白名单。
+- 不需要 exec、proc_open、GNU find 或 PHP CLI 才能打开更新运维中心。
 - 不修改数据库结构和授权数据。
 - 不改变 appstore/appstore_v2、Nuosike 加密、UDID、卡密时长、黑名单和 transfer_count 语义。
 - 保留 GitHub 在线更新、SHA256、备份、文件校验与回滚机制。
