@@ -30,6 +30,7 @@ foreach ([
     'old_authorization_events',
     'old_transfer_logs',
     "'mode' => 'audit_only'",
+    "'stable_semantics' => 'active_entitlements_only'",
 ] as $needle) {
     p15Assert(strpos($audit, $needle) !== false, 'audit contract missing ' . $needle);
 }
@@ -44,7 +45,7 @@ p15Assert(strpos($controller, 'DataIntegrityAudit::snapshot()') !== false, 'inte
 
 $view = file_get_contents($root . '/application/admin/view/authorization/integrity.html');
 p15Assert(strpos($view, '不会自动创建 UNIQUE INDEX') !== false, 'UI must state unique index is not automatic');
-p15Assert(strpos($view, 'active_entitlements_only') !== false, 'UI must expose stable unbind semantics');
+p15Assert(strpos($view, '换绑稳定语义') !== false, 'UI must expose unbind semantics section');
 
 // Freeze the existing /unbind semantics for Phase 15: only currently active
 // entitlement rows move; expired historical rows stay on their original UDID.
