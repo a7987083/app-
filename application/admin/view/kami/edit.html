@@ -13,13 +13,29 @@
         </div>
     </div>
 
-	<div class="form-group">
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">卡密用途:</label>
+        <div class="col-xs-12 col-sm-8">
+            {:build_radios('row[card_scope]', ['1'=>'全软件源授权', '3'=>'指定App授权', '2'=>'仅验证'], $row['card_scope'])}
+            <span class="help-block">修改已激活卡的用途会立即改变它当前能够获得的软件源下载权限。</span>
+        </div>
+    </div>
+
+    <div id="card-app-targets" class="form-group" style="display:none;">
+        <label class="control-label col-xs-12 col-sm-2">授权App:</label>
+        <div class="col-xs-12 col-sm-8">
+            {:build_select('row[app_ids][]', $appOptions, $selectedAppIds, ['class'=>'form-control selectpicker', 'multiple'=>'', 'data-live-search'=>'true', 'data-actions-box'=>'true', 'title'=>'请选择要解锁的App'])}
+            <span class="help-block">指定App卡必须至少选择一个App；其他付费App仍保持锁定。</span>
+        </div>
+    </div>
+
+    <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Kmyp')}:</label>
         <div class="col-xs-12 col-sm-8">
             {:build_radios('row[kmyp]', ['4'=>'日卡', '5'=>'周卡','1'=>'月卡', '2'=>'季卡', '3'=>'年卡'], $row['kmyp'])}
         </div>
     </div>
-	<div class="form-group">
+    <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Jh')}:</label>
         <div class="col-xs-12 col-sm-8">
             {:build_radios('row[jh]', ['0'=>'未激活', '1'=>'已激活'], $row['jh'])}
@@ -34,7 +50,6 @@
         </div>
     </div>
 
-    
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Addtime')}:</label>
         <div class="col-xs-12 col-sm-8">
@@ -53,7 +68,7 @@
             <input id="c-endtime" data-rule="" class="form-control datetimepicker" data-date-format="YYYY-MM-DD HH:mm:ss" data-use-current="true" name="row[endtime]" type="text" value="{:$row.endtime?datetime($row.endtime):''}">
         </div>
     </div>
-    
+
     <div class="form-group layer-footer">
         <label class="control-label col-xs-12 col-sm-2"></label>
         <div class="col-xs-12 col-sm-8">
