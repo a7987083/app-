@@ -1,0 +1,62 @@
+<style>
+    .zonoe-ops-card {border:1px solid #e7eaec;border-radius:4px;background:#fff;padding:14px;margin-bottom:14px;min-height:128px;}
+    .zonoe-ops-card h4 {margin:0 0 10px;font-weight:600;}
+    .zonoe-ops-number {font-size:24px;font-weight:700;line-height:1.2;}
+    .zonoe-ops-sub {color:#888;margin-top:4px;word-break:break-all;}
+    .zonoe-ops-good {color:#18bc9c;}
+    .zonoe-ops-warn {color:#f39c12;}
+    .zonoe-ops-bad {color:#d9534f;}
+    .zonoe-ops-table td {vertical-align:middle!important;}
+    .zonoe-ops-json {font-family:monospace;font-size:12px;white-space:pre-wrap;word-break:break-all;background:#f8f8f8;border:1px solid #eee;padding:10px;max-height:260px;overflow:auto;}
+</style>
+<div class="panel panel-default panel-intro">
+    <div class="panel-heading">
+        <div class="panel-lead"><em>更新运维中心</em>备份、历史、锁、任务和文件完整性诊断；清理操作默认只预览。</div>
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-code-fork"></i> 当前版本</h4><div id="ops-version" class="zonoe-ops-number">-</div><div id="ops-integrity" class="zonoe-ops-sub">正在检测完整性</div></div></div>
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-database"></i> 更新备份</h4><div id="ops-backups" class="zonoe-ops-number">-</div><div id="ops-backup-bytes" class="zonoe-ops-sub">-</div></div></div>
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-tasks"></i> 更新任务</h4><div id="ops-running" class="zonoe-ops-number">-</div><div id="ops-stale" class="zonoe-ops-sub">-</div></div></div>
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-lock"></i> 更新锁</h4><div id="ops-lock" class="zonoe-ops-number">-</div><div id="ops-lock-meta" class="zonoe-ops-sub">-</div></div></div>
+        </div>
+
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="zonoe-ops-card">
+                    <h4>最近升级</h4>
+                    <div id="ops-latest-update" class="zonoe-ops-sub">暂无记录</div>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="zonoe-ops-card">
+                    <h4>最近回滚</h4>
+                    <div id="ops-latest-rollback" class="zonoe-ops-sub">暂无记录</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>存储占用</strong></div>
+            <div class="panel-body" id="ops-storage">正在读取...</div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>安全清理</strong>
+                <span class="text-muted">仅清理超过保留期且不再被回滚记录引用的数据；running 任务不会删除。</span>
+            </div>
+            <div class="panel-body">
+                <button type="button" id="ops-refresh" class="btn btn-info"><i class="fa fa-refresh"></i> 刷新诊断</button>
+                <button type="button" id="ops-preview" class="btn btn-default"><i class="fa fa-search"></i> 预览可清理项</button>
+                <button type="button" id="ops-clean" class="btn btn-danger"><i class="fa fa-trash"></i> 执行安全清理</button>
+                <div id="ops-cleanup-result" style="margin-top:12px;"></div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>运行中 / 疑似中断任务</strong></div>
+            <div class="panel-body" id="ops-jobs">暂无任务</div>
+        </div>
+    </div>
+</div>
