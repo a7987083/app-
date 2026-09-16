@@ -5,8 +5,9 @@ namespace app\common\library;
 /**
  * Pure AppStore payload mapper.
  *
- * Public protocol keys stay here, while SourceAppRecord translates the legacy
- * physical fa_category columns into semantic names.
+ * Public protocol keys stay unchanged. SourceAppRecord translates the legacy
+ * physical fa_category columns into semantic names, while CardAccessPolicy
+ * supplies whole-source or per-App download permissions.
  */
 class AppStorePayload
 {
@@ -37,17 +38,35 @@ class AppStorePayload
         return $info;
     }
 
-    public static function apps(array $rows, $mode, $allowLockedDownload = false)
+    /**
+     * $sourceAccess keeps boolean backwards compatibility:
+     * - true  => unlock all paid apps
+     * - false => unlock none
+     * New callers may pass ['unlock_all'=>bool, 'app_ids'=>[...]].
+     */
+    public static function apps(array $rows, $mode, $sourceAccess = false)
     {
+        if (is_array($sourceAccess)) {
+            $access = [
+                'unlock_all' => !empty($sourceAccess['unlock_all']),
+                'app_ids' => isset($sourceAccess['app_ids']) && is_array($sourceAccess['app_ids'])
+                    ? CardAccessPolicy::normalizeAppIds($sourceAccess['app_ids'])
+                    : [],
+            ];
+        } else {
+            $access = ['unlock_all' => (bool)$sourceAccess, 'app_ids' => []];
+        }
+
         $data = [];
         foreach ($rows as $key => $row) {
             $rawType = SourceAppRecord::value($row, 'type');
             $type = $rawType === 'default' ? 0 : $rawType;
             $lock = SourceAppRecord::value($row, 'paid');
             $download = SourceAppRecord::value($row, 'download_url');
+            $appId = (int)SourceAppRecord::value($row, 'id', 0);
 
             if ($mode === 'licensed') {
-                if ($lock === '1' && !$allowLockedDownload) {
+                if ($lock === '1' && !CardAccessPolicy::allowsApp($access, $appId)) {
                     $download = '';
                 }
             } else {
