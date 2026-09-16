@@ -3,9 +3,6 @@ application/common/library/update/UpdateRuntimeStore.php
 application/common/library/update/UpdateInstaller.php
 application/common/library/update/UpdateManager.php
 application/common/library/update/UpdateOps.php
-application/common/library/update/SiteStorageManager.php
-application/common/library/update/FastStorageManager.php
-application/common/library/update/FastStorageManagerCompat.php
 application/admin/controller/general/Config.php
 application/admin/controller/general/Updatemaintenance.php
 application/admin/view/general/updatemaintenance/panel.html
@@ -20,4 +17,3 @@ application/admin/controller/Integrity.php
 application/admin/view/authorization/integrity.html
 public/api.php
 public/encrypt.php
-tools/storage_worker.php
