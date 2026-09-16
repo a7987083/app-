@@ -29,7 +29,8 @@ p154_assert(strpos($view, '安全清理更新数据') !== false, 'update-only cl
 p154_assert(strpos($js, 'updatemaintenance/scan') === false, 'whole-site scan client survived');
 p154_assert(strpos($js, 'cleanupSelected') === false, 'whole-site delete client survived');
 p154_assert(strpos($js, 'status_only=1') === false, 'storage polling client survived');
-p154_assert(strpos($js, "data:{apply:0}") !== false, 'update cleanup preview missing');
-p154_assert(strpos($js, "data:{apply:1}") !== false, 'update cleanup apply missing');
+p154_assert(strpos($js, 'cleanup(false)') !== false, 'update cleanup preview missing');
+p154_assert(strpos($js, 'cleanup(true)') !== false, 'update cleanup apply missing');
+p154_assert(strpos($js, 'apply:apply ? 1 : 0') !== false || strpos($js, 'apply: apply ? 1 : 0') !== false, 'cleanup apply flag mapping missing');
 
 fwrite(STDOUT, "OK phase15_4_ops_slim_contract_test\n");
