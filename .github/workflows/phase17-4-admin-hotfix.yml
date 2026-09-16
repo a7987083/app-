@@ -1,0 +1,68 @@
+name: Phase 17.4 Admin Hotfix
+
+on:
+  push:
+    branches:
+      - hotfix/phase17-4-admin-actions-v1
+    paths:
+      - 'application/admin/controller/Category.php'
+      - 'application/admin/controller/Authorization.php'
+      - 'application/admin/view/category/**'
+      - 'application/admin/view/authorization/**'
+      - 'release/online-update-files.txt'
+      - 'release/sql/2026091705_renewal_entry_repair.sql'
+      - 'tests/phase17_4_admin_hotfix_contract_test.php'
+      - 'tests/phase17_4_admin_hotfix_mysql57_test.php'
+      - '.github/workflows/phase17-4-admin-hotfix.yml'
+  workflow_dispatch:
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: Lint and contract checks
+        run: |
+          set -euo pipefail
+          php -l application/admin/controller/Category.php
+          php -l application/admin/controller/Authorization.php
+          php -l tests/phase17_4_admin_hotfix_contract_test.php
+          php tests/phase17_4_admin_hotfix_contract_test.php
+
+  mysql57-online-splitter:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Execute migration with online-update splitter semantics
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php -l tests/phase17_4_admin_hotfix_mysql57_test.php
+          php tests/phase17_4_admin_hotfix_mysql57_test.php
