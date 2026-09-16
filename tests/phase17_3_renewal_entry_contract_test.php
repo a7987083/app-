@@ -48,10 +48,10 @@ $transfers = file_get_contents($root . '/application/admin/view/authorization/tr
 $events = file_get_contents($root . '/application/admin/view/authorization/events.html');
 p173Assert(strpos($transfers, '清空全部换绑记录') !== false, 'transfer destructive clear button missing');
 p173Assert(strpos($events, '清空全部授权事件') !== false, 'event destructive clear button missing');
-p173Assert(strpos($transfers, 'data: {clear: 1}') !== false, 'transfer clear POST payload missing');
-p173Assert(strpos($events, 'data: {clear: 1}') !== false, 'event clear POST payload missing');
-p173Assert(strpos($transfers, 'Layer.confirm') !== false, 'transfer clear confirmation missing');
-p173Assert(strpos($events, 'Layer.confirm') !== false, 'event clear confirmation missing');
+p173Assert(strpos($transfers, 'method="post"') !== false && strpos($transfers, 'name="clear" value="1"') !== false, 'transfer clear POST form missing');
+p173Assert(strpos($events, 'method="post"') !== false && strpos($events, 'name="clear" value="1"') !== false, 'event clear POST form missing');
+p173Assert(strpos($transfers, 'confirm(') !== false, 'transfer clear confirmation missing');
+p173Assert(strpos($events, 'confirm(') !== false, 'event clear confirmation missing');
 
 $sql = file_get_contents($root . '/release/sql/2026091704_renewal_entry.sql');
 p173Assert(strpos($sql, "COLUMN_NAME = 'renewal_entry'") !== false, 'renewal migration guard missing');
