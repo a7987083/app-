@@ -1,19 +1,25 @@
-ZONOE 软件源 Release 2026091701
-版本：2026091701
-基线：2026091611
+ZONOE 软件源 Release 2026091702
+版本：2026091702
+基线：2026091701
 
-更新内容：
-1. 解锁码激活成功响应新增 expire、ts、nonce、sign 四个字段，原 code/msg 和三种卡密权限逻辑保持不变。
-2. sign 使用 HMAC-SHA256，签名原文为 udid|expire|ts|nonce；nonce 使用 8 字节安全随机数。
-3. 系统配置新增 unlock_sign_key，后台显示“解锁签名KEY”；管理员填写什么值，服务端就使用什么值。
-4. KEY 不写入 GitHub 源码、不返回解锁接口、不写入授权事件日志。
-5. unlock_sign_key 留空时，首次解锁前自动生成 32 字节随机 KEY 并写回服务器配置，避免升级后因未配置 KEY 中断解锁。
-6. 全软件源卡、仅验证卡、指定App卡统一返回 expire/ts/nonce/sign，并保留各自原成功提示。
-7. 在线更新包新增 2026091701_unlock_signing.sql，只新增配置项且不会覆盖已有 KEY，脚本可重复执行。
-8. 新增 Phase17 协议契约测试和 MySQL 5.7 配置迁移测试。
+修复内容：
+1. 修复 2026091701 的签名字段只接入 App::activateCode、实际设备验证接口 Index::apiface 仍只返回 {"msg":"ok"} 的问题。
+2. apiface 成功响应新增 code=1、expire、ts、nonce、sign，msg 继续为 ok。
+3. apiface 继续使用后台 unlock_sign_key 和 HMAC-SHA256，签名原文为 udid|expire|ts|nonce。
+4. apiface 只使用 jh=1 且 endtime>当前时间的有效授权，并返回当前有效授权中的最新到期时间。
+5. 仅验证卡已绑定同一 UDID 且仍有效时，重复提交改为幂等验证成功，不再提示“解锁码已使用”。
+6. 仅验证卡幂等验证不会重复加时长、不会重复执行激活写入、不会重复写授权事件日志。
+7. 不同 UDID、过期卡、全软件源卡和指定App卡继续保持原有已使用判断。
+8. 在线更新清单补入 application/index/controller/Index.php，确保 apiface 修复随 ZIP 实际升级。
+9. Phase17 契约测试增加 apiface 签名、有效授权筛选、仅验证卡幂等和更新清单检查。
+
+数据库：
+- 本版本不新增数据库结构。
+- 继续使用 2026091701 已建立的 unlock_sign_key 配置。
+- 既有幂等迁移可重复执行，不覆盖管理员当前 KEY。
 
 兼容性：
 - 兼容宝塔 PHP 7.0、MySQL 5.7。
-- 原有成功状态码继续使用 code=0。
-- 不改变卡密字符串格式、日/周/月/季/年时长、card_scope、fa_kami_app、权限链叠加和换绑逻辑。
+- 首次卡密激活仍保持 code=0；apiface 验证成功使用 code=1、msg=ok。
+- 不改变卡密字符串格式、时长定义、card_scope、fa_kami_app、权限链叠加及换绑规则。
 - 保留 GitHub 在线更新、SHA256、数据库/程序备份、文件校验与失败回滚机制。
