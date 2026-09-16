@@ -272,13 +272,10 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
     }
 
     function openUpdateOperations() {
-        layer.open({
-            type: 2,
-            title: '更新运维中心',
+        Fast.api.open('general/updatemaintenance/panel', '更新运维中心', {
             area: ['92%', '88%'],
             maxmin: true,
-            shadeClose: false,
-            content: 'general/updatemaintenance/panel'
+            shadeClose: false
         });
     }
 
@@ -359,7 +356,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 var that = this;
                 Layer.confirm(__('Are you sure you want to delete this item?'), {icon: 3, title: '提示'}, function (index) {
                     Backend.api.ajax({url: "general/config/del", data: {name: $(that).data("name")}}, function () {
-                        $(that).closest("tr").remove();
+                        $(that).closest('tr').remove();
                         Layer.close(index);
                     });
                 });
