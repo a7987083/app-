@@ -183,7 +183,7 @@ class App
 
         if ($localRequested) {
             try {
-                return SourceEncryptionProvider::encryptEncodedContent($content);
+                return SourceEncryptionProvider::encryptEncodedContent($content, $appType);
             } catch (\Exception $e) {
                 error_log('[App::encryptedSourcePayload] local encryption failed: ' . $e->getMessage());
                 if (!SourceEncryptionPolicy::fallbackAllowed()) {
