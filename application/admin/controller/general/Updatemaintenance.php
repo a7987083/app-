@@ -11,8 +11,11 @@ use app\common\library\update\UpdateOps;
  */
 class Updatemaintenance extends Backend
 {
-    protected $noNeedRight = ['index', 'cleanup'];
+    protected $noNeedRight = ['index', 'panel', 'cleanup'];
 
+    /**
+     * JSON diagnostics endpoint.
+     */
     public function index()
     {
         $ops = new UpdateOps(ROOT_PATH);
@@ -33,6 +36,17 @@ class Updatemaintenance extends Backend
         return json(['code' => 200, 'msg' => 'ok', 'data' => $data]);
     }
 
+    /**
+     * Human-facing operations panel. The page reads data from index().
+     */
+    public function panel()
+    {
+        return $this->view->fetch();
+    }
+
+    /**
+     * Safe cleanup endpoint. Default is dry-run; apply=1 performs deletion.
+     */
     public function cleanup()
     {
         $apply = intval($this->request->param('apply', 0)) === 1;
