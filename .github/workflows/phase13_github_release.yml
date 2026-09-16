@@ -15,6 +15,9 @@ on:
       - 'tests/phase13_update_runtime_test.php'
       - 'tests/phase15_data_integrity_contract_test.php'
       - 'tests/phase15_4_ops_slim_contract_test.php'
+      - 'tests/card_access_policy_test.php'
+      - 'tests/appstore_card_scope_test.php'
+      - 'tests/phase16_card_scope_contract_test.php'
       - '.github/workflows/phase13_github_release.yml'
   workflow_dispatch:
 
@@ -43,15 +46,24 @@ jobs:
           php -l tests/phase13_update_runtime_test.php
           php -l tests/phase15_data_integrity_contract_test.php
           php -l tests/phase15_4_ops_slim_contract_test.php
+          php -l tests/card_access_policy_test.php
+          php -l tests/appstore_card_scope_test.php
+          php -l tests/phase16_card_scope_contract_test.php
           php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
           php -l application/common/library/update/UpdateOps.php
+          php -l application/common/library/CardAccessPolicy.php
+          php -l application/common/library/AppStorePayload.php
+          php -l application/common/library/SourceAppRecord.php
           php -l application/common/library/AuthorizationSchema.php
           php -l application/common/library/DataIntegrityAudit.php
+          php -l application/index/controller/App.php
+          php -l application/admin/controller/Kami.php
           php -l application/admin/controller/Integrity.php
           php -l application/admin/controller/general/Config.php
           php -l application/admin/controller/general/Updatemaintenance.php
+          node --check public/assets/js/backend/kami.js
           node --check public/assets/js/backend/general/updatemaintenance.js
       - name: Verify source integrity manifest
         run: |
@@ -64,6 +76,9 @@ jobs:
       - name: Run full PHP 7.0 regression
         run: |
           set -euo pipefail
+          php tests/card_access_policy_test.php
+          php tests/appstore_card_scope_test.php
+          php tests/phase16_card_scope_contract_test.php
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
           php tests/appstore_semantic_equivalence_test.php
@@ -115,8 +130,16 @@ jobs:
           grep -F 'UpdateInstaller.php' release/online-update-files.txt
           grep -F 'UpdateManager.php' release/online-update-files.txt
           grep -F 'UpdateOps.php' release/online-update-files.txt
+          grep -F 'CardAccessPolicy.php' release/online-update-files.txt
+          grep -F 'AppStorePayload.php' release/online-update-files.txt
+          grep -F 'SourceAppRecord.php' release/online-update-files.txt
+          grep -F 'application/admin/controller/Kami.php' release/online-update-files.txt
+          grep -F 'application/admin/view/kami/add.html' release/online-update-files.txt
+          grep -F 'application/admin/view/kami/edit.html' release/online-update-files.txt
+          grep -F 'public/assets/js/backend/kami.js' release/online-update-files.txt
           grep -F 'DataIntegrityAudit.php' release/online-update-files.txt
           grep -F 'Integrity.php' release/online-update-files.txt
+          test -s release/sql/2026091611_card_scope.sql
           ! grep -F 'FastStorageManager.php' release/online-update-files.txt
           ! grep -F 'FastStorageManagerCompat.php' release/online-update-files.txt
           ! grep -F 'SiteStorageManager.php' release/online-update-files.txt
@@ -131,11 +154,20 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateInstaller.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateManager.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateOps.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/CardAccessPolicy.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/AppStorePayload.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/SourceAppRecord.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/AuthorizationSchema.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/index/controller/App.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Kami.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/kami/add.html'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/kami/edit.html'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/kami.js'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026091611_card_scope.sql'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Config.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Updatemaintenance.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/general/updatemaintenance/panel.html'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/general/updatemaintenance.js'
-          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/AuthorizationSchema.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/DataIntegrityAudit.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Integrity.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/authorization/integrity.html'
@@ -167,6 +199,7 @@ jobs:
             zonoe-online-update.zip.sha256
             release/RELEASE_NOTES.md
             release/online-update-files.txt
+            release/sql/2026091611_card_scope.sql
           if-no-files-found: error
           retention-days: 30
 
