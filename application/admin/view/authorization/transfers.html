@@ -1,11 +1,14 @@
 <div class="panel panel-default panel-intro">
     {:build_heading()}
     <div class="panel-body">
-        <form class="form-inline" method="get" style="margin-bottom:15px;">
+        <form class="form-inline" method="get" style="margin-bottom:10px;">
             <div class="form-group"><input class="form-control" style="width:360px" name="q" value="{$q|htmlentities}" placeholder="搜索卡密 / 旧UDID / 新UDID / IP"></div>
             <button class="btn btn-primary" type="submit">搜索</button>
             <a class="btn btn-default" href="{:url('authorization/transfers')}">重置搜索</a>
-            <button class="btn btn-danger" id="clear-transfer-log" type="button"><i class="fa fa-trash"></i> 清空全部换绑记录</button>
+        </form>
+        <form method="post" action="{:url('authorization/transfers')}" style="margin-bottom:15px;" onsubmit="return confirm('确定清空全部换绑记录吗？此操作不可撤销，但不会改变当前授权和剩余换绑次数。');">
+            <input type="hidden" name="clear" value="1">
+            <button class="btn btn-danger" type="submit"><i class="fa fa-trash"></i> 清空全部换绑记录</button>
         </form>
         <div class="table-responsive">
             <table class="table table-striped table-bordered table-hover">
@@ -25,29 +28,3 @@
         <div class="text-muted">最多显示最近 300 条，可通过卡密、UDID 或 IP 搜索。清空操作会删除全部换绑历史记录，不影响当前卡密授权状态。</div>
     </div>
 </div>
-<script>
-$(function () {
-    $('#clear-transfer-log').on('click', function () {
-        Layer.confirm('确定清空全部换绑记录吗？此操作不可撤销，但不会改变当前授权和剩余换绑次数。', {icon: 3, title: '确认清空'}, function (index) {
-            Layer.close(index);
-            $.ajax({
-                type: 'POST',
-                url: '{:url("authorization/transfers")}',
-                dataType: 'json',
-                data: {clear: 1},
-                success: function (ret) {
-                    if (ret && Number(ret.code) === 1) {
-                        Toastr.success((ret.msg || '换绑记录已清空') + (ret.deleted !== undefined ? '（' + ret.deleted + ' 条）' : ''));
-                        setTimeout(function () { location.reload(); }, 300);
-                    } else {
-                        Toastr.error(ret && ret.msg ? ret.msg : '清空失败');
-                    }
-                },
-                error: function () {
-                    Toastr.error('清空请求失败');
-                }
-            });
-        });
-    });
-});
-</script>
