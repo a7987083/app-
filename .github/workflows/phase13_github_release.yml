@@ -4,9 +4,14 @@ on:
   push:
     branches:
       - feature/phase13-github-release
+      - feature/phase17-2-auth-integrity-v1
+      - 'release/**'
     paths:
+      - 'VERSION'
       - 'public/update/ver.txt'
       - 'ver.json'
+      - 'PHASE13_RELEASE.txt'
+      - 'RELEASE_POLICY.md'
       - 'release/RELEASE_NOTES.md'
       - 'release/online-update-files.txt'
       - 'release/sql/**'
@@ -66,7 +71,9 @@ jobs:
           php -l application/common/library/AuthorizationSchema.php
           php -l application/common/library/DataIntegrityAudit.php
           php -l application/index/controller/App.php
+          php -l application/index/controller/Index.php
           php -l application/admin/controller/Kami.php
+          php -l application/admin/controller/Authorization.php
           php -l application/admin/controller/Integrity.php
           php -l application/admin/controller/general/Config.php
           php -l application/admin/controller/general/Updatemaintenance.php
@@ -167,9 +174,14 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(tr -d '\r\n ' < public/update/ver.txt)"
+          ROOT_VERSION="$(tr -d '\r\n ' < VERSION)"
+          JSON_VERSION="$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo isset($j["version"]) ? $j["version"] : "";')"
           [[ "$VERSION" =~ ^20[0-9]{6,12}$ ]]
+          test "$ROOT_VERSION" = "$VERSION"
+          test "$JSON_VERSION" = "$VERSION"
           grep -F "ZONOE 软件源 ${VERSION}" release/RELEASE_NOTES.md
           grep -F "版本：${VERSION}" PHASE13_RELEASE.txt
+          test -s RELEASE_POLICY.md
           grep -F 'UpdateRuntimeStore.php' release/online-update-files.txt
           grep -F 'UpdateInstaller.php' release/online-update-files.txt
           grep -F 'UpdateManager.php' release/online-update-files.txt
@@ -179,6 +191,9 @@ jobs:
           grep -F 'AppStorePayload.php' release/online-update-files.txt
           grep -F 'SourceAppRecord.php' release/online-update-files.txt
           grep -F 'application/index/controller/App.php' release/online-update-files.txt
+          grep -F 'application/index/controller/Index.php' release/online-update-files.txt
+          grep -F 'application/admin/controller/Authorization.php' release/online-update-files.txt
+          grep -F 'application/admin/view/authorization/index.html' release/online-update-files.txt
           grep -F 'application/admin/controller/Kami.php' release/online-update-files.txt
           grep -F 'application/admin/view/kami/add.html' release/online-update-files.txt
           grep -F 'application/admin/view/kami/edit.html' release/online-update-files.txt
@@ -207,6 +222,9 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/SourceAppRecord.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/AuthorizationSchema.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/index/controller/App.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/index/controller/Index.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Authorization.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/authorization/index.html'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Kami.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/kami/add.html'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/kami/edit.html'
