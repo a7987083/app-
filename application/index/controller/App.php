@@ -4,6 +4,7 @@ namespace app\index\controller;
 
 use app\common\library\AppStorePayload;
 use app\common\library\BlacklistPolicy;
+use app\common\library\CardAccessPolicy;
 use app\common\library\CardEntitlementPolicy;
 use app\common\library\AuthorizationEventLog;
 use app\common\library\AuthorizationPolicy;
@@ -58,12 +59,13 @@ class App
         $kamiRows = $udid === ''
             ? []
             : Db::table('fa_kami')->where('udid', $udid)->order('id desc')->select();
-        $mode = $kamiRows ? 'licensed' : 'guest';
-        $allowLockedDownload = $kamiRows
-            ? CardEntitlementPolicy::activeEndTime($kamiRows, $now) > $now
-            : false;
+        $appMap = $this->cardAppMap($kamiRows);
+        $sourceAccess = CardAccessPolicy::sourceAccess($kamiRows, $appMap, $now);
+        // Verification-only cards must behave exactly like guests in the
+        // software-source response and therefore never reveal paid URLs.
+        $mode = CardAccessPolicy::hasSourceCard($kamiRows) ? 'licensed' : 'guest';
 
-        $payload = $this->buildSourcePayload($configRows, $udid, $nowtime, $mode, $allowLockedDownload);
+        $payload = $this->buildSourcePayload($configRows, $udid, $nowtime, $mode, $sourceAccess);
         if (is_object($payload)) {
             return $payload;
         }
@@ -141,7 +143,7 @@ class App
         }
     }
 
-    protected function buildSourcePayload(array $config, $udid, $nowtime, $mode, $allowLockedDownload)
+    protected function buildSourcePayload(array $config, $udid, $nowtime, $mode, array $sourceAccess)
     {
         if (empty($config)) {
             return json(['code' => 0, 'msg' => '暂无站点数据']);
@@ -157,7 +159,7 @@ class App
         }
 
         $info = AppStorePayload::siteInfo($config);
-        $apps = AppStorePayload::apps($list, $mode, $allowLockedDownload);
+        $apps = AppStorePayload::apps($list, $mode, $sourceAccess);
         return AppStorePayload::source($info, $udid, $nowtime, $apps);
     }
 
@@ -203,8 +205,10 @@ class App
     }
 
     /**
-     * Activate one unused card. If the same UDID already has active time, the
-     * new duration is appended to the furthest active expiration.
+     * Activate one unused card. Stacking is isolated by entitlement chain:
+     * - whole-source cards stack only with whole-source cards;
+     * - verification cards stack only with verification cards;
+     * - App cards stack only when their selected App set is exactly equal.
      */
     protected function activateCode($kcode, $udid, $now = null)
     {
@@ -230,12 +234,24 @@ class App
                 return json(['code' => 0, 'msg' => '解锁码已使用']);
             }
 
-            $existing = Db::table('fa_kami')
+            $scope = CardAccessPolicy::scopeForRow($kdata);
+            $targetApps = [];
+            if ($scope === CardAccessPolicy::SCOPE_APPS) {
+                $map = $this->cardAppMap([$kdata]);
+                $targetApps = isset($map[(int)$kdata['id']]) ? $map[(int)$kdata['id']] : [];
+                if (!$targetApps) {
+                    Db::rollback();
+                    return json(['code' => 0, 'msg' => '该指定App卡未配置授权App']);
+                }
+            }
+
+            $allActive = Db::table('fa_kami')
                 ->where('udid', $udid)
                 ->where('jh', 1)
                 ->where('endtime', '>', $now)
                 ->lock(true)
                 ->select();
+            $existing = $this->stackRowsForScope($allActive, $scope, $targetApps);
             $wasStacked = CardEntitlementPolicy::activeEndTime($existing, $now) > $now;
             $state = CardEntitlementPolicy::activationState((int)$kdata['kmyp'], $existing, $now);
             $configValues = SourceConfigRepository::mapRows(SourceConfigRepository::rows());
@@ -255,6 +271,11 @@ class App
                 throw new \RuntimeException('卡密激活写入失败');
             }
 
+            $scopeName = CardAccessPolicy::scopeName($scope);
+            $detail = ($wasStacked ? '卡密叠加授权：' : '卡密首次激活：') . $scopeName;
+            if ($scope === CardAccessPolicy::SCOPE_APPS) {
+                $detail .= ' AppID=' . implode(',', $targetApps);
+            }
             if (!AuthorizationEventLog::record($wasStacked ? 'stack' : 'activate', [
                 'kami_id' => $kdata['id'],
                 'kami' => $kcode,
@@ -262,13 +283,19 @@ class App
                 'duration' => CardEntitlementPolicy::durationSeconds((int)$kdata['kmyp']),
                 'endtime' => $state['endtime'],
                 'ip' => isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '',
-                'detail' => $wasStacked ? '卡密叠加授权' : '卡密首次激活',
+                'detail' => $detail,
                 'addtime' => $now,
             ])) {
                 throw new \RuntimeException('授权事件写入失败');
             }
 
             Db::commit();
+            if ($scope === CardAccessPolicy::SCOPE_VERIFY) {
+                return json(['code' => 0, 'msg' => 'ok，验证卡激活成功']);
+            }
+            if ($scope === CardAccessPolicy::SCOPE_APPS) {
+                return json(['code' => 0, 'msg' => 'ok，指定App授权成功']);
+            }
             return json(['code' => 0, 'msg' => 'ok，解锁成功']);
         } catch (\InvalidArgumentException $e) {
             Db::rollback();
@@ -278,6 +305,67 @@ class App
             error_log('[App::activateCode] ' . $e->getMessage());
             return json(['code' => 0, 'msg' => '激活失败，请稍后重试']);
         }
+    }
+
+    /** Return [kami_id => [app_id, ...]] for the supplied card rows. */
+    protected function cardAppMap(array $rows)
+    {
+        $ids = [];
+        foreach ($rows as $row) {
+            if (CardAccessPolicy::scopeForRow($row) === CardAccessPolicy::SCOPE_APPS && !empty($row['id'])) {
+                $ids[(int)$row['id']] = true;
+            }
+        }
+        if (!$ids) {
+            return [];
+        }
+
+        try {
+            $mapped = Db::table('fa_kami_app')
+                ->where('kami_id', 'in', array_keys($ids))
+                ->field('kami_id,app_id')
+                ->select();
+        } catch (\Exception $e) {
+            error_log('[App::cardAppMap] ' . $e->getMessage());
+            return [];
+        }
+
+        $result = [];
+        foreach ($mapped as $row) {
+            $kamiId = isset($row['kami_id']) ? (int)$row['kami_id'] : 0;
+            $appId = isset($row['app_id']) ? (int)$row['app_id'] : 0;
+            if ($kamiId > 0 && $appId > 0) {
+                if (!isset($result[$kamiId])) {
+                    $result[$kamiId] = [];
+                }
+                $result[$kamiId][] = $appId;
+            }
+        }
+        foreach ($result as $kamiId => $appIds) {
+            $result[$kamiId] = CardAccessPolicy::normalizeAppIds($appIds);
+        }
+        return $result;
+    }
+
+    protected function stackRowsForScope(array $rows, $scope, array $targetApps)
+    {
+        $scope = CardAccessPolicy::normalizeScope($scope);
+        $result = [];
+        $appMap = $scope === CardAccessPolicy::SCOPE_APPS ? $this->cardAppMap($rows) : [];
+        foreach ($rows as $row) {
+            if (CardAccessPolicy::scopeForRow($row) !== $scope) {
+                continue;
+            }
+            if ($scope === CardAccessPolicy::SCOPE_APPS) {
+                $kamiId = isset($row['id']) ? (int)$row['id'] : 0;
+                $rowApps = isset($appMap[$kamiId]) ? $appMap[$kamiId] : [];
+                if (!CardAccessPolicy::sameAppSet($rowApps, $targetApps)) {
+                    continue;
+                }
+            }
+            $result[] = $row;
+        }
+        return $result;
     }
 
     public function log()
