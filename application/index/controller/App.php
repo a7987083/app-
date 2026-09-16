@@ -218,6 +218,13 @@ class App
             return json(['code' => 0, 'msg' => '未获取设备UDID']);
         }
 
+        try {
+            $secretKey = $this->unlockSignKey();
+        } catch (\Exception $e) {
+            error_log('[App::unlockSignKey] signing key unavailable');
+            return json(['code' => 0, 'msg' => '解锁签名配置不可用']);
+        }
+
         Db::startTrans();
         try {
             $kdata = Db::table('fa_kami')
@@ -289,14 +296,17 @@ class App
                 throw new \RuntimeException('授权事件写入失败');
             }
 
-            Db::commit();
             if ($scope === CardAccessPolicy::SCOPE_VERIFY) {
-                return json(['code' => 0, 'msg' => 'ok，验证卡激活成功']);
+                $message = 'ok，验证卡激活成功';
+            } elseif ($scope === CardAccessPolicy::SCOPE_APPS) {
+                $message = 'ok，指定App授权成功';
+            } else {
+                $message = 'ok，解锁成功';
             }
-            if ($scope === CardAccessPolicy::SCOPE_APPS) {
-                return json(['code' => 0, 'msg' => 'ok，指定App授权成功']);
-            }
-            return json(['code' => 0, 'msg' => 'ok，解锁成功']);
+            $response = $this->signedActivationPayload($message, $udid, $state['endtime'], $secretKey);
+
+            Db::commit();
+            return json($response);
         } catch (\InvalidArgumentException $e) {
             Db::rollback();
             return json(['code' => 0, 'msg' => $e->getMessage()]);
@@ -305,6 +315,70 @@ class App
             error_log('[App::activateCode] ' . $e->getMessage());
             return json(['code' => 0, 'msg' => '激活失败，请稍后重试']);
         }
+    }
+
+    /**
+     * Resolve the server-side HMAC key. Existing configured values are used as-is.
+     * A blank/missing key is generated once and persisted so upgrades are safe by default.
+     */
+    protected function unlockSignKey()
+    {
+        $key = (string)SourceConfigRepository::get('unlock_sign_key', '', false);
+        if ($key !== '') {
+            return $key;
+        }
+
+        $generated = bin2hex(random_bytes(32));
+        $row = Db::name('config')->where('name', 'unlock_sign_key')->find();
+        if ($row) {
+            $current = isset($row['value']) ? (string)$row['value'] : '';
+            if ($current === '') {
+                Db::name('config')
+                    ->where('id', (int)$row['id'])
+                    ->where('value', $current)
+                    ->update(['value' => $generated]);
+            }
+        } else {
+            try {
+                Db::name('config')->insert([
+                    'name' => 'unlock_sign_key',
+                    'group' => 'basic',
+                    'title' => '解锁签名KEY',
+                    'tip' => '用于解锁响应HMAC-SHA256签名；留空时系统自动生成',
+                    'type' => 'string',
+                    'value' => $generated,
+                    'content' => '',
+                    'rule' => '',
+                    'extend' => 'autocomplete="off"',
+                ]);
+            } catch (\Exception $e) {
+                // A concurrent request may have inserted the unique config row first.
+            }
+        }
+
+        SourceConfigRepository::forget();
+        $key = (string)SourceConfigRepository::get('unlock_sign_key', '', false);
+        if ($key === '') {
+            throw new \RuntimeException('解锁签名KEY不可用');
+        }
+        return $key;
+    }
+
+    protected function signedActivationPayload($message, $udid, $expire, $secretKey)
+    {
+        $expire = (int)$expire;
+        $ts = time();
+        $nonce = bin2hex(random_bytes(8));
+        $signData = $udid . '|' . $expire . '|' . $ts . '|' . $nonce;
+
+        return [
+            'code' => 0,
+            'msg' => $message,
+            'expire' => $expire,
+            'ts' => $ts,
+            'nonce' => $nonce,
+            'sign' => hash_hmac('sha256', $signData, $secretKey),
+        ];
     }
 
     /** Return [kami_id => [app_id, ...]] for the supplied card rows. */
