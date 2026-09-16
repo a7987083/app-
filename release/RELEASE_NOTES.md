@@ -1,18 +1,18 @@
-# ZONOE 软件源 2026091602
+# ZONOE 软件源 2026091603
 
 ## 更新内容
 
-- 修正 2026091601 的错误 DES-CBC 假设，按 zonoe/QNQ 实际客户端解码协议重做软件源加密。
-- `appstore` 改为 Nuosike legacy 兼容链路：从 `update.json` / `key.json` 解析当前动态 `bkey`，使用 RC4 加密并 Base64 输出。
-- `appstore_v2` 改为 Nuosike v2 兼容链路：15 字符 RC4 key + RSA PKCS#1 v1.5 + `0xFEEDFACF` 容器 + Nuosike 自定义变宽字符编码。
-- 新增与 Nuosike 同名的公开入口：`/api.php`（appstore）和 `/encrypt.php`（appstore_v2），均接收 POST `content` 参数并直接返回密文字符串。
-- `/appstore` 主接口继续保留现有 `appstore` / `appstore_v2` 外层字段和请求头识别方式，认证、UDID、卡密、黑名单、授权时长与换绑次数语义不变。
-- 默认仍为本地优先、Nuosike 故障回退；可用 `SOURCE_ENCRYPTION_PROVIDER=nuosike` 整体回退，或 `SOURCE_ENCRYPTION_LOCAL_V2=0` 单独关闭 v2 本地编码。
-- PHP 7.0 CI 已改为验证 RC4/RSA/v2 容器协议，不再使用 DES-CBC 兼容测试。
+- Phase 14.2 更新器故障防护：新增低磁盘空间预检，并覆盖 SHA256 错误、损坏 ZIP、SQL 执行失败、目标文件写入失败、备份失败、更新锁冲突等失败场景。
+- 保留现有自动回滚机制，更新中途失败时继续保护程序文件、数据库与版本状态。
+- Phase 14.3 新增更新运维诊断：统计备份、history、status、cache 占用，并显示真实更新锁、运行中任务和疑似中断任务。
+- 新增后台“更新运维中心”页面 `general/updatemaintenance/panel`，可查看当前版本、文件完整性、最近一次更新、最近一次回滚及存储占用。
+- 新增安全清理预览和二次确认执行流程；运行中任务、成功且仍可回滚的更新历史，以及被历史记录引用的备份不会被自动删除。
+- 在现有系统配置 / GitHub 在线更新区域新增“更新运维中心”入口，可直接以内嵌后台窗口打开运维面板。
+- PHP 7.0、JavaScript 语法、Phase 14.2 故障注入、Phase 13 runtime、Phase 14 atomicity 与 Phase 14.3 UI contract 回归均已通过。
 
-## 兼容性与依赖
+## 兼容性
 
 - 目标环境继续兼容宝塔 PHP 7.0。
-- `appstore_v2` 的编码可在本机完成；`appstore` 为保持现有 zonoe 客户端 1:1 协议，仍需读取 Nuosike `update.json` 与 `key.json` 的当前动态 key 链。
 - 不修改现有数据库结构和已有卡密数据。
-- 不修改在线更新器的备份、回滚与 SHA256 校验机制。
+- `appstore` / `appstore_v2`、Nuosike 兼容加密、UDID、卡密、黑名单、授权时长与换绑次数语义保持 2026091602 行为不变。
+- GitHub 在线更新继续使用 HTTPS、SHA256、备份和回滚机制。
