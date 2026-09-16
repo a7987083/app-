@@ -3,55 +3,53 @@
     .zonoe-ops-card h4 {margin:0 0 10px;font-weight:600;}
     .zonoe-ops-number {font-size:24px;font-weight:700;line-height:1.2;}
     .zonoe-ops-sub {color:#888;margin-top:4px;word-break:break-all;}
-    .zonoe-ops-good {color:#18bc9c;}
-    .zonoe-ops-warn {color:#f39c12;}
-    .zonoe-ops-bad {color:#d9534f;}
-    .zonoe-ops-table td {vertical-align:middle!important;}
-    .zonoe-ops-json {font-family:monospace;font-size:12px;white-space:pre-wrap;word-break:break-all;background:#f8f8f8;border:1px solid #eee;padding:10px;max-height:260px;overflow:auto;}
+    .zonoe-ops-good {color:#18bc9c;}.zonoe-ops-warn {color:#f39c12;}.zonoe-ops-bad {color:#d9534f;}
+    .zonoe-ops-table td {vertical-align:middle!important;word-break:break-all;}
+    .zonoe-badge {display:inline-block;padding:2px 7px;border-radius:10px;background:#eee;margin-right:4px;}
 </style>
 <div class="panel panel-default panel-intro">
     <div class="panel-heading">
-        <div class="panel-lead"><em>更新运维中心</em>备份、历史、锁、任务和文件完整性诊断；清理操作默认只预览。</div>
+        <div class="panel-lead"><em>更新运维中心</em>全站文件与储存管理：扫描网站根目录全部文件，区分程序必需数据、业务数据、缓存、日志、备份、临时文件和未识别文件。</div>
     </div>
     <div class="panel-body">
         <div class="row">
             <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-code-fork"></i> 当前版本</h4><div id="ops-version" class="zonoe-ops-number">-</div><div id="ops-integrity" class="zonoe-ops-sub">正在检测完整性</div></div></div>
-            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-database"></i> 更新备份</h4><div id="ops-backups" class="zonoe-ops-number">-</div><div id="ops-backup-bytes" class="zonoe-ops-sub">-</div></div></div>
-            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-tasks"></i> 更新任务</h4><div id="ops-running" class="zonoe-ops-number">-</div><div id="ops-stale" class="zonoe-ops-sub">-</div></div></div>
-            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-lock"></i> 更新锁</h4><div id="ops-lock" class="zonoe-ops-number">-</div><div id="ops-lock-meta" class="zonoe-ops-sub">-</div></div></div>
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-hdd-o"></i> 网站总占用</h4><div id="site-total-bytes" class="zonoe-ops-number">-</div><div id="site-total-files" class="zonoe-ops-sub">-</div></div></div>
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-trash"></i> 自动安全可清理</h4><div id="site-safe-bytes" class="zonoe-ops-number">-</div><div id="site-safe-files" class="zonoe-ops-sub">-</div></div></div>
+            <div class="col-sm-3"><div class="zonoe-ops-card"><h4><i class="fa fa-exclamation-triangle"></i> 需人工确认</h4><div id="site-review-bytes" class="zonoe-ops-number">-</div><div id="site-review-files" class="zonoe-ops-sub">备份 + 未识别文件</div></div></div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>全站储存分类</strong> <span class="text-muted">所有普通文件都纳入统计；符号链接不跟随。</span></div>
+            <div class="panel-body" id="site-storage-summary">正在扫描...</div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>安全清理</strong> <span class="text-muted">自动清理仅删除可重建缓存/临时文件，并要求文件至少存在 1 小时；程序文件、业务上传、日志、更新状态不会自动删除。</span></div>
+            <div class="panel-body">
+                <button type="button" id="ops-refresh" class="btn btn-info"><i class="fa fa-refresh"></i> 重新扫描全站</button>
+                <button type="button" id="ops-preview" class="btn btn-default"><i class="fa fa-search"></i> 预览自动安全清理</button>
+                <button type="button" id="ops-clean" class="btn btn-danger"><i class="fa fa-trash"></i> 执行自动安全清理</button>
+                <div id="ops-cleanup-result" style="margin-top:12px;"></div>
+            </div>
+        </div>
+
+        <div class="panel panel-warning">
+            <div class="panel-heading"><strong>备份 / 未识别文件</strong> <span class="text-muted">这些文件全部计入储存管理，但不会自动删除。确认无用后可手工勾选删除。</span></div>
+            <div class="panel-body">
+                <div id="site-review-list">正在读取...</div>
+                <button type="button" id="ops-delete-selected" class="btn btn-warning"><i class="fa fa-check-square-o"></i> 删除已勾选文件</button>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>最大文件 TOP 50</strong></div>
+            <div class="panel-body" id="site-largest">正在读取...</div>
         </div>
 
         <div class="row">
-            <div class="col-sm-6">
-                <div class="zonoe-ops-card">
-                    <h4>最近升级</h4>
-                    <div id="ops-latest-update" class="zonoe-ops-sub">暂无记录</div>
-                </div>
-            </div>
-            <div class="col-sm-6">
-                <div class="zonoe-ops-card">
-                    <h4>最近回滚</h4>
-                    <div id="ops-latest-rollback" class="zonoe-ops-sub">暂无记录</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>存储占用</strong></div>
-            <div class="panel-body" id="ops-storage">正在读取...</div>
-        </div>
-
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>安全清理</strong>
-                <span class="text-muted">仅清理超过保留期且不再被回滚记录引用的数据；running 任务不会删除。</span>
-            </div>
-            <div class="panel-body">
-                <button type="button" id="ops-refresh" class="btn btn-info"><i class="fa fa-refresh"></i> 刷新诊断</button>
-                <button type="button" id="ops-preview" class="btn btn-default"><i class="fa fa-search"></i> 预览可清理项</button>
-                <button type="button" id="ops-clean" class="btn btn-danger"><i class="fa fa-trash"></i> 执行安全清理</button>
-                <div id="ops-cleanup-result" style="margin-top:12px;"></div>
-            </div>
+            <div class="col-sm-6"><div class="zonoe-ops-card"><h4>最近升级</h4><div id="ops-latest-update" class="zonoe-ops-sub">暂无记录</div></div></div>
+            <div class="col-sm-6"><div class="zonoe-ops-card"><h4>最近回滚</h4><div id="ops-latest-rollback" class="zonoe-ops-sub">暂无记录</div></div></div>
         </div>
 
         <div class="panel panel-default">
