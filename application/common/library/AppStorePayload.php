@@ -6,8 +6,8 @@ namespace app\common\library;
  * Pure AppStore payload mapper.
  *
  * Public protocol keys stay unchanged. SourceAppRecord translates the legacy
- * physical fa_category columns into semantic names, while CardAccessPolicy
- * supplies whole-source or per-App download permissions.
+ * physical fa_category columns into semantic names. The mapper accepts either
+ * the historical boolean unlock flag or a structured per-App permission set.
  */
 class AppStorePayload
 {
@@ -47,14 +47,13 @@ class AppStorePayload
     public static function apps(array $rows, $mode, $sourceAccess = false)
     {
         if (is_array($sourceAccess)) {
-            $access = [
-                'unlock_all' => !empty($sourceAccess['unlock_all']),
-                'app_ids' => isset($sourceAccess['app_ids']) && is_array($sourceAccess['app_ids'])
-                    ? CardAccessPolicy::normalizeAppIds($sourceAccess['app_ids'])
-                    : [],
-            ];
+            $unlockAll = !empty($sourceAccess['unlock_all']);
+            $appIds = isset($sourceAccess['app_ids']) && is_array($sourceAccess['app_ids'])
+                ? self::normalizeAppIds($sourceAccess['app_ids'])
+                : [];
         } else {
-            $access = ['unlock_all' => (bool)$sourceAccess, 'app_ids' => []];
+            $unlockAll = (bool)$sourceAccess;
+            $appIds = [];
         }
 
         $data = [];
@@ -66,7 +65,8 @@ class AppStorePayload
             $appId = (int)SourceAppRecord::value($row, 'id', 0);
 
             if ($mode === 'licensed') {
-                if ($lock === '1' && !CardAccessPolicy::allowsApp($access, $appId)) {
+                $allowed = $unlockAll || ($appId > 0 && in_array($appId, $appIds, true));
+                if ($lock === '1' && !$allowed) {
                     $download = '';
                 }
             } else {
@@ -91,6 +91,20 @@ class AppStorePayload
             ];
         }
         return $data;
+    }
+
+    protected static function normalizeAppIds(array $ids)
+    {
+        $clean = [];
+        foreach ($ids as $id) {
+            $id = (int)$id;
+            if ($id > 0) {
+                $clean[$id] = true;
+            }
+        }
+        $ids = array_keys($clean);
+        sort($ids, SORT_NUMERIC);
+        return $ids;
     }
 
     public static function source(array $info, $udid, $nowTime, array $apps)
