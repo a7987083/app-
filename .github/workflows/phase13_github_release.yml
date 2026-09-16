@@ -13,6 +13,7 @@ on:
       - 'tools/build_online_update.php'
       - 'tests/phase13_github_online_update_e2e.php'
       - 'tests/phase13_update_runtime_test.php'
+      - 'tests/phase15_data_integrity_contract_test.php'
       - '.github/workflows/phase13_github_release.yml'
   workflow_dispatch:
 
@@ -39,9 +40,13 @@ jobs:
           php -l tools/build_online_update.php
           php -l tests/phase13_github_online_update_e2e.php
           php -l tests/phase13_update_runtime_test.php
+          php -l tests/phase15_data_integrity_contract_test.php
           php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
+          php -l application/common/library/AuthorizationSchema.php
+          php -l application/common/library/DataIntegrityAudit.php
+          php -l application/admin/controller/Integrity.php
           php -l application/admin/controller/general/Config.php
       - name: Verify source integrity manifest
         run: |
@@ -78,6 +83,7 @@ jobs:
           php tests/phase11_contract_test.php
           php tests/phase12_update_contract_test.php
           php tests/phase13_update_runtime_test.php
+          php tests/phase15_data_integrity_contract_test.php
           php tests/legacy_controller_contract_test.php
           bash tests/legacy_controller_audit_test.sh
           php tests/deployment_contract_test.php
@@ -100,6 +106,8 @@ jobs:
           grep -F 'UpdateRuntimeStore.php' release/online-update-files.txt
           grep -F 'UpdateInstaller.php' release/online-update-files.txt
           grep -F 'UpdateManager.php' release/online-update-files.txt
+          grep -F 'DataIntegrityAudit.php' release/online-update-files.txt
+          grep -F 'Integrity.php' release/online-update-files.txt
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Build release assets from manifest
         run: |
@@ -111,6 +119,10 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/update/UpdateManager.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Config.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/general/config.js'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/AuthorizationSchema.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/DataIntegrityAudit.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Integrity.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/authorization/integrity.html'
           test -s zonoe-online-update.zip.sha256
       - name: Publish or refresh stable GitHub Release
         env:
