@@ -1,14 +1,18 @@
-# ZONOE 软件源 2026091604
+# ZONOE 软件源 2026091605
 
 ## 更新内容
 
-- 修复 2026091603 后台“更新运维中心”点击后出现 404 的问题。
-- 将运维中心入口从 `layer.open(type: 2, content: 'general/updatemaintenance/panel')` 改为 FastAdmin 原生 `Fast.api.open(...)`，由框架统一解析后台入口与路由地址，兼容自定义后台入口路径。
-- `general/updatemaintenance/panel` 页面、运维诊断、安全清理、Phase 14.2 更新器故障防护保持不变。
-- 软件源 `appstore` / `appstore_v2`、Nuosike 兼容加密、UDID、卡密、黑名单、授权时长与换绑次数行为保持不变。
+- 进入 Phase 15 数据完整性与授权收尾，新增后台“授权中心 → 数据完整性”只读审计页。
+- 审计 `fa_kami.kami` 重复卡密组、额外重复行和空卡密，并展示最多 20 组重复样本，便于生产数据确认。
+- 审计已激活但 UDID 为空、当前有效授权 UDID 长度异常、`transfer_count` 超出后台允许范围等数据异常。
+- 检测 `fa_kami.kami` 是否已存在单列 UNIQUE INDEX，并给出“是否具备后续唯一索引迁移前提”；本版不会自动创建唯一索引，也不会修改生产卡密数据。
+- 固定 `/unbind` 当前稳定语义为 `active_entitlements_only`：只迁移 `jh=1` 且 `endtime>当前时间` 的有效授权行；过期历史卡继续保留原 UDID，本版不改变既有换绑行为。
+- 新增 180 天长期保留候选统计：已过期黑名单、旧授权事件、旧换绑日志仅统计不删除，为后续归档策略提供生产数据依据。
+- 新增 Phase 15 PHP 7.0 合约回归，并在正式 Release 流程中强制校验审计文件已进入在线更新包。
 
 ## 兼容性
 
 - 目标环境继续兼容宝塔 PHP 7.0。
-- 不修改现有数据库结构和已有卡密数据。
+- 不修改现有数据库结构、不创建 UNIQUE INDEX、不删除历史数据。
+- 不修改 `appstore` / `appstore_v2`、Nuosike 兼容加密、UDID、卡密授权时长、黑名单和换绑次数语义。
 - GitHub 在线更新继续使用 HTTPS、SHA256、备份、文件校验和回滚机制。
