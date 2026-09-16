@@ -102,9 +102,10 @@ class AuthorizationSchema
         }
 
         $children = [
-            ['authorization/index', '授权总览', 'fa fa-dashboard', 4],
-            ['authorization/transfers', '换绑记录', 'fa fa-exchange', 3],
-            ['authorization/events', '授权事件', 'fa fa-list', 2],
+            ['authorization/index', '授权总览', 'fa fa-dashboard', 5],
+            ['authorization/transfers', '换绑记录', 'fa fa-exchange', 4],
+            ['authorization/events', '授权事件', 'fa fa-list', 3],
+            ['integrity/index', '数据完整性', 'fa fa-database', 2],
             ['authorization/diagnostic', '系统诊断', 'fa fa-stethoscope', 1],
         ];
         foreach ($children as $item) {
