@@ -23,6 +23,12 @@ $view = file_get_contents($root . '/application/index/view/index/unbind.html');
 foreach (["where('kami', \$code)", "where('udid', \$oldUdid)", "where('endtime', '>', \$now)", "'udid' => \$newUdid", "'transfer_count' => \$newRemaining", 'BlacklistPolicy::findActive', 'AuthorizationPolicy::maxTransfers', 'AuthorizationPolicy::remainingQuota', 'successCountForUdid', 'ipAttempts'] as $needle) {
     transferAssert(strpos($transfer, $needle) !== false, 'transfer contract missing: ' . $needle);
 }
+transferAssert(strpos($transfer, '(int)$card[\'endtime\'] <= $now') !== false, 'expired submitted card must not move another active entitlement');
+transferAssert(strpos($transfer, 'CardAccessPolicy::scopeForRow($card)') !== false, 'submitted card scope is not resolved');
+transferAssert(strpos($transfer, 'rowsForChain($allActiveRows, $scope, $targetApps)') !== false, 'old UDID transfer is not isolated to entitlement chain');
+transferAssert(strpos($transfer, 'rowsForChain($newRows, $scope, $targetApps)') !== false, 'new UDID conflict check is not chain-aware');
+transferAssert(strpos($transfer, 'CardAccessPolicy::sameAppSet') !== false, 'App-specific transfer chain must match exact App set');
+transferAssert(strpos($transfer, 'fa_kami_app') !== false, 'App-specific transfer mapping lookup missing');
 transferAssert(strpos($index, 'CardDeviceTransfer::transfer') !== false, 'Index unbind action missing transfer service');
 transferAssert(strpos($index, 'CardDeviceTransfer::queryStatus') !== false, 'Index unbind query missing');
 transferAssert(strpos($route, "Route::rule('unbind','index/Index/unbind');") !== false, 'unbind route missing');
