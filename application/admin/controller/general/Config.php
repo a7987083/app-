@@ -4,6 +4,7 @@ namespace app\admin\controller\general;
 
 use app\common\controller\Backend;
 use app\common\library\Email;
+use app\common\library\SourceConfigRepository;
 use app\common\library\update\UpdateManager;
 use app\common\model\Config as ConfigModel;
 use think\Exception;
@@ -191,6 +192,11 @@ class Config extends Backend
             APP_PATH . 'extra' . DS . 'site.php',
             '<?php' . "\n\nreturn " . var_export($config, true) . ";"
         );
+        try {
+            SourceConfigRepository::forget();
+        } catch (\Throwable $e) {
+            error_log('[Config::refreshFile] source config cache invalidation failed: ' . $e->getMessage());
+        }
     }
 
     /**
