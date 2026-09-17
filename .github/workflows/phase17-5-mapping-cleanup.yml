@@ -1,0 +1,35 @@
+name: Phase 17.5 Mapping Cleanup
+
+on:
+  push:
+    branches:
+      - feature/phase17-5-mapping-cleanup-v1
+    paths:
+      - 'application/admin/model/Kami.php'
+      - 'application/common/model/Category.php'
+      - 'application/admin/controller/Authorization.php'
+      - 'release/online-update-files.txt'
+      - 'tests/phase17_5_mapping_cleanup_contract_test.php'
+      - '.github/workflows/phase17-5-mapping-cleanup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: Lint and contract checks
+        run: |
+          set -euo pipefail
+          php -l application/admin/model/Kami.php
+          php -l application/common/model/Category.php
+          php -l application/admin/controller/Authorization.php
+          php -l tests/phase17_5_mapping_cleanup_contract_test.php
+          php tests/phase17_5_mapping_cleanup_contract_test.php
