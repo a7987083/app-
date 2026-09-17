@@ -35,21 +35,54 @@ class SourceConfigRepository
     }
 
     /**
-     * Convert legacy config rows to name => value without changing values.
+     * Convert legacy config rows to name => runtime value.
+     *
+     * opencry historically behaved as a boolean. Phase 18.2 extends its stored
+     * value to 0=off, 1=normal, 2=V2 while keeping existing callers compatible:
+     * both encrypted modes are exposed as runtime value "1" here. Call
+     * rawValue()/rawValueFromRows() when the exact selected mode is required.
      */
     public static function mapRows(array $rows)
     {
         $values = [];
         foreach ($rows as $row) {
-            if (isset($row['name'])) {
-                $values[$row['name']] = isset($row['value']) ? $row['value'] : null;
+            if (!isset($row['name'])) {
+                continue;
             }
+            $name = (string)$row['name'];
+            $value = array_key_exists('value', $row) ? $row['value'] : null;
+            if ($name === 'opencry') {
+                $value = SourceEncryptionMode::runtimeEnabledValue($value);
+            }
+            $values[$name] = $value;
         }
         return $values;
     }
 
     /**
-     * Return all current config values keyed by name.
+     * Read one exact stored value from an already-fetched row set.
+     */
+    public static function rawValueFromRows(array $rows, $name, $default = null)
+    {
+        $name = (string)$name;
+        foreach ($rows as $row) {
+            if (isset($row['name']) && (string)$row['name'] === $name) {
+                return array_key_exists('value', $row) ? $row['value'] : $default;
+            }
+        }
+        return $default;
+    }
+
+    /**
+     * Read one exact stored value without runtime compatibility normalization.
+     */
+    public static function rawValue($name, $default = null, $useCache = true)
+    {
+        return self::rawValueFromRows(self::rows($useCache), $name, $default);
+    }
+
+    /**
+     * Return all current runtime-compatible config values keyed by name.
      */
     public static function values($useCache = true)
     {
@@ -57,7 +90,7 @@ class SourceConfigRepository
     }
 
     /**
-     * Read one value while preserving the old null-on-missing behavior.
+     * Read one runtime-compatible value while preserving null-on-missing.
      */
     public static function get($name, $default = null, $useCache = true)
     {
