@@ -7,15 +7,19 @@ on:
       - 'release/**'
     paths:
       - 'application/admin/controller/Authorization.php'
+      - 'application/admin/controller/general/Config.php'
       - 'application/admin/view/authorization/**'
       - 'public/assets/js/backend/authorization.js'
       - 'application/index/controller/App.php'
+      - 'application/index/controller/SourceV3.php'
       - 'application/route.php'
+      - 'application/common/library/AppStorePayload.php'
       - 'application/common/library/SourceAppRepository.php'
       - 'application/common/library/SourceChangeLog.php'
+      - 'application/common/library/SourceLegacyCache.php'
       - 'application/common/library/SourceResponse.php'
-      - 'application/common/library/SourceResponseCache.php'
       - 'release/online-update-files.txt'
+      - 'release/sql/2026091802_retire_source_v3.sql'
       - 'tests/phase17_4_admin_hotfix_contract_test.php'
       - 'tests/phase19_2_authorization_center_contract_test.php'
       - 'tests/phase19_2_legacy_response_cache_test.php'
@@ -32,18 +36,33 @@ jobs:
           php-version: '7.0'
           coverage: none
           extensions: zip
-      - name: Lint Phase 19.2 authorization runtime
+
+      - name: Lint Phase 19.2 runtime and contracts
         run: |
           set -euo pipefail
           php -l application/admin/controller/Authorization.php
+          php -l application/admin/controller/general/Config.php
+          php -l application/index/controller/App.php
+          php -l application/index/controller/SourceV3.php
+          php -l application/route.php
+          php -l application/common/library/AppStorePayload.php
+          php -l application/common/library/SourceAppRepository.php
+          php -l application/common/library/SourceChangeLog.php
+          php -l application/common/library/SourceLegacyCache.php
+          php -l application/common/library/SourceResponse.php
           php -l tests/phase17_4_admin_hotfix_contract_test.php
           php -l tests/phase19_2_authorization_center_contract_test.php
-      - name: Run authorization-center regression contracts
+          php -l tests/phase19_2_legacy_response_cache_test.php
+          node --check public/assets/js/backend/authorization.js
+
+      - name: Run Phase 19.2 regression contracts
         run: |
           set -euo pipefail
           php tests/phase17_4_admin_hotfix_contract_test.php
           php tests/phase19_2_authorization_center_contract_test.php
-      - name: Verify online update contains authorization controller UI
+          php tests/phase19_2_legacy_response_cache_test.php
+
+      - name: Verify Phase 19.2 online update package
         run: |
           set -euo pipefail
           php tools/build_online_update.php "$PWD/phase19-2-online-update.zip"
@@ -52,3 +71,12 @@ jobs:
           unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/admin/view/authorization/transfers.html'
           unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/admin/view/authorization/events.html'
           unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/public/assets/js/backend/authorization.js'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/route.php'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/index/controller/SourceV3.php'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/common/library/SourceLegacyCache.php'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/common/library/SourceAppRepository.php'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/common/library/SourceChangeLog.php'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/common/library/AppStorePayload.php'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/common/library/SourceResponse.php'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'mysql/2026091802_retire_source_v3.sql'
+          ! unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/common/library/SourceSyncV3.php'
