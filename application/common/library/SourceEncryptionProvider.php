@@ -8,7 +8,9 @@ namespace app\common\library;
  * appstore (legacy):
  *   JSON -> RC4(dynamic bkey) -> Base64
  *   bkey is resolved exactly like the client: update.json supplies the RSA
- *   private key, key.json supplies the RSA-encrypted bkey.
+ *   private key, key.json supplies the RSA-encrypted bkey. The resolved bkey
+ *   is cached outside the public web root so normal requests do not perform
+ *   two remote HTTPS fetches every time.
  *
  * appstore_v2:
  *   JSON -> RC4(random 15-char key)
@@ -20,6 +22,8 @@ class SourceEncryptionProvider
 {
     const LEGACY_UPDATE_URL = 'https://api.nuosike.com/update.json';
     const LEGACY_KEY_URL = 'https://api.nuosike.com/key.json';
+    const LEGACY_BKEY_CACHE_TTL = 900;
+    const LEGACY_BKEY_STALE_TTL = 86400;
     const V2_MAGIC = 0xFEEDFACF;
     const V2_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const V2_KEY_LENGTH = 15;
@@ -33,12 +37,19 @@ class SourceEncryptionProvider
         . "MQIDAQAB\n"
         . "-----END PUBLIC KEY-----\n";
 
+    protected static $lastLegacyKeySource = 'none';
+
     public static function localAvailable()
     {
         return function_exists('openssl_pkey_get_private')
             && function_exists('openssl_private_decrypt')
             && function_exists('openssl_pkey_get_public')
             && function_exists('openssl_public_encrypt');
+    }
+
+    public static function lastLegacyKeySource()
+    {
+        return self::$lastLegacyKeySource;
     }
 
     public static function encryptEncodedContent($content, $appType = 'appstore')
@@ -64,6 +75,8 @@ class SourceEncryptionProvider
         }
         if ($bkey === null) {
             $bkey = self::loadLegacyBKey();
+        } else {
+            self::$lastLegacyKeySource = 'supplied';
         }
         if (!is_string($bkey) || $bkey === '') {
             throw new \RuntimeException('Legacy bkey is empty');
@@ -159,6 +172,30 @@ class SourceEncryptionProvider
             throw new \RuntimeException('Required curl/OpenSSL functions are unavailable');
         }
 
+        $now = time();
+        $cached = self::readLegacyBKeyCache();
+        if ($cached && ($now - $cached['fetched_at']) <= self::legacyBKeyCacheTtl()) {
+            self::$lastLegacyKeySource = 'cache';
+            return $cached['bkey'];
+        }
+
+        try {
+            $bkey = self::fetchLegacyBKey();
+            self::writeLegacyBKeyCache($bkey, $now);
+            self::$lastLegacyKeySource = 'remote';
+            return $bkey;
+        } catch (\Exception $e) {
+            if ($cached && ($now - $cached['fetched_at']) <= self::legacyBKeyStaleTtl()) {
+                self::$lastLegacyKeySource = 'stale-cache';
+                error_log('[SourceEncryptionProvider] legacy bkey refresh failed; using stale cache: ' . $e->getMessage());
+                return $cached['bkey'];
+            }
+            throw $e;
+        }
+    }
+
+    protected static function fetchLegacyBKey()
+    {
         $update = self::getJson(self::LEGACY_UPDATE_URL, 'update.json');
         if (!isset($update['rule']) || !is_string($update['rule'])) {
             throw new \RuntimeException('update.json missing rule');
@@ -189,8 +226,78 @@ class SourceEncryptionProvider
         if (!$ok || $bkey === '') {
             throw new \RuntimeException('Legacy bkey RSA decrypt failed');
         }
-
         return $bkey;
+    }
+
+    protected static function legacyBKeyCacheTtl()
+    {
+        $value = getenv('SOURCE_LEGACY_BKEY_TTL');
+        $ttl = $value === false || trim((string)$value) === '' ? self::LEGACY_BKEY_CACHE_TTL : (int)$value;
+        return $ttl > 0 ? $ttl : self::LEGACY_BKEY_CACHE_TTL;
+    }
+
+    protected static function legacyBKeyStaleTtl()
+    {
+        $value = getenv('SOURCE_LEGACY_BKEY_STALE_TTL');
+        $ttl = $value === false || trim((string)$value) === '' ? self::LEGACY_BKEY_STALE_TTL : (int)$value;
+        return $ttl > 0 ? $ttl : self::LEGACY_BKEY_STALE_TTL;
+    }
+
+    protected static function legacyBKeyCacheFile()
+    {
+        $custom = getenv('SOURCE_LEGACY_BKEY_CACHE_FILE');
+        if ($custom !== false && trim((string)$custom) !== '') {
+            return trim((string)$custom);
+        }
+        $runtime = defined('RUNTIME_PATH') ? RUNTIME_PATH : dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR;
+        return rtrim($runtime, '/\\') . DIRECTORY_SEPARATOR . 'source_crypto' . DIRECTORY_SEPARATOR . 'legacy_bkey.json';
+    }
+
+    protected static function readLegacyBKeyCache()
+    {
+        $file = self::legacyBKeyCacheFile();
+        if (!is_file($file) || !is_readable($file)) {
+            return null;
+        }
+        $raw = @file_get_contents($file);
+        if (!is_string($raw) || $raw === '') {
+            return null;
+        }
+        $data = json_decode($raw, true);
+        if (!is_array($data) || empty($data['bkey']) || empty($data['fetched_at'])) {
+            return null;
+        }
+        $bkey = base64_decode((string)$data['bkey'], true);
+        if ($bkey === false || $bkey === '') {
+            return null;
+        }
+        return [
+            'bkey' => $bkey,
+            'fetched_at' => (int)$data['fetched_at'],
+        ];
+    }
+
+    protected static function writeLegacyBKeyCache($bkey, $fetchedAt)
+    {
+        $file = self::legacyBKeyCacheFile();
+        $dir = dirname($file);
+        if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
+            error_log('[SourceEncryptionProvider] unable to create legacy bkey cache directory');
+            return;
+        }
+        $payload = json_encode([
+            'version' => 1,
+            'fetched_at' => (int)$fetchedAt,
+            'bkey' => base64_encode((string)$bkey),
+        ]);
+        $tmp = $file . '.tmp.' . getmypid() . '.' . mt_rand(1000, 9999);
+        if (@file_put_contents($tmp, $payload, LOCK_EX) === false) {
+            return;
+        }
+        @chmod($tmp, 0600);
+        if (!@rename($tmp, $file)) {
+            @unlink($tmp);
+        }
     }
 
     protected static function getJson($url, $label)
