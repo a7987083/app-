@@ -35,6 +35,7 @@ application/common/model/Category.php
 application/admin/view/authorization/index.html
 application/admin/view/authorization/transfers.html
 application/admin/view/authorization/events.html
+public/assets/js/backend/authorization.js
 application/admin/view/category/add.html
 application/admin/view/category/edit.html
 application/admin/controller/Kami.php

@@ -1,0 +1,54 @@
+name: Phase 19.2 Legacy AppStore Performance
+
+on:
+  push:
+    branches:
+      - 'feature/phase19-2-legacy-response-cache-v1'
+      - 'release/**'
+    paths:
+      - 'application/admin/controller/Authorization.php'
+      - 'application/admin/view/authorization/**'
+      - 'public/assets/js/backend/authorization.js'
+      - 'application/index/controller/App.php'
+      - 'application/route.php'
+      - 'application/common/library/SourceAppRepository.php'
+      - 'application/common/library/SourceChangeLog.php'
+      - 'application/common/library/SourceResponse.php'
+      - 'application/common/library/SourceResponseCache.php'
+      - 'release/online-update-files.txt'
+      - 'tests/phase17_4_admin_hotfix_contract_test.php'
+      - 'tests/phase19_2_authorization_center_contract_test.php'
+      - 'tests/phase19_2_legacy_response_cache_test.php'
+      - '.github/workflows/phase19-2-legacy-performance.yml'
+  workflow_dispatch:
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: zip
+      - name: Lint Phase 19.2 authorization runtime
+        run: |
+          set -euo pipefail
+          php -l application/admin/controller/Authorization.php
+          php -l tests/phase17_4_admin_hotfix_contract_test.php
+          php -l tests/phase19_2_authorization_center_contract_test.php
+      - name: Run authorization-center regression contracts
+        run: |
+          set -euo pipefail
+          php tests/phase17_4_admin_hotfix_contract_test.php
+          php tests/phase19_2_authorization_center_contract_test.php
+      - name: Verify online update contains authorization controller UI
+        run: |
+          set -euo pipefail
+          php tools/build_online_update.php "$PWD/phase19-2-online-update.zip"
+          unzip -t phase19-2-online-update.zip >/dev/null
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/admin/controller/Authorization.php'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/admin/view/authorization/transfers.html'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/application/admin/view/authorization/events.html'
+          unzip -Z1 phase19-2-online-update.zip | grep -Fx 'program/public/assets/js/backend/authorization.js'
