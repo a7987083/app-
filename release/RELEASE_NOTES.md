@@ -1,47 +1,35 @@
-# ZONOE 软件源 2026091709
+# ZONOE 软件源 2026091710
 
 ## 更新内容
 
-### 回滚到 2026091706 稳定运行时代码
+### 修复从 2026091704 开始的 `/appstore` 可用性回归
 
-- **2026091707、2026091708 正式作废（Deprecated）**，不再作为稳定版、部署基线或后续开发基线。
-- 2026091709 不是在 1708 上继续打补丁，而是直接从 `source-v2026091706` 正式 Release commit `1315f7974f9220d1b422ef69686ad2110f5e549e` 重新建立。
-- `application/index/controller/App.php` 恢复 1706 实现：重新直接读取 `fa_category`，不再调用 1707 引入的 `SourceAppRepository` / `SourcePerformance`。
-- `SourceResponse.php` 恢复 1706 实现：移除代码层 HTTP gzip。
-- `SourceEncryptionProvider.php` 恢复 1706 实现：移除 legacy bkey 持久缓存改动。
-- 1707/1708 新增的 `SourceAppRepository.php`、`SourcePerformance.php` 如果已经存在于生产服务器，可作为未引用残留文件保留；1709 的运行时代码不会加载它们。
-- `appstore` / `appstore_v2` 的客户端协议、JSON 字段和 1706 原有加密兼容逻辑保持不变，不要求客户端更新。
+- 已确认 `/appstore` 路由本身在 2026091703 与 2026091704 完全一致，仍为 `appstore -> index/App/list`；问题不是路由被删除。
+- 2026091704 首次把 `renewal_entry` 加入 `SourceAppRecord::publicSourceColumns()`，导致 `/appstore` 每次查询 `fa_category` 时都强制 SELECT `renewal_entry`。
+- 如果生产库的 `2026091704_renewal_entry.sql` 没有成功新增该字段，MySQL 会直接报不存在字段，ThinkPHP 返回异常页，因此整个软件源无法访问。
+- 2026091710 将 `renewal_entry` 改为**运行时可选字段**：先检测 `fa_category` 是否真实存在该列；存在则继续启用续费入口，不存在则自动排除该字段并按旧版 App 数据返回。
+- 数据库迁移是否成功不再决定 `/appstore` 是否可访问。即使旧服务器漏跑迁移，软件源也应继续工作。
+- 续费入口功能没有删除：字段存在时仍读取 `renewal_entry`，`renewal_entry=1` 仍保持 `lock=1`、`downloadURL=''`。
+- 不修改 `appstore` / `appstore_v2` 加密协议，不修改客户端 JSON 字段，不要求客户端更新。
 
-## 保留的 1706 功能
+## 影响版本
 
-- 删除卡密时同步清理对应 `fa_kami_app.kami_id` 映射；卡密仅到期不清映射。
-- 删除 App 时同步清理对应 `fa_kami_app.app_id` 映射；隐藏、停用、编辑不清映射。
-- 清空换绑记录、授权事件后重新进入授权总览并禁止旧页面缓存。
-- 保持续费入口、卡密用途、授权叠加、换绑额度、`apiface` 签名等 1706 已验证逻辑。
+- `2026091703`：最后一个没有 `renewal_entry` 强制查询依赖的版本。
+- `2026091704`：首次引入该依赖，是本次回归起点。
+- `2026091705` ～ `2026091709`：继承了相同的源查询字段依赖；即使后续增加修复迁移，只要生产库字段仍缺失，`/appstore` 仍可能失败。
+- `2026091710`：首次把源接口改为 schema-adaptive，不再因 `renewal_entry` 缺失而整体不可用。
 
-## 数据库
+## 测试
 
-- 本版本无数据库结构变更。
-- 不删除、不回滚任何用户业务数据。
-- 已在 1707/1708 期间产生的卡密、授权、App 数据继续保留。
-
-## 废弃版本
-
-- `2026091707`：**DEPRECATED / 作废，请勿部署**。
-- `2026091708`：**DEPRECATED / 作废，请勿部署**。
-- 后续开发统一从 `2026091709`（1706 runtime baseline）继续。
-
-## 验证要求
-
-- PHP 7.0 全回归必须通过。
-- MySQL 5.7 迁移链必须通过。
-- 在线更新 ZIP 必须包含 1706 版本的 `App.php`、`SourceResponse.php`、`SourceEncryptionProvider.php` 等运行文件。
-- 必须发布 `zonoe-online-update.zip` 与 SHA256。
-- 必须通过从上一正式 Release 到 2026091709 的真实 GitHub 在线升级 E2E。
+- PHP 7.0：`SourceAppRecord::publicSourceColumns()` 在运行时检测不到 `renewal_entry` 时必须自动排除该字段。
+- MySQL 5.7：先创建不含 `renewal_entry` 的旧 `fa_category`，验证兼容 SELECT 可以正常执行；随后运行续费入口迁移，再验证字段会自动重新进入源查询列。
+- 保留既有续费入口、卡密/App 映射清理、授权总览刷新、`apiface` 签名和三种卡密用途回归。
+- 正式发布继续要求 PHP 7.0 全回归、MySQL 5.7 迁移、ZIP/SHA256 和真实 GitHub Release 在线升级 E2E 全部通过。
 
 ## 在线更新
 
-- 正式版本：`2026091709`
-- GitHub Release：`source-v2026091709`
+- 正式版本：`2026091710`
+- 基线：`2026091709`
+- GitHub Release：`source-v2026091710`
 - 发布资产：`zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`
-- 已在 2026091707 / 2026091708 的服务器可直接在线升级到 2026091709 完成回滚。
+- 2026091704 ～ 2026091709 的服务器均应升级到 2026091710；本版不会删除业务数据。
