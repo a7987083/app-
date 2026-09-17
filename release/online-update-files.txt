@@ -8,10 +8,14 @@ application/admin/controller/general/Updatemaintenance.php
 application/admin/view/general/updatemaintenance/panel.html
 public/assets/js/backend/general/config.js
 public/assets/js/backend/general/updatemaintenance.js
+application/route.php
 application/index/controller/App.php
+application/index/controller/SourceV3.php
 application/index/controller/Index.php
 application/common/library/SourceAppRecord.php
 application/common/library/SourceAppRepository.php
+application/common/library/SourceChangeLog.php
+application/common/library/SourceSyncV3.php
 application/common/library/AppStorePayload.php
 application/common/library/CardAccessPolicy.php
 application/common/library/CardDeviceTransfer.php
@@ -23,6 +27,7 @@ application/common/library/AuthorizationSchema.php
 application/common/library/DataIntegrityAudit.php
 application/admin/controller/Authorization.php
 application/admin/controller/Category.php
+application/admin/controller/Ajax.php
 application/admin/model/Kami.php
 application/common/model/Category.php
 application/admin/view/authorization/index.html
