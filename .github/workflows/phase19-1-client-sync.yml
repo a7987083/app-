@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - 'feature/phase19-1-client-sync-contract-v1'
-      - 'release/**'
     paths:
       - 'application/index/controller/SourceV3.php'
       - 'application/common/library/SourceSyncV3.php'
