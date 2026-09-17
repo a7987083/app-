@@ -1,43 +1,35 @@
-# ZONOE 软件源 2026091711
+# ZONOE 软件源 2026091712
 
 ## 更新内容
 
-### 在 2026091710 稳定基线上恢复 1707/1708 性能功能
+### Phase 18.1 — 软件源 V3 万级同步基础
 
-- 继续保留 2026091710 对 `/appstore` 的 schema-adaptive 修复：`fa_category.renewal_entry` 缺失时自动排除该字段，软件源接口不能再因漏跑 1704 迁移整体报错。
-- 恢复 2026091707 的 legacy `appstore` bkey 本地缓存：默认 fresh TTL 900 秒、stale fallback 86400 秒，减少每次请求远程读取 `update.json/key.json` 的固定等待。
-- 恢复公共 App 行数据 15 秒共享缓存，减少高并发添加/刷新时重复扫描 `fa_category`。
-- 恢复 2026091708 的 cache fail-open：缓存读、写、删除异常只记录日志，始终回退数据库，缓存故障不能影响 `/appstore` 可用性。
-- 恢复 `appstore/appstore_v2` HTTP gzip 传输压缩；仅客户端声明 `Accept-Encoding: gzip` 时启用，HTTP 解压后的协议正文保持不变。
-- 恢复 `[SourcePerf]` 慢请求性能日志，记录 App 数量、数据来源、JSON/加密/总耗时、响应字节和峰值内存。
-- 恢复 1k/5k/10k/20k/50k 双协议基准工具及相关兼容测试。
-- 不修改 `appstore` / `appstore_v2` 的加密协议、JSON 字段和客户端解密逻辑，不要求客户端升级。
+- 旧 `/appstore` 路由和 `appstore / appstore_v2` 协议保持不变，现有客户端无需更新。
+- 新增 `/appstore/v3/meta`：返回 V3 协议版本、当前 source revision、正常 App 总数、分页/增量上限和增量表可用状态。
+- 新增 `/appstore/v3/apps`：使用 `after_id + limit` 做稳定游标分页；默认 200、最大 500。每个 App 额外包含稳定 `id` 和 `weigh`，供新客户端本地数据库和排序使用。
+- 新增 `/appstore/v3/delta`：使用 `since + limit` 按 revision 增量拉取，仅返回 `upserts` 和 `deleted`；默认 200、最大 1000，并返回 `next_since/current_revision/has_more`。
+- V3 继续复用现有卡密授权、指定 App 授权、黑名单和 `appstore/appstore_v2` 加密封装；不会绕过原授权规则。
+- 新增 `fa_source_change`：`revision` 使用 MySQL AUTO_INCREMENT，保证并发写入下仍有唯一、单调递增的增量游标。
+- App 新增、模型更新、删除、后台直接编辑、批量状态更新和拖动排序均写入 change log。
+- change log 写入采用 fail-open：增量表异常只记录日志，不得影响旧 `/appstore`、后台 App 管理或 1711 的稳定功能。
+- 首次全量同步建议：先读取 `/appstore/v3/meta` 记住 revision，再按 `after_id` 拉完整页，最后调用 `/appstore/v3/delta?since=<初始revision>` 补齐同步期间发生的变化。
 
-## 1707 / 1708 状态说明
+## 与 2026091711 的关系
 
-- 之前将 1707/1708 作废，是在尚未定位 `/appstore` 故障起点时的风险控制措施。
-- 现已确认故障起点是 2026091704 对 `renewal_entry` 的强制查询依赖，并已由 2026091710 修复。
-- 1707/1708 的性能功能本身现已重新纳入 2026091711。
-- 历史 `source-v2026091707` / `source-v2026091708` 标签仍不建议单独部署，因为它们不包含 1710 的 schema-adaptive 修复；后续统一以 2026091711 为基线。
+- 完整保留 1710 的 `renewal_entry` schema-adaptive 修复。
+- 完整保留 1711 恢复的 legacy bkey 缓存、15 秒 App 缓存、cache fail-open、HTTP gzip、SourcePerf 和 50k benchmark。
+- 保持续费入口、三种卡密用途、授权叠加、`apiface` 签名、换绑额度、卡密/App 删除映射清理和授权总览刷新。
+- 本版本只是新增 V3 服务端基础，不会自动把现有客户端切换到 V3。
 
-## 保留的业务功能
+## 验证
 
-- 保留续费入口：字段存在时 `renewal_entry=1` 仍保持 `lock=1`、`downloadURL=''`。
-- 保留三种卡密用途、授权叠加、`apiface` 签名和换绑额度逻辑。
-- 保留删除卡密/App 时同步清理 `fa_kami_app` 映射；仅到期、隐藏、停用、编辑不清映射。
-- 保留清空换绑记录/授权事件后回到授权总览并禁止旧页面缓存。
-
-## 验证要求
-
-- PHP 7.0 全回归必须通过。
-- MySQL 5.7 迁移链及“缺少 renewal_entry 的旧表兼容查询”必须通过。
-- 1707/1708 性能专项测试必须通过：bkey cache、App cache fail-open、gzip 字节等价、性能契约和 50k benchmark。
-- 在线更新 ZIP 必须包含 `SourceAppRecord.php`、`SourceAppRepository.php`、`SourceEncryptionProvider.php`、`SourcePerformance.php`、`SourceResponse.php` 与新版 `App.php`。
-- 必须发布 `zonoe-online-update.zip` 与 SHA256，并通过 2026091710 → 2026091711 的真实 GitHub 在线升级 E2E。
+- Phase 18.1 PHP 7.0 契约测试：旧 `/appstore` 路由保持、V3 三接口、分页/增量字段、App 变更 revision、拖动排序 revision、change-log fail-open。
+- MySQL 5.7：`fa_source_change` 迁移可重复执行；revision 自增且 delta cursor 顺序正确。
+- 正式发布继续要求既有 PHP 7.0 全回归、MySQL 5.7 迁移链、在线更新 ZIP/SHA256 和真实 GitHub Release E2E 全部通过。
 
 ## 在线更新
 
-- 正式版本：`2026091711`
-- 基线：`2026091710`
-- GitHub Release：`source-v2026091711`
+- 正式版本：`2026091712`
+- 基线：`2026091711`
+- GitHub Release：`source-v2026091712`
 - 发布资产：`zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`
