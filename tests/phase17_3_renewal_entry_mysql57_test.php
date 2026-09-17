@@ -1,5 +1,9 @@
 <?php
 
+require_once dirname(__DIR__) . '/application/common/library/SourceAppRecord.php';
+
+use app\common\library\SourceAppRecord;
+
 function renewalMysqlFail($message)
 {
     fwrite(STDERR, "FAIL phase17_3_renewal_entry_mysql57_test: {$message}\n");
@@ -45,6 +49,24 @@ function renewalMysqlExec(mysqli $db, $sql)
 
 renewalMysqlExec($mysqli, "DROP TABLE IF EXISTS `fa_category`; CREATE TABLE `fa_category` (`id` int(10) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(30) NOT NULL DEFAULT '', `bt2b` varchar(10) NOT NULL DEFAULT '0', PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8; INSERT INTO `fa_category` (`name`,`bt2b`) VALUES ('LEGACY-APP','1');");
 
+// Critical 2026091710 regression check: before the renewal migration exists,
+// the public source column list must not select renewal_entry.
+$res = $mysqli->query('SHOW COLUMNS FROM `fa_category`');
+renewalMysqlAssert($res !== false, 'SHOW COLUMNS failed before migration');
+$available = [];
+while ($column = $res->fetch_assoc()) {
+    $available[] = $column['Field'];
+}
+$res->free();
+$compatible = SourceAppRecord::publicSourceColumnsForSchema($available);
+renewalMysqlAssert(!in_array('renewal_entry', $compatible, true), 'legacy schema selected missing renewal_entry');
+renewalMysqlAssert(in_array('id', $compatible, true) && in_array('name', $compatible, true) && in_array('bt2b', $compatible, true), 'legacy compatible source columns incomplete');
+$res = $mysqli->query('SELECT ' . implode(',', array_map(function ($column) {
+    return '`' . str_replace('`', '``', $column) . '`';
+}, $compatible)) . ' FROM `fa_category` LIMIT 1');
+renewalMysqlAssert($res !== false && $res->num_rows === 1, 'legacy appstore-compatible SELECT failed: ' . $mysqli->error);
+$res->free();
+
 $sqlFile = dirname(__DIR__) . '/release/sql/2026091704_renewal_entry.sql';
 $sql = file_get_contents($sqlFile);
 renewalMysqlAssert($sql !== false && trim($sql) !== '', 'migration SQL missing');
@@ -73,5 +95,16 @@ $row = $res->fetch_assoc();
 renewalMysqlAssert((int)$row['renewal_entry'] === 1, 'renewal flag must persist');
 $res->free();
 
+// After migration, schema filtering must include renewal_entry again.
+$res = $mysqli->query('SHOW COLUMNS FROM `fa_category`');
+renewalMysqlAssert($res !== false, 'SHOW COLUMNS failed after migration');
+$available = [];
+while ($column = $res->fetch_assoc()) {
+    $available[] = $column['Field'];
+}
+$res->free();
+$compatible = SourceAppRecord::publicSourceColumnsForSchema($available);
+renewalMysqlAssert(in_array('renewal_entry', $compatible, true), 'modern schema did not restore renewal_entry source field');
+
 $mysqli->close();
-fwrite(STDOUT, "OK phase17_3_renewal_entry_mysql57_test idempotent=passed legacy_default=passed flag=passed\n");
+fwrite(STDOUT, "OK phase17_3_renewal_entry_mysql57_test pre_migration_appstore=passed idempotent=passed legacy_default=passed flag=passed post_migration=passed\n");
