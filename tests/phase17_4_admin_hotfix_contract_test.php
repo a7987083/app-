@@ -33,10 +33,17 @@ phase174Assert(strpos($category, "unset(\$params['renewal_entry'])") !== false, 
 phase174Assert(strpos($edit, '$renewalEntryAvailable') !== false, 'edit view schema guard missing');
 phase174Assert(strpos($add, '$renewalEntryAvailable') !== false, 'add view schema guard missing');
 
-phase174Assert(strpos($authorization, "DELETE FROM `fa_card_transfer_log`") !== false, 'transfer DELETE missing');
-phase174Assert(strpos($authorization, "DELETE FROM `fa_authorization_event`") !== false, 'authorization event DELETE missing');
-phase174Assert(strpos($authorization, "\$this->success(\n                    '换绑记录已清空") !== false, 'transfer clear must use backend success response');
-phase174Assert(strpos($authorization, "\$this->success(\n                    '授权事件已清空") !== false, 'event clear must use backend success response');
+$transferDelete = strpos($authorization, "DELETE FROM `fa_card_transfer_log`");
+$transferCatch = strpos($authorization, 'catch (\\Exception $e)', $transferDelete);
+$transferSuccess = strpos($authorization, "'换绑记录已清空", $transferDelete);
+phase174Assert($transferDelete !== false && $transferCatch !== false && $transferSuccess !== false, 'transfer clear flow missing');
+phase174Assert($transferDelete < $transferCatch && $transferCatch < $transferSuccess, 'transfer success must be outside DB exception handler');
+
+$eventDelete = strpos($authorization, "DELETE FROM `fa_authorization_event`");
+$eventCatch = strpos($authorization, 'catch (\\Exception $e)', $eventDelete);
+$eventSuccess = strpos($authorization, "'授权事件已清空", $eventDelete);
+phase174Assert($eventDelete !== false && $eventCatch !== false && $eventSuccess !== false, 'authorization event clear flow missing');
+phase174Assert($eventDelete < $eventCatch && $eventCatch < $eventSuccess, 'event success must be outside DB exception handler');
 phase174Assert(strpos($authorization, "['deleted' => (int)\$deleted, 'resource' => 'transfers']") !== false, 'transfer AJAX result payload missing');
 phase174Assert(strpos($authorization, "['deleted' => (int)\$deleted, 'resource' => 'events']") !== false, 'event AJAX result payload missing');
 phase174Assert(strpos($authorization, "\$target = url('authorization/index'") === false, 'legacy one-second redirect target must be removed');
