@@ -35,7 +35,7 @@ p181Assert(strpos($changes, "order('revision asc')") !== false, 'change-log must
 p181Assert(strpos($changes, 'legacy source remains available') !== false, 'change logging must fail-open');
 p181Assert(strpos($model, 'SourceChangeLog::record') !== false, 'model add/update/delete revision hooks missing');
 p181Assert(strpos($admin, 'SourceChangeLog::record((int)$ids, \'update\')') !== false, 'direct admin edit revision logging missing');
-p181Assert(strpos($ajax, "SourceChangeLog::recordMany(array_keys($weighids), 'update')") !== false, 'drag-sort revision logging missing');
+p181Assert(strpos($ajax, 'SourceChangeLog::recordMany(array_keys($weighids), \'update\')') !== false, 'drag-sort revision logging missing');
 p181Assert(strpos($sql, 'CREATE TABLE IF NOT EXISTS `fa_source_change`') !== false && strpos($sql, '`revision` bigint(20) unsigned NOT NULL AUTO_INCREMENT') !== false, 'idempotent revision schema missing');
 p181Assert(strpos($legacyApp, 'public function list()') !== false && strpos($legacyApp, 'SourceAppRepository::rows()') !== false, 'legacy source controller contract unexpectedly changed');
 
