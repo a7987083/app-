@@ -2,6 +2,7 @@
 
 namespace app\common\model;
 
+use think\Db;
 use think\Model;
 
 /**
@@ -25,6 +26,15 @@ class Category extends Model
     {
         self::afterInsert(function ($row) {
             $row->save(['weigh' => $row['id']]);
+        });
+
+        // 真正删除 App 时同步删除“指定 App 卡 -> App”映射。
+        // App 仅隐藏、卡密仅到期等状态变化不会触发这里，因此历史映射会保留。
+        self::beforeDelete(function ($row) {
+            $id = isset($row['id']) ? (int)$row['id'] : 0;
+            if ($id > 0) {
+                Db::table('fa_kami_app')->where('app_id', $id)->delete();
+            }
         });
     }
 
