@@ -23,7 +23,13 @@ class AppStorePayload
 
     public static function appType($headerValue)
     {
-        return SourceEncryptionMode::appType($headerValue);
+        $modeClass = __NAMESPACE__ . '\\SourceEncryptionMode';
+        if (class_exists($modeClass)) {
+            return SourceEncryptionMode::appType($headerValue);
+        }
+        // Legacy isolated tests and minimal integrations load this mapper
+        // without the framework autoloader. Preserve the 1712 fallback there.
+        return $headerValue === 'v2' ? 'appstore_v2' : 'appstore';
     }
 
     public static function siteInfo(array $configRows)
