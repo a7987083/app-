@@ -44,92 +44,8 @@ function elapsedMs($startedAt)
     return round((microtime(true) - $startedAt) * 1000, 2);
 }
 
-/** Candidate only: same legacy ASCII-key semantics with an exact-size output buffer. */
-function fastRc4Ascii($data, $keyText)
-{
-    $key = [];
-    $keyTextLength = strlen($keyText);
-    for ($n = 0; $n < $keyTextLength; $n++) {
-        $key[] = ord($keyText[$n]);
-    }
-    $keyLength = count($key);
-    if ($keyLength === 0) {
-        throw new RuntimeException('key is empty');
-    }
-
-    $state = range(0, 255);
-    $j = 0;
-    for ($i = 0; $i < 256; $i++) {
-        $j = ($j + $state[$i] + $key[$i % $keyLength]) & 0xff;
-        $tmp = $state[$i];
-        $state[$i] = $state[$j];
-        $state[$j] = $tmp;
-    }
-
-    $length = strlen($data);
-    if ($length === 0) {
-        return '';
-    }
-    $output = str_repeat("\0", $length);
-    $i = 0;
-    $j = 0;
-    for ($n = 0; $n < $length; $n++) {
-        $i = ($i + 1) & 0xff;
-        $j = ($j + $state[$i]) & 0xff;
-        $tmp = $state[$i];
-        $state[$i] = $state[$j];
-        $state[$j] = $tmp;
-        $k = $state[($state[$i] + $state[$j]) & 0xff];
-        $output[$n] = chr(ord($data[$n]) ^ $k);
-    }
-    return $output;
-}
-
-/** Candidate only: same V2 variable-width codec with a worst-case preallocated buffer. */
-function fastV2Codec($raw)
-{
-    $alphabet = SourceEncryptionProvider::V2_ALPHABET;
-    $length = strlen($raw);
-    if ($length === 0) {
-        return '';
-    }
-    $output = str_repeat("\0", (int)ceil($length * 1.61) + 4);
-    $out = 0;
-    $buffer = 0;
-    $bitCount = 0;
-
-    for ($i = 0; $i < $length; $i++) {
-        $buffer |= ord($raw[$i]) << $bitCount;
-        $bitCount += 8;
-        while ($bitCount >= 5) {
-            $value5 = $buffer & 31;
-            if ($value5 === 30 || $value5 === 31) {
-                $output[$out++] = $alphabet[$value5];
-                $buffer >>= 5;
-                $bitCount -= 5;
-                continue;
-            }
-            if ($bitCount < 6) {
-                break;
-            }
-            $value6 = $buffer & 63;
-            $output[$out++] = $alphabet[$value6];
-            $buffer >>= 6;
-            $bitCount -= 6;
-        }
-    }
-
-    if ($bitCount > 0) {
-        $value5 = $buffer & 31;
-        $output[$out++] = ($bitCount >= 5 && ($value5 === 30 || $value5 === 31))
-            ? $alphabet[$value5]
-            : $alphabet[$buffer & 63];
-    }
-    return substr($output, 0, $out);
-}
-
 $key = 'UthbkJctpzDlLle';
-echo "count\tjson_mb\tappstore_ms\tappstore_mb_s\tv2_ms\tv2_mb_s\tprealloc_rc4_ms\tprealloc_codec_ms\tprealloc_v2_core_ms\tlegacy_out_mb\tv2_out_mb\tpeak_mb\n";
+echo "count\tjson_mb\tappstore_ms\tappstore_mb_s\tv2_ms\tv2_mb_s\tlegacy_out_mb\tlegacy_gzip1_mb\tlegacy_gzip1_ms\tv2_out_mb\tv2_gzip1_mb\tv2_gzip1_ms\tpeak_mb\n";
 
 foreach ($counts as $count) {
     $json = benchJson($count);
@@ -145,24 +61,12 @@ foreach ($counts as $count) {
     $v2Ms = elapsedMs($started);
 
     $started = microtime(true);
-    $candidatePayload = fastRc4Ascii($json, $key);
-    $candidateRc4Ms = elapsedMs($started);
-    if (base64_encode($candidatePayload) !== $legacy) {
-        throw new RuntimeException('preallocated RC4 output mismatch');
-    }
+    $legacyGzip = gzencode($legacy, 1);
+    $legacyGzipMs = elapsedMs($started);
 
-    $candidateRaw = pack('V', SourceEncryptionProvider::V2_MAGIC)
-        . pack('V', 256)
-        . str_repeat('R', 256)
-        . pack('V', strlen($candidatePayload))
-        . $candidatePayload;
-    $referenceCodec = SourceEncryptionProvider::encodeV2Codec($candidateRaw);
     $started = microtime(true);
-    $candidateCodec = fastV2Codec($candidateRaw);
-    $candidateCodecMs = elapsedMs($started);
-    if ($candidateCodec !== $referenceCodec) {
-        throw new RuntimeException('preallocated V2 codec output mismatch');
-    }
+    $v2Gzip = gzencode($v2, 1);
+    $v2GzipMs = elapsedMs($started);
 
     $legacyRate = $legacyMs > 0 ? round($mb / ($legacyMs / 1000), 2) : 0;
     $v2Rate = $v2Ms > 0 ? round($mb / ($v2Ms / 1000), 2) : 0;
@@ -174,15 +78,16 @@ foreach ($counts as $count) {
         $legacyRate,
         $v2Ms,
         $v2Rate,
-        $candidateRc4Ms,
-        $candidateCodecMs,
-        round($candidateRc4Ms + $candidateCodecMs, 2),
         round(strlen($legacy) / 1048576, 2),
+        round(strlen($legacyGzip) / 1048576, 2),
+        $legacyGzipMs,
         round(strlen($v2) / 1048576, 2),
+        round(strlen($v2Gzip) / 1048576, 2),
+        $v2GzipMs,
         round(memory_get_peak_usage(true) / 1048576, 2),
     ]) . "\n";
 
-    unset($json, $legacy, $v2, $candidatePayload, $candidateRaw, $referenceCodec, $candidateCodec);
+    unset($json, $legacy, $v2, $legacyGzip, $v2Gzip);
     if (function_exists('gc_collect_cycles')) {
         gc_collect_cycles();
     }
