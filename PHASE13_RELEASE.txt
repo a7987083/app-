@@ -1,31 +1,23 @@
-ZONOE 软件源 Release 2026091712
-版本：2026091712
-基线：2026091711
+ZONOE 软件源 Release 2026091713
+版本：2026091713
+基线：2026091712
 
 更新内容：
-1. 保持旧 /appstore、appstore、appstore_v2 完全兼容，现有客户端无需升级。
-2. 新增 /appstore/v3/meta：返回 source revision、App 总数、分页/增量限制和增量表状态。
-3. 新增 /appstore/v3/apps：after_id 游标分页，默认 200、最大 500；返回稳定 App id 与 weigh。
-4. 新增 /appstore/v3/delta：since revision 增量同步，仅返回 upserts / deleted，并返回 next_since/current_revision/has_more。
-5. 新增 fa_source_change，revision 使用 AUTO_INCREMENT，保证唯一单调递增游标。
-6. App 新增、模型更新、删除、后台直接编辑、批量状态修改和拖动排序均记录 revision。
-7. change log fail-open：增量表异常不能影响旧软件源接口或后台 App 管理。
-8. V3 继续复用现有卡密授权、指定 App 权限、黑名单和 appstore/appstore_v2 加密封装。
-9. 保留 1710 renewal_entry 缺列兼容修复及 1711 的 bkey cache、App cache、gzip、SourcePerf 等全部功能。
-
-客户端后续接入建议：
-- 首次同步先调用 meta 记住 revision。
-- 使用 apps?after_id=0&limit=200 分页同步到本地数据库。
-- 全量完成后调用 delta?since=<初始revision> 补齐同步期间变化。
-- 后续启动只需按上次 revision 拉 delta。
+1. 系统配置“软件源加密”改为互斥三选一：关闭 / 普通 / V2。
+2. 继续复用 opencry：0=关闭，1=普通 appstore，2=appstore_v2；旧 0/1 配置无损升级。
+3. 后台选择为服务端权威模式：普通强制 appstore，V2 强制 appstore_v2，不允许两个协议同时开启。
+4. opencry=2 对旧布尔加密路径兼容为已开启，继续复用现有发送、gzip、缓存和性能日志链。
+5. /appstore 与 /appstore/v3/* 共用同一协议选择策略。
+6. 保留 1712 V3 revision/分页/delta，1711 性能优化及 1710 schema-adaptive 修复。
+7. 配置迁移支持 MySQL 5.7 且可重复执行。
 
 验证：
-- PHP 7.0 V3 专项契约。
-- MySQL 5.7 V3 change-log 迁移、幂等、revision 单调性和 delta cursor 测试。
-- 既有 PHP 7.0 全回归、MySQL 5.7 全迁移。
-- 在线更新 ZIP/SHA256。
-- 2026091711 -> 2026091712 真实 GitHub Release 在线更新 E2E。
+- Phase 18.2 PHP 7.0 互斥协议契约。
+- Phase 18.2 MySQL 5.7 配置迁移测试。
+- 正式 PHP 7.0 全回归与 MySQL 5.7 迁移链。
+- 在线更新 ZIP 必须携带 SourceEncryptionMode、SourceConfigRepository、AppStorePayload 和 1713 SQL。
+- 2026091712 -> 2026091713 真实 GitHub Release 在线更新 E2E。
 
 在线更新：
-- GitHub Release 标签：source-v2026091712。
+- GitHub Release 标签：source-v2026091713。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。

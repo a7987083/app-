@@ -1,35 +1,34 @@
-# ZONOE 软件源 2026091712
+# ZONOE 软件源 2026091713
 
 ## 更新内容
 
-### Phase 18.1 — 软件源 V3 万级同步基础
+### Phase 18.2 — 软件源加密模式互斥选择
 
-- 旧 `/appstore` 路由和 `appstore / appstore_v2` 协议保持不变，现有客户端无需更新。
-- 新增 `/appstore/v3/meta`：返回 V3 协议版本、当前 source revision、正常 App 总数、分页/增量上限和增量表可用状态。
-- 新增 `/appstore/v3/apps`：使用 `after_id + limit` 做稳定游标分页；默认 200、最大 500。每个 App 额外包含稳定 `id` 和 `weigh`，供新客户端本地数据库和排序使用。
-- 新增 `/appstore/v3/delta`：使用 `since + limit` 按 revision 增量拉取，仅返回 `upserts` 和 `deleted`；默认 200、最大 1000，并返回 `next_since/current_revision/has_more`。
-- V3 继续复用现有卡密授权、指定 App 授权、黑名单和 `appstore/appstore_v2` 加密封装；不会绕过原授权规则。
-- 新增 `fa_source_change`：`revision` 使用 MySQL AUTO_INCREMENT，保证并发写入下仍有唯一、单调递增的增量游标。
-- App 新增、模型更新、删除、后台直接编辑、批量状态更新和拖动排序均写入 change log。
-- change log 写入采用 fail-open：增量表异常只记录日志，不得影响旧 `/appstore`、后台 App 管理或 1711 的稳定功能。
-- 首次全量同步建议：先读取 `/appstore/v3/meta` 记住 revision，再按 `after_id` 拉完整页，最后调用 `/appstore/v3/delta?since=<初始revision>` 补齐同步期间发生的变化。
+- 系统配置中的“软件源加密”由旧的开/关改为三选一：`关闭 / 普通 / V2`，普通与 V2 不能同时开启。
+- 继续复用原 `fa_config.opencry`，不新增并行开关：`0=关闭`、`1=普通(appstore)`、`2=V2(appstore_v2)`。
+- 旧服务器升级时原 `opencry=0/1` 原样保留；迁移可重复执行，`opencry=2` 也不会被后续在线更新覆盖。
+- 后台选择的加密模式成为服务端权威值：选择“普通”时客户端即使请求 V2 也按普通协议输出；选择“V2”时客户端即使未声明 V2 也按 V2 输出。
+- `opencry=2` 对旧布尔判断仍表现为“加密已开启”，因此复用现有 `App::emitPayload()`、加密 provider、gzip 和 SourcePerf，不复制第二套发送链。
+- `/appstore` 与 `/appstore/v3/meta`、`/appstore/v3/apps`、`/appstore/v3/delta` 统一通过同一协议选择策略，避免旧源和 V3 使用不同加密模式。
+- 保留 2026091712 的 V3 revision、游标分页、delta 增量同步、change-log fail-open；保留 2026091711 的 bkey 缓存、App 缓存、cache fail-open、gzip 和性能日志；保留 2026091710 的 `renewal_entry` schema-adaptive 修复。
 
-## 与 2026091711 的关系
+## 兼容性
 
-- 完整保留 1710 的 `renewal_entry` schema-adaptive 修复。
-- 完整保留 1711 恢复的 legacy bkey 缓存、15 秒 App 缓存、cache fail-open、HTTP gzip、SourcePerf 和 50k benchmark。
-- 保持续费入口、三种卡密用途、授权叠加、`apiface` 签名、换绑额度、卡密/App 删除映射清理和授权总览刷新。
-- 本版本只是新增 V3 服务端基础，不会自动把现有客户端切换到 V3。
+- 未修改普通 `appstore` 和 `appstore_v2` 的密码算法、密文 envelope 或客户端解密格式。
+- 关闭加密时继续返回原明文 JSON。
+- 现有数据库无需手工改字段，只更新 `fa_config.opencry` 这一行的展示类型和可选值。
+- 实际软件源浏览客户端的 SQLite/V3 本地同步代码不在本服务端仓库中，本版本不向无关的 dylib/菜单工程混入客户端代码；1712 V3 服务端接口保持可用，待对应客户端源码接入后继续 Phase 18.2 客户端部分。
 
-## 验证
+## 验证要求
 
-- Phase 18.1 PHP 7.0 契约测试：旧 `/appstore` 路由保持、V3 三接口、分页/增量字段、App 变更 revision、拖动排序 revision、change-log fail-open。
-- MySQL 5.7：`fa_source_change` 迁移可重复执行；revision 自增且 delta cursor 顺序正确。
-- 正式发布继续要求既有 PHP 7.0 全回归、MySQL 5.7 迁移链、在线更新 ZIP/SHA256 和真实 GitHub Release E2E 全部通过。
+- PHP 7.0：加密模式类、配置兼容层、AppStorePayload 语法和互斥协议契约必须通过。
+- MySQL 5.7：1713 配置迁移必须可重复执行；旧值 1、新值 2、异常值回退和缺失行初始化均验证。
+- 在线更新 ZIP 必须包含 `SourceEncryptionMode.php`、`SourceConfigRepository.php`、`AppStorePayload.php` 和 `2026091713_source_encryption_mode.sql`。
+- 正式发布继续执行全量 PHP 7.0 回归、MySQL 5.7 迁移链、ZIP/SHA256、GitHub Release 和 2026091712 → 2026091713 真实在线更新 E2E。
 
 ## 在线更新
 
-- 正式版本：`2026091712`
-- 基线：`2026091711`
-- GitHub Release：`source-v2026091712`
+- 正式版本：`2026091713`
+- 基线：`2026091712`
+- GitHub Release：`source-v2026091713`
 - 发布资产：`zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`
