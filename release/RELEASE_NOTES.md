@@ -1,56 +1,42 @@
-# ZONOE 软件源 2026091714
+# ZONOE 软件源 2026091801
 
-## Phase 18.3 — V3 开关与明确回退协议
+## Phase 19.1 — V3 客户端安全同步契约
 
-### 更新内容
+本版本以 `2026091714` 为稳定基线，继续保留旧 `/appstore` 和 Phase 18 V3 接口，并补齐客户端 SQLite/增量同步真正需要的服务端一致性边界。
 
-- 系统配置新增 `V3软件源` 开关，固定显示在 `软件源加密` 正下方。
-- 配置键为 `source_v3`：`1=开启`、`0=关闭`；升级默认开启，保持 2026091712/1713 已启用 V3 的行为。
-- `/appstore` 永久保留并保持原有兼容行为；V3 仍为附加接口：`/appstore/v3/meta`、`/appstore/v3/apps`、`/appstore/v3/delta`。
-- V3 开启时健康接口返回 `supported=1`；客户端可优先探测 `/appstore/v3/meta` 并继续使用分页/增量同步。
-- V3 关闭时 V3 接口明确返回 `code=0`、`supported=0`、`fallback=appstore`，让支持新协议的客户端无歧义回退到原 `/appstore`。
-- 黑名单、授权失败等业务拒绝仍属于 `supported=1` 的 V3 服务，不能被客户端当作“不支持 V3”而回退绕过。
-- V3 增量表不可用时继续给出可诊断错误；服务端能力与业务错误分开表达。
-- V3 开关保存后通过现有 ConfigModel 写入事件清理 SourceConfigRepository 缓存，配置立即生效。
-- 软件源加密仍沿用 2026091713 的互斥模式：关闭 / 普通 / V2，V3 与旧 `/appstore` 共用同一加密响应策略。
+### 全量同步快照一致性
 
-### 地址兼容
+- `/appstore/v3/apps` 支持 `snapshot_revision`。
+- 第一次全量分页建立快照 revision；后续页携带同一个 `snapshot_revision`。
+- 如果同步期间软件源数据发生变化，服务端返回 `snapshot_valid=0`、`restart_required=1`，且不返回可能混合新旧 revision 的 apps。
+- 客户端应丢弃未提交的临时全量同步结果，以新的 revision 从 `after_id=0` 重新开始。
 
-用户和客户端仍只需要保存基础软件源地址：
+### Delta 可续接窗口
 
-`https://app3.zonoeios.xyz/appstore`
+- `/appstore/v3/meta` 新增 `min_delta_since`。
+- `/appstore/v3/delta` 新增 `min_since`、`reset_required`、`reset_reason`。
+- 本地 revision 早于服务端保留窗口时返回 `reset_reason=history_gap`，客户端必须重新全量同步。
+- 本地 revision 高于服务端当前 revision 时返回 `reset_reason=future_revision`，避免错误游标永久卡死。
+- 正常 delta 继续使用 `next_since`、`has_more`、`upserts`、`deleted`，旧 V3 字段保持兼容。
 
-支持 V3 的客户端可从该地址派生 `/v3/meta`、`/v3/apps`、`/v3/delta`；不支持 V3 的旧客户端继续直接访问 `/appstore`，无需重新添加软件源。
+### 兼容性
 
-### 数据库
+- `/appstore` 路由和 payload 不变。
+- `source_v3=0` 时仍以 `supported=0` + `fallback=appstore` 明确回退。
+- 黑名单、授权失败等业务拒绝仍为 `supported=1`，不能通过 fallback 绕过。
+- 普通 / V2 加密选择和 envelope 不变。
+- PHP 7.0、MySQL 5.7 保持兼容。
 
-新增幂等迁移：`2026091714_source_v3_toggle.sql`。
+### 验证
 
-- 已存在合法 `0/1` 值时原样保留。
-- 配置不存在时创建并默认开启。
-- 异常历史值修复为开启，避免升级后意外关闭已在生产使用的 V3。
-- 兼容 MySQL 5.7。
-
-### 兼容性与边界
-
-- PHP 7.0 保持兼容。
-- MySQL 5.7 保持兼容。
-- 不改变旧 `/appstore` 的 payload、授权逻辑或 URL。
-- 不改变普通 / V2 加密算法和 envelope。
-- 本版本完成服务端 V3 能力开关、能力声明和 fallback 协议；实际软件源浏览客户端的 SQLite/V3 自动同步将在对应客户端源码接入后进入下一阶段，不向无关的 dylib/菜单工程混入客户端代码。
-
-### 验证要求
-
-- Phase 18.3 PHP 7.0 契约：V3 开关、`supported`、fallback、旧路由、后台显示顺序。
-- Phase 18.3 MySQL 5.7：迁移重复执行、默认开启、关闭值保持。
-- 正式 PHP 7.0 全回归。
-- 正式 MySQL 5.7 全迁移链。
-- 在线更新 ZIP 必须包含 `SourceV3.php`、后台 `Config.php` 和 `2026091714_source_v3_toggle.sql`。
-- 2026091713 → 2026091714 真实 GitHub Release 在线更新 E2E。
+- Phase 19.1 feature CI Run `35261910066` 已通过。
+- PHP 7.0：Phase18 V3 兼容、Phase19 snapshot/reset 合约、在线更新 ZIP 内容检查通过。
+- MySQL 5.7：revision window、retention boundary、history gap、future revision 测试通过。
+- 正式发布流水线继续执行完整 PHP 7.0 回归、MySQL 5.7 迁移、ZIP/SHA256 生成，并执行 `2026091714 -> 2026091801` GitHub Release 在线更新 E2E。
 
 ## 在线更新
 
-- 正式版本：`2026091714`
-- 基线：`2026091713`
-- GitHub Release：`source-v2026091714`
+- 正式版本：`2026091801`
+- 基线：`2026091714`
+- GitHub Release：`source-v2026091801`
 - 发布资产：`zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`
