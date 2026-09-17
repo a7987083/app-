@@ -6,6 +6,11 @@ on:
       - 'feature/phase19-2-legacy-response-cache-v1'
       - 'release/**'
     paths:
+      - 'VERSION'
+      - 'public/update/ver.txt'
+      - 'ver.json'
+      - 'PHASE13_RELEASE.txt'
+      - 'release/RELEASE_NOTES.md'
       - 'application/admin/controller/Authorization.php'
       - 'application/admin/controller/general/Config.php'
       - 'application/admin/view/authorization/**'
