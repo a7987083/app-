@@ -1,79 +1,68 @@
 {
   "repository": "a7987083/app-",
-  "stable_candidate": {
-    "branch": "feature/unlock-signing-fix-v2",
-    "phase": "17.1",
-    "version": "2026091702",
-    "commit": "77a85830c3e93ac431885d7bc043edbccde33d15",
-    "release": null,
-    "ci_result": "previously_validated"
+  "stable_release": {
+    "branch": "release/2026091801-phase19-client-sync",
+    "phase": "19.1",
+    "version": "2026091801",
+    "commit": "6e3c7a3af25843c3f329207bd6b4c4e06e182e57",
+    "release": "source-v2026091801",
+    "release_ci_run": 35262273073,
+    "release_ci_result": "success",
+    "online_update_from": "2026091714",
+    "online_update_e2e": "passed"
   },
-  "current_development": {
-    "branch": "feature/phase17-2-auth-integrity-v1",
-    "phase": "17.2",
-    "code_commit": "740afc69652c7c3510aec734e68c246948ee2a82",
-    "pull_request": 8,
-    "status": "code_complete_ci_running",
-    "version": "unchanged_pending_validation"
+  "feature_validation": {
+    "branch": "feature/phase19-1-client-sync-contract-v1",
+    "commit": "894a9b5b3380ac367a479536c380de37fe10f2bf",
+    "ci_run": 35261910066,
+    "ci_result": "success"
   },
   "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
   "runtime_changes": true,
   "architecture": {
-    "public_source": "/appstore -> application/index/controller/App.php::list",
-    "authorization_probe": "/index/index/apiface -> application/index/controller/Index.php::apiface",
+    "legacy_source": "/appstore -> application/index/controller/App.php::list",
+    "v3_meta": "/appstore/v3/meta -> application/index/controller/SourceV3.php::meta",
+    "v3_full_sync": "/appstore/v3/apps -> SourceSyncV3::page",
+    "v3_delta": "/appstore/v3/delta -> SourceSyncV3::delta",
+    "v3_revision_log": "application/common/library/SourceChangeLog.php",
     "payload_mapper": "application/common/library/AppStorePayload.php",
-    "source_semantics": "application/common/library/SourceAppRecord.php",
     "source_config": "application/common/library/SourceConfigRepository.php",
-    "source_http": "application/common/library/SourceHttpClient.php",
-    "source_response": "application/common/library/SourceResponse.php",
-    "blacklist_policy": "application/common/library/BlacklistPolicy.php",
-    "trace_policy": "application/common/library/TraceMonitorPolicy.php",
-    "card_entitlement": "application/common/library/CardEntitlementPolicy.php",
-    "card_transfer": "application/common/library/CardDeviceTransfer.php",
-    "authorization": "AuthorizationSchema + AuthorizationPolicy + AuthorizationEventLog + AuthorizationLicense",
-    "integrity_audit": "application/common/library/DataIntegrityAudit.php",
-    "update_pipeline": "Config controller -> UpdateManager -> UpdateSource -> UpdateInstaller -> UpdateBackup/UpdateSqlRunner -> UpdateRuntimeStore"
+    "update_pipeline": "Config -> UpdateManager -> GitHub/Nuosike source -> UpdateInstaller -> backup/sql -> UpdateRuntimeStore"
   },
-  "phase17_2_completed": [
-    "All three card scopes use one-time activation codes; verification-card idempotent code reuse was removed",
-    "Ongoing client authorization remains on apiface and does not require resubmitting the card code",
-    "apiface preserves code/msg/expire/ts/nonce/sign and appends authorizations after sign",
-    "authorizations contains only currently active scope types and exposes an independent expire for each present scope",
-    "Authorization overview buttons now scroll to same-page transfer/event/diagnostic previews",
-    "Data integrity audit expanded to card state, scope, time chain, App mapping, orphan log and blacklist consistency checks",
-    "Integrity reaudit route fixed from authorization/integrity to integrity/index",
-    "Online update manifest includes Authorization controller/dashboard changes",
-    "Phase17 contract updated and a dedicated PHP 7.0 pull-request workflow added"
+  "phase19_1_completed": [
+    "Full-sync pages support snapshot_revision and reject mixed-revision snapshots",
+    "V3 meta exposes min_delta_since",
+    "Delta exposes min_since/reset_required/reset_reason",
+    "History gaps and future client revisions explicitly require full resync",
+    "Legacy /appstore and V3 fallback/business-error semantics remain compatible",
+    "PHP 7.0 and MySQL 5.7 Phase19 CI passed",
+    "Online update ZIP contains all Phase19 runtime files",
+    "Real GitHub Release E2E upgraded 2026091714 to 2026091801 successfully"
   ],
-  "compatibility_boundaries": [
-    "Do not change appstore/appstore_v2 public keys or encoding behavior",
-    "All card codes are one-time activation credentials; repeated used-card submission returns 解锁码已使用",
-    "apiface owns ongoing UDID authorization checks",
-    "Keep apiface legacy fields code/msg/expire/ts/nonce/sign and legacy HMAC input unchanged",
-    "New apiface authorization type details must remain after sign for backward compatibility",
-    "Scope 1/2/3 entitlement stacking remains isolated",
-    "transfer_count remains remaining transfer quota",
-    "Do not restore App-mb.php or Index2.php",
-    "No physical fa_category bt1a/bt1b/bt2a/bt2b migration without a separate migration plan",
-    "Keep Nuosike updater alongside GitHub updater",
-    "Keep BaoTa deployment contract and BT_DB_* placeholders"
-  ],
-  "known_open_items": [
-    "Phase17.2 has not yet been live-smoked against the production database/server",
-    "Top-level apiface expire is retained as the furthest active expiration for legacy clients; per-scope expiration is exposed in authorizations",
-    "CardDeviceTransfer implementation moves only currently active card rows; older handoff text says all activated history moves. Treat as unresolved semantic mismatch and do not change without an explicit decision.",
-    "App.php and Index.php duplicate blacklist persistence/query behavior",
-    "App::activateCode still owns a large transaction and should eventually move behind a service boundary",
-    "Authorization dashboard counts active blacklist rows in PHP after loading the full table",
-    "fa_kami.kami uniqueness remains application-enforced; production duplicate audit must be reviewed before adding a unique index"
-  ],
+  "client_source": {
+    "present_in_this_repository": false,
+    "objective_c_code_search": 0,
+    "sqlite3_code_search": 0,
+    "status": "requires corresponding iOS client repository for Phase 19.2"
+  },
   "validation": {
-    "phase17_2_static_diff": "passed",
-    "phase17_2_contract_source_review": "passed",
-    "phase17_2_pull_request_ci": "running_pr_8",
-    "phase17_2_live_server": "not_run",
-    "phase17_2_database_audit": "not_run"
+    "php70_full_regression": "passed",
+    "mysql57_migrations": "passed",
+    "phase19_contract": "passed",
+    "phase19_mysql57_delta_window": "passed",
+    "release_package_and_sha256": "passed",
+    "github_release_online_update_e2e": "passed",
+    "production_baota_server_smoke": "not_run",
+    "ios_real_device_sqlite_sync": "not_run"
   },
-  "next_task": "Wait for PR #8 CI result in the current validation cycle, then perform server smoke tests for one-time verification-card reuse, apiface per-scope authorizations, Authorization overview previews, and Integrity reaudit.",
+  "compatibility_boundaries": [
+    "Do not change legacy appstore/appstore_v2 public keys or encoding behavior",
+    "Only supported=0 is a protocol fallback condition; authorization/blacklist errors remain supported=1",
+    "Keep one-time card activation and existing authorization stacking semantics",
+    "Keep transfer_count as remaining device-transfer quota",
+    "Do not restore App-mb.php or Index2.php",
+    "Keep Nuosike updater alongside GitHub updater"
+  ],
+  "next_task": "Phase 19.2: integrate the published V3 snapshot/delta contract into the actual iOS software-source client repository with transactional SQLite state and real-device E2E.",
   "roadmap": "ROADMAP.md"
 }

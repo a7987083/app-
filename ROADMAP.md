@@ -3,77 +3,61 @@
 ## 当前稳定基线
 
 - Repository: `a7987083/app-`
-- Stable candidate branch: `feature/phase13-github-release`
-- Phase: `13.6`
-- Version: `2026091203`
-- Commit: `d13ccb9ced56ca655a27cf13b5be0d6a33e724e2`
-- Release: `source-v2026091203`
-- Release CI: `34654867771` — SUCCESS
-- 稳定边界：不改变 `appstore / appstore_v2` 公共协议、授权时长、UDID 格式、黑名单语义、卡密换绑剩余次数语义；保留 Nuosike 更新源。
+- Stable release branch: `release/2026091801-phase19-client-sync`
+- Phase: `19.1`
+- Version: `2026091801`
+- Release commit: `6e3c7a3af25843c3f329207bd6b4c4e06e182e57`
+- Release: `source-v2026091801`
+- Phase19 feature CI: `35261910066` — SUCCESS
+- Release CI: `35262273073` — SUCCESS
+- Online update E2E: `2026091714 -> 2026091801` — SUCCESS
+- `main` 不是活动开发/发布基线。
 
-## Phase 14 — Production Hardening / 生产稳定化
+## Phase 19 — V3 客户端安全同步
 
-开发分支：`refactor/phase14-production-hardening`
-基线：Phase 13.6 / `d13ccb9ced56ca655a27cf13b5be0d6a33e724e2`
-当前已验证代码 Commit：`3600ceb25190ca93deb85689a94d44aea57c709d`
-CI Run：`34663424209` — SUCCESS
+### 19.1 服务端同步契约 — 已完成并发布
 
-### 14.1 更新事务、回滚和历史可靠性 — 已完成代码与 CI
+- `/appstore/v3/apps` 支持 `snapshot_revision`，全量分页绑定单一 revision。
+- 同步期间 revision 变化时返回 `snapshot_valid=0`、`restart_required=1`，不向客户端返回混合快照。
+- `/appstore/v3/meta` 暴露 `min_delta_since`。
+- `/appstore/v3/delta` 暴露 `min_since/reset_required/reset_reason`。
+- 变更历史缺口返回 `history_gap`；客户端 revision 高于服务端返回 `future_revision`，两者均要求重新全量同步。
+- 旧 `/appstore`、V3 开关、授权/黑名单语义、普通/V2 加密协议保持兼容。
+- PHP 7.0 / MySQL 5.7 专项测试及正式 Release 全回归通过。
+- 在线更新 manifest 已包含 `SourceV3.php`、`SourceSyncV3.php`、`SourceChangeLog.php`。
+- 正式 GitHub Release 在线更新 E2E 已验证 `2026091714 -> 2026091801`。
 
-- 多包连续升级从“单包回滚”提升为“整条更新链逆序回滚”。
-- 当前失败包已创建备份时，也纳入 Manager 级全链回滚。
-- 回滚文件复制、目录创建、新建文件删除失败不再被静默忽略。
-- 更新下载和解压缓存由 `public/update/cache` 移到 `runtime/update/cache`，不再位于 Web Root。
-- 修复 `UpdateRuntimeStore` 同秒历史记录排序不确定：历史文件加入单调微秒级排序键，确保刚产生的 rollback/update 记录稳定排在前面。
-- 新增/扩展 `tests/phase14_update_atomicity_test.php`：覆盖第二包失败时回滚前一包、回滚 I/O 失败不得假成功、缓存目录不得位于 public、同秒历史顺序稳定。
-- PHP 7.0 全回归通过。
+### 19.2 iOS 客户端 SQLite 同步 — Next Task
 
-### 14.2 真实生产升级/回滚闭环 — Next Task
+当前 `app-` 仓库是 ThinkPHP/FastAdmin 服务端仓库。仓库代码检索未发现 Objective-C 或 `sqlite3` 客户端实现，因此不能在本仓库内伪造“客户端 SQLite 已接入”。下一阶段必须在对应的软件源浏览客户端源码仓库完成：
 
-验收链：
+1. 基础地址自动探测 `/v3/meta`，仅 `supported=0` 时回退旧 `/appstore`。
+2. SQLite 建立 source/app/sync-state 表，使用 transaction 保证完整提交。
+3. 首次同步使用 `/v3/apps` 分页，并固定 `snapshot_revision`；`restart_required=1` 时回滚临时事务并重启。
+4. 后续使用 `/v3/delta` 应用 upsert/delete；`reset_required=1` 时清除临时游标并重新全量同步。
+5. 本地 revision 只在事务成功后推进，禁止“revision 已更新但 apps 未完整落盘”。
+6. 覆盖明文/普通/V2 三种响应模式，以及 V3 开关关闭、授权拒绝、黑名单、断网、进程中断等恢复场景。
+7. 完成 iOS 真机 E2E 后再标记客户端部分完成。
 
-1. 从 `2026091202` 通过真实 GitHub Release 在线升级到 `2026091203`。
-2. 验证版本、SHA256、文件覆盖、数据库、更新历史和备份记录。
-3. 从成功更新记录回滚到 `2026091202`。
-4. 验证程序、数据库、`ver.json`、`public/update/ver.txt` 和完整性状态全部恢复。
-5. 再次在线升级到 `2026091203`，确认可重复闭环。
-6. 做失败注入：SHA256 错误、ZIP 损坏、SQL 失败、文件不可写、备份失败、更新锁冲突和磁盘空间不足。
+## Phase 20 — V3 Production Hardening
 
-### 14.3 更新运维闭环
+在客户端接入完成后推进：
 
-- 更新备份空间统计。
-- 备份/历史保留策略和安全清理。
-- 异常锁和中断任务诊断。
-- 更新中心显示最近升级、最近回滚、当前完整性状态和 Release/Commit 对应关系。
+- `fa_source_change` retention/GC 与 `min_delta_since` 联动。
+- delta/history 容量、索引和查询成本监控。
+- ETag/条件请求、gzip、分页大小与请求合并优化。
+- 同步耗时、失败原因、全量重置原因可观测性。
+- 大规模 Category/变更日志压测。
+- 生产 BaoTa/MySQL/browser/iOS 真机回归闭环。
 
-## Phase 15 — 数据完整性与授权收尾
+## 保持不变的稳定边界
 
-- 对生产 `fa_kami.kami` 做重复数据审计；只有审计和迁移方案确认后才考虑 UNIQUE INDEX。
-- 明确 `/unbind` 的稳定语义：迁移“全部已激活历史卡”还是“仅当前有效授权行”。当前代码仅移动有效行，旧交接文档曾写全部历史，禁止在未确认前改变。
-- 评估过期黑名单、授权事件、换绑日志的长期归档/保留策略。
-
-## Phase 16 — 后台规模化与性能
-
-- Authorization 主页 active blacklist 统计改为数据库条件查询，避免全表载入 PHP。
-- transfers/events 从固定 300 行改为服务器分页。
-- 优化 GitHubUpdateSource 检查路径，避免为所有历史 Release 逐个请求 SHA256。
-- UpdateRuntimeStore 历史记录加入保留/索引机制；Phase14.1 已修同秒排序，但历史总量仍可能长期增长。
-- 大数据库备份评估 OFFSET 扫描成本和更适合 BaoTa 的备份方式。
-
-## Phase 17 — 选择性结构收口
-
-只在有具体功能或 Bug 触发时做，不进行全仓库重写：
-
-- 抽离 `BlacklistRepository/Service`，统一 App/Index/Transfer 的黑名单查询与首次命中写入。
-- 抽离 `CardActivationService`，把 `App::activateCode()` 的事务编排移出控制器。
-- 逐步减少 Controller 直接 DB orchestration。
-- ThinkPHP 5.0.24 / FastAdmin 升级继续延期，直到 HTTP/数据库集成测试覆盖足够。
-
-## 禁止破坏的稳定行为
-
-- 不为重构修改公共软件源字段、锁定判断、加密包装格式或 Nuosike provider 协议。
-- 不改变 day/week/month/quarter/year = 1/7/30/90/360 天。
-- 卡密仍然一次性消费，授权时长仍可叠加。
-- `transfer_count` 仍表示剩余换绑次数。
-- BaoTa 包继续保留 `auto_install.json`、`import.sql`、`nginx.rewrite` 和 `BT_DB_*` 占位符。
+- 不改变旧 `appstore / appstore_v2` 公共字段、加密 envelope 和 URL。
+- V3 不支持与业务拒绝必须严格区分：只有 `supported=0` 才能 fallback。
+- day/week/month/quarter/year 仍为 1/7/30/90/360 天。
+- 卡密仍一次性消费，授权时长可叠加；`transfer_count` 仍表示剩余换绑次数。
+- BaoTa 部署契约和 `BT_DB_*` 占位符保持。
 - `App-mb.php` / `Index2.php` 不得恢复。
+- ThinkPHP 5.0.24 / FastAdmin 升级继续延期，直到集成测试覆盖足够。
+
+其他长期问题见 `KNOWN_ISSUES.md`。
