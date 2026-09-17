@@ -179,7 +179,10 @@ class App
     {
         if ($opencry == '1') {
             $jsonStartedAt = microtime(true);
-            $json = json_encode($payload, $jsonFlags);
+            $json = SourceLegacyCache::encryptedJson($payload, $jsonFlags);
+            if (!is_string($json)) {
+                $json = json_encode($payload, $jsonFlags);
+            }
             $jsonMs = (microtime(true) - $jsonStartedAt) * 1000;
             $content = base64_encode($json);
 
