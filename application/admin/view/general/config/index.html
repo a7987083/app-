@@ -28,6 +28,7 @@
             {foreach $siteList as $index=>$vo}
             <li class="{$vo.active?'active':''}"><a href="#{$vo.name}" data-toggle="tab">{:__($vo.title)}</a></li>
             {/foreach}
+            <li><a href="#api-center" data-toggle="tab"><i class="fa fa-plug"></i> API接口</a></li>
             <li data-toggle="tooltip" title="{:__('Add new config')}">
                 <a href="#addcfg" data-toggle="tab"><i class="fa fa-plus"></i></a>
             </li>
@@ -173,6 +174,146 @@
                 </div>
             </div>
             {/foreach}
+
+            <div class="tab-pane fade" id="api-center">
+                <div class="widget-body no-padding">
+                    <ul class="nav nav-pills" style="margin-bottom:15px;">
+                        <li class="active"><a href="#project-api-list" data-toggle="tab">API列表</a></li>
+                        <li><a href="#project-api-add" data-toggle="tab">新增API</a></li>
+                        <li><a href="#project-api-edit" data-toggle="tab">编辑API</a></li>
+                        <li><a href="#project-api-test" data-toggle="tab">测试API</a></li>
+                        <li><a href="#project-api-logs" data-toggle="tab">请求日志</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane active" id="project-api-list">
+                            <div class="alert alert-info">
+                                这里只管理当前项目自己的公开接口，不包含 FastAdmin 原生 /api/*。
+                                完整地址自动使用当前访问域名生成。系统API不可删除，自定义API可增改删。
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-bordered table-hover">
+                                    <thead>
+                                    <tr>
+                                        <th>名称</th>
+                                        <th>接口地址</th>
+                                        <th>Method</th>
+                                        <th>来源</th>
+                                        <th>鉴权</th>
+                                        <th>状态</th>
+                                        <th>今日请求</th>
+                                        <th>最后请求</th>
+                                        <th>平均耗时</th>
+                                        <th>操作</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {volist name="apiEndpoints" id="api"}
+                                    <tr>
+                                        <td>{$api.name|htmlentities}</td>
+                                        <td style="max-width:420px;word-break:break-all;"><code>{$api.full_url|htmlentities}</code></td>
+                                        <td>{$api.method|htmlentities}</td>
+                                        <td>{if condition="$api.source eq 'system'"}系统API{else /}自定义API{/if}</td>
+                                        <td>{$api.auth|htmlentities}</td>
+                                        <td>
+                                            {if condition="$api.enabled"}
+                                            <span class="label label-success">开启</span>
+                                            {else /}
+                                            <span class="label label-default">关闭</span>
+                                            {/if}
+                                        </td>
+                                        <td>{$api.today_requests}</td>
+                                        <td>{if condition="$api.last_request"}{:date('H:i:s',$api.last_request)}{else /}-{/if}</td>
+                                        <td>{$api.avg_ms} ms</td>
+                                        <td style="white-space:nowrap;">
+                                            {if condition="$api.enabled"}
+                                            <button type="button" class="btn btn-xs btn-warning api-toggle-btn" data-key="{$api.endpoint_key|htmlentities}" data-enabled="0">关闭</button>
+                                            {else /}
+                                            <button type="button" class="btn btn-xs btn-success api-toggle-btn" data-key="{$api.endpoint_key|htmlentities}" data-enabled="1">开启</button>
+                                            {/if}
+                                            <button type="button" class="btn btn-xs btn-info api-test-select"
+                                                    data-id="{$api.id|default=0}"
+                                                    data-name="{$api.name|htmlentities}"
+                                                    data-url="{$api.full_url|htmlentities}">测试</button>
+                                            {if condition="$api.source neq 'system'"}
+                                            <button type="button" class="btn btn-xs btn-primary api-edit-select"
+                                                    data-id="{$api.id}"
+                                                    data-name="{$api.name|htmlentities}"
+                                                    data-path="{$api.path|htmlentities}"
+                                                    data-method="{$api.method|htmlentities}"
+                                                    data-auth="{$api.auth|htmlentities}"
+                                                    data-handler="{$api.handler_key|htmlentities}"
+                                                    data-enabled="{$api.enabled}"
+                                                    data-description="{$api.description|htmlentities}">编辑</button>
+                                            <button type="button" class="btn btn-xs btn-danger api-delete-btn" data-id="{$api.id}" data-name="{$api.name|htmlentities}">删除</button>
+                                            {/if}
+                                        </td>
+                                    </tr>
+                                    {/volist}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane" id="project-api-add">
+                            <form id="project-api-add-form" class="form-horizontal">
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">名称</label><div class="col-xs-12 col-sm-6"><input class="form-control" name="row[name]" required></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">API别名</label><div class="col-xs-12 col-sm-6"><div class="input-group"><span class="input-group-addon">/project-api/</span><input class="form-control" name="row[slug]" placeholder="例如 dylib-auth-v2" required></div></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">处理器</label><div class="col-xs-12 col-sm-6"><select class="form-control" name="row[handler_key]">{foreach name="apiHandlers" item="handlerName"}<option value="{$key}">{$handlerName}</option>{/foreach}</select></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Method</label><div class="col-xs-12 col-sm-6"><select class="form-control" name="row[method]"><option>GET</option><option>POST</option><option>ANY</option></select></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">鉴权说明</label><div class="col-xs-12 col-sm-6"><input class="form-control" name="row[auth]" placeholder="例如 UDID+HMAC"></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">说明</label><div class="col-xs-12 col-sm-6"><input class="form-control" name="row[description]"></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">状态</label><div class="col-xs-12 col-sm-6"><label><input type="checkbox" name="row[enabled]" value="1" checked> 开启</label></div></div>
+                                <div class="form-group"><div class="col-xs-12 col-sm-offset-2 col-sm-6"><button type="button" class="btn btn-success" id="project-api-add-submit">保存API</button></div></div>
+                            </form>
+                        </div>
+
+                        <div class="tab-pane" id="project-api-edit">
+                            <div class="alert alert-warning" id="project-api-edit-empty">请先从“API列表”选择一个自定义API进行编辑。系统API只允许开启/关闭。</div>
+                            <form id="project-api-edit-form" class="form-horizontal hide">
+                                <input type="hidden" name="id" id="project-api-edit-id">
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">名称</label><div class="col-xs-12 col-sm-6"><input class="form-control" name="row[name]" id="project-api-edit-name" required></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">API别名</label><div class="col-xs-12 col-sm-6"><div class="input-group"><span class="input-group-addon">/project-api/</span><input class="form-control" name="row[slug]" id="project-api-edit-slug" required></div></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">处理器</label><div class="col-xs-12 col-sm-6"><select class="form-control" name="row[handler_key]" id="project-api-edit-handler">{foreach name="apiHandlers" item="handlerName"}<option value="{$key}">{$handlerName}</option>{/foreach}</select></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Method</label><div class="col-xs-12 col-sm-6"><select class="form-control" name="row[method]" id="project-api-edit-method"><option>GET</option><option>POST</option><option>ANY</option></select></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">鉴权说明</label><div class="col-xs-12 col-sm-6"><input class="form-control" name="row[auth]" id="project-api-edit-auth"></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">说明</label><div class="col-xs-12 col-sm-6"><input class="form-control" name="row[description]" id="project-api-edit-description"></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">状态</label><div class="col-xs-12 col-sm-6"><label><input type="checkbox" name="row[enabled]" id="project-api-edit-enabled" value="1"> 开启</label></div></div>
+                                <div class="form-group"><div class="col-xs-12 col-sm-offset-2 col-sm-6"><button type="button" class="btn btn-success" id="project-api-edit-submit">保存修改</button></div></div>
+                            </form>
+                        </div>
+
+                        <div class="tab-pane" id="project-api-test">
+                            <form id="project-api-test-form" class="form-horizontal">
+                                <input type="hidden" name="id" id="project-api-test-id">
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">接口</label><div class="col-xs-12 col-sm-7"><input class="form-control" id="project-api-test-url" readonly placeholder="从API列表点击“测试”选择接口"></div></div>
+                                <div class="form-group"><label class="control-label col-xs-12 col-sm-2">参数</label><div class="col-xs-12 col-sm-7"><input class="form-control" name="params" id="project-api-test-params" placeholder="例如 udid=00008120-..."></div></div>
+                                <div class="form-group"><div class="col-xs-12 col-sm-offset-2 col-sm-7"><button type="button" class="btn btn-info" id="project-api-test-submit">发送测试</button></div></div>
+                            </form>
+                            <pre id="project-api-test-result" style="display:none;max-height:360px;overflow:auto;"></pre>
+                        </div>
+
+                        <div class="tab-pane" id="project-api-logs">
+                            <div style="margin-bottom:10px;"><button type="button" class="btn btn-default" onclick="location.reload()">刷新日志</button></div>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-bordered table-hover">
+                                    <thead><tr><th>ID</th><th>接口</th><th>Method</th><th>路径</th><th>IP</th><th>HTTP</th><th>耗时</th><th>时间</th></tr></thead>
+                                    <tbody>
+                                    {volist name="apiLogs" id="log"}
+                                    <tr>
+                                        <td>{$log.id}</td><td>{$log.endpoint_key|htmlentities}</td><td>{$log.method|htmlentities}</td>
+                                        <td>{$log.path|htmlentities}</td><td>{$log.ip|htmlentities}</td><td>{$log.status_code}</td>
+                                        <td>{$log.duration_ms} ms</td><td>{:date('Y-m-d H:i:s',$log.addtime)}</td>
+                                    </tr>
+                                    {/volist}
+                                    {if condition="empty($apiLogs)"}<tr><td colspan="8" class="text-muted text-center">暂无API请求日志</td></tr>{/if}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="tab-pane fade" id="addcfg">
                 <form id="add-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="{:url('general.config/add')}">
                     {:token()}
@@ -266,6 +407,74 @@ value2|title2</textarea>
     </div>
 </div>
 <script>
+
+function projectApiPost(url, data, success){
+    $.ajax({
+        type: 'POST',
+        url: url,
+        data: data,
+        dataType: 'json',
+        success: function(resp){
+            if(resp && (resp.code === 1 || resp.code === 200)){
+                if(success){ success(resp); }
+                return;
+            }
+            layer.alert((resp && resp.msg) ? resp.msg : '操作失败', {icon:2});
+        },
+        error: function(xhr){
+            layer.alert('请求失败 HTTP ' + xhr.status, {icon:2});
+        }
+    });
+}
+$(document).on('click', '.api-toggle-btn', function(){
+    var btn = $(this);
+    var enabled = parseInt(btn.data('enabled'), 10) ? 1 : 0;
+    projectApiPost('general/config/api_toggle', {endpoint_key: btn.data('key'), enabled: enabled}, function(){
+        location.reload();
+    });
+});
+$('#project-api-add-submit').on('click', function(){
+    projectApiPost('general/config/api_save', $('#project-api-add-form').serialize(), function(){ location.reload(); });
+});
+$(document).on('click', '.api-edit-select', function(){
+    var btn = $(this);
+    $('#project-api-edit-id').val(btn.data('id'));
+    $('#project-api-edit-name').val(btn.data('name'));
+    var path = String(btn.data('path') || '');
+    $('#project-api-edit-slug').val(path.replace(/^\/project-api\//, ''));
+    $('#project-api-edit-handler').val(btn.data('handler'));
+    $('#project-api-edit-method').val(btn.data('method'));
+    $('#project-api-edit-auth').val(btn.data('auth'));
+    $('#project-api-edit-description').val(btn.data('description'));
+    $('#project-api-edit-enabled').prop('checked', parseInt(btn.data('enabled'), 10) === 1);
+    $('#project-api-edit-empty').addClass('hide');
+    $('#project-api-edit-form').removeClass('hide');
+    $('a[href="#project-api-edit"]').tab('show');
+});
+$('#project-api-edit-submit').on('click', function(){
+    projectApiPost('general/config/api_save', $('#project-api-edit-form').serialize(), function(){ location.reload(); });
+});
+$(document).on('click', '.api-delete-btn', function(){
+    var btn = $(this);
+    Layer.confirm('确定删除自定义API“' + btn.data('name') + '”吗？', function(index){
+        Layer.close(index);
+        projectApiPost('general/config/api_delete', {id: btn.data('id')}, function(){ location.reload(); });
+    });
+});
+$(document).on('click', '.api-test-select', function(){
+    $('#project-api-test-id').val($(this).data('id'));
+    $('#project-api-test-url').val($(this).data('url'));
+    $('#project-api-test-result').hide().text('');
+    $('a[href="#project-api-test"]').tab('show');
+});
+$('#project-api-test-submit').on('click', function(){
+    var id = $('#project-api-test-id').val();
+    if(!id){ layer.alert('请先从API列表选择接口'); return; }
+    projectApiPost('general/config/api_test', $('#project-api-test-form').serialize(), function(resp){
+        $('#project-api-test-result').show().text(JSON.stringify(resp.data || {}, null, 2));
+    });
+});
+
 function sc(){
     window.open('https://control.v-team.cn/panel/login');
     return false;
