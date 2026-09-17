@@ -11,9 +11,6 @@
 // +----------------------------------------------------------------------
 use think\Route;
 Route::rule('appstore','index/App/list');
-Route::rule('appstore/v3/meta','index/SourceV3/meta');
-Route::rule('appstore/v3/apps','index/SourceV3/apps');
-Route::rule('appstore/v3/delta','index/SourceV3/delta');
 Route::rule('log','index/App/log');
 Route::rule('unbind','index/Index/unbind');
 Route::rule('unbind/query','index/Index/unbindQuery');
