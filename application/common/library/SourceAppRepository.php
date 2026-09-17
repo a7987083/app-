@@ -14,7 +14,7 @@ use think\Db;
 class SourceAppRepository
 {
     const CACHE_KEY = 'zonoe_source_app_rows_v1';
-    const CACHE_TTL = 30;
+    const CACHE_TTL = 15;
 
     protected static $lastSource = 'none';
 
