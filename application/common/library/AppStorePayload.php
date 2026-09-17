@@ -23,7 +23,7 @@ class AppStorePayload
 
     public static function appType($headerValue)
     {
-        return $headerValue === 'v2' ? 'appstore_v2' : 'appstore';
+        return SourceEncryptionMode::appType($headerValue);
     }
 
     public static function siteInfo(array $configRows)
