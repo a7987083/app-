@@ -53,7 +53,7 @@ p193_assert(strpos($registry, "project-api/") !== false, 'custom API aliases mus
 $managed = $read('application/index/controller/ManagedApi.php');
 p193_assert(strpos($managed, 'Safe aliases for project-owned APIs') !== false, 'managed API safety boundary missing');
 p193_assert(strpos($managed, 'eval(') === false, 'managed API must not execute arbitrary PHP');
-p193_assert(strpos($managed, "action($map[$handler])") !== false, 'managed API handler dispatch missing');
+p193_assert(strpos($managed, 'action($map[$handler])') !== false, 'managed API handler dispatch missing');
 
 $app = $read('application/index/controller/App.php');
 p193_assert(strpos($app, "ApiEndpointRegistry::guard('appstore')") !== false, 'appstore runtime switch missing');
