@@ -1,23 +1,23 @@
-ZONOE 软件源 Release 2026091713
-版本：2026091713
-基线：2026091712
+ZONOE 软件源 Release 2026091714
+版本：2026091714
+基线：2026091713
 
 更新内容：
-1. 系统配置“软件源加密”改为互斥三选一：关闭 / 普通 / V2。
-2. 继续复用 opencry：0=关闭，1=普通 appstore，2=appstore_v2；旧 0/1 配置无损升级。
-3. 后台选择为服务端权威模式：普通强制 appstore，V2 强制 appstore_v2，不允许两个协议同时开启。
-4. opencry=2 对旧布尔加密路径兼容为已开启，继续复用现有发送、gzip、缓存和性能日志链。
-5. /appstore 与 /appstore/v3/* 共用同一协议选择策略。
-6. 保留 1712 V3 revision/分页/delta，1711 性能优化及 1710 schema-adaptive 修复。
-7. 配置迁移支持 MySQL 5.7 且可重复执行。
+1. 系统配置新增 V3软件源 开关，并固定显示在 软件源加密 正下方。
+2. source_v3：1=开启、0=关闭；升级默认开启，合法 0/1 值重复迁移时保持不变。
+3. /appstore 始终保留；V3 开启时健康接口声明 supported=1。
+4. V3 关闭时返回 code=0、supported=0、fallback=appstore，供支持新协议的客户端自动回退。
+5. 黑名单/授权等业务拒绝保持 supported=1，不能通过 fallback 绕过。
+6. /appstore 与 /appstore/v3/* 继续复用 1713 的关闭/普通/V2 加密策略。
+7. 保留 1712 的 revision、keyset pagination、delta 增量同步及 1711/1710 兼容修复。
 
 验证：
-- Phase 18.2 PHP 7.0 互斥协议契约。
-- Phase 18.2 MySQL 5.7 配置迁移测试。
-- 正式 PHP 7.0 全回归与 MySQL 5.7 迁移链。
-- 在线更新 ZIP 必须携带 SourceEncryptionMode、SourceConfigRepository、AppStorePayload 和 1713 SQL。
-- 2026091712 -> 2026091713 真实 GitHub Release 在线更新 E2E。
+- Phase 18.3 PHP 7.0 开关/fallback/UI顺序契约。
+- Phase 18.3 MySQL 5.7 开关迁移。
+- 正式 PHP 7.0 全回归与 MySQL 5.7 全迁移链。
+- 在线更新 ZIP 携带 SourceV3.php、后台 Config.php 和 1714 SQL。
+- 2026091713 -> 2026091714 真实 GitHub Release 在线更新 E2E。
 
 在线更新：
-- GitHub Release 标签：source-v2026091713。
+- GitHub Release 标签：source-v2026091714。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
