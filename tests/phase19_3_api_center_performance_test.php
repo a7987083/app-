@@ -28,13 +28,13 @@ $read = function ($relative) use ($root) {
 
 $authorization = $read('application/admin/controller/Authorization.php');
 $transferDelete = strpos($authorization, "DELETE FROM `fa_card_transfer_log`");
-$transferCatch = strpos($authorization, "catch (\\Exception $e)", $transferDelete);
+$transferCatch = strpos($authorization, 'catch (\\Exception $e)', $transferDelete);
 $transferSuccess = strpos($authorization, "换绑记录已清空", $transferDelete);
 p193_assert($transferDelete !== false && $transferCatch !== false && $transferSuccess !== false, 'transfer clear flow missing');
 p193_assert($transferDelete < $transferCatch && $transferCatch < $transferSuccess, 'transfer success must be outside DB exception handler');
 
 $eventDelete = strpos($authorization, "DELETE FROM `fa_authorization_event`");
-$eventCatch = strpos($authorization, "catch (\\Exception $e)", $eventDelete);
+$eventCatch = strpos($authorization, 'catch (\\Exception $e)', $eventDelete);
 $eventSuccess = strpos($authorization, "授权事件已清空", $eventDelete);
 p193_assert($eventDelete !== false && $eventCatch !== false && $eventSuccess !== false, 'event clear flow missing');
 p193_assert($eventDelete < $eventCatch && $eventCatch < $eventSuccess, 'event success must be outside DB exception handler');
