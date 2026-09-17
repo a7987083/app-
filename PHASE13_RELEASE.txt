@@ -1,43 +1,16 @@
-ZONOE 软件源 Release 2026091707
-版本：2026091707
-基线：2026091706
+ZONOE 软件源 Release 2026091708
+版本：2026091708
+基线：2026091707
 
 更新内容：
-1. appstore legacy bkey 增加本地持久缓存，默认 15 分钟内不重复请求远端 update.json/key.json。
-2. legacy bkey 刷新失败时可使用 24 小时内最近有效缓存，减少外部服务波动导致的软件源添加等待。
-3. fa_category 公共软件源行增加 15 秒共享缓存，减少集中请求时重复数据库读取；新增/删除 App 主动失效缓存。
-4. 新增 SourcePerf 性能日志，记录 App 数、数据来源、JSON/加密/总耗时、响应大小、峰值内存、provider 和 legacy key 来源。
-5. 软件源大响应支持标准 HTTP gzip；仅 Accept-Encoding 支持 gzip 的客户端启用，HTTP 解压后 appstore/appstore_v2 应用层字节保持一致。
-6. SOURCE_HTTP_GZIP=0 可关闭代码层 gzip；SOURCE_HTTP_GZIP_MIN_BYTES 可修改默认 1024 字节阈值。
-7. 不修改 appstore legacy RC4、appstore_v2 RSA/RC4/容器/Codec 协议，不要求客户端更新。
-8. 本版本无数据库结构变更。
-
-PHP 7.0 CI 基准（模拟数据，仅服务器加密阶段）：
-- 1000 App / 0.42MB：appstore ~77ms；v2 ~164ms。
-- 5000 App / 2.12MB：appstore ~376ms；v2 ~812ms。
-- 10000 App / 4.23MB：appstore ~761ms；v2 ~1.64s。
-- 20000 App / 8.47MB：appstore ~1.52s；v2 ~3.30s。
-- 50000 App / 21.17MB：appstore ~3.84s；v2 ~8.21s。
-- 10000 App gzip：appstore 5.65MB -> 4.37MB；v2 5.71MB -> 4.38MB；gzip 本身约 148ms。
-
-环境参数：
-- SOURCE_ENCRYPTION_PROVIDER=local 可强制本地加密；默认仍保持 local_fallback 兼容行为。
-- SOURCE_LEGACY_BKEY_TTL 默认 900。
-- SOURCE_LEGACY_BKEY_STALE_TTL 默认 86400。
-- SOURCE_LEGACY_BKEY_CACHE_FILE 可自定义缓存文件。
-- SOURCE_PERF_LOG=1 记录全部性能请求；默认仍记录 >500ms 慢请求。
-- SOURCE_PERF_SLOW_MS 可修改慢请求阈值。
-- SOURCE_HTTP_GZIP=0 可禁用 gzip。
-
-测试：
-- 原加密向量兼容测试通过。
-- legacy bkey 缓存密文等价测试通过。
-- HTTP gzip 解压后字节一致测试通过。
-- 1k~50k 双协议性能基准通过。
-- Phase 10 旧静态契约已适配 App -> SourceAppRepository -> SourceAppRecord 的缓存查询调用链。
-- 正式发布继续执行 PHP 7.0 全回归、MySQL 5.7、ZIP/SHA256、GitHub Release 和真实在线升级 E2E。
+1. 修复 2026091707 新增 App 行缓存可能因 runtime/cache 不可写或文件缓存异常触发 ThinkPHP 异常页的问题。
+2. SourceAppRepository 改为 fail-open：缓存读/写/删除失败时记录日志并直接回退 MySQL，不影响软件源接口返回。
+3. 缓存正常时继续保留 15 秒共享缓存，不牺牲 2026091707 的性能收益。
+4. 新增 PHP 7.0 fail-open 测试，覆盖读失败、写失败、删除失败、正常缓存命中。
+5. 保留 2026091707 的 legacy bkey 缓存、HTTP gzip、SourcePerf 性能日志与原有 appstore/appstore_v2 协议。
+6. 本版本无数据库结构变更。
 
 在线更新：
-- GitHub Release 标签：source-v2026091707。
+- GitHub Release 标签：source-v2026091708。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 2026091706 可直接通过后台 GitHub 在线更新升级到 2026091707。
+- 2026091707 可直接通过后台 GitHub 在线更新升级到 2026091708。
