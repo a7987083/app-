@@ -34,6 +34,7 @@ PHP 7.0 CI 基准（模拟数据，仅服务器加密阶段）：
 - legacy bkey 缓存密文等价测试通过。
 - HTTP gzip 解压后字节一致测试通过。
 - 1k~50k 双协议性能基准通过。
+- Phase 10 旧静态契约已适配 App -> SourceAppRepository -> SourceAppRecord 的缓存查询调用链。
 - 正式发布继续执行 PHP 7.0 全回归、MySQL 5.7、ZIP/SHA256、GitHub Release 和真实在线升级 E2E。
 
 在线更新：
