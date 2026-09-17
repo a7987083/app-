@@ -3,6 +3,7 @@
 namespace app\common\model;
 
 use app\common\library\SourceAppRepository;
+use app\common\library\SourceChangeLog;
 use think\Db;
 use think\Model;
 
@@ -23,11 +24,28 @@ class Category extends Model
         'flag_text',
     ];
 
+    // afterInsert 内部会再次 save() 设置 weigh，避免把一次新增记录成 add+update 两次。
+    protected static $suppressSourceChange = false;
+
     protected static function init()
     {
         self::afterInsert(function ($row) {
-            $row->save(['weigh' => $row['id']]);
+            self::$suppressSourceChange = true;
+            try {
+                $row->save(['weigh' => $row['id']]);
+            } finally {
+                self::$suppressSourceChange = false;
+            }
             SourceAppRepository::forget();
+            SourceChangeLog::record(isset($row['id']) ? (int)$row['id'] : 0, 'add');
+        });
+
+        self::afterUpdate(function ($row) {
+            if (self::$suppressSourceChange) {
+                return;
+            }
+            SourceAppRepository::forget();
+            SourceChangeLog::record(isset($row['id']) ? (int)$row['id'] : 0, 'update');
         });
 
         // 真正删除 App 时同步删除“指定 App 卡 -> App”映射。
@@ -38,6 +56,10 @@ class Category extends Model
                 Db::table('fa_kami_app')->where('app_id', $id)->delete();
             }
             SourceAppRepository::forget();
+        });
+
+        self::afterDelete(function ($row) {
+            SourceChangeLog::record(isset($row['id']) ? (int)$row['id'] : 0, 'delete');
         });
     }
 
