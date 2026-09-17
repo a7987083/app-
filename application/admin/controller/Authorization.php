@@ -26,6 +26,14 @@ class Authorization extends Backend
 
     public function index()
     {
+        // 授权总览包含最近日志预览，必须始终从数据库重新读取。
+        // 禁止浏览器/代理缓存，避免清空日志后通过后退按钮恢复旧的 8 条预览快照。
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+        }
+
         $now = time();
         $today = strtotime(date('Y-m-d 00:00:00', $now));
         $week = $now + 7 * 86400;
@@ -71,7 +79,8 @@ class Authorization extends Backend
             }
             try {
                 $deleted = Db::execute('DELETE FROM `fa_card_transfer_log`');
-                $this->success('换绑记录已清空，共删除 ' . (int)$deleted . ' 条', url('authorization/transfers'));
+                $target = url('authorization/index', ['_refresh' => time()]) . '#transfer-preview';
+                $this->success('换绑记录已清空，共删除 ' . (int)$deleted . ' 条', $target);
             } catch (\Exception $e) {
                 error_log('[Authorization::transfers] clear failed: ' . $e->getMessage());
                 $this->error('清空换绑记录失败: ' . $e->getMessage());
@@ -103,7 +112,8 @@ class Authorization extends Backend
             }
             try {
                 $deleted = Db::execute('DELETE FROM `fa_authorization_event`');
-                $this->success('授权事件已清空，共删除 ' . (int)$deleted . ' 条', url('authorization/events'));
+                $target = url('authorization/index', ['_refresh' => time()]) . '#event-preview';
+                $this->success('授权事件已清空，共删除 ' . (int)$deleted . ' 条', $target);
             } catch (\Exception $e) {
                 error_log('[Authorization::events] clear failed: ' . $e->getMessage());
                 $this->error('清空授权事件失败: ' . $e->getMessage());
