@@ -3,10 +3,12 @@
 namespace app\admin\controller\general;
 
 use app\common\controller\Backend;
+use app\common\library\ApiEndpointRegistry;
 use app\common\library\Email;
 use app\common\library\SourceConfigRepository;
 use app\common\library\update\UpdateManager;
 use app\common\model\Config as ConfigModel;
+use think\Db;
 use think\Exception;
 use think\Validate;
 
@@ -23,7 +25,7 @@ class Config extends Backend
      * @var \app\common\model\Config
      */
     protected $model = null;
-    protected $noNeedRight = ['check', 'rulelist', 'version_notice', 'update_status', 'update_history', 'update_rollback'];
+    protected $noNeedRight = ['check', 'rulelist', 'version_notice', 'update_status', 'update_history', 'update_rollback', 'api_toggle', 'api_save', 'api_delete', 'api_test', 'api_logs'];
 
     public function _initialize()
     {
@@ -71,6 +73,9 @@ class Config extends Backend
         $this->view->assign('typeList', ConfigModel::getTypeList());
         $this->view->assign('ruleList', ConfigModel::getRegexList());
         $this->view->assign('groupList', ConfigModel::getGroupList());
+        $this->view->assign('apiEndpoints', ApiEndpointRegistry::all($this->request->domain()));
+        $this->view->assign('apiHandlers', ApiEndpointRegistry::handlerOptions());
+        $this->view->assign('apiLogs', ApiEndpointRegistry::recentLogs(100));
         return $this->view->fetch();
     }
 
@@ -331,6 +336,99 @@ class Config extends Backend
         $historyId = (string)$this->request->param('history_id', '');
         $jobId = (string)$this->request->param('job_id', '');
         return json($this->updateManager()->rollback($historyId, $jobId));
+    }
+
+    public function api_toggle()
+    {
+        try {
+            ApiEndpointRegistry::toggle(
+                $this->request->post('endpoint_key', ''),
+                (int)$this->request->post('enabled', 0) === 1
+            );
+            $this->success('API状态已更新');
+        } catch (\Exception $e) {
+            $this->error($e->getMessage());
+        }
+    }
+
+    public function api_save()
+    {
+        try {
+            $id = (int)$this->request->post('id', 0);
+            $params = $this->request->post('row/a', []);
+            $endpointKey = ApiEndpointRegistry::saveCustom(is_array($params) ? $params : [], $id);
+            $this->success('API已保存', null, ['endpoint_key' => $endpointKey]);
+        } catch (\Exception $e) {
+            $this->error($e->getMessage());
+        }
+    }
+
+    public function api_delete()
+    {
+        try {
+            ApiEndpointRegistry::deleteCustom((int)$this->request->post('id', 0));
+            $this->success('API已删除');
+        } catch (\Exception $e) {
+            $this->error($e->getMessage());
+        }
+    }
+
+    public function api_logs()
+    {
+        return json(['code' => 1, 'data' => ApiEndpointRegistry::recentLogs((int)$this->request->get('limit', 100))]);
+    }
+
+    public function api_test()
+    {
+        $id = (int)$this->request->post('id', 0);
+        $params = trim((string)$this->request->post('params', ''));
+        try {
+            $row = Db::table('fa_api_endpoint')->where('id', $id)->find();
+            if (!$row) {
+                $this->error('API不存在');
+            }
+
+            $url = rtrim($this->request->domain(), '/') . (string)$row['path'];
+            $method = strtoupper((string)$row['method']);
+            if ($method === 'ANY' || strpos($method, 'GET') !== false) {
+                if ($params !== '') {
+                    $url .= (strpos($url, '?') === false ? '?' : '&') . ltrim($params, '?&');
+                }
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+                $body = curl_exec($ch);
+            } else {
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+                $body = curl_exec($ch);
+            }
+            $error = curl_error($ch);
+            $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $elapsed = (float)curl_getinfo($ch, CURLINFO_TOTAL_TIME) * 1000;
+            curl_close($ch);
+
+            if ($body === false) {
+                $this->error('API测试失败: ' . $error);
+            }
+            $this->success('API测试完成', null, [
+                'url' => $url,
+                'status' => $status,
+                'elapsed_ms' => round($elapsed, 2),
+                'body' => mb_substr((string)$body, 0, 4000, 'UTF-8'),
+            ]);
+        } catch (\Exception $e) {
+            $this->error($e->getMessage());
+        }
     }
 
     protected function updateManager()
