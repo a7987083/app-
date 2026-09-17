@@ -12,6 +12,7 @@ on:
       - 'application/common/library/SourceSyncV3.php'
       - 'application/common/model/Category.php'
       - 'application/admin/controller/Category.php'
+      - 'application/admin/controller/Ajax.php'
       - 'release/sql/2026091712_source_sync_v3.sql'
       - 'tests/phase18_1_source_v3_contract_test.php'
       - 'tests/phase18_1_source_v3_mysql57_test.php'
@@ -36,6 +37,7 @@ jobs:
           php -l application/common/library/SourceSyncV3.php
           php -l application/common/model/Category.php
           php -l application/admin/controller/Category.php
+          php -l application/admin/controller/Ajax.php
           php -l tests/phase18_1_source_v3_contract_test.php
       - name: Run V3 contract
         run: php tests/phase18_1_source_v3_contract_test.php
