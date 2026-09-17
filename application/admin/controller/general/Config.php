@@ -61,31 +61,6 @@ class Config extends Backend
             $siteList[$v['group']]['list'][] = $value;
         }
 
-        // Source V3 is operationally coupled to source encryption. Keep the
-        // switch immediately below opencry regardless of fa_config insert id.
-        if (isset($siteList['basic']['list']) && is_array($siteList['basic']['list'])) {
-            $basicList = $siteList['basic']['list'];
-            $opencryIndex = null;
-            $v3Index = null;
-            foreach ($basicList as $position => $item) {
-                $name = isset($item['name']) ? (string)$item['name'] : '';
-                if ($name === 'opencry') {
-                    $opencryIndex = $position;
-                } elseif ($name === 'source_v3') {
-                    $v3Index = $position;
-                }
-            }
-            if ($opencryIndex !== null && $v3Index !== null && $v3Index !== $opencryIndex + 1) {
-                $v3Item = $basicList[$v3Index];
-                array_splice($basicList, $v3Index, 1);
-                if ($v3Index < $opencryIndex) {
-                    $opencryIndex--;
-                }
-                array_splice($basicList, $opencryIndex + 1, 0, [$v3Item]);
-                $siteList['basic']['list'] = $basicList;
-            }
-        }
-
         $index = 0;
         foreach ($siteList as $k => &$v) {
             $v['active'] = !$index ? true : false;
