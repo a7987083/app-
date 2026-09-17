@@ -17,6 +17,7 @@ use think\Db;
 class SourceAppRepository
 {
     const CACHE_KEY = 'zonoe_source_app_rows_v1';
+    const GENERATION_KEY = 'zonoe_source_app_generation_v1';
     const CACHE_TTL = 15;
 
     protected static $lastSource = 'none';
@@ -73,10 +74,33 @@ class SourceAppRepository
         return self::$lastSource;
     }
 
+    /**
+     * A cheap cross-worker generation token. It complements SourceChangeLog's
+     * revision and guarantees mapped/body caches are invalidated even if the
+     * revision table is temporarily unavailable.
+     */
+    public static function generation()
+    {
+        try {
+            $cached = Cache::get(self::GENERATION_KEY);
+            if (is_array($cached) && isset($cached['value']) && $cached['value'] !== '') {
+                return (string)$cached['value'];
+            }
+            $value = 'g' . str_replace('.', '', uniqid('', true));
+            Cache::set(self::GENERATION_KEY, ['value' => $value], 0);
+            return $value;
+        } catch (\Throwable $e) {
+            self::logCacheFailure('generation-read', $e);
+            return '0';
+        }
+    }
+
     public static function forget()
     {
         try {
             Cache::rm(self::CACHE_KEY);
+            $value = 'g' . str_replace('.', '', uniqid('', true));
+            Cache::set(self::GENERATION_KEY, ['value' => $value], 0);
         } catch (\Throwable $e) {
             self::logCacheFailure('remove', $e);
         }
