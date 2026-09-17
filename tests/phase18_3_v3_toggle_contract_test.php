@@ -10,10 +10,12 @@ function p183Assert($condition, $message)
 
 $root = dirname(__DIR__);
 $controller = file_get_contents($root . '/application/index/controller/SourceV3.php');
+$adminConfig = file_get_contents($root . '/application/admin/controller/general/Config.php');
 $route = file_get_contents($root . '/application/route.php');
 $migration = file_get_contents($root . '/release/sql/2026091714_source_v3_toggle.sql');
 
 p183Assert($controller !== false, 'SourceV3 controller missing');
+p183Assert($adminConfig !== false, 'admin Config controller missing');
 p183Assert($route !== false, 'route file missing');
 p183Assert($migration !== false, 'V3 toggle migration missing');
 
@@ -40,4 +42,9 @@ p183Assert(strpos($migration, "'source_v3','basic','V3软件源'") !== false, 's
 p183Assert(strpos($migration, "'switch','1'") !== false, 'source_v3 must default enabled');
 p183Assert(strpos($migration, "WHEN `value` IN ('0','1')") !== false, 'source_v3 migration must preserve valid values');
 
-echo "OK phase18_3_v3_toggle_contract_test toggle=passed fallback=appstore legacy_route=passed default_on=passed\n";
+// Keep V3 directly below source encryption without mutating persistent config ids.
+p183Assert(strpos($adminConfig, "\$name === 'opencry'") !== false, 'admin ordering does not anchor on opencry');
+p183Assert(strpos($adminConfig, "\$name === 'source_v3'") !== false, 'admin ordering does not locate source_v3');
+p183Assert(strpos($adminConfig, 'array_splice($basicList, $opencryIndex + 1, 0, [$v3Item])') !== false, 'source_v3 is not placed directly below opencry');
+
+echo "OK phase18_3_v3_toggle_contract_test toggle=passed fallback=appstore legacy_route=passed default_on=passed ui_order=passed\n";
