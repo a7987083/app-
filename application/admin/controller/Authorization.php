@@ -80,15 +80,15 @@ class Authorization extends Backend
             }
             try {
                 $deleted = Db::execute('DELETE FROM `fa_card_transfer_log`');
-                $this->success(
-                    '换绑记录已清空，共删除 ' . (int)$deleted . ' 条',
-                    null,
-                    ['deleted' => (int)$deleted, 'resource' => 'transfers']
-                );
             } catch (\Exception $e) {
                 error_log('[Authorization::transfers] clear failed: ' . $e->getMessage());
                 $this->error('清空换绑记录失败: ' . $e->getMessage());
             }
+            $this->success(
+                '换绑记录已清空，共删除 ' . (int)$deleted . ' 条',
+                null,
+                ['deleted' => (int)$deleted, 'resource' => 'transfers']
+            );
         }
 
         $q = trim((string)$this->request->get('q', ''));
@@ -116,15 +116,15 @@ class Authorization extends Backend
             }
             try {
                 $deleted = Db::execute('DELETE FROM `fa_authorization_event`');
-                $this->success(
-                    '授权事件已清空，共删除 ' . (int)$deleted . ' 条',
-                    null,
-                    ['deleted' => (int)$deleted, 'resource' => 'events']
-                );
             } catch (\Exception $e) {
                 error_log('[Authorization::events] clear failed: ' . $e->getMessage());
                 $this->error('清空授权事件失败: ' . $e->getMessage());
             }
+            $this->success(
+                '授权事件已清空，共删除 ' . (int)$deleted . ' 条',
+                null,
+                ['deleted' => (int)$deleted, 'resource' => 'events']
+            );
         }
 
         $q = trim((string)$this->request->get('q', ''));
