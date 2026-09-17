@@ -3,7 +3,7 @@ name: Phase 17.6 Source Performance
 on:
   push:
     branches:
-      - release/2026091707-source-performance
+      - 'release/**'
     paths:
       - 'application/index/controller/App.php'
       - 'application/common/library/SourceEncryptionProvider.php'
@@ -12,6 +12,7 @@ on:
       - 'application/common/library/SourceResponse.php'
       - 'application/common/model/Category.php'
       - 'tests/source_encryption_bkey_cache_test.php'
+      - 'tests/source_app_repository_failopen_test.php'
       - 'tests/source_response_gzip_test.php'
       - 'tests/phase17_6_source_performance_contract_test.php'
       - 'tools/source_encryption_benchmark.php'
@@ -38,6 +39,7 @@ jobs:
           php -l application/common/model/Category.php
           php -l tests/source_encryption_provider_test.php
           php -l tests/source_encryption_bkey_cache_test.php
+          php -l tests/source_app_repository_failopen_test.php
           php -l tests/source_response_gzip_test.php
           php -l tests/phase17_6_source_performance_contract_test.php
           php -l tools/source_encryption_benchmark.php
@@ -47,6 +49,7 @@ jobs:
           php tests/source_encryption_provider_test.php
           php tests/source_encryption_policy_test.php
           php tests/source_encryption_bkey_cache_test.php
+          php tests/source_app_repository_failopen_test.php
           php tests/source_response_gzip_test.php
           php tests/phase17_6_source_performance_contract_test.php
       - name: Benchmark 1k to 50k source payloads
