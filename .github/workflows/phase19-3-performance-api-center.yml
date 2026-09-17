@@ -1,0 +1,113 @@
+name: Phase 19.3 Performance and API Center
+
+on:
+  push:
+    branches:
+      - 'feature/phase19-3-performance-api-center-v1'
+      - 'release/**'
+    paths:
+      - 'VERSION'
+      - 'public/update/ver.txt'
+      - 'ver.json'
+      - 'PHASE13_RELEASE.txt'
+      - 'release/RELEASE_NOTES.md'
+      - 'release/online-update-files.txt'
+      - 'release/sql/2026091803_api_center_performance.sql'
+      - 'application/admin/controller/Authorization.php'
+      - 'application/admin/controller/general/Config.php'
+      - 'application/admin/view/general/config/index.html'
+      - 'application/index/controller/App.php'
+      - 'application/index/controller/Index.php'
+      - 'application/index/controller/ManagedApi.php'
+      - 'application/route.php'
+      - 'application/common/library/ApiEndpointRegistry.php'
+      - 'application/common/library/SourceAppRepository.php'
+      - 'application/common/library/SourceLegacyCache.php'
+      - 'application/common/library/SourcePerformance.php'
+      - 'tests/phase19_3_api_center_performance_test.php'
+      - 'tests/phase19_3_mysql57_migration_test.php'
+      - '.github/workflows/phase19-3-performance-api-center.yml'
+  workflow_dispatch:
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, zip
+
+      - name: Lint Phase 19.3 runtime and contracts
+        run: |
+          set -euo pipefail
+          php -l application/admin/controller/Authorization.php
+          php -l application/admin/controller/general/Config.php
+          php -l application/index/controller/App.php
+          php -l application/index/controller/Index.php
+          php -l application/index/controller/ManagedApi.php
+          php -l application/route.php
+          php -l application/common/library/ApiEndpointRegistry.php
+          php -l application/common/library/SourceAppRepository.php
+          php -l tests/phase19_2_authorization_center_contract_test.php
+          php -l tests/phase19_2_legacy_response_cache_test.php
+          php -l tests/phase19_3_api_center_performance_test.php
+          php -l tests/phase19_3_mysql57_migration_test.php
+          node --check public/assets/js/backend/authorization.js
+
+      - name: Run Phase 19.2 and 19.3 regression contracts
+        run: |
+          set -euo pipefail
+          php tests/phase19_2_authorization_center_contract_test.php
+          php tests/phase19_2_legacy_response_cache_test.php
+          php tests/phase19_3_api_center_performance_test.php
+
+      - name: Verify Phase 19.3 online update package
+        run: |
+          set -euo pipefail
+          php tools/build_online_update.php "$PWD/phase19-3-online-update.zip"
+          unzip -t phase19-3-online-update.zip >/dev/null
+          unzip -Z1 phase19-3-online-update.zip | grep -Fx 'program/application/admin/controller/Authorization.php'
+          unzip -Z1 phase19-3-online-update.zip | grep -Fx 'program/application/admin/controller/general/Config.php'
+          unzip -Z1 phase19-3-online-update.zip | grep -Fx 'program/application/admin/view/general/config/index.html'
+          unzip -Z1 phase19-3-online-update.zip | grep -Fx 'program/application/index/controller/App.php'
+          unzip -Z1 phase19-3-online-update.zip | grep -Fx 'program/application/index/controller/Index.php'
+          unzip -Z1 phase19-3-online-update.zip | grep -Fx 'program/application/index/controller/ManagedApi.php'
+          unzip -Z1 phase19-3-online-update.zip | grep -Fx 'program/application/common/library/ApiEndpointRegistry.php'
+          unzip -Z1 phase19-3-online-update.zip | grep -Fx 'program/application/common/library/SourceAppRepository.php'
+          unzip -Z1 phase19-3-online-update.zip | grep -Fx 'mysql/2026091803_api_center_performance.sql'
+
+  mysql57-migration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Run Phase 19.3 migration twice on MySQL 5.7
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php tests/phase19_3_mysql57_migration_test.php
