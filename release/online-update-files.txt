@@ -15,7 +15,7 @@ application/index/controller/Index.php
 application/common/library/SourceAppRecord.php
 application/common/library/SourceAppRepository.php
 application/common/library/SourceChangeLog.php
-application/common/library/SourceSyncV3.php
+application/common/library/SourceLegacyCache.php
 application/common/library/SourceConfigRepository.php
 application/common/library/SourceEncryptionMode.php
 application/common/library/AppStorePayload.php
