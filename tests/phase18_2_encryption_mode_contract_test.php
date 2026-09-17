@@ -24,6 +24,14 @@ p182Assert(SourceEncryptionMode::runtimeEnabledValue('0') === '0', 'off must rem
 p182Assert(SourceEncryptionMode::runtimeEnabledValue('1') === '1', 'normal mode must enable legacy encryption path');
 p182Assert(SourceEncryptionMode::runtimeEnabledValue('2') === '1', 'v2 mode must enable legacy encryption path');
 
+// Server setting is authoritative while encryption is enabled.
+p182Assert(SourceEncryptionMode::appTypeForMode('1', 'v2') === 'appstore', 'normal mode must override a V2 request header');
+p182Assert(SourceEncryptionMode::appTypeForMode('2', null) === 'appstore_v2', 'V2 mode must override a normal request');
+p182Assert(SourceEncryptionMode::appTypeForMode('2', 'v2') === 'appstore_v2', 'V2 mode resolution failed');
+// Disabled/unavailable mode preserves old header routing because the response is plaintext.
+p182Assert(SourceEncryptionMode::appTypeForMode('0', 'v2') === 'appstore_v2', 'off mode compatibility fallback failed');
+p182Assert(SourceEncryptionMode::appTypeForMode(null, 'v2') === 'appstore_v2', 'unavailable config compatibility fallback failed');
+
 $rows = [
     ['name' => 'opencry', 'value' => '2'],
     ['name' => 'openblack', 'value' => '1'],
@@ -42,4 +50,4 @@ p182Assert(strpos($migration, '"1":"普通"') !== false, 'normal choice missing'
 p182Assert(strpos($migration, '"2":"V2"') !== false, 'V2 choice missing');
 p182Assert(strpos($migration, "WHEN `value` IN ('0','1','2')") !== false, 'migration must preserve valid old/new values');
 
-echo "OK phase18_2_encryption_mode_contract_test modes=passed compatibility=passed mutual_exclusion=passed\n";
+echo "OK phase18_2_encryption_mode_contract_test modes=passed compatibility=passed mutual_exclusion=passed protocol_override=passed\n";
