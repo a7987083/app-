@@ -20,9 +20,9 @@ p175Assert($authorization !== false, 'Authorization controller missing');
 p175Assert($manifest !== false, 'online update manifest missing');
 
 p175Assert(strpos($kamiModel, 'self::beforeDelete(function ($row)') !== false, 'card beforeDelete cleanup missing');
-p175Assert(strpos($kamiModel, "Db::table('fa_kami_app')->where('kami_id', $id)->delete();") !== false, 'card mapping cleanup missing');
+p175Assert(strpos($kamiModel, "Db::table('fa_kami_app')->where('kami_id', \$id)->delete();") !== false, 'card mapping cleanup missing');
 p175Assert(strpos($categoryModel, 'self::beforeDelete(function ($row)') !== false, 'app beforeDelete cleanup missing');
-p175Assert(strpos($categoryModel, "Db::table('fa_kami_app')->where('app_id', $id)->delete();") !== false, 'app mapping cleanup missing');
+p175Assert(strpos($categoryModel, "Db::table('fa_kami_app')->where('app_id', \$id)->delete();") !== false, 'app mapping cleanup missing');
 
 p175Assert(strpos($authorization, "header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0')") !== false, 'dashboard no-store header missing');
 p175Assert(strpos($authorization, "url('authorization/index', ['_refresh' => time()]) . '#transfer-preview'") !== false, 'transfer clear dashboard redirect missing');
