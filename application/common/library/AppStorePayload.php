@@ -23,7 +23,13 @@ class AppStorePayload
 
     public static function appType($headerValue)
     {
-        return SourceEncryptionMode::appType($headerValue);
+        $modeClass = __NAMESPACE__ . '\\SourceEncryptionMode';
+        if (class_exists($modeClass)) {
+            return SourceEncryptionMode::appType($headerValue);
+        }
+        // Legacy isolated tests and minimal integrations load this mapper
+        // without the framework autoloader. Preserve the 1712 fallback there.
+        return $headerValue === 'v2' ? 'appstore_v2' : 'appstore';
     }
 
     public static function siteInfo(array $configRows)
@@ -70,8 +76,6 @@ class AppStorePayload
             $renewalEntry = (int)SourceAppRecord::value($row, 'renewal_entry', 0) === 1;
 
             if ($renewalEntry) {
-                // The row is a card-renewal trigger only. Keep the existing
-                // client unlock UI, but never expose or unlock an install URL.
                 $lock = '1';
                 $download = '';
             } elseif ($mode === 'licensed') {
@@ -80,7 +84,6 @@ class AppStorePayload
                     $download = '';
                 }
             } else {
-                // Preserve legacy guest truthiness for the paid flag.
                 if ($lock) {
                     $download = '';
                 }
