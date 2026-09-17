@@ -1,24 +1,25 @@
-ZONOE 软件源 Release 2026091802
-版本：2026091802
-基线：2026091801
-阶段：Phase 19.2 — Legacy AppStore High Performance + Authorization Center Fix
+ZONOE 软件源 Release 2026091803
+版本：2026091803
+基线：2026091802
+阶段：Phase 19.3 — Performance + API Center + Authorization Clear Fix
 
 更新内容：
-1. 客户端继续只使用原 `/appstore`，无需支持 V3、无需修改软件源地址。
-2. 新增 `SourceLegacyCache`，按 Guest / 全软件源 / 指定 App 权限集合隔离缓存，避免授权串数据。
-3. `SourceAppRepository` 增加跨 worker generation，`SourceChangeLog` 保留 revision 并增加共享 revision 缓存，用于服务端缓存失效。
-4. `AppStorePayload::apps()` 缓存大 App 列表映射结果；`SourceResponse::plainBody()` 缓存 Legacy 最终 JSON body。
-5. 删除 `/appstore/v3/meta`、`/apps`、`/delta` 公网路由；`source_v3` 后台开关通过 SQL migration 删除；`fa_source_change` 保留。
-6. 旧 `SourceV3.php` 在线更新后覆盖为 404 tombstone，`SourceSyncV3.php` 不再分发，避免旧安装继续暴露 V3。
-7. 授权中心“换绑记录/授权事件”清空逻辑恢复 FastAdmin AJAX；清空后立即刷新，不再出现 1 秒自动跳转；授权总览不再保留陈旧页面数据。
-8. `authorization.js` 纳入在线更新包；后台配置写入后主动失效软件源配置缓存。
+1. 修复换绑记录/授权事件“数据库已删除但前端提示失败”的异常；FastAdmin success 响应移出数据库 catch 范围。
+2. 系统设置新增“API接口”页签，包含 API列表 / 新增API / 编辑API / 测试API / 请求日志。
+3. API中心只管理项目接口：/appstore、dylib、apiface、unbind、unbind/query、license，不显示 FastAdmin 原生 /api/*。
+4. API完整地址自动使用当前域名；六个项目API接入真实开关，请求日志统计今日请求、最后请求、平均耗时。
+5. 自定义API仅支持 /project-api/<slug> 安全别名并映射已有处理器；系统API不可删除，不提供任意PHP执行。
+6. 新增 fa_kami / fa_black / fa_kami_app 热路径索引；SourceAppRepository 行缓存提升至120秒并继续由 generation/revision 主动失效。
+7. 加密响应缓存静态 JSON 大块，仅重建 UDID/Time；最终加密结果仍逐请求生成，客户端协议不变。
+8. 2万App契约测试：约6.9MB JSON，映射约77ms，JSON约49ms，峰值内存约63.8MB，新旧加密前JSON字节完全一致。
+9. 远程 dylib API 本版仅纳入管理中心，不重构内部授权逻辑。
 
 验证：
-- Phase 19.2 feature CI Run 35275598054 — SUCCESS。
-- PHP 7.0：授权中心、Legacy 缓存、V3 退役、更新包内容契约全部通过。
-- 在线更新包包含 SourceLegacyCache、授权中心 JS、V3 退役 SQL，并排除 SourceSyncV3。
-- 正式 Release 流水线必须完成 2026091801 -> 2026091802 GitHub Release 在线更新 E2E。
+- Phase 19.3 feature CI Run 35287755570 — SUCCESS。
+- PHP 7.0：19.2回归、API中心、授权清空、2万App、在线更新包契约通过。
+- MySQL 5.7：迁移重复执行两次、API schema、热路径索引通过。
+- 正式 Release 流水线必须完成 2026091802 -> 2026091803 GitHub Release 在线更新 E2E。
 
 在线更新：
-- GitHub Release 标签：source-v2026091802。
+- GitHub Release 标签：source-v2026091803。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
