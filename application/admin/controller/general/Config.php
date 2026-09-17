@@ -345,10 +345,10 @@ class Config extends Backend
                 $this->request->post('endpoint_key', ''),
                 (int)$this->request->post('enabled', 0) === 1
             );
-            $this->success('API状态已更新');
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
+        $this->success('API状态已更新');
     }
 
     public function api_save()
@@ -357,20 +357,20 @@ class Config extends Backend
             $id = (int)$this->request->post('id', 0);
             $params = $this->request->post('row/a', []);
             $endpointKey = ApiEndpointRegistry::saveCustom(is_array($params) ? $params : [], $id);
-            $this->success('API已保存', null, ['endpoint_key' => $endpointKey]);
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
+        $this->success('API已保存', null, ['endpoint_key' => $endpointKey]);
     }
 
     public function api_delete()
     {
         try {
             ApiEndpointRegistry::deleteCustom((int)$this->request->post('id', 0));
-            $this->success('API已删除');
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
+        $this->success('API已删除');
     }
 
     public function api_logs()
@@ -385,7 +385,7 @@ class Config extends Backend
         try {
             $row = Db::table('fa_api_endpoint')->where('id', $id)->find();
             if (!$row) {
-                $this->error('API不存在');
+                throw new \InvalidArgumentException('API不存在');
             }
 
             $url = rtrim($this->request->domain(), '/') . (string)$row['path'];
@@ -418,17 +418,18 @@ class Config extends Backend
             curl_close($ch);
 
             if ($body === false) {
-                $this->error('API测试失败: ' . $error);
+                throw new \RuntimeException('API测试失败: ' . $error);
             }
-            $this->success('API测试完成', null, [
+            $result = [
                 'url' => $url,
                 'status' => $status,
                 'elapsed_ms' => round($elapsed, 2),
                 'body' => mb_substr((string)$body, 0, 4000, 'UTF-8'),
-            ]);
+            ];
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
+        $this->success('API测试完成', null, $result);
     }
 
     protected function updateManager()
