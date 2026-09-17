@@ -18,10 +18,12 @@ class SourceLegacyCache
 {
     const APPS_TTL = 120;
     const BODY_TTL = 120;
+    const ENCRYPTED_JSON_TTL = 120;
 
     protected static $context = null;
     protected static $appsState = 'none';
     protected static $bodyState = 'none';
+    protected static $jsonState = 'none';
 
     public static function begin($mode, $sourceAccess)
     {
@@ -49,6 +51,7 @@ class SourceLegacyCache
         ];
         self::$appsState = 'miss';
         self::$bodyState = 'none';
+        self::$jsonState = 'none';
         return self::$context;
     }
 
@@ -138,9 +141,117 @@ class SourceLegacyCache
         return $body;
     }
 
+    /**
+     * Build the encrypted-path JSON without re-encoding the large App array on
+     * every request. Only UDID/Time remain request-specific.
+     *
+     * The assembled bytes are intentionally equivalent to json_encode() over
+     * AppStorePayload::source() with the same flags.
+     */
+    public static function encryptedJson(array $payload, $jsonFlags)
+    {
+        $context = self::context();
+        if (!$context || !isset($payload['apps']) || !is_array($payload['apps'])) {
+            return null;
+        }
+
+        $key = self::encryptedJsonKey($context, $payload, $jsonFlags);
+        $static = null;
+        try {
+            $cached = Cache::get($key);
+            if (is_array($cached)
+                && isset($cached['prefix']) && is_string($cached['prefix'])
+                && isset($cached['apps']) && is_string($cached['apps'])) {
+                $static = $cached;
+                self::$jsonState = 'hit';
+            }
+        } catch (\Throwable $e) {
+            self::logFailure('encrypted-json-read', $e);
+        }
+
+        if ($static === null) {
+            $static = self::buildEncryptedStatic($payload, $jsonFlags);
+            if ($static === null) {
+                self::$jsonState = 'fallback';
+                return null;
+            }
+            self::$jsonState = 'miss';
+            try {
+                Cache::set($key, $static, self::ENCRYPTED_JSON_TTL);
+            } catch (\Throwable $e) {
+                self::logFailure('encrypted-json-write', $e);
+            }
+        }
+
+        $udid = json_encode(array_key_exists('UDID', $payload) ? $payload['UDID'] : null, $jsonFlags);
+        $time = json_encode(array_key_exists('Time', $payload) ? $payload['Time'] : null, $jsonFlags);
+        if (!is_string($udid) || !is_string($time)) {
+            self::$jsonState = 'fallback';
+            return null;
+        }
+
+        return $static['prefix']
+            . ',"UDID":' . $udid
+            . ',"Time":' . $time
+            . ',"apps":' . $static['apps']
+            . '}';
+    }
+
+    /**
+     * Pure byte-equivalence helper used by tests and cache-miss generation.
+     */
+    public static function buildEncryptedJson(array $payload, $jsonFlags)
+    {
+        $static = self::buildEncryptedStatic($payload, $jsonFlags);
+        if ($static === null) {
+            return null;
+        }
+        $udid = json_encode(array_key_exists('UDID', $payload) ? $payload['UDID'] : null, $jsonFlags);
+        $time = json_encode(array_key_exists('Time', $payload) ? $payload['Time'] : null, $jsonFlags);
+        if (!is_string($udid) || !is_string($time)) {
+            return null;
+        }
+        return $static['prefix']
+            . ',"UDID":' . $udid
+            . ',"Time":' . $time
+            . ',"apps":' . $static['apps']
+            . '}';
+    }
+
     public static function status()
     {
-        return self::$appsState . '/' . self::$bodyState;
+        return self::$appsState . '/' . self::$bodyState . '/' . self::$jsonState;
+    }
+
+    protected static function buildEncryptedStatic(array $payload, $jsonFlags)
+    {
+        $site = [];
+        foreach (AppStorePayload::SITE_KEYS as $key) {
+            $site[$key] = array_key_exists($key, $payload) ? $payload[$key] : null;
+        }
+
+        $prefix = json_encode($site, $jsonFlags);
+        $apps = json_encode($payload['apps'], $jsonFlags);
+        if (!is_string($prefix) || !is_string($apps) || substr($prefix, -1) !== '}') {
+            return null;
+        }
+
+        return [
+            'prefix' => substr($prefix, 0, -1),
+            'apps' => $apps,
+        ];
+    }
+
+    protected static function encryptedJsonKey(array $context, array $payload, $jsonFlags)
+    {
+        $site = [];
+        foreach (AppStorePayload::SITE_KEYS as $key) {
+            $site[$key] = array_key_exists($key, $payload) ? $payload[$key] : null;
+        }
+        $siteFingerprint = sha1(json_encode($site, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        return 'zonoe_legacy_encrypted_json_v1_' . sha1(
+            self::appsKey($context) . '|' . $siteFingerprint . '|' . (int)$jsonFlags
+        );
     }
 
     protected static function appsKey(array $context)
