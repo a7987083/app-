@@ -80,8 +80,15 @@ class SourceResponse
 
     public static function send($body)
     {
+        // If any previous code has already flushed headers/body, compression
+        // would be unsafe because Content-Encoding could no longer be added.
+        if (headers_sent()) {
+            echo $body;
+            die;
+        }
+
         $transport = self::transportBody($body);
-        if ($transport['gzip'] && !headers_sent()) {
+        if ($transport['gzip']) {
             header('Content-Encoding: gzip');
             header('Vary: Accept-Encoding');
         }
