@@ -54,15 +54,44 @@ class SourceAppRecord
         return array_keys($columns);
     }
 
-    public static function publicSourceColumns()
+    public static function publicSourceColumns($includeRenewalEntry = true)
     {
-        // id and renewal_entry are used internally for permission/renewal
-        // behavior. AppStorePayload does not expose either as a new public
-        // protocol field.
-        return self::columns([
+        $fields = [
             'id', 'type', 'name', 'version', 'description', 'download_url',
-            'button_color', 'file_size', 'paid', 'renewal_entry', 'cloud_flag',
-            'icon_url', 'updated_at',
-        ]);
+            'button_color', 'file_size', 'paid',
+        ];
+        if ($includeRenewalEntry) {
+            $fields[] = 'renewal_entry';
+        }
+        $fields[] = 'cloud_flag';
+        $fields[] = 'icon_url';
+        $fields[] = 'updated_at';
+
+        return self::columns($fields);
+    }
+
+    /**
+     * Intersect known source columns with the columns physically present in
+     * fa_category. This prevents optional/new schema fields from taking the
+     * whole public /appstore endpoint down when a migration was missed.
+     */
+    public static function publicSourceColumnsForSchema(array $availableColumns)
+    {
+        $available = [];
+        foreach ($availableColumns as $column) {
+            $column = (string)$column;
+            if ($column !== '') {
+                $available[$column] = true;
+            }
+        }
+
+        $compatible = [];
+        foreach (self::publicSourceColumns(true) as $column) {
+            if (isset($available[$column])) {
+                $compatible[] = $column;
+            }
+        }
+
+        return $compatible;
     }
 }
