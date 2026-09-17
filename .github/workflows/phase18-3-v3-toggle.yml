@@ -1,0 +1,63 @@
+name: Phase 18.3 V3 Toggle
+
+on:
+  push:
+    branches:
+      - 'feature/phase18-3-v3-toggle-fallback-v1'
+      - 'release/**'
+    paths:
+      - 'application/index/controller/SourceV3.php'
+      - 'release/sql/2026091714_source_v3_toggle.sql'
+      - 'tests/phase18_3_v3_toggle_contract_test.php'
+      - 'tests/phase18_3_v3_toggle_mysql57_test.php'
+      - '.github/workflows/phase18-3-v3-toggle.yml'
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: Run V3 toggle contract
+        run: |
+          set -euo pipefail
+          php -l application/index/controller/SourceV3.php
+          php -l tests/phase18_3_v3_toggle_contract_test.php
+          php tests/phase18_3_v3_toggle_contract_test.php
+
+  mysql57-v3-toggle:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Run V3 toggle MySQL 5.7 migration test
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php -l tests/phase18_3_v3_toggle_mysql57_test.php
+          php tests/phase18_3_v3_toggle_mysql57_test.php
