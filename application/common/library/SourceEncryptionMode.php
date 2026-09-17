@@ -47,20 +47,31 @@ class SourceEncryptionMode
     }
 
     /**
+     * Pure resolver used by runtime and contracts. A non-null server mode is
+     * authoritative; null preserves the historical request-header behavior.
+     */
+    public static function appTypeForMode($mode, $headerValue = null)
+    {
+        if ($mode !== null) {
+            $mode = self::normalize($mode);
+            if ($mode === self::V2) {
+                return 'appstore_v2';
+            }
+            if ($mode === self::NORMAL) {
+                return 'appstore';
+            }
+        }
+
+        return $headerValue === 'v2' ? 'appstore_v2' : 'appstore';
+    }
+
+    /**
      * Resolve the wire protocol. When encryption is enabled, the server-side
      * selection wins so normal and V2 can never be active simultaneously.
      */
     public static function appType($headerValue = null, $useCache = true)
     {
-        $mode = self::selected($useCache);
-        if ($mode === self::V2) {
-            return 'appstore_v2';
-        }
-        if ($mode === self::NORMAL) {
-            return 'appstore';
-        }
-
-        return $headerValue === 'v2' ? 'appstore_v2' : 'appstore';
+        return self::appTypeForMode(self::selected($useCache), $headerValue);
     }
 
     /**
