@@ -9,8 +9,10 @@ on:
       - 'application/common/library/SourceEncryptionProvider.php'
       - 'application/common/library/SourceAppRepository.php'
       - 'application/common/library/SourcePerformance.php'
+      - 'application/common/library/SourceResponse.php'
       - 'application/common/model/Category.php'
       - 'tests/source_encryption_bkey_cache_test.php'
+      - 'tests/source_response_gzip_test.php'
       - 'tests/phase17_6_source_performance_contract_test.php'
       - 'tools/source_encryption_benchmark.php'
       - '.github/workflows/phase17-6-source-performance.yml'
@@ -24,7 +26,7 @@ jobs:
         with:
           php-version: '7.0'
           coverage: none
-          extensions: curl, openssl, iconv
+          extensions: curl, openssl, iconv, zlib
       - name: Lint source performance files
         run: |
           set -euo pipefail
@@ -32,9 +34,11 @@ jobs:
           php -l application/common/library/SourceEncryptionProvider.php
           php -l application/common/library/SourceAppRepository.php
           php -l application/common/library/SourcePerformance.php
+          php -l application/common/library/SourceResponse.php
           php -l application/common/model/Category.php
           php -l tests/source_encryption_provider_test.php
           php -l tests/source_encryption_bkey_cache_test.php
+          php -l tests/source_response_gzip_test.php
           php -l tests/phase17_6_source_performance_contract_test.php
           php -l tools/source_encryption_benchmark.php
       - name: Run compatibility and cache tests
@@ -43,6 +47,7 @@ jobs:
           php tests/source_encryption_provider_test.php
           php tests/source_encryption_policy_test.php
           php tests/source_encryption_bkey_cache_test.php
+          php tests/source_response_gzip_test.php
           php tests/phase17_6_source_performance_contract_test.php
       - name: Benchmark 1k to 50k source payloads
         run: |
