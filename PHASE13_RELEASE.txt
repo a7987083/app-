@@ -1,30 +1,31 @@
-ZONOE 软件源 Release 2026091711
-版本：2026091711
-基线：2026091710
+ZONOE 软件源 Release 2026091712
+版本：2026091712
+基线：2026091711
 
 更新内容：
-1. 保留 2026091710 的 `/appstore` schema-adaptive 修复：fa_category 缺少 renewal_entry 时自动排除该字段，不能再因漏跑 1704 迁移导致软件源整体报错。
-2. 恢复 2026091707 的 legacy appstore bkey 本地缓存：默认 900 秒 fresh、86400 秒 stale fallback。
-3. 恢复 App 行数据 15 秒共享缓存，减少重复读取 fa_category。
-4. 恢复 2026091708 的 cache fail-open：缓存读/写/删除失败只记日志并继续走数据库。
-5. 恢复 HTTP gzip：仅客户端支持 gzip 时启用，解压后的 appstore/appstore_v2 协议正文保持不变。
-6. 恢复 SourcePerf 慢请求监控和 1k/5k/10k/20k/50k 双协议基准工具。
-7. 保持 appstore / appstore_v2 加密协议、JSON 字段和客户端解密逻辑不变。
-8. 保持续费入口、三种卡密用途、授权叠加、apiface 签名、换绑额度、卡密/App 删除映射清理及授权总览刷新功能。
+1. 保持旧 /appstore、appstore、appstore_v2 完全兼容，现有客户端无需升级。
+2. 新增 /appstore/v3/meta：返回 source revision、App 总数、分页/增量限制和增量表状态。
+3. 新增 /appstore/v3/apps：after_id 游标分页，默认 200、最大 500；返回稳定 App id 与 weigh。
+4. 新增 /appstore/v3/delta：since revision 增量同步，仅返回 upserts / deleted，并返回 next_since/current_revision/has_more。
+5. 新增 fa_source_change，revision 使用 AUTO_INCREMENT，保证唯一单调递增游标。
+6. App 新增、模型更新、删除、后台直接编辑、批量状态修改和拖动排序均记录 revision。
+7. change log fail-open：增量表异常不能影响旧软件源接口或后台 App 管理。
+8. V3 继续复用现有卡密授权、指定 App 权限、黑名单和 appstore/appstore_v2 加密封装。
+9. 保留 1710 renewal_entry 缺列兼容修复及 1711 的 bkey cache、App cache、gzip、SourcePerf 等全部功能。
 
-1707/1708 说明：
-- 之前作废是故障根因尚未定位时的风险控制。
-- 已确认真正回归从 2026091704 的 renewal_entry 强制查询开始，并由 2026091710 修复。
-- 1707/1708 的性能功能现统一恢复到 2026091711。
-- 历史 1707/1708 标签仍不建议独立部署，因为缺少 1710 的 schema-adaptive 修复。
+客户端后续接入建议：
+- 首次同步先调用 meta 记住 revision。
+- 使用 apps?after_id=0&limit=200 分页同步到本地数据库。
+- 全量完成后调用 delta?since=<初始revision> 补齐同步期间变化。
+- 后续启动只需按上次 revision 拉 delta。
 
 验证：
-- PHP 7.0 全回归。
-- MySQL 5.7 全迁移与旧表缺 renewal_entry 兼容测试。
-- bkey cache、App cache fail-open、gzip 等价、性能契约及 50k benchmark。
+- PHP 7.0 V3 专项契约。
+- MySQL 5.7 V3 change-log 迁移、幂等、revision 单调性和 delta cursor 测试。
+- 既有 PHP 7.0 全回归、MySQL 5.7 全迁移。
 - 在线更新 ZIP/SHA256。
-- 2026091710 -> 2026091711 真实 GitHub Release 在线更新 E2E。
+- 2026091711 -> 2026091712 真实 GitHub Release 在线更新 E2E。
 
 在线更新：
-- GitHub Release 标签：source-v2026091711。
+- GitHub Release 标签：source-v2026091712。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
