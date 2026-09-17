@@ -25,7 +25,9 @@ foreach ($required as $path) {
 
 $record = file_get_contents($root . '/application/common/library/SourceAppRecord.php');
 p173Assert(strpos($record, "'renewal_entry' => 'renewal_entry'") !== false, 'renewal semantic field missing');
-p173Assert(strpos($record, "'paid', 'renewal_entry', 'cloud_flag'") !== false, 'renewal field missing from source query columns');
+p173Assert(strpos($record, '$includeRenewalEntry') !== false, 'renewal source field must be optional');
+p173Assert(strpos($record, 'renewalEntryColumnAvailable') !== false, 'renewal schema detection missing');
+p173Assert(strpos($record, "SHOW COLUMNS FROM `fa_category` LIKE 'renewal_entry'") !== false, 'renewal schema probe missing');
 
 $payload = file_get_contents($root . '/application/common/library/AppStorePayload.php');
 p173Assert(strpos($payload, "SourceAppRecord::value(\$row, 'renewal_entry', 0)") !== false, 'payload does not read renewal flag');
@@ -58,4 +60,4 @@ p173Assert(strpos($sql, "COLUMN_NAME = 'renewal_entry'") !== false, 'renewal mig
 p173Assert(strpos($sql, 'ALTER TABLE `fa_category` ADD COLUMN `renewal_entry`') !== false, 'renewal migration ALTER missing');
 p173Assert(strpos($sql, "DEFAULT ''0''") !== false, 'renewal migration default missing');
 
-echo "OK phase17_3_renewal_entry_contract_test renewal=passed cleanup=passed migration=passed\n";
+echo "OK phase17_3_renewal_entry_contract_test renewal=passed schema_compat=passed cleanup=passed migration=passed\n";
