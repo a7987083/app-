@@ -7,6 +7,7 @@ on:
       - 'release/**'
     paths:
       - 'application/index/controller/SourceV3.php'
+      - 'application/admin/controller/general/Config.php'
       - 'release/sql/2026091714_source_v3_toggle.sql'
       - 'tests/phase18_3_v3_toggle_contract_test.php'
       - 'tests/phase18_3_v3_toggle_mysql57_test.php'
@@ -25,6 +26,7 @@ jobs:
         run: |
           set -euo pipefail
           php -l application/index/controller/SourceV3.php
+          php -l application/admin/controller/general/Config.php
           php -l tests/phase18_3_v3_toggle_contract_test.php
           php tests/phase18_3_v3_toggle_contract_test.php
 
