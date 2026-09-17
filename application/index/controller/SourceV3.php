@@ -30,9 +30,11 @@ class SourceV3 extends App
             'protocol' => 'appstore_v3',
             'version' => 3,
             'code' => 1,
+            'supported' => 1,
             'revision' => $meta['revision'],
             'app_count' => $meta['app_count'],
             'delta_available' => $meta['delta_available'],
+            'fallback' => 'appstore',
             'pagination' => [
                 'default_limit' => $meta['default_limit'],
                 'max_limit' => $meta['max_limit'],
@@ -58,6 +60,7 @@ class SourceV3 extends App
             'protocol' => 'appstore_v3',
             'version' => 3,
             'code' => 1,
+            'supported' => 1,
             'revision' => $page['revision'],
             'apps' => $page['apps'],
             'paging' => $page['paging'],
@@ -77,7 +80,9 @@ class SourceV3 extends App
                 'protocol' => 'appstore_v3',
                 'version' => 3,
                 'code' => 0,
+                'supported' => 1,
                 'msg' => 'V3增量同步表不可用，请先完成服务端数据库更新',
+                'fallback' => 'appstore',
             ];
             $this->emitPayload($payload, $ctx['opencry'], $ctx['app_type'], 320, true);
         }
@@ -89,6 +94,7 @@ class SourceV3 extends App
             'protocol' => 'appstore_v3',
             'version' => 3,
             'code' => 1,
+            'supported' => 1,
             'since' => $delta['since'],
             'next_since' => $delta['next_since'],
             'current_revision' => $delta['current_revision'],
@@ -106,6 +112,23 @@ class SourceV3 extends App
         $configRows = SourceConfigRepository::rows();
         $configValues = SourceConfigRepository::mapRows($configRows);
         $opencry = array_key_exists('opencry', $configValues) ? $configValues['opencry'] : null;
+        $v3Enabled = !array_key_exists('source_v3', $configValues) || (string)$configValues['source_v3'] === '1';
+
+        if (!$v3Enabled) {
+            return [
+                'opencry' => $opencry,
+                'app_type' => $appType,
+                'error' => [
+                    'protocol' => 'appstore_v3',
+                    'version' => 3,
+                    'code' => 0,
+                    'supported' => 0,
+                    'msg' => 'V3软件源已关闭，请回退到appstore',
+                    'fallback' => 'appstore',
+                ],
+            ];
+        }
+
         $udid = isset($_GET['udid']) ? trim((string)$_GET['udid']) : '';
         $now = time();
 
@@ -119,6 +142,7 @@ class SourceV3 extends App
                     'protocol' => 'appstore_v3',
                     'version' => 3,
                     'code' => 0,
+                    'supported' => 1,
                     'msg' => '设备已被拉黑',
                 ],
             ];
