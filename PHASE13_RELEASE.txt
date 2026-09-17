@@ -1,34 +1,30 @@
-ZONOE 软件源 Release 2026091710
-版本：2026091710
-基线：2026091709
+ZONOE 软件源 Release 2026091711
+版本：2026091711
+基线：2026091710
 
 更新内容：
-1. 重新定位 /appstore 回归起点为 2026091704，而不是 2026091707。
-2. 2026091703 与 2026091704 的 application/route.php 完全一致，appstore 仍映射 index/App/list，路由本身未丢失。
-3. 2026091704 首次把 fa_category.renewal_entry 加入公开软件源查询字段；生产库缺该列时会直接 SQL 异常。
-4. SourceAppRecord::publicSourceColumns() 现在运行时检测 renewal_entry 是否真实存在；缺失时自动排除，源接口继续使用旧字段返回。
-5. renewal_entry 存在时继续启用续费入口语义，不移除 renewal_entry 功能。
-6. 数据库迁移失败、漏跑或历史库结构不完整，不再允许单个可选字段拖死整个 /appstore。
-7. 不改变 appstore / appstore_v2 加密协议、客户端 JSON 字段和既有卡密授权协议。
-8. 新增 PHP 7.0 缺列兼容回归；MySQL 5.7 测试覆盖迁移前旧表可查询、迁移后自动恢复 renewal_entry 查询。
+1. 保留 2026091710 的 `/appstore` schema-adaptive 修复：fa_category 缺少 renewal_entry 时自动排除该字段，不能再因漏跑 1704 迁移导致软件源整体报错。
+2. 恢复 2026091707 的 legacy appstore bkey 本地缓存：默认 900 秒 fresh、86400 秒 stale fallback。
+3. 恢复 App 行数据 15 秒共享缓存，减少重复读取 fa_category。
+4. 恢复 2026091708 的 cache fail-open：缓存读/写/删除失败只记日志并继续走数据库。
+5. 恢复 HTTP gzip：仅客户端支持 gzip 时启用，解压后的 appstore/appstore_v2 协议正文保持不变。
+6. 恢复 SourcePerf 慢请求监控和 1k/5k/10k/20k/50k 双协议基准工具。
+7. 保持 appstore / appstore_v2 加密协议、JSON 字段和客户端解密逻辑不变。
+8. 保持续费入口、三种卡密用途、授权叠加、apiface 签名、换绑额度、卡密/App 删除映射清理及授权总览刷新功能。
 
-影响版本：
-- 2026091703：最后一个无 renewal_entry 强依赖的版本。
-- 2026091704：回归起点。
-- 2026091705~2026091709：继承相同查询依赖，生产库字段缺失时仍可能失败。
-- 2026091710：首次从运行时代码层彻底消除该强依赖。
+1707/1708 说明：
+- 之前作废是故障根因尚未定位时的风险控制。
+- 已确认真正回归从 2026091704 的 renewal_entry 强制查询开始，并由 2026091710 修复。
+- 1707/1708 的性能功能现统一恢复到 2026091711。
+- 历史 1707/1708 标签仍不建议独立部署，因为缺少 1710 的 schema-adaptive 修复。
 
-数据库：
-- 不删除任何字段或业务数据。
-- 仍保留既有 renewal_entry 迁移；迁移成功时功能完整启用。
-- 迁移未成功时 /appstore 自动按旧表兼容模式运行。
+验证：
+- PHP 7.0 全回归。
+- MySQL 5.7 全迁移与旧表缺 renewal_entry 兼容测试。
+- bkey cache、App cache fail-open、gzip 等价、性能契约及 50k benchmark。
+- 在线更新 ZIP/SHA256。
+- 2026091710 -> 2026091711 真实 GitHub Release 在线更新 E2E。
 
 在线更新：
-- GitHub Release 标签：source-v2026091710。
+- GitHub Release 标签：source-v2026091711。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 2026091704~2026091709 可直接在线升级到 2026091710。
-- 发布必须通过 PHP 7.0、MySQL 5.7、ZIP/SHA256 和真实 GitHub Release 在线升级 E2E 后才视为完成。
-
-兼容性：
-- 兼容宝塔 PHP 7.0、MySQL 5.7。
-- 不要求客户端更新。
