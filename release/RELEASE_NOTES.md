@@ -4,6 +4,8 @@
 
 本版本以 `2026091714` 为稳定基线，继续保留旧 `/appstore` 和 Phase 18 V3 接口，并补齐客户端 SQLite/增量同步真正需要的服务端一致性边界。
 
+## 更新内容
+
 ### 全量同步快照一致性
 
 - `/appstore/v3/apps` 支持 `snapshot_revision`。
