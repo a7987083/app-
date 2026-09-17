@@ -2,6 +2,7 @@
 
 namespace app\index\controller;
 
+use app\common\library\ApiEndpointRegistry;
 use app\common\library\AppStorePayload;
 use app\common\library\BlacklistPolicy;
 use app\common\library\CardAccessPolicy;
@@ -28,6 +29,11 @@ class App
 
     public function list()
     {
+        $guard = ApiEndpointRegistry::guard('appstore');
+        if ($guard !== null) {
+            return $guard;
+        }
+
         $this->requestStartedAt = microtime(true);
         $input = json_decode(file_get_contents('php://input'), true);
         $traceValue = is_array($input) && array_key_exists('value', $input) ? $input['value'] : null;
