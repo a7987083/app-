@@ -1,0 +1,75 @@
+name: Phase 18.1 Source V3
+
+on:
+  push:
+    branches:
+      - 'feature/phase18-1-source-v3-foundation'
+      - 'release/**'
+    paths:
+      - 'application/route.php'
+      - 'application/index/controller/SourceV3.php'
+      - 'application/common/library/SourceChangeLog.php'
+      - 'application/common/library/SourceSyncV3.php'
+      - 'application/common/model/Category.php'
+      - 'application/admin/controller/Category.php'
+      - 'release/sql/2026091712_source_sync_v3.sql'
+      - 'tests/phase18_1_source_v3_contract_test.php'
+      - 'tests/phase18_1_source_v3_mysql57_test.php'
+      - '.github/workflows/phase18-1-source-v3.yml'
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, openssl, iconv, zlib
+      - name: Lint V3 files
+        run: |
+          set -euo pipefail
+          php -l application/route.php
+          php -l application/index/controller/SourceV3.php
+          php -l application/common/library/SourceChangeLog.php
+          php -l application/common/library/SourceSyncV3.php
+          php -l application/common/model/Category.php
+          php -l application/admin/controller/Category.php
+          php -l tests/phase18_1_source_v3_contract_test.php
+      - name: Run V3 contract
+        run: php tests/phase18_1_source_v3_contract_test.php
+
+  mysql57-v3:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Run V3 MySQL 5.7 test
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php -l tests/phase18_1_source_v3_mysql57_test.php
+          php tests/phase18_1_source_v3_mysql57_test.php
