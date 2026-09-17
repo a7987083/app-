@@ -37,9 +37,9 @@ $appStorePayloadSource = file_get_contents($root . '/application/common/library/
 $migration = file_get_contents($root . '/release/sql/2026091713_source_encryption_mode.sql');
 p182Assert($appStorePayloadSource !== false && strpos($appStorePayloadSource, 'SourceEncryptionMode::appType($headerValue)') !== false, 'AppStorePayload does not delegate protocol selection');
 p182Assert($migration !== false && strpos($migration, "'radio'") !== false, 'opencry migration is not a radio selector');
-p182Assert(strpos($migration, '\"0\":\"关闭\"') !== false, 'off choice missing');
-p182Assert(strpos($migration, '\"1\":\"普通\"') !== false, 'normal choice missing');
-p182Assert(strpos($migration, '\"2\":\"V2\"') !== false, 'V2 choice missing');
+p182Assert(strpos($migration, '"0":"关闭"') !== false, 'off choice missing');
+p182Assert(strpos($migration, '"1":"普通"') !== false, 'normal choice missing');
+p182Assert(strpos($migration, '"2":"V2"') !== false, 'V2 choice missing');
 p182Assert(strpos($migration, "WHEN `value` IN ('0','1','2')") !== false, 'migration must preserve valid old/new values');
 
 echo "OK phase18_2_encryption_mode_contract_test modes=passed compatibility=passed mutual_exclusion=passed\n";
