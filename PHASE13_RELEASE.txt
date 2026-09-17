@@ -1,29 +1,42 @@
-ZONOE 软件源 Release 2026091706
-版本：2026091706
-基线：2026091705
+ZONOE 软件源 Release 2026091707
+版本：2026091707
+基线：2026091706
 
 更新内容：
-1. 删除卡密时同步删除 fa_kami_app 中该 kami_id 的指定 App 授权映射。
-2. 删除 App 时同步删除 fa_kami_app 中该 app_id 的指定 App 授权映射。
-3. 卡密仅到期不清映射；App 仅隐藏/停用/编辑也不清映射，只有真正删除时触发。
-4. 映射清理使用 ThinkPHP beforeDelete 模型事件，继续处于 FastAdmin 删除事务内，单删/批量删均生效。
-5. 清空换绑记录成功后跳回授权总览 #transfer-preview，并通过唯一 _refresh 参数强制重新请求。
-6. 清空授权事件成功后跳回授权总览 #event-preview，并通过唯一 _refresh 参数强制重新请求。
-7. 授权总览增加 no-store/no-cache 响应头，避免浏览器后退恢复清空前的旧预览快照。
-8. 在线更新清单新增 application/admin/model/Kami.php 与 application/common/model/Category.php。
-9. 不自动删除历史孤儿映射；现有异常继续通过数据完整性页面审计。
-10. Phase17.5 PHP 7.0 契约测试通过。
+1. appstore legacy bkey 增加本地持久缓存，默认 15 分钟内不重复请求远端 update.json/key.json。
+2. legacy bkey 刷新失败时可使用 24 小时内最近有效缓存，减少外部服务波动导致的软件源添加等待。
+3. fa_category 公共软件源行增加 15 秒共享缓存，减少集中请求时重复数据库读取；新增/删除 App 主动失效缓存。
+4. 新增 SourcePerf 性能日志，记录 App 数、数据来源、JSON/加密/总耗时、响应大小、峰值内存、provider 和 legacy key 来源。
+5. 软件源大响应支持标准 HTTP gzip；仅 Accept-Encoding 支持 gzip 的客户端启用，HTTP 解压后 appstore/appstore_v2 应用层字节保持一致。
+6. SOURCE_HTTP_GZIP=0 可关闭代码层 gzip；SOURCE_HTTP_GZIP_MIN_BYTES 可修改默认 1024 字节阈值。
+7. 不修改 appstore legacy RC4、appstore_v2 RSA/RC4/容器/Codec 协议，不要求客户端更新。
+8. 本版本无数据库结构变更。
 
-数据库：
-- 不新增数据库字段，不改变 fa_kami_app 表结构。
-- 到期数据继续保留映射；真正删除卡密/App 时同步清映射。
+PHP 7.0 CI 基准（模拟数据，仅服务器加密阶段）：
+- 1000 App / 0.42MB：appstore ~77ms；v2 ~164ms。
+- 5000 App / 2.12MB：appstore ~376ms；v2 ~812ms。
+- 10000 App / 4.23MB：appstore ~761ms；v2 ~1.64s。
+- 20000 App / 8.47MB：appstore ~1.52s；v2 ~3.30s。
+- 50000 App / 21.17MB：appstore ~3.84s；v2 ~8.21s。
+- 10000 App gzip：appstore 5.65MB -> 4.37MB；v2 5.71MB -> 4.38MB；gzip 本身约 148ms。
+
+环境参数：
+- SOURCE_ENCRYPTION_PROVIDER=local 可强制本地加密；默认仍保持 local_fallback 兼容行为。
+- SOURCE_LEGACY_BKEY_TTL 默认 900。
+- SOURCE_LEGACY_BKEY_STALE_TTL 默认 86400。
+- SOURCE_LEGACY_BKEY_CACHE_FILE 可自定义缓存文件。
+- SOURCE_PERF_LOG=1 记录全部性能请求；默认仍记录 >500ms 慢请求。
+- SOURCE_PERF_SLOW_MS 可修改慢请求阈值。
+- SOURCE_HTTP_GZIP=0 可禁用 gzip。
+
+测试：
+- 原加密向量兼容测试通过。
+- legacy bkey 缓存密文等价测试通过。
+- HTTP gzip 解压后字节一致测试通过。
+- 1k~50k 双协议性能基准通过。
+- 正式发布继续执行 PHP 7.0 全回归、MySQL 5.7、ZIP/SHA256、GitHub Release 和真实在线升级 E2E。
 
 在线更新：
-- GitHub Release 标签：source-v2026091706。
+- GitHub Release 标签：source-v2026091707。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 从 2026091705 可通过后台 GitHub 在线更新直接升级到 2026091706。
-- 保留 HTTPS、SHA256、数据库/程序备份、文件覆盖校验、失败回滚和真实 Release E2E。
-
-兼容性：
-- 兼容宝塔 PHP 7.0、MySQL 5.7。
-- 不改变三种卡密用途、一次性消费规则、授权叠加语义、apiface 签名和续费入口协议。
+- 2026091706 可直接通过后台 GitHub 在线更新升级到 2026091707。
