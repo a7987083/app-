@@ -18,7 +18,7 @@ class SourceAppRepository
 {
     const CACHE_KEY = 'zonoe_source_app_rows_v1';
     const GENERATION_KEY = 'zonoe_source_app_generation_v1';
-    const CACHE_TTL = 15;
+    const CACHE_TTL = 120;
 
     protected static $lastSource = 'none';
 
