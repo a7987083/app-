@@ -1,0 +1,85 @@
+name: Phase 19.1 V3 Client Sync Contract
+
+on:
+  push:
+    branches:
+      - 'feature/phase19-1-client-sync-contract-v1'
+      - 'release/**'
+    paths:
+      - 'application/index/controller/SourceV3.php'
+      - 'application/common/library/SourceSyncV3.php'
+      - 'application/common/library/SourceChangeLog.php'
+      - 'tests/phase19_1_client_sync_contract_test.php'
+      - 'tests/phase19_1_client_sync_mysql57_test.php'
+      - 'release/online-update-files.txt'
+      - 'VERSION'
+      - 'public/update/ver.txt'
+      - 'ver.json'
+      - '.github/workflows/phase19-1-client-sync.yml'
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: zip
+      - name: Lint Phase 19 runtime
+        run: |
+          set -euo pipefail
+          php -l application/index/controller/SourceV3.php
+          php -l application/common/library/SourceSyncV3.php
+          php -l application/common/library/SourceChangeLog.php
+          php -l tests/phase19_1_client_sync_contract_test.php
+      - name: Run V3 compatibility and Phase 19 contract
+        run: |
+          set -euo pipefail
+          php tests/phase18_1_source_v3_contract_test.php
+          php tests/phase18_3_v3_toggle_contract_test.php
+          php tests/phase19_1_client_sync_contract_test.php
+      - name: Verify online update payload contains Phase 19 runtime
+        run: |
+          set -euo pipefail
+          php tools/build_online_update.php "$PWD/phase19-online-update.zip"
+          unzip -t phase19-online-update.zip >/dev/null
+          unzip -Z1 phase19-online-update.zip | grep -Fx 'program/application/index/controller/SourceV3.php'
+          unzip -Z1 phase19-online-update.zip | grep -Fx 'program/application/common/library/SourceSyncV3.php'
+          unzip -Z1 phase19-online-update.zip | grep -Fx 'program/application/common/library/SourceChangeLog.php'
+
+  mysql57-delta-window:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Run Phase 19 MySQL 5.7 delta-window test
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php -l tests/phase19_1_client_sync_mysql57_test.php
+          php tests/phase18_1_source_v3_mysql57_test.php
+          php tests/phase19_1_client_sync_mysql57_test.php

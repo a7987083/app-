@@ -32,6 +32,7 @@ class SourceV3 extends App
             'code' => 1,
             'supported' => 1,
             'revision' => $meta['revision'],
+            'min_delta_since' => $meta['min_delta_since'],
             'app_count' => $meta['app_count'],
             'delta_available' => $meta['delta_available'],
             'fallback' => 'appstore',
@@ -40,6 +41,11 @@ class SourceV3 extends App
                 'max_limit' => $meta['max_limit'],
                 'default_delta_limit' => $meta['default_delta_limit'],
                 'max_delta_limit' => $meta['max_delta_limit'],
+            ],
+            'sync_contract' => [
+                'snapshot_param' => 'snapshot_revision',
+                'snapshot_restart_field' => 'restart_required',
+                'delta_reset_field' => 'reset_required',
             ],
         ];
         $this->emitPayload($payload, $ctx['opencry'], $ctx['app_type'], 320, true);
@@ -54,17 +60,27 @@ class SourceV3 extends App
 
         $afterId = isset($_GET['after_id']) ? (int)$_GET['after_id'] : 0;
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : SourceSyncV3::DEFAULT_LIMIT;
-        $page = SourceSyncV3::page($afterId, $limit, $ctx['mode'], $ctx['source_access']);
+        $snapshotRevision = isset($_GET['snapshot_revision']) && $_GET['snapshot_revision'] !== ''
+            ? (int)$_GET['snapshot_revision']
+            : null;
+        $page = SourceSyncV3::page($afterId, $limit, $ctx['mode'], $ctx['source_access'], $snapshotRevision);
 
         $payload = [
             'protocol' => 'appstore_v3',
             'version' => 3,
-            'code' => 1,
+            'code' => !empty($page['snapshot_valid']) ? 1 : 0,
             'supported' => 1,
             'revision' => $page['revision'],
+            'snapshot_revision' => $page['snapshot_revision'],
+            'current_revision' => $page['current_revision'],
+            'snapshot_valid' => $page['snapshot_valid'],
+            'restart_required' => $page['restart_required'],
             'apps' => $page['apps'],
             'paging' => $page['paging'],
         ];
+        if (!empty($page['restart_required'])) {
+            $payload['msg'] = '软件源数据在全量同步期间发生变化，请使用新的revision重新开始全量同步';
+        }
         $this->emitPayload($payload, $ctx['opencry'], $ctx['app_type'], 320, true);
     }
 
@@ -97,11 +113,19 @@ class SourceV3 extends App
             'supported' => 1,
             'since' => $delta['since'],
             'next_since' => $delta['next_since'],
+            'min_since' => $delta['min_since'],
             'current_revision' => $delta['current_revision'],
             'has_more' => $delta['has_more'],
+            'reset_required' => $delta['reset_required'],
+            'reset_reason' => $delta['reset_reason'],
             'upserts' => $delta['upserts'],
             'deleted' => $delta['deleted'],
         ];
+        if (!empty($delta['reset_required'])) {
+            $payload['msg'] = $delta['reset_reason'] === 'history_gap'
+                ? '本地revision已超出服务端可增量恢复窗口，请重新全量同步'
+                : '本地revision高于服务端revision，请重新全量同步';
+        }
         $this->emitPayload($payload, $ctx['opencry'], $ctx['app_type'], 320, true);
     }
 

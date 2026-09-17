@@ -97,6 +97,37 @@ class SourceChangeLog
         }
     }
 
+    /**
+     * Return the oldest client revision that can still be resumed with delta.
+     *
+     * If the first retained change is revision N, a client at N-1 can consume
+     * every retained change without a gap. This makes future change-log
+     * retention safe: clients older than min_since must perform a full sync.
+     */
+    public static function minDeltaSince()
+    {
+        try {
+            $row = Db::table(self::TABLE)
+                ->order('revision asc')
+                ->field('revision')
+                ->find();
+            if (!$row || !isset($row['revision'])) {
+                return self::currentRevision();
+            }
+            return max(0, (int)$row['revision'] - 1);
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    public static function revisionWindow()
+    {
+        return [
+            'min_since' => self::minDeltaSince(),
+            'current_revision' => self::currentRevision(),
+        ];
+    }
+
     public static function changesSince($since, $limit)
     {
         $since = max(0, (int)$since);
