@@ -56,6 +56,22 @@ class AppStorePayload
      */
     public static function apps(array $rows, $mode, $sourceAccess = false)
     {
+        $cacheClass = __NAMESPACE__ . '\\SourceLegacyCache';
+        $cacheContext = null;
+        if (class_exists($cacheClass)) {
+            try {
+                $cacheContext = SourceLegacyCache::begin($mode, $sourceAccess);
+                $cachedApps = SourceLegacyCache::getMappedApps($cacheContext);
+                if (is_array($cachedApps)) {
+                    return $cachedApps;
+                }
+            } catch (\Throwable $e) {
+                // Mapping cache is strictly optional; fall through to the
+                // historical mapper on any cache/backend failure.
+                $cacheContext = null;
+            }
+        }
+
         if (is_array($sourceAccess)) {
             $unlockAll = !empty($sourceAccess['unlock_all']);
             $appIds = isset($sourceAccess['app_ids']) && is_array($sourceAccess['app_ids'])
@@ -102,6 +118,14 @@ class AppStorePayload
                 'tintColor' => SourceAppRecord::value($row, 'button_color'),
                 'size' => SourceAppRecord::value($row, 'file_size'),
             ];
+        }
+
+        if ($cacheContext !== null) {
+            try {
+                SourceLegacyCache::storeMappedApps($cacheContext, $data);
+            } catch (\Throwable $e) {
+                // Cache write failure must not affect Legacy /appstore output.
+            }
         }
         return $data;
     }
