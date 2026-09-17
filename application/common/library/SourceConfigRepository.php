@@ -41,6 +41,9 @@ class SourceConfigRepository
      * value to 0=off, 1=normal, 2=V2 while keeping existing callers compatible:
      * both encrypted modes are exposed as runtime value "1" here. Call
      * rawValue()/rawValueFromRows() when the exact selected mode is required.
+     *
+     * Keep this translation standalone: legacy unit tests load this class
+     * without the framework autoloader.
      */
     public static function mapRows(array $rows)
     {
@@ -51,8 +54,8 @@ class SourceConfigRepository
             }
             $name = (string)$row['name'];
             $value = array_key_exists('value', $row) ? $row['value'] : null;
-            if ($name === 'opencry') {
-                $value = SourceEncryptionMode::runtimeEnabledValue($value);
+            if ($name === 'opencry' && (string)$value === '2') {
+                $value = '1';
             }
             $values[$name] = $value;
         }
