@@ -2,6 +2,7 @@
 
 namespace app\index\controller;
 
+use app\common\library\ApiEndpointRegistry;
 use app\common\controller\Frontend;
 use app\common\library\BlacklistPolicy;
 use app\common\library\CategoryDailyStat;
@@ -20,6 +21,11 @@ class Index extends Frontend
 
     public function dylib()
     {
+        $guard = ApiEndpointRegistry::guard('dylib_config');
+        if ($guard !== null) {
+            return $guard;
+        }
+
         header('Content-Type: application/json;charset=utf-8');
         $arr = ['code' => 0, 'msg' => '未获取设备UDID！', 'data' => []];
         if (empty($_REQUEST['udid'])) {
@@ -62,6 +68,11 @@ class Index extends Frontend
 
     public function apiface()
     {
+        $guard = ApiEndpointRegistry::guard('dylib_auth');
+        if ($guard !== null) {
+            return $guard;
+        }
+
         AuthorizationSchema::ensure();
         if (empty($_REQUEST['udid'])) {
             echo json_encode(['msg' => '未获取设备udid'], JSON_UNESCAPED_UNICODE);
@@ -106,6 +117,11 @@ class Index extends Frontend
 
     public function unbind()
     {
+        $guard = ApiEndpointRegistry::guard('unbind');
+        if ($guard !== null) {
+            return $guard;
+        }
+
         AuthorizationSchema::ensure();
         $result = null;
         if ($this->request->isPost()) {
@@ -122,12 +138,22 @@ class Index extends Frontend
 
     public function unbindQuery()
     {
+        $guard = ApiEndpointRegistry::guard('unbind_query');
+        if ($guard !== null) {
+            return $guard;
+        }
+
         AuthorizationSchema::ensure();
         return json(CardDeviceTransfer::queryStatus($this->request->request('udid', '')));
     }
 
     public function license()
     {
+        $guard = ApiEndpointRegistry::guard('license');
+        if ($guard !== null) {
+            return $guard;
+        }
+
         AuthorizationSchema::ensure();
         $result = null;
         if ($this->request->isPost()) {
