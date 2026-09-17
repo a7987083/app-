@@ -17,12 +17,14 @@
 - 未修改普通 `appstore` 和 `appstore_v2` 的密码算法、密文 envelope 或客户端解密格式。
 - 关闭加密时继续返回原明文 JSON。
 - 现有数据库无需手工改字段，只更新 `fa_config.opencry` 这一行的展示类型和可选值。
+- 保留旧独立测试/极简集成直接加载 `AppStorePayload.php`、`SourceConfigRepository.php` 的能力；框架 autoload 不存在时自动使用 1712 兼容路径，不影响生产环境的后台权威模式。
 - 实际软件源浏览客户端的 SQLite/V3 本地同步代码不在本服务端仓库中，本版本不向无关的 dylib/菜单工程混入客户端代码；1712 V3 服务端接口保持可用，待对应客户端源码接入后继续 Phase 18.2 客户端部分。
 
 ## 验证要求
 
 - PHP 7.0：加密模式类、配置兼容层、AppStorePayload 语法和互斥协议契约必须通过。
 - MySQL 5.7：1713 配置迁移必须可重复执行；旧值 1、新值 2、异常值回退和缺失行初始化均验证。
+- 旧版完整 PHP 7.0 回归必须继续通过，尤其是 `appstore_payload_test` 与 `source_config_repository_test` 的独立加载场景。
 - 在线更新 ZIP 必须包含 `SourceEncryptionMode.php`、`SourceConfigRepository.php`、`AppStorePayload.php` 和 `2026091713_source_encryption_mode.sql`。
 - 正式发布继续执行全量 PHP 7.0 回归、MySQL 5.7 迁移链、ZIP/SHA256、GitHub Release 和 2026091712 → 2026091713 真实在线更新 E2E。
 
