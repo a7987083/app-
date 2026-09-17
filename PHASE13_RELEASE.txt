@@ -1,23 +1,24 @@
-ZONOE 软件源 Release 2026091801
-版本：2026091801
-基线：2026091714
-阶段：Phase 19.1 — V3 Client-safe Sync Contract
+ZONOE 软件源 Release 2026091802
+版本：2026091802
+基线：2026091801
+阶段：Phase 19.2 — Legacy AppStore High Performance + Authorization Center Fix
 
 更新内容：
-1. V3 全量分页新增 snapshot_revision 一致性契约，防止同步期间后台修改导致客户端 SQLite 得到混合 revision 数据。
-2. /appstore/v3/apps 返回 snapshot_revision、current_revision、snapshot_valid、restart_required；快照失效时不返回混合数据，客户端必须从新 revision 重启全量同步。
-3. V3 meta 新增 min_delta_since，并声明 snapshot/reset 同步字段，客户端可判断本地 revision 是否仍能增量续接。
-4. /appstore/v3/delta 新增 min_since、reset_required、reset_reason；历史缺口和客户端 future revision 均明确要求重新全量同步。
-5. 业务拒绝仍保持 supported=1，不允许把授权/黑名单错误误判为 V3 不支持并回退绕过。
-6. 旧 /appstore、V3 开关、普通/V2 加密协议均保持兼容。
-7. 新增 PHP 7.0 Phase19 合约、MySQL 5.7 revision-window 测试和在线更新 ZIP 内容验证。
+1. 客户端继续只使用原 `/appstore`，无需支持 V3、无需修改软件源地址。
+2. 新增 `SourceLegacyCache`，按 Guest / 全软件源 / 指定 App 权限集合隔离缓存，避免授权串数据。
+3. `SourceAppRepository` 增加跨 worker generation，`SourceChangeLog` 保留 revision 并增加共享 revision 缓存，用于服务端缓存失效。
+4. `AppStorePayload::apps()` 缓存大 App 列表映射结果；`SourceResponse::plainBody()` 缓存 Legacy 最终 JSON body。
+5. 删除 `/appstore/v3/meta`、`/apps`、`/delta` 公网路由；`source_v3` 后台开关通过 SQL migration 删除；`fa_source_change` 保留。
+6. 旧 `SourceV3.php` 在线更新后覆盖为 404 tombstone，`SourceSyncV3.php` 不再分发，避免旧安装继续暴露 V3。
+7. 授权中心“换绑记录/授权事件”清空逻辑恢复 FastAdmin AJAX；清空后立即刷新，不再出现 1 秒自动跳转；授权总览不再保留陈旧页面数据。
+8. `authorization.js` 纳入在线更新包；后台配置写入后主动失效软件源配置缓存。
 
 验证：
-- Phase 19.1 feature CI Run 35261910066 — SUCCESS。
-- PHP 7.0：Phase18 兼容 + Phase19 snapshot/reset + 在线更新包内容检查通过。
-- MySQL 5.7：revision retention window、history gap、future revision、delta boundary 通过。
-- 正式 Release 流水线需完成 2026091714 -> 2026091801 GitHub Release 在线更新 E2E。
+- Phase 19.2 feature CI Run 35275598054 — SUCCESS。
+- PHP 7.0：授权中心、Legacy 缓存、V3 退役、更新包内容契约全部通过。
+- 在线更新包包含 SourceLegacyCache、授权中心 JS、V3 退役 SQL，并排除 SourceSyncV3。
+- 正式 Release 流水线必须完成 2026091801 -> 2026091802 GitHub Release 在线更新 E2E。
 
 在线更新：
-- GitHub Release 标签：source-v2026091801。
+- GitHub Release 标签：source-v2026091802。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
