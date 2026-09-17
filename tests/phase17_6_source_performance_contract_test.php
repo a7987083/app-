@@ -23,7 +23,7 @@ p176Assert(strpos($app, "'encryption_ms'") !== false && strpos($app, "'response_
 p176Assert(strpos($provider, 'LEGACY_BKEY_CACHE_TTL = 900') !== false, 'legacy bkey fresh TTL missing');
 p176Assert(strpos($provider, 'LEGACY_BKEY_STALE_TTL = 86400') !== false, 'legacy bkey stale fallback missing');
 p176Assert(strpos($provider, "'source_crypto'") !== false && strpos($provider, "'legacy_bkey.json'") !== false, 'legacy bkey runtime cache path missing');
-p176Assert(strpos($provider, "self::$lastLegacyKeySource = 'cache'") !== false, 'cache-hit source marker missing');
+p176Assert(strpos($provider, 'self::$lastLegacyKeySource = \'cache\'') !== false, 'cache-hit source marker missing');
 p176Assert(strpos($repo, 'const CACHE_TTL = 15') !== false, 'App-row cache TTL must stay short');
 p176Assert(strpos($model, 'SourceAppRepository::forget()') !== false, 'App-row cache invalidation missing');
 p176Assert(strpos($benchmark, '50000') !== false && strpos($benchmark, 'encryptV2Json') !== false, '50k dual-protocol benchmark missing');
