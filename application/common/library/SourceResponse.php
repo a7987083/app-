@@ -14,9 +14,31 @@ class SourceResponse
 
     public static function plainBody(array $payload, $jsonFlags = 320, $replaceMarkers = true)
     {
+        $cacheClass = __NAMESPACE__ . '\\SourceLegacyCache';
+        if (class_exists($cacheClass)) {
+            try {
+                $cached = SourceLegacyCache::getPlainBody($payload, $jsonFlags, $replaceMarkers);
+                if (is_string($cached)) {
+                    return $cached;
+                }
+            } catch (\Throwable $e) {
+                // Shared response cache is optional. Preserve the historical
+                // encoding path if the cache backend is unavailable.
+            }
+        }
+
         $payload = AppStorePayload::withoutRuntimeFields($payload);
         $json = json_encode($payload, $jsonFlags);
-        return $replaceMarkers ? str_replace('@@@', '\\n', $json) : $json;
+        $body = $replaceMarkers ? str_replace('@@@', '\\n', $json) : $json;
+
+        if (class_exists($cacheClass)) {
+            try {
+                SourceLegacyCache::storePlainBody($payload, $jsonFlags, $replaceMarkers, $body);
+            } catch (\Throwable $e) {
+                // Cache write failures must not alter the public response.
+            }
+        }
+        return $body;
     }
 
     public static function encryptedBody($appType, $encryptedPayload, $replaceMarkers = true)
