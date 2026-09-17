@@ -1,0 +1,65 @@
+name: Phase 17.6 Source Performance
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'application/index/controller/App.php'
+      - 'application/common/library/SourceEncryptionProvider.php'
+      - 'application/common/library/SourceAppRepository.php'
+      - 'application/common/library/SourcePerformance.php'
+      - 'application/common/library/SourceResponse.php'
+      - 'application/common/model/Category.php'
+      - 'tests/source_encryption_bkey_cache_test.php'
+      - 'tests/source_app_repository_failopen_test.php'
+      - 'tests/source_response_gzip_test.php'
+      - 'tests/phase17_6_source_performance_contract_test.php'
+      - 'tools/source_encryption_benchmark.php'
+      - '.github/workflows/phase17-6-source-performance.yml'
+
+jobs:
+  php70-performance-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, openssl, iconv, zlib
+      - name: Lint source performance files
+        run: |
+          set -euo pipefail
+          php -l application/index/controller/App.php
+          php -l application/common/library/SourceEncryptionProvider.php
+          php -l application/common/library/SourceAppRepository.php
+          php -l application/common/library/SourcePerformance.php
+          php -l application/common/library/SourceResponse.php
+          php -l application/common/model/Category.php
+          php -l tests/source_encryption_provider_test.php
+          php -l tests/source_encryption_bkey_cache_test.php
+          php -l tests/source_app_repository_failopen_test.php
+          php -l tests/source_response_gzip_test.php
+          php -l tests/phase17_6_source_performance_contract_test.php
+          php -l tools/source_encryption_benchmark.php
+      - name: Run compatibility and cache tests
+        run: |
+          set -euo pipefail
+          php tests/source_encryption_provider_test.php
+          php tests/source_encryption_policy_test.php
+          php tests/source_encryption_bkey_cache_test.php
+          php tests/source_app_repository_failopen_test.php
+          php tests/source_response_gzip_test.php
+          php tests/phase17_6_source_performance_contract_test.php
+      - name: Benchmark 1k to 50k source payloads
+        run: |
+          set -euo pipefail
+          php -d memory_limit=512M tools/source_encryption_benchmark.php --counts=1000,5000,10000,20000,50000 | tee source-encryption-benchmark.tsv
+      - name: Upload benchmark result
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-encryption-benchmark-php70
+          path: source-encryption-benchmark.tsv
+          if-no-files-found: error
+          retention-days: 30

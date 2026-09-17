@@ -11,11 +11,14 @@ public/assets/js/backend/general/updatemaintenance.js
 application/index/controller/App.php
 application/index/controller/Index.php
 application/common/library/SourceAppRecord.php
+application/common/library/SourceAppRepository.php
 application/common/library/AppStorePayload.php
 application/common/library/CardAccessPolicy.php
 application/common/library/CardDeviceTransfer.php
 application/common/library/SourceEncryptionPolicy.php
 application/common/library/SourceEncryptionProvider.php
+application/common/library/SourcePerformance.php
+application/common/library/SourceResponse.php
 application/common/library/AuthorizationSchema.php
 application/common/library/DataIntegrityAudit.php
 application/admin/controller/Authorization.php

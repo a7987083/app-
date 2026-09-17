@@ -2,6 +2,7 @@
 
 namespace app\common\model;
 
+use app\common\library\SourceAppRepository;
 use think\Db;
 use think\Model;
 
@@ -26,6 +27,7 @@ class Category extends Model
     {
         self::afterInsert(function ($row) {
             $row->save(['weigh' => $row['id']]);
+            SourceAppRepository::forget();
         });
 
         // 真正删除 App 时同步删除“指定 App 卡 -> App”映射。
@@ -35,6 +37,7 @@ class Category extends Model
             if ($id > 0) {
                 Db::table('fa_kami_app')->where('app_id', $id)->delete();
             }
+            SourceAppRepository::forget();
         });
     }
 
