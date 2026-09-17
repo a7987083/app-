@@ -11,18 +11,21 @@ function phase10Assert($condition, $message)
 $root = dirname(__DIR__);
 $app = file_get_contents($root . '/application/index/controller/App.php');
 $payload = file_get_contents($root . '/application/common/library/AppStorePayload.php');
+$sourceRepo = file_get_contents($root . '/application/common/library/SourceAppRepository.php');
 
 foreach (array(
     'SourceHttpClient::postForm',
     'SourceResponse::encryptedBody',
     'SourceResponse::plainBody',
-    'SourceAppRecord::publicSourceColumns',
+    'SourceAppRepository::rows',
     'CardEntitlementPolicy::activeEndTime',
     'CardEntitlementPolicy::activationState',
     '->lock(true)',
 ) as $needle) {
     phase10Assert(strpos($app, $needle) !== false, 'App controller missing: ' . $needle);
 }
+phase10Assert($sourceRepo !== false, 'SourceAppRepository missing');
+phase10Assert(strpos($sourceRepo, 'SourceAppRecord::publicSourceColumns') !== false, 'cached source repository missing semantic source columns');
 foreach (array('public function curl(', 'protected function codeTimes(') as $legacy) {
     phase10Assert(strpos($app, $legacy) === false, 'legacy controller helper remains: ' . $legacy);
 }
