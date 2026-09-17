@@ -1,29 +1,32 @@
-ZONOE 软件源 Release 2026091706
-版本：2026091706
-基线：2026091705
+ZONOE 软件源 Release 2026091709
+版本：2026091709
+基线：2026091706（运行时代码完整回滚）
 
 更新内容：
-1. 删除卡密时同步删除 fa_kami_app 中该 kami_id 的指定 App 授权映射。
-2. 删除 App 时同步删除 fa_kami_app 中该 app_id 的指定 App 授权映射。
-3. 卡密仅到期不清映射；App 仅隐藏/停用/编辑也不清映射，只有真正删除时触发。
-4. 映射清理使用 ThinkPHP beforeDelete 模型事件，继续处于 FastAdmin 删除事务内，单删/批量删均生效。
-5. 清空换绑记录成功后跳回授权总览 #transfer-preview，并通过唯一 _refresh 参数强制重新请求。
-6. 清空授权事件成功后跳回授权总览 #event-preview，并通过唯一 _refresh 参数强制重新请求。
-7. 授权总览增加 no-store/no-cache 响应头，避免浏览器后退恢复清空前的旧预览快照。
-8. 在线更新清单新增 application/admin/model/Kami.php 与 application/common/model/Category.php。
-9. 不自动删除历史孤儿映射；现有异常继续通过数据完整性页面审计。
-10. Phase17.5 PHP 7.0 契约测试通过。
+1. 正式作废 2026091707 与 2026091708，不再作为稳定版、部署基线或后续开发基线。
+2. 2026091709 从 source-v2026091706 的正式 Release commit 1315f7974f9220d1b422ef69686ad2110f5e549e 重新建立，不从 1707/1708 继续修补。
+3. application/index/controller/App.php 恢复 1706：移除 SourceAppRepository / SourcePerformance 调用，恢复直接读取 fa_category。
+4. SourceResponse.php 恢复 1706：移除 1707 新增的代码层 HTTP gzip。
+5. SourceEncryptionProvider.php 恢复 1706：移除 1707 新增的 legacy bkey 持久缓存逻辑。
+6. appstore / appstore_v2 的客户端协议、JSON 字段和原 1706 加密兼容逻辑保持不变。
+7. 1707/1708 曾新增的 SourceAppRepository.php、SourcePerformance.php 即使在已升级服务器残留，也不再被 1709 运行时代码引用，不影响执行。
+8. 保留 1706 已验证的卡密/App 映射删除、授权总览刷新、续费入口、授权签名等功能。
 
 数据库：
-- 不新增数据库字段，不改变 fa_kami_app 表结构。
-- 到期数据继续保留映射；真正删除卡密/App 时同步清映射。
+- 不新增、不删除、不修改数据库字段。
+- 不回滚用户业务数据、卡密、授权、换绑记录或 App 数据。
+
+废弃版本：
+- 2026091707：DEPRECATED / 作废。
+- 2026091708：DEPRECATED / 作废。
+- 禁止新部署，禁止作为后续开发基线。
 
 在线更新：
-- GitHub Release 标签：source-v2026091706。
+- GitHub Release 标签：source-v2026091709。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 从 2026091705 可通过后台 GitHub 在线更新直接升级到 2026091706。
-- 保留 HTTPS、SHA256、数据库/程序备份、文件覆盖校验、失败回滚和真实 Release E2E。
+- 2026091707 / 2026091708 可直接通过后台 GitHub 在线更新升级到 2026091709，完成运行时代码回滚。
+- 发布必须通过 PHP 7.0、MySQL 5.7、ZIP/SHA256 和真实 GitHub Release 在线升级 E2E 后才视为完成。
 
 兼容性：
 - 兼容宝塔 PHP 7.0、MySQL 5.7。
-- 不改变三种卡密用途、一次性消费规则、授权叠加语义、apiface 签名和续费入口协议。
+- 运行时代码以已验证的 2026091706 为唯一基线。
