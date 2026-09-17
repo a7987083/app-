@@ -26,6 +26,7 @@ on:
       - 'application/common/library/SourcePerformance.php'
       - 'tests/phase19_3_api_center_performance_test.php'
       - 'tests/phase19_3_mysql57_migration_test.php'
+      - 'tests/phase19_3_large_catalog_test.php'
       - '.github/workflows/phase19-3-performance-api-center.yml'
   workflow_dispatch:
 
@@ -55,6 +56,7 @@ jobs:
           php -l tests/phase19_2_legacy_response_cache_test.php
           php -l tests/phase19_3_api_center_performance_test.php
           php -l tests/phase19_3_mysql57_migration_test.php
+          php -l tests/phase19_3_large_catalog_test.php
           node --check public/assets/js/backend/authorization.js
 
       - name: Run Phase 19.2 and 19.3 regression contracts
@@ -63,6 +65,7 @@ jobs:
           php tests/phase19_2_authorization_center_contract_test.php
           php tests/phase19_2_legacy_response_cache_test.php
           php tests/phase19_3_api_center_performance_test.php
+          php tests/phase19_3_large_catalog_test.php
 
       - name: Verify Phase 19.3 online update package
         run: |
