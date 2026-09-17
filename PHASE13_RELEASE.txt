@@ -1,29 +1,29 @@
-ZONOE 软件源 Release 2026091705
-版本：2026091705
-基线：2026091704
+ZONOE 软件源 Release 2026091706
+版本：2026091706
+基线：2026091705
 
 更新内容：
-1. 修复 2026091704 后台“编辑 App”可能进入错误页的问题。
-2. Category 新增 renewal_entry 字段检测与自修复；字段仍不可用时只隐藏续费入口选项，不再让编辑页整体失败。
-3. 新增 2026091705_renewal_entry_repair.sql，MySQL 5.7 可重复执行，并且不依赖 bt2b 字段位置。
-4. 修复“清空全部换绑记录”按钮无法真正删除日志的问题。
-5. 修复“清空全部授权事件”按钮无法真正删除日志的问题。
-6. 两个清空动作改为原生 POST 表单，不再依赖内联 jQuery/$.ajax；后端通过原生 success()/error() 反馈并跳回列表。
-7. 换绑日志清空仍只删除 fa_card_transfer_log；授权事件清空仍只删除 fa_authorization_event，不改变卡密或当前授权状态。
-8. 在线更新清单补入 application/admin/controller/Category.php，避免数据库/表单修复遗漏出更新包。
-9. Phase17.4 PHP 7.0 契约测试通过。
-10. MySQL 5.7 专项测试通过 UpdateSqlRunner::splitStatements() 后逐句执行两次，覆盖真实在线更新 SQL 语义。
+1. 删除卡密时同步删除 fa_kami_app 中该 kami_id 的指定 App 授权映射。
+2. 删除 App 时同步删除 fa_kami_app 中该 app_id 的指定 App 授权映射。
+3. 卡密仅到期不清映射；App 仅隐藏/停用/编辑也不清映射，只有真正删除时触发。
+4. 映射清理使用 ThinkPHP beforeDelete 模型事件，继续处于 FastAdmin 删除事务内，单删/批量删均生效。
+5. 清空换绑记录成功后跳回授权总览 #transfer-preview，并通过唯一 _refresh 参数强制重新请求。
+6. 清空授权事件成功后跳回授权总览 #event-preview，并通过唯一 _refresh 参数强制重新请求。
+7. 授权总览增加 no-store/no-cache 响应头，避免浏览器后退恢复清空前的旧预览快照。
+8. 在线更新清单新增 application/admin/model/Kami.php 与 application/common/model/Category.php。
+9. 不自动删除历史孤儿映射；现有异常继续通过数据完整性页面审计。
+10. Phase17.5 PHP 7.0 契约测试通过。
 
 数据库：
-- 续费入口字段仍为 fa_category.renewal_entry tinyint(1) unsigned NOT NULL DEFAULT 0。
-- 新修复迁移：release/sql/2026091705_renewal_entry_repair.sql。
+- 不新增数据库字段，不改变 fa_kami_app 表结构。
+- 到期数据继续保留映射；真正删除卡密/App 时同步清映射。
 
 在线更新：
-- GitHub Release 标签：source-v2026091705。
+- GitHub Release 标签：source-v2026091706。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 从 2026091704 可通过后台 GitHub 在线更新直接升级到 2026091705。
+- 从 2026091705 可通过后台 GitHub 在线更新直接升级到 2026091706。
 - 保留 HTTPS、SHA256、数据库/程序备份、文件覆盖校验、失败回滚和真实 Release E2E。
 
 兼容性：
 - 兼容宝塔 PHP 7.0、MySQL 5.7。
-- 不改变三种卡密用途、一次性消费规则、授权叠加语义、apiface 签名和续费入口对客户端的现有协议。
+- 不改变三种卡密用途、一次性消费规则、授权叠加语义、apiface 签名和续费入口协议。
