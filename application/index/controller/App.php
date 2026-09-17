@@ -16,6 +16,7 @@ use app\common\library\SourceConfigRepository;
 use app\common\library\SourceEncryptionPolicy;
 use app\common\library\SourceEncryptionProvider;
 use app\common\library\SourceHttpClient;
+use app\common\library\SourceLegacyCache;
 use app\common\library\SourcePerformance;
 use app\common\library\SourceResponse;
 use app\common\library\TraceMonitorPolicy;
@@ -205,6 +206,7 @@ class App
             'provider' => $encrypted ? $this->lastEncryptionProvider : 'plain',
             'legacy_key_source' => $appType === 'appstore' && $encrypted ? SourceEncryptionProvider::lastLegacyKeySource() : 'n/a',
             'app_rows_source' => SourceAppRepository::lastSource(),
+            'legacy_cache' => SourceLegacyCache::status(),
             'app_count' => isset($payload['apps']) && is_array($payload['apps']) ? count($payload['apps']) : 0,
             'source_build_ms' => round($this->sourceBuildMs, 2),
             'json_ms' => round((float)$jsonMs, 2),
