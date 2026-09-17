@@ -1,32 +1,34 @@
-ZONOE 软件源 Release 2026091709
-版本：2026091709
-基线：2026091706（运行时代码完整回滚）
+ZONOE 软件源 Release 2026091710
+版本：2026091710
+基线：2026091709
 
 更新内容：
-1. 正式作废 2026091707 与 2026091708，不再作为稳定版、部署基线或后续开发基线。
-2. 2026091709 从 source-v2026091706 的正式 Release commit 1315f7974f9220d1b422ef69686ad2110f5e549e 重新建立，不从 1707/1708 继续修补。
-3. application/index/controller/App.php 恢复 1706：移除 SourceAppRepository / SourcePerformance 调用，恢复直接读取 fa_category。
-4. SourceResponse.php 恢复 1706：移除 1707 新增的代码层 HTTP gzip。
-5. SourceEncryptionProvider.php 恢复 1706：移除 1707 新增的 legacy bkey 持久缓存逻辑。
-6. appstore / appstore_v2 的客户端协议、JSON 字段和原 1706 加密兼容逻辑保持不变。
-7. 1707/1708 曾新增的 SourceAppRepository.php、SourcePerformance.php 即使在已升级服务器残留，也不再被 1709 运行时代码引用，不影响执行。
-8. 保留 1706 已验证的卡密/App 映射删除、授权总览刷新、续费入口、授权签名等功能。
+1. 重新定位 /appstore 回归起点为 2026091704，而不是 2026091707。
+2. 2026091703 与 2026091704 的 application/route.php 完全一致，appstore 仍映射 index/App/list，路由本身未丢失。
+3. 2026091704 首次把 fa_category.renewal_entry 加入公开软件源查询字段；生产库缺该列时会直接 SQL 异常。
+4. SourceAppRecord::publicSourceColumns() 现在运行时检测 renewal_entry 是否真实存在；缺失时自动排除，源接口继续使用旧字段返回。
+5. renewal_entry 存在时继续启用续费入口语义，不移除 renewal_entry 功能。
+6. 数据库迁移失败、漏跑或历史库结构不完整，不再允许单个可选字段拖死整个 /appstore。
+7. 不改变 appstore / appstore_v2 加密协议、客户端 JSON 字段和既有卡密授权协议。
+8. 新增 PHP 7.0 缺列兼容回归；MySQL 5.7 测试覆盖迁移前旧表可查询、迁移后自动恢复 renewal_entry 查询。
+
+影响版本：
+- 2026091703：最后一个无 renewal_entry 强依赖的版本。
+- 2026091704：回归起点。
+- 2026091705~2026091709：继承相同查询依赖，生产库字段缺失时仍可能失败。
+- 2026091710：首次从运行时代码层彻底消除该强依赖。
 
 数据库：
-- 不新增、不删除、不修改数据库字段。
-- 不回滚用户业务数据、卡密、授权、换绑记录或 App 数据。
-
-废弃版本：
-- 2026091707：DEPRECATED / 作废。
-- 2026091708：DEPRECATED / 作废。
-- 禁止新部署，禁止作为后续开发基线。
+- 不删除任何字段或业务数据。
+- 仍保留既有 renewal_entry 迁移；迁移成功时功能完整启用。
+- 迁移未成功时 /appstore 自动按旧表兼容模式运行。
 
 在线更新：
-- GitHub Release 标签：source-v2026091709。
+- GitHub Release 标签：source-v2026091710。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 2026091707 / 2026091708 可直接通过后台 GitHub 在线更新升级到 2026091709，完成运行时代码回滚。
+- 2026091704~2026091709 可直接在线升级到 2026091710。
 - 发布必须通过 PHP 7.0、MySQL 5.7、ZIP/SHA256 和真实 GitHub Release 在线升级 E2E 后才视为完成。
 
 兼容性：
 - 兼容宝塔 PHP 7.0、MySQL 5.7。
-- 运行时代码以已验证的 2026091706 为唯一基线。
+- 不要求客户端更新。
