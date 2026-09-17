@@ -15,6 +15,7 @@ Route::rule('log','index/App/log');
 Route::rule('unbind','index/Index/unbind');
 Route::rule('unbind/query','index/Index/unbindQuery');
 Route::rule('license','index/Index/license');
+Route::rule('project-api/:slug','index/ManagedApi/dispatch');
 return [
     '__alias__'   => [
     ],
