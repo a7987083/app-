@@ -3,6 +3,8 @@
 namespace app\admin\controller;
 
 use app\common\controller\Backend;
+use app\common\library\SourceAppRepository;
+use app\common\library\SourceChangeLog;
 use fast\Random;
 use think\addons\Service;
 use think\Cache;
@@ -217,6 +219,10 @@ class Ajax extends Backend
             }
             $weighids[$n] = $weighdata[$offset];
             Db::name($table)->where($prikey, $n)->update([$field => $weighdata[$offset]]);
+        }
+        if ($table === 'category' && $weighids) {
+            SourceAppRepository::forget();
+            SourceChangeLog::recordMany(array_keys($weighids), 'update');
         }
         $this->success();
     }
