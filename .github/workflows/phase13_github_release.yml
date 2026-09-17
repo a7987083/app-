@@ -7,6 +7,7 @@ on:
       - feature/phase17-2-auth-integrity-v1
       - feature/phase17-3-renewal-entry-v1
       - hotfix/phase17-4-admin-actions-v1
+      - feature/phase17-5-mapping-cleanup-v1
       - 'release/**'
     paths:
       - 'VERSION'
@@ -32,6 +33,7 @@ on:
       - 'tests/phase17_3_renewal_entry_mysql57_test.php'
       - 'tests/phase17_4_admin_hotfix_contract_test.php'
       - 'tests/phase17_4_admin_hotfix_mysql57_test.php'
+      - 'tests/phase17_5_mapping_cleanup_contract_test.php'
       - '.github/workflows/phase13_github_release.yml'
   workflow_dispatch:
 
@@ -70,6 +72,7 @@ jobs:
           php -l tests/phase17_3_renewal_entry_mysql57_test.php
           php -l tests/phase17_4_admin_hotfix_contract_test.php
           php -l tests/phase17_4_admin_hotfix_mysql57_test.php
+          php -l tests/phase17_5_mapping_cleanup_contract_test.php
           php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
           php -l application/common/library/update/UpdateManager.php
@@ -85,6 +88,8 @@ jobs:
           php -l application/admin/controller/Kami.php
           php -l application/admin/controller/Authorization.php
           php -l application/admin/controller/Category.php
+          php -l application/admin/model/Kami.php
+          php -l application/common/model/Category.php
           php -l application/admin/controller/Integrity.php
           php -l application/admin/controller/general/Config.php
           php -l application/admin/controller/general/Updatemaintenance.php
@@ -107,6 +112,7 @@ jobs:
           php tests/phase17_unlock_signing_contract_test.php
           php tests/phase17_3_renewal_entry_contract_test.php
           php tests/phase17_4_admin_hotfix_contract_test.php
+          php tests/phase17_5_mapping_cleanup_contract_test.php
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
           php tests/appstore_semantic_equivalence_test.php
@@ -211,6 +217,8 @@ jobs:
           grep -F 'application/index/controller/Index.php' release/online-update-files.txt
           grep -F 'application/admin/controller/Authorization.php' release/online-update-files.txt
           grep -F 'application/admin/controller/Category.php' release/online-update-files.txt
+          grep -F 'application/admin/model/Kami.php' release/online-update-files.txt
+          grep -F 'application/common/model/Category.php' release/online-update-files.txt
           grep -F 'application/admin/view/authorization/index.html' release/online-update-files.txt
           grep -F 'application/admin/view/authorization/transfers.html' release/online-update-files.txt
           grep -F 'application/admin/view/authorization/events.html' release/online-update-files.txt
@@ -249,6 +257,8 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/index/controller/Index.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Authorization.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/Category.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/model/Kami.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/model/Category.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/authorization/index.html'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/authorization/transfers.html'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/authorization/events.html'
