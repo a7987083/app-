@@ -3,6 +3,8 @@
 namespace app\admin\controller;
 
 use app\common\controller\Backend;
+use app\common\library\SourceAppRepository;
+use app\common\library\SourceChangeLog;
 use app\common\model\Category as CategoryModel;
 use fast\Tree;
 use think\Db;
@@ -155,8 +157,13 @@ class Category extends Backend
                     if ($modify == '2') {
                         $params['updatetime'] = time();
                     }
+                    // 保留历史直接 Db update 行为；成功修改后显式写入 V3 revision。
                     $result = Db::name('category')->where(['id' => $ids])->update($params);
                     if ($result !== false) {
+                        if ((int)$result > 0) {
+                            SourceAppRepository::forget();
+                            SourceChangeLog::record((int)$ids, 'update');
+                        }
                         $this->success();
                     } else {
                         $this->error($row->getError());
