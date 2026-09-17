@@ -16,11 +16,14 @@ class SourceAppRepository
     const CACHE_KEY = 'zonoe_source_app_rows_v1';
     const CACHE_TTL = 30;
 
+    protected static $lastSource = 'none';
+
     public static function rows($useCache = true)
     {
         if ($useCache) {
             $cached = Cache::get(self::CACHE_KEY);
             if (is_array($cached)) {
+                self::$lastSource = 'cache';
                 return $cached;
             }
         }
@@ -32,11 +35,18 @@ class SourceAppRepository
             ->select();
         $rows = is_array($rows) ? $rows : [];
         Cache::set(self::CACHE_KEY, $rows, self::CACHE_TTL);
+        self::$lastSource = 'db';
         return $rows;
+    }
+
+    public static function lastSource()
+    {
+        return self::$lastSource;
     }
 
     public static function forget()
     {
         Cache::rm(self::CACHE_KEY);
+        self::$lastSource = 'none';
     }
 }
