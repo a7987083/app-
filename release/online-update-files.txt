@@ -46,3 +46,6 @@ application/admin/controller/Integrity.php
 application/admin/view/authorization/integrity.html
 public/api.php
 public/encrypt.php
+application/admin/view/general/config/index.html
+application/index/controller/ManagedApi.php
+application/common/library/ApiEndpointRegistry.php
