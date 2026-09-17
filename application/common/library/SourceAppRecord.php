@@ -30,6 +30,8 @@ class SourceAppRecord
         'status' => 'status',
     ];
 
+    protected static $renewalEntryAvailable = null;
+
     public static function column($semantic)
     {
         if (!array_key_exists($semantic, self::FIELD_MAP)) {
@@ -54,8 +56,12 @@ class SourceAppRecord
         return array_keys($columns);
     }
 
-    public static function publicSourceColumns($includeRenewalEntry = true)
+    public static function publicSourceColumns($includeRenewalEntry = null)
     {
+        if ($includeRenewalEntry === null) {
+            $includeRenewalEntry = self::renewalEntryColumnAvailable();
+        }
+
         $fields = [
             'id', 'type', 'name', 'version', 'description', 'download_url',
             'button_color', 'file_size', 'paid',
@@ -71,9 +77,34 @@ class SourceAppRecord
     }
 
     /**
+     * Detect the optional renewal_entry column at runtime. The public source
+     * must keep working even if the 2026091704 schema migration was missed.
+     */
+    public static function renewalEntryColumnAvailable()
+    {
+        if (self::$renewalEntryAvailable !== null) {
+            return self::$renewalEntryAvailable;
+        }
+
+        if (!class_exists('think\\Db')) {
+            self::$renewalEntryAvailable = false;
+            return false;
+        }
+
+        try {
+            $rows = \think\Db::query("SHOW COLUMNS FROM `fa_category` LIKE 'renewal_entry'");
+            self::$renewalEntryAvailable = !empty($rows);
+        } catch (\Exception $e) {
+            error_log('[SourceAppRecord] renewal_entry schema detection failed: ' . $e->getMessage());
+            self::$renewalEntryAvailable = false;
+        }
+
+        return self::$renewalEntryAvailable;
+    }
+
+    /**
      * Intersect known source columns with the columns physically present in
-     * fa_category. This prevents optional/new schema fields from taking the
-     * whole public /appstore endpoint down when a migration was missed.
+     * fa_category. Useful for schema-compatibility validation and migrations.
      */
     public static function publicSourceColumnsForSchema(array $availableColumns)
     {
