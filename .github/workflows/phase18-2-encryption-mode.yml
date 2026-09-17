@@ -1,0 +1,69 @@
+name: Phase 18.2 Encryption Mode
+
+on:
+  push:
+    branches:
+      - 'feature/phase18-2-encryption-mode-v1'
+      - 'release/**'
+    paths:
+      - 'application/common/library/SourceEncryptionMode.php'
+      - 'application/common/library/SourceConfigRepository.php'
+      - 'application/common/library/AppStorePayload.php'
+      - 'release/sql/2026091713_source_encryption_mode.sql'
+      - 'tests/phase18_2_encryption_mode_contract_test.php'
+      - 'tests/phase18_2_encryption_mode_mysql57_test.php'
+      - '.github/workflows/phase18-2-encryption-mode.yml'
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, openssl, iconv, zlib
+      - name: Lint encryption mode files
+        run: |
+          set -euo pipefail
+          php -l application/common/library/SourceEncryptionMode.php
+          php -l application/common/library/SourceConfigRepository.php
+          php -l application/common/library/AppStorePayload.php
+          php -l tests/phase18_2_encryption_mode_contract_test.php
+      - name: Run encryption mode contract
+        run: php tests/phase18_2_encryption_mode_contract_test.php
+
+  mysql57-encryption-mode:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Run encryption mode MySQL 5.7 test
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php -l tests/phase18_2_encryption_mode_mysql57_test.php
+          php tests/phase18_2_encryption_mode_mysql57_test.php
