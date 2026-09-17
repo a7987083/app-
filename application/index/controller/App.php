@@ -10,18 +10,25 @@ use app\common\library\AuthorizationEventLog;
 use app\common\library\AuthorizationPolicy;
 use app\common\library\AuthorizationSchema;
 use app\common\library\SourceAppRecord;
+use app\common\library\SourceAppRepository;
 use app\common\library\SourceConfigRepository;
 use app\common\library\SourceEncryptionPolicy;
 use app\common\library\SourceEncryptionProvider;
 use app\common\library\SourceHttpClient;
+use app\common\library\SourcePerformance;
 use app\common\library\SourceResponse;
 use app\common\library\TraceMonitorPolicy;
 use think\Db;
 
 class App
 {
+    protected $requestStartedAt = 0.0;
+    protected $sourceBuildMs = 0.0;
+    protected $lastEncryptionProvider = 'plain';
+
     public function list()
     {
+        $this->requestStartedAt = microtime(true);
         $input = json_decode(file_get_contents('php://input'), true);
         $traceValue = is_array($input) && array_key_exists('value', $input) ? $input['value'] : null;
         $appType = AppStorePayload::appType(isset($_SERVER['HTTP_APPSTORE']) ? $_SERVER['HTTP_APPSTORE'] : null);
@@ -65,7 +72,9 @@ class App
         // software-source response and therefore never reveal paid URLs.
         $mode = CardAccessPolicy::hasSourceCard($kamiRows) ? 'licensed' : 'guest';
 
+        $buildStartedAt = microtime(true);
         $payload = $this->buildSourcePayload($configRows, $udid, $nowtime, $mode, $sourceAccess);
+        $this->sourceBuildMs = (microtime(true) - $buildStartedAt) * 1000;
         if (is_object($payload)) {
             return $payload;
         }
@@ -149,11 +158,7 @@ class App
             return json(['code' => 0, 'msg' => '暂无站点数据']);
         }
 
-        $list = Db::table('fa_category')
-            ->field(implode(',', SourceAppRecord::publicSourceColumns()))
-            ->where('status', 'normal')
-            ->order('weigh desc')
-            ->select();
+        $list = SourceAppRepository::rows();
         if (empty($list)) {
             return json(['code' => 0, 'msg' => '暂无app数据']);
         }
@@ -166,16 +171,44 @@ class App
     protected function emitPayload(array $payload, $opencry, $appType, $jsonFlags, $replaceMarkers)
     {
         if ($opencry == '1') {
-            $content = base64_encode(json_encode($payload, $jsonFlags));
+            $jsonStartedAt = microtime(true);
+            $json = json_encode($payload, $jsonFlags);
+            $jsonMs = (microtime(true) - $jsonStartedAt) * 1000;
+            $content = base64_encode($json);
+
+            $encryptStartedAt = microtime(true);
             $encrypted = $this->encryptedSourcePayload($content, $appType);
-            SourceResponse::send(
-                SourceResponse::encryptedBody($appType, $encrypted, $replaceMarkers)
-            );
+            $encryptMs = (microtime(true) - $encryptStartedAt) * 1000;
+            $body = SourceResponse::encryptedBody($appType, $encrypted, $replaceMarkers);
+
+            $this->logSourcePerformance($payload, $appType, true, $jsonMs, $encryptMs, strlen((string)$json), strlen($content), strlen((string)$body));
+            SourceResponse::send($body);
         }
 
-        SourceResponse::send(
-            SourceResponse::plainBody($payload, $jsonFlags, $replaceMarkers)
-        );
+        $body = SourceResponse::plainBody($payload, $jsonFlags, $replaceMarkers);
+        $this->logSourcePerformance($payload, $appType, false, 0, 0, 0, 0, strlen((string)$body));
+        SourceResponse::send($body);
+    }
+
+    protected function logSourcePerformance(array $payload, $appType, $encrypted, $jsonMs, $encryptMs, $jsonBytes, $inputBytes, $responseBytes)
+    {
+        $totalMs = $this->requestStartedAt > 0 ? (microtime(true) - $this->requestStartedAt) * 1000 : 0;
+        SourcePerformance::log([
+            'app_type' => $appType,
+            'encrypted' => $encrypted ? 1 : 0,
+            'provider' => $encrypted ? $this->lastEncryptionProvider : 'plain',
+            'legacy_key_source' => $appType === 'appstore' && $encrypted ? SourceEncryptionProvider::lastLegacyKeySource() : 'n/a',
+            'app_rows_source' => SourceAppRepository::lastSource(),
+            'app_count' => isset($payload['apps']) && is_array($payload['apps']) ? count($payload['apps']) : 0,
+            'source_build_ms' => round($this->sourceBuildMs, 2),
+            'json_ms' => round((float)$jsonMs, 2),
+            'encryption_ms' => round((float)$encryptMs, 2),
+            'total_ms' => round((float)$totalMs, 2),
+            'json_bytes' => (int)$jsonBytes,
+            'encryption_input_bytes' => (int)$inputBytes,
+            'response_bytes' => (int)$responseBytes,
+            'memory_peak_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
+        ]);
     }
 
     protected function encryptedSourcePayload($content, $appType)
@@ -185,10 +218,13 @@ class App
 
         if ($localRequested) {
             try {
-                return SourceEncryptionProvider::encryptEncodedContent($content, $appType);
+                $result = SourceEncryptionProvider::encryptEncodedContent($content, $appType);
+                $this->lastEncryptionProvider = 'local';
+                return $result;
             } catch (\Exception $e) {
                 error_log('[App::encryptedSourcePayload] local encryption failed: ' . $e->getMessage());
                 if (!SourceEncryptionPolicy::fallbackAllowed()) {
+                    $this->lastEncryptionProvider = 'local-failed';
                     return false;
                 }
             }
@@ -198,6 +234,7 @@ class App
             SourceEncryptionPolicy::nuosikeUrl($appType),
             ['content' => $content]
         );
+        $this->lastEncryptionProvider = $localRequested ? 'nuosike-fallback' : 'nuosike';
 
         // Legacy curl_exec() failures serialized as boolean false. Preserve
         // that envelope while logging/timeout/TLS handling is improved.
