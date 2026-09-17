@@ -2,18 +2,22 @@
 
 namespace app\common\library;
 
+use think\Cache;
 use think\Db;
 
 /**
- * Monotonic change log for AppStore V3 incremental synchronization.
+ * Monotonic change log for public-source mutations.
  *
- * Each public-source mutation receives one unique AUTO_INCREMENT revision.
+ * The revision is retained after the public V3 protocol is retired because it
+ * is useful server-side for safe Legacy /appstore cache invalidation.
  * Logging is fail-open: a missing/temporarily unavailable change-log table
  * must never break legacy /appstore administration or delivery.
  */
 class SourceChangeLog
 {
     const TABLE = 'fa_source_change';
+    const REVISION_CACHE_KEY = 'zonoe_source_revision_v1';
+    const REVISION_CACHE_TTL = 3600;
 
     public static function available()
     {
@@ -47,8 +51,11 @@ class SourceChangeLog
                 ->order('revision desc')
                 ->field('revision')
                 ->find();
-            return $row && isset($row['revision']) ? (int)$row['revision'] : 0;
+            $revision = $row && isset($row['revision']) ? (int)$row['revision'] : 0;
+            self::rememberRevision($revision);
+            return $revision;
         } catch (\Throwable $e) {
+            self::forgetRevisionCache();
             self::logFailure('record', $e);
             return 0;
         }
@@ -77,8 +84,11 @@ class SourceChangeLog
         }
 
         try {
-            return (int)Db::table(self::TABLE)->insertAll($rows);
+            $inserted = (int)Db::table(self::TABLE)->insertAll($rows);
+            self::forgetRevisionCache();
+            return $inserted;
         } catch (\Throwable $e) {
+            self::forgetRevisionCache();
             self::logFailure('recordMany', $e);
             return 0;
         }
@@ -87,11 +97,22 @@ class SourceChangeLog
     public static function currentRevision()
     {
         try {
+            $cached = Cache::get(self::REVISION_CACHE_KEY);
+            if (is_array($cached) && array_key_exists('revision', $cached)) {
+                return max(0, (int)$cached['revision']);
+            }
+        } catch (\Throwable $e) {
+            // Cache is an optimization only; continue to the database.
+        }
+
+        try {
             $row = Db::table(self::TABLE)
                 ->order('revision desc')
                 ->field('revision')
                 ->find();
-            return $row && isset($row['revision']) ? (int)$row['revision'] : 0;
+            $revision = $row && isset($row['revision']) ? (int)$row['revision'] : 0;
+            self::rememberRevision($revision);
+            return $revision;
         } catch (\Throwable $e) {
             return 0;
         }
@@ -99,10 +120,8 @@ class SourceChangeLog
 
     /**
      * Return the oldest client revision that can still be resumed with delta.
-     *
-     * If the first retained change is revision N, a client at N-1 can consume
-     * every retained change without a gap. This makes future change-log
-     * retention safe: clients older than min_since must perform a full sync.
+     * Retained for change-log maintenance/backward compatibility even though
+     * the public V3 endpoints are no longer exposed.
      */
     public static function minDeltaSince()
     {
@@ -143,6 +162,24 @@ class SourceChangeLog
         } catch (\Throwable $e) {
             self::logFailure('changesSince', $e);
             return [];
+        }
+    }
+
+    protected static function rememberRevision($revision)
+    {
+        try {
+            Cache::set(self::REVISION_CACHE_KEY, ['revision' => max(0, (int)$revision)], self::REVISION_CACHE_TTL);
+        } catch (\Throwable $e) {
+            // Ignore cache failures; currentRevision() remains DB-backed.
+        }
+    }
+
+    protected static function forgetRevisionCache()
+    {
+        try {
+            Cache::rm(self::REVISION_CACHE_KEY);
+        } catch (\Throwable $e) {
+            // Ignore cache failures; next generation token still prevents stale Legacy cache reuse.
         }
     }
 
