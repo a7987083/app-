@@ -402,6 +402,67 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         });
     }
 
+    function announcementMessageInput() {
+        return $('textarea[name="row[message]"], input[name="row[message]"]').first();
+    }
+
+    function insertAnnouncementToken(token) {
+        var input = announcementMessageInput();
+        if (!input.length) return;
+        var element = input.get(0);
+        var value = String(input.val() || '');
+        var start = typeof element.selectionStart === 'number' ? element.selectionStart : value.length;
+        var end = typeof element.selectionEnd === 'number' ? element.selectionEnd : start;
+        var next = value.substring(0, start) + token + value.substring(end);
+        input.val(next).trigger('input').trigger('change').focus();
+        if (typeof element.setSelectionRange === 'function') {
+            var cursor = start + token.length;
+            element.setSelectionRange(cursor, cursor);
+        }
+    }
+
+    function bindAnnouncementTools() {
+        $(document).off('click.zonoeAnnouncementVariable').on('click.zonoeAnnouncementVariable', '.announcement-variable', function () {
+            insertAnnouncementToken(String($(this).data('token') || ''));
+        });
+
+        $(document).off('click.zonoeAnnouncementPreview').on('click.zonoeAnnouncementPreview', '#announcement-preview-submit', function () {
+            var button = $(this);
+            var input = announcementMessageInput();
+            if (!input.length) {
+                Layer.alert('未找到软件源公告输入框', {icon: 2});
+                return;
+            }
+
+            button.prop('disabled', true);
+            $.ajax({
+                type: 'POST',
+                url: 'general/config/announcement_preview',
+                dataType: 'json',
+                data: {
+                    message: input.val() || '',
+                    udid: $('#announcement-preview-udid').val() || ''
+                },
+                success: function (ret) {
+                    if (!ret || ret.code !== 1) {
+                        Layer.alert((ret && ret.msg) || '公告预览失败', {icon: 2});
+                        return;
+                    }
+                    var data = ret.data || {};
+                    $('#announcement-preview-result')
+                        .removeClass('hide')
+                        .text(typeof data.message === 'undefined' ? '' : String(data.message));
+                },
+                error: function (xhr) {
+                    Layer.alert('公告预览失败 HTTP ' + xhr.status, {icon: 2});
+                },
+                complete: function () {
+                    button.prop('disabled', false);
+                }
+            });
+        });
+    }
+
     function bindApiCenter() {
         $(document).off('shown.bs.tab.zonoeApiOuter').on('shown.bs.tab.zonoeApiOuter', 'a[data-toggle="tab"]', function () {
             var href = $(this).attr('href') || '';
@@ -601,6 +662,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 });
             });
 
+            bindAnnouncementTools();
             bindApiCenter();
         },
         add: function () { Controller.api.bindevent(); },

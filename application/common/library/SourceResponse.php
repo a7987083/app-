@@ -14,12 +14,14 @@ class SourceResponse
 
     public static function plainBody(array $payload, $jsonFlags = 320, $replaceMarkers = true)
     {
+        $templatePayload = $payload;
+        $announcementTemplate = array_key_exists('message', $templatePayload) ? $templatePayload['message'] : null;
         $cacheClass = __NAMESPACE__ . '\\SourceLegacyCache';
         if (class_exists($cacheClass)) {
             try {
-                $cached = SourceLegacyCache::getPlainBody($payload, $jsonFlags, $replaceMarkers);
+                $cached = SourceLegacyCache::getPlainBody($templatePayload, $jsonFlags, $replaceMarkers);
                 if (is_string($cached)) {
-                    return $cached;
+                    return self::injectAnnouncementBody($cached, $announcementTemplate, $jsonFlags);
                 }
             } catch (\Throwable $e) {
                 // Shared response cache is optional. Preserve the historical
@@ -28,17 +30,30 @@ class SourceResponse
         }
 
         $payload = AppStorePayload::withoutRuntimeFields($payload);
+        $announcementClass = __NAMESPACE__ . '\\SourceAnnouncementTemplate';
+        if (class_exists($announcementClass)) {
+            $payload = SourceAnnouncementTemplate::placeholderPayload($payload);
+        }
         $json = json_encode($payload, $jsonFlags);
         $body = $replaceMarkers ? str_replace('@@@', '\\n', $json) : $json;
 
         if (class_exists($cacheClass)) {
             try {
-                SourceLegacyCache::storePlainBody($payload, $jsonFlags, $replaceMarkers, $body);
+                SourceLegacyCache::storePlainBody($templatePayload, $jsonFlags, $replaceMarkers, $body);
             } catch (\Throwable $e) {
                 // Cache write failures must not alter the public response.
             }
         }
-        return $body;
+        return self::injectAnnouncementBody($body, $announcementTemplate, $jsonFlags);
+    }
+
+    protected static function injectAnnouncementBody($body, $template, $jsonFlags)
+    {
+        $announcementClass = __NAMESPACE__ . '\\SourceAnnouncementTemplate';
+        if (!class_exists($announcementClass)) {
+            return $body;
+        }
+        return SourceAnnouncementTemplate::injectEncodedMessage($body, $template, $jsonFlags);
     }
 
     public static function encryptedBody($appType, $encryptedPayload, $replaceMarkers = true)

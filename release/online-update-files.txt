@@ -49,3 +49,8 @@ public/encrypt.php
 application/admin/view/general/config/index.html
 application/index/controller/ManagedApi.php
 application/common/library/ApiEndpointRegistry.php
+application/common/library/SourceAnnouncementTemplate.php
+application/common/library/AuthorizationLicense.php
+application/index/view/index/license.html
+application/index/view/index/unbind.html
+nginx.rewrite

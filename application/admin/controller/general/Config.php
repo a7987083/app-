@@ -6,6 +6,8 @@ use app\common\controller\Backend;
 use app\common\library\ApiEndpointRegistry;
 use app\common\library\Email;
 use app\common\library\SourceConfigRepository;
+use app\common\library\SourceAnnouncementTemplate;
+use app\common\library\SourceAppRepository;
 use app\common\library\update\UpdateManager;
 use app\common\model\Config as ConfigModel;
 use think\Db;
@@ -25,7 +27,7 @@ class Config extends Backend
      * @var \app\common\model\Config
      */
     protected $model = null;
-    protected $noNeedRight = ['check', 'rulelist', 'version_notice', 'update_status', 'update_history', 'update_rollback', 'api_toggle', 'api_save', 'api_delete', 'api_test', 'api_logs'];
+    protected $noNeedRight = ['check', 'rulelist', 'version_notice', 'update_status', 'update_history', 'update_rollback', 'api_toggle', 'api_save', 'api_delete', 'api_test', 'api_logs', 'announcement_preview'];
 
     public function _initialize()
     {
@@ -76,6 +78,7 @@ class Config extends Backend
         $this->view->assign('apiEndpoints', ApiEndpointRegistry::all($this->request->domain()));
         $this->view->assign('apiHandlers', ApiEndpointRegistry::handlerOptions());
         $this->view->assign('apiLogs', ApiEndpointRegistry::recentLogs(100));
+        $this->view->assign('announcementVariables', SourceAnnouncementTemplate::variables());
         return $this->view->fetch();
     }
 
@@ -435,6 +438,40 @@ class Config extends Backend
             $this->error($e->getMessage());
         }
         $this->success('API测试完成', null, $result);
+    }
+
+    public function announcement_preview()
+    {
+        $template = (string)$this->request->post('message', '');
+        $udid = trim((string)$this->request->post('udid', ''));
+        $now = time();
+
+        $configRows = SourceConfigRepository::rows();
+        $sourceName = (string)SourceConfigRepository::rawValueFromRows($configRows, 'name', '');
+        $appRows = SourceAppRepository::rows();
+        $cardRows = [];
+        if ($udid !== '') {
+            $cardRows = Db::table('fa_kami')
+                ->where('udid', $udid)
+                ->order('id desc')
+                ->select();
+            $cardRows = is_array($cardRows) ? $cardRows : [];
+        }
+
+        $sourceAccess = SourceAnnouncementTemplate::sourceAccessForRows($cardRows, $now);
+        $context = SourceAnnouncementTemplate::buildContext(
+            $template,
+            $sourceName,
+            $appRows,
+            $cardRows,
+            $sourceAccess,
+            $now
+        );
+
+        $this->success('公告预览已生成', null, [
+            'message' => SourceAnnouncementTemplate::render($template, $context),
+            'context' => $context,
+        ]);
     }
 
     protected function updateManager()

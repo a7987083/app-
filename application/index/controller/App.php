@@ -12,6 +12,7 @@ use app\common\library\AuthorizationPolicy;
 use app\common\library\AuthorizationSchema;
 use app\common\library\SourceAppRecord;
 use app\common\library\SourceAppRepository;
+use app\common\library\SourceAnnouncementTemplate;
 use app\common\library\SourceConfigRepository;
 use app\common\library\SourceEncryptionPolicy;
 use app\common\library\SourceEncryptionProvider;
@@ -36,6 +37,7 @@ class App
         }
 
         $this->requestStartedAt = microtime(true);
+        SourceAnnouncementTemplate::reset();
         $input = json_decode(file_get_contents('php://input'), true);
         $traceValue = is_array($input) && array_key_exists('value', $input) ? $input['value'] : null;
         $appType = AppStorePayload::appType(isset($_SERVER['HTTP_APPSTORE']) ? $_SERVER['HTTP_APPSTORE'] : null);
@@ -80,7 +82,7 @@ class App
         $mode = CardAccessPolicy::hasSourceCard($kamiRows) ? 'licensed' : 'guest';
 
         $buildStartedAt = microtime(true);
-        $payload = $this->buildSourcePayload($configRows, $udid, $nowtime, $mode, $sourceAccess);
+        $payload = $this->buildSourcePayload($configRows, $udid, $now, $mode, $sourceAccess, $kamiRows);
         $this->sourceBuildMs = (microtime(true) - $buildStartedAt) * 1000;
         if (is_object($payload)) {
             return $payload;
@@ -159,7 +161,7 @@ class App
         }
     }
 
-    protected function buildSourcePayload(array $config, $udid, $nowtime, $mode, array $sourceAccess)
+    protected function buildSourcePayload(array $config, $udid, $now, $mode, array $sourceAccess, array $kamiRows)
     {
         if (empty($config)) {
             return json(['code' => 0, 'msg' => '暂无站点数据']);
@@ -170,7 +172,17 @@ class App
             return json(['code' => 0, 'msg' => '暂无app数据']);
         }
 
+        $now = (int)$now;
+        $nowtime = date('Y-m-d H:i:s', $now);
         $info = AppStorePayload::siteInfo($config);
+        SourceAnnouncementTemplate::begin(SourceAnnouncementTemplate::buildContext(
+            isset($info['message']) ? $info['message'] : '',
+            isset($info['name']) ? $info['name'] : '',
+            $list,
+            $kamiRows,
+            $sourceAccess,
+            $now
+        ));
         $apps = AppStorePayload::apps($list, $mode, $sourceAccess);
         return AppStorePayload::source($info, $udid, $nowtime, $apps);
     }

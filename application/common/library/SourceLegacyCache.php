@@ -190,7 +190,8 @@ class SourceLegacyCache
             return null;
         }
 
-        return $static['prefix']
+        $prefix = self::injectAnnouncementPrefix($static['prefix'], $payload, $jsonFlags);
+        return $prefix
             . ',"UDID":' . $udid
             . ',"Time":' . $time
             . ',"apps":' . $static['apps']
@@ -211,7 +212,8 @@ class SourceLegacyCache
         if (!is_string($udid) || !is_string($time)) {
             return null;
         }
-        return $static['prefix']
+        $prefix = self::injectAnnouncementPrefix($static['prefix'], $payload, $jsonFlags);
+        return $prefix
             . ',"UDID":' . $udid
             . ',"Time":' . $time
             . ',"apps":' . $static['apps']
@@ -225,9 +227,10 @@ class SourceLegacyCache
 
     protected static function buildEncryptedStatic(array $payload, $jsonFlags)
     {
+        $staticPayload = self::announcementPlaceholderPayload($payload);
         $site = [];
         foreach (AppStorePayload::SITE_KEYS as $key) {
-            $site[$key] = array_key_exists($key, $payload) ? $payload[$key] : null;
+            $site[$key] = array_key_exists($key, $staticPayload) ? $staticPayload[$key] : null;
         }
 
         $prefix = json_encode($site, $jsonFlags);
@@ -242,6 +245,24 @@ class SourceLegacyCache
         ];
     }
 
+    protected static function announcementPlaceholderPayload(array $payload)
+    {
+        $announcementClass = __NAMESPACE__ . '\\SourceAnnouncementTemplate';
+        if (class_exists($announcementClass)) {
+            return SourceAnnouncementTemplate::placeholderPayload($payload);
+        }
+        return $payload;
+    }
+
+    protected static function injectAnnouncementPrefix($prefix, array $payload, $jsonFlags)
+    {
+        $announcementClass = __NAMESPACE__ . '\\SourceAnnouncementTemplate';
+        if (!class_exists($announcementClass) || !array_key_exists('message', $payload)) {
+            return $prefix;
+        }
+        return SourceAnnouncementTemplate::injectEncodedMessage($prefix, $payload['message'], $jsonFlags);
+    }
+
     protected static function encryptedJsonKey(array $context, array $payload, $jsonFlags)
     {
         $site = [];
@@ -249,7 +270,7 @@ class SourceLegacyCache
             $site[$key] = array_key_exists($key, $payload) ? $payload[$key] : null;
         }
         $siteFingerprint = sha1(json_encode($site, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        return 'zonoe_legacy_encrypted_json_v1_' . sha1(
+        return 'zonoe_legacy_encrypted_json_v2_' . sha1(
             self::appsKey($context) . '|' . $siteFingerprint . '|' . (int)$jsonFlags
         );
     }
@@ -271,7 +292,7 @@ class SourceLegacyCache
             $site[$key] = array_key_exists($key, $payload) ? $payload[$key] : null;
         }
         $siteFingerprint = sha1(json_encode($site, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        return 'zonoe_legacy_body_v1_' . sha1(
+        return 'zonoe_legacy_body_v2_' . sha1(
             self::appsKey($context) . '|' . $siteFingerprint . '|' .
             (int)$jsonFlags . '|' . ($replaceMarkers ? '1' : '0')
         );

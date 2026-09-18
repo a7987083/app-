@@ -72,6 +72,21 @@ if (strpos($rewrite, 'rewrite ^(.*)$ /index.php?s=$1 last; break;') === false) {
     deployFail('nginx.rewrite missing ThinkPHP rewrite target');
 }
 
+if (strpos($rewrite, 'location = /LICENSE { return 404; }') === false) {
+    deployFail('nginx.rewrite must explicitly block uppercase /LICENSE');
+}
+if (strpos($rewrite, 'location = /license { rewrite ^(.*)$ /index.php?s=$1 last; }') === false) {
+    deployFail('nginx.rewrite must route lowercase /license before case-insensitive security regex');
+}
+if (preg_match('/location\s+~\*[^\{]*LICENSE/i', $rewrite)) {
+    deployFail('nginx.rewrite must not case-insensitively block lowercase /license');
+}
+
+$route = file_get_contents($root . '/application/route.php');
+if (strpos($route, "Route::rule('license','index/Index/license')") === false) {
+    deployFail('ThinkPHP /license route missing');
+}
+
 $upgrade = file_get_contents($phase11Upgrade);
 foreach (array('transfer_count', 'fa_card_transfer_log', 'fa_authorization_event', 'unbind_max_count') as $needle) {
     if (strpos($upgrade, $needle) === false) {
