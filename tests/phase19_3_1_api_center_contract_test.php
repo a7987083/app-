@@ -40,9 +40,9 @@ p1931ApiAssert(strpos($js, "'#project-api-logs-refresh'") !== false, 'log refres
 p1931ApiAssert(strpos($js, 'renderApiLogs') !== false, 'AJAX log renderer missing');
 p1931ApiAssert(strpos($js, 'sessionStorage') !== false, 'API tab persistence missing');
 
-p1931ApiAssert(strpos($controller, "'enabled' => \\$enabled ? 1 : 0") !== false, 'toggle response must return persisted target state');
+p1931ApiAssert(strpos($controller, '\'enabled\' => $enabled ? 1 : 0') !== false, 'toggle response must return persisted target state');
 p1931ApiAssert(strpos($controller, "post('endpoint_key'") !== false, 'API test must use endpoint key');
-p1931ApiAssert(strpos($controller, "where('endpoint_key', \\$endpointKey)") !== false, 'API test lookup by endpoint key missing');
+p1931ApiAssert(strpos($controller, 'where(\'endpoint_key\', $endpointKey)') !== false, 'API test lookup by endpoint key missing');
 
 p1931ApiAssert(strpos($registry, 'API不存在或尚未完成数据库迁移') !== false, 'toggle missing-row guard missing');
 p1931ApiAssert(strpos($registry, '接口开关写入后校验失败') !== false, 'toggle post-write verification missing');
