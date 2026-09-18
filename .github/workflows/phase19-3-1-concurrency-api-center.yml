@@ -1,0 +1,170 @@
+name: Phase 19.3.1 Concurrency and API Center
+
+on:
+  push:
+    branches:
+      - 'feature/phase19-3-1-concurrency-api-center-v2'
+      - 'release/**'
+    paths:
+      - 'VERSION'
+      - 'public/update/ver.txt'
+      - 'ver.json'
+      - 'PHASE13_RELEASE.txt'
+      - 'release/RELEASE_NOTES.md'
+      - 'release/online-update-files.txt'
+      - 'application/admin/controller/general/Config.php'
+      - 'application/admin/view/general/config/index.html'
+      - 'public/assets/js/backend/general/config.js'
+      - 'application/common/library/ApiEndpointRegistry.php'
+      - 'application/common/library/SourceEncryptionProvider.php'
+      - 'application/common/library/SourceLegacyCache.php'
+      - 'application/common/library/SourceAppRepository.php'
+      - 'application/index/controller/App.php'
+      - 'tests/phase19_3_1_api_center_contract_test.php'
+      - 'tests/phase19_3_1_encryption_benchmark.php'
+      - 'tests/phase19_3_1_load_result_gate.php'
+      - 'tests/fixtures/phase19_3_1_load_schema.sql'
+      - 'tests/load/phase19_3_1_http_load.sh'
+      - 'tests/load/wrk_metrics.lua'
+      - '.github/workflows/phase19-3-1-concurrency-api-center.yml'
+  workflow_dispatch:
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, openssl, mbstring
+
+      - name: Lint Phase 19.3.1 runtime and tests
+        run: |
+          set -euo pipefail
+          php -l application/admin/controller/general/Config.php
+          php -l application/common/library/ApiEndpointRegistry.php
+          php -l application/common/library/SourceEncryptionProvider.php
+          php -l application/common/library/SourceLegacyCache.php
+          php -l application/common/library/SourceAppRepository.php
+          php -l application/index/controller/App.php
+          php -l tests/phase19_3_1_api_center_contract_test.php
+          php -l tests/phase19_3_1_encryption_benchmark.php
+          php -l tests/phase19_3_1_load_result_gate.php
+          bash -n tests/load/phase19_3_1_http_load.sh
+          node --check public/assets/js/backend/general/config.js
+
+      - name: Run Phase 19.2/19.3 regression and 19.3.1 contracts
+        run: |
+          set -euo pipefail
+          php tests/phase19_2_authorization_center_contract_test.php
+          php tests/phase19_2_legacy_response_cache_test.php
+          php tests/phase19_3_api_center_performance_test.php
+          php tests/phase19_3_large_catalog_test.php
+          php tests/phase19_3_1_api_center_contract_test.php
+          php tests/phase19_3_1_encryption_benchmark.php
+
+      - name: Verify online update manifest contains Phase 19.3.1 runtime
+        run: |
+          set -euo pipefail
+          grep -Fx 'application/admin/view/general/config/index.html' release/online-update-files.txt
+          grep -Fx 'public/assets/js/backend/general/config.js' release/online-update-files.txt
+          grep -Fx 'application/admin/controller/general/Config.php' release/online-update-files.txt
+          grep -Fx 'application/common/library/ApiEndpointRegistry.php' release/online-update-files.txt
+          grep -Fx 'application/common/library/SourceEncryptionProvider.php' release/online-update-files.txt
+          php tools/build_online_update.php "$PWD/phase19-3-1-online-update.zip"
+          unzip -t phase19-3-1-online-update.zip >/dev/null
+          unzip -Z1 phase19-3-1-online-update.zip | grep -Fx 'program/application/admin/view/general/config/index.html'
+          unzip -Z1 phase19-3-1-online-update.zip | grep -Fx 'program/public/assets/js/backend/general/config.js'
+          unzip -Z1 phase19-3-1-online-update.zip | grep -Fx 'program/application/admin/controller/general/Config.php'
+          unzip -Z1 phase19-3-1-online-update.zip | grep -Fx 'program/application/common/library/ApiEndpointRegistry.php'
+          unzip -Z1 phase19-3-1-online-update.zip | grep -Fx 'program/application/common/library/SourceEncryptionProvider.php'
+
+  mysql57-regression:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Run Phase 19.3 MySQL 5.7 regression
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: |
+          set -euo pipefail
+          php tests/phase19_3_mysql57_migration_test.php
+
+  real-http-load:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_load
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli, curl, openssl, mbstring, iconv
+
+      - name: Install HTTP load tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y nginx wrk
+
+      - name: Run real /appstore HTTP concurrency matrix
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_load
+          ZONOE_LOAD_SECONDS: 2
+          ZONOE_LOAD_RESULT: ${{ github.workspace }}/phase19-3-1-load-results.tsv
+        run: |
+          set -euo pipefail
+          chmod +x tests/load/phase19_3_1_http_load.sh
+          tests/load/phase19_3_1_http_load.sh
+
+      - name: Upload HTTP load metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase19-3-1-http-load-${{ github.run_id }}
+          path: |
+            phase19-3-1-load-results.tsv
+            /tmp/zonoe-phase19-3-1-nginx-error.log
+            /tmp/zonoe-php-*.log
+          if-no-files-found: warn
+          retention-days: 30
