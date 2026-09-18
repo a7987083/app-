@@ -51,7 +51,22 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 ]
             };
 
+            var removeRows = function (ids) {
+                if (!$.isArray(ids)) {
+                    ids = [ids];
+                }
+                if (!ids.length) {
+                    return;
+                }
+                var options = table.bootstrapTable('getOptions');
+                table.bootstrapTable('remove', {
+                    field: options.pk,
+                    values: ids
+                });
+            };
+
             var bindDeleteWithoutRefresh = function () {
+                // 行内删除：成功后只移除当前行，不重新请求 1000 条列表。
                 $(".btn-delone", table).each(function () {
                     var button = this;
                     $(button).data("success", function () {
@@ -59,12 +74,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         var row = Table.api.getrowdata(table, rowIndex);
                         var options = table.bootstrapTable('getOptions');
                         if (row && typeof row[options.pk] !== 'undefined') {
-                            table.bootstrapTable('remove', {
-                                field: options.pk,
-                                values: [row[options.pk]]
-                            });
+                            removeRows(row[options.pk]);
                         }
-                        // 阻止 require-table.js 在删除成功后执行整表 refresh。
                         return false;
                     });
                 });
@@ -73,6 +84,18 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             table.on('post-body.bs.table', bindDeleteWithoutRefresh);
             table.bootstrapTable(tableOptions);
             $(".fixed-table-toolbar .search input").attr("placeholder", "搜索应用名称");
+
+            // 工具栏批量删除同样不刷新整页。先保存本次选中 ID，再让 FastAdmin 发删除请求。
+            // success 返回 false 会阻止 require-table.js 的 bootstrapTable('refresh')。
+            $("#toolbar .btn-del").on('click.categoryPerformance', function () {
+                var button = this;
+                var ids = Table.api.selectedids(table);
+                $(button).data("success", function () {
+                    removeRows(ids);
+                    return false;
+                });
+            });
+
             Table.api.bindevent(table);
             bindDeleteWithoutRefresh();
 
@@ -94,7 +117,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 parent.Toastr.success(msg);
                 var index = parent.Layer.getFrameIndex(window.name);
                 parent.Layer.close(index);
-                // FastAdmin 表单成功回调返回 false，父级列表由管理员手动刷新。
+                // 新增/编辑后由管理员手动刷新当前列表。
                 return false;
             },
             toPickerValue: function (val) {
