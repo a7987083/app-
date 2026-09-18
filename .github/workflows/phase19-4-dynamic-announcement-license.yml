@@ -100,3 +100,4 @@ jobs:
           unzip -Z1 phase19-4-online-update.zip | grep -Fx 'program/application/index/view/index/unbind.html'
           unzip -Z1 phase19-4-online-update.zip | grep -Fx 'program/nginx.rewrite'
           unzip -Z1 phase19-4-online-update.zip | grep -Fx 'mysql/2026091808_phase19_4_x_closeout.sql'
+          php -r "require 'application/common/library/UpdateIntegrity.php'; echo 'SOURCE_FILE_SIGN=' . app\\common\\library\\UpdateIntegrity::signFromRoot(getcwd()) . PHP_EOL;"
