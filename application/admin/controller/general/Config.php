@@ -340,15 +340,17 @@ class Config extends Backend
 
     public function api_toggle()
     {
+        $endpointKey = trim((string)$this->request->post('endpoint_key', ''));
+        $enabled = (int)$this->request->post('enabled', 0) === 1;
         try {
-            ApiEndpointRegistry::toggle(
-                $this->request->post('endpoint_key', ''),
-                (int)$this->request->post('enabled', 0) === 1
-            );
+            ApiEndpointRegistry::toggle($endpointKey, $enabled);
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
-        $this->success('API状态已更新');
+        $this->success('API状态已更新', null, [
+            'endpoint_key' => $endpointKey,
+            'enabled' => $enabled ? 1 : 0,
+        ]);
     }
 
     public function api_save()
@@ -380,10 +382,13 @@ class Config extends Backend
 
     public function api_test()
     {
-        $id = (int)$this->request->post('id', 0);
+        $endpointKey = trim((string)$this->request->post('endpoint_key', ''));
         $params = trim((string)$this->request->post('params', ''));
         try {
-            $row = Db::table('fa_api_endpoint')->where('id', $id)->find();
+            if ($endpointKey === '') {
+                throw new \InvalidArgumentException('请选择API接口');
+            }
+            $row = Db::table('fa_api_endpoint')->where('endpoint_key', $endpointKey)->find();
             if (!$row) {
                 throw new \InvalidArgumentException('API不存在');
             }
