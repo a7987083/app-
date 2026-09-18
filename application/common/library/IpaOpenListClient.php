@@ -5,7 +5,7 @@ namespace app\common\library;
 use RuntimeException;
 
 /**
- * Minimal OpenList v3-style filesystem client used by Phase 20 discovery/parser.
+ * Minimal OpenList v3/v4-style filesystem client used by Phase 20 discovery/parser/governance.
  */
 class IpaOpenListClient
 {
@@ -47,6 +47,23 @@ class IpaOpenListClient
     {
         $response=$this->request('/fs/get',['path'=>IpaRemoteFile::normalizePath($path),'password'=>'']);
         return isset($response['data'])&&is_array($response['data'])?$response['data']:[];
+    }
+
+    public function rename($path, $newName)
+    {
+        $path=IpaRemoteFile::normalizePath($path);$newName=trim((string)$newName);
+        if($newName===''||$newName==='.'||$newName==='..'||strpos($newName,'/')!==false||strpos($newName,'\\')!==false)throw new RuntimeException('OpenList rename target must be a file name only');
+        $this->request('/fs/rename',['path'=>$path,'name'=>$newName]);
+        return true;
+    }
+
+    public function move($srcDir, $dstDir, array $names)
+    {
+        $srcDir=IpaRemoteFile::normalizePath($srcDir);$dstDir=IpaRemoteFile::normalizePath($dstDir);$safe=[];
+        foreach($names as $name){$name=trim((string)$name);if($name===''||$name==='.'||$name==='..'||strpos($name,'/')!==false||strpos($name,'\\')!==false)throw new RuntimeException('OpenList move names must be base names');$safe[]=$name;}
+        if(!$safe)throw new RuntimeException('OpenList move names are empty');
+        $this->request('/fs/move',['src_dir'=>$srcDir,'dst_dir'=>$dstDir,'names'=>$safe]);
+        return true;
     }
 
     public function health($path='/')
