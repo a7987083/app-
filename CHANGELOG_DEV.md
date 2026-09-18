@@ -1,5 +1,26 @@
 # Development Changelog
 
+## 2026-09-18 — Phase 19.4 Dynamic Announcement + License Routing
+
+Baseline: `source-v2026091804@34fc713346eafe92f23d1f5fcf470526daf8ddb6`
+Feature branch: `feature/2026091805-phase19-4-dynamic-announcement-license`
+Feature code commit: `391de96f6a8f4da3d1f75b505acc876b07101608`
+Phase 19.4 CI: Run `35296525450` — SUCCESS
+
+- Added request-aware dynamic software-source announcement templates with default-value syntax.
+- Added source statistics and scope-separated authorization variables without changing the public AppStore schema.
+- Kept shared Legacy caches static by caching a sentinel and injecting request-specific announcement text after cache lookup and before encryption/transport.
+- Bumped plain-body/encrypted-JSON cache namespaces to v2 to avoid mixing old cached bodies with the new sentinel format.
+- Added admin variable insertion and optional-UDID live preview.
+- Added exact Nginx routing contract: uppercase `/LICENSE` remains blocked while lowercase `/license` reaches ThinkPHP.
+- Added missing authorization views/library plus Nginx rewrite to the online-update manifest.
+- Added PHP 7.0 Phase19.4 contracts and ZIP-content assertions.
+- Phase19.4 CI output: dynamic announcement/cache isolation/default syntax/admin/manifest passed; SourceResponse, Legacy cache, API Center, deployment, card policy and App scope regressions passed.
+- Online-update test package built successfully with 56 program files and 9 SQL files.
+- Stable 1804 release audit found Run `35291515730` failed only at final GitHub online-update E2E because the test requires the literal phrase `更新内容`; build, PHP 7.0, MySQL 5.7, load gate and package publishing all passed. Phase19.4 release notes now preserve that literal marker.
+
+Not yet claimed: production Nginx reload, public `/license` GET/POST verification, iOS real-device announcement/encryption regression, or formal `2026091805` release.
+
 ## 2026-09-18 — Phase 19.1 V3 Client-safe Sync Contract / Release 2026091801
 
 Baseline: `source-v2026091714@6a0ab0aee756ae89dc2cd89d9f3aac2ebdee2620`
@@ -145,3 +166,4 @@ Compatibility: no public `appstore/appstore_v2` protocol changes, no authorizati
 
 - Added shared Nuosike/GitHub hardened updater with SHA256, locking, ZIP/path protection, backup, rollback and integrity checks.
 - Fixed local integrity verification, BaoTa diagnostics and transfer quota migration/semantics.
+

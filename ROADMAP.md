@@ -3,61 +3,44 @@
 ## 当前稳定基线
 
 - Repository: `a7987083/app-`
-- Stable release branch: `release/2026091801-phase19-client-sync`
-- Phase: `19.1`
-- Version: `2026091801`
-- Release commit: `6e3c7a3af25843c3f329207bd6b4c4e06e182e57`
-- Release: `source-v2026091801`
-- Phase19 feature CI: `35261910066` — SUCCESS
-- Release CI: `35262273073` — SUCCESS
-- Online update E2E: `2026091714 -> 2026091801` — SUCCESS
+- Stable release branch: `release/2026091804-phase19-3-1-concurrency-api-center`
+- Stable phase/version: `Phase 19.3.1 / 2026091804`
+- Stable commit: `34fc713346eafe92f23d1f5fcf470526daf8ddb6`
+- Release: `source-v2026091804`
+- Phase 19.3.1 gate: Run `35291515475` — SUCCESS
+- ZONOE Source Release Run `35291515730`: package/release SUCCESS, final online-update E2E FAILURE only because Release Notes lacked literal `更新内容`.
 - `main` 不是活动开发/发布基线。
 
-## Phase 19 — V3 客户端安全同步
+## Phase 19.4 — Dynamic Announcement + License Routing
 
-### 19.1 服务端同步契约 — 已完成并发布
+Development branch: `feature/2026091805-phase19-4-dynamic-announcement-license`
 
-- `/appstore/v3/apps` 支持 `snapshot_revision`，全量分页绑定单一 revision。
-- 同步期间 revision 变化时返回 `snapshot_valid=0`、`restart_required=1`，不向客户端返回混合快照。
-- `/appstore/v3/meta` 暴露 `min_delta_since`。
-- `/appstore/v3/delta` 暴露 `min_since/reset_required/reset_reason`。
-- 变更历史缺口返回 `history_gap`；客户端 revision 高于服务端返回 `future_revision`，两者均要求重新全量同步。
-- 旧 `/appstore`、V3 开关、授权/黑名单语义、普通/V2 加密协议保持兼容。
-- PHP 7.0 / MySQL 5.7 专项测试及正式 Release 全回归通过。
-- 在线更新 manifest 已包含 `SourceV3.php`、`SourceSyncV3.php`、`SourceChangeLog.php`。
-- 正式 GitHub Release 在线更新 E2E 已验证 `2026091714 -> 2026091801`。
+### 已完成
 
-### 19.2 iOS 客户端 SQLite 同步 — Next Task
+- [x] 新增 `SourceAnnouncementTemplate` 动态公告渲染层。
+- [x] 支持刷新时间、软件数量、今日/七日更新、授权状态、全源/验证到期、指定 App 数、授权摘要、源名称、服务器时间。
+- [x] 支持默认值语法，例如 `[全源到期时间|未解锁]`。
+- [x] Guest / 全源 / 仅验证 / 指定 App 授权数据独立计算。
+- [x] 动态公告在共享缓存之后、JSON/加密之前注入，避免 UDID 维度污染公共缓存。
+- [x] Legacy plain/encrypted JSON cache 采用 sentinel 静态缓存，并将 body/encrypted-json cache key 升为 v2。
+- [x] 后台公告板增加变量快捷插入、可选 UDID 实时预览。
+- [x] `/LICENSE` exact 404 与 `/license` exact ThinkPHP 路由分离。
+- [x] online-update manifest 补齐 `license.html`、`unbind.html`、`AuthorizationLicense.php`、动态公告运行时和 `nginx.rewrite`。
+- [x] Phase 19.4 PHP 7.0 / Legacy / deployment / update-package gate：Run `35296525450` SUCCESS。
 
-当前 `app-` 仓库是 ThinkPHP/FastAdmin 服务端仓库。仓库代码检索未发现 Objective-C 或 `sqlite3` 客户端实现，因此不能在本仓库内伪造“客户端 SQLite 已接入”。下一阶段必须在对应的软件源浏览客户端源码仓库完成：
+### 发布前剩余
 
-1. 基础地址自动探测 `/v3/meta`，仅 `supported=0` 时回退旧 `/appstore`。
-2. SQLite 建立 source/app/sync-state 表，使用 transaction 保证完整提交。
-3. 首次同步使用 `/v3/apps` 分页，并固定 `snapshot_revision`；`restart_required=1` 时回滚临时事务并重启。
-4. 后续使用 `/v3/delta` 应用 upsert/delete；`reset_required=1` 时清除临时游标并重新全量同步。
-5. 本地 revision 只在事务成功后推进，禁止“revision 已更新但 apps 未完整落盘”。
-6. 覆盖明文/普通/V2 三种响应模式，以及 V3 开关关闭、授权拒绝、黑名单、断网、进程中断等恢复场景。
-7. 完成 iOS 真机 E2E 后再标记客户端部分完成。
-
-## Phase 20 — V3 Production Hardening
-
-在客户端接入完成后推进：
-
-- `fa_source_change` retention/GC 与 `min_delta_since` 联动。
-- delta/history 容量、索引和查询成本监控。
-- ETag/条件请求、gzip、分页大小与请求合并优化。
-- 同步耗时、失败原因、全量重置原因可观测性。
-- 大规模 Category/变更日志压测。
-- 生产 BaoTa/MySQL/browser/iOS 真机回归闭环。
+- [ ] 在真实 BaoTa/Nginx 将新版 rewrite 应用到活动站点配置并 reload。
+- [ ] 验证 `/LICENSE -> 404`、`/license GET -> 200`、`/license POST` 卡密+UDID 查询。
+- [ ] 实机验证静态公告与动态公告在明文/普通加密/V2 下均正确。
+- [ ] 实机验证 Guest / 全源卡 / 指定 App 卡 / 仅验证卡公告隔离。
+- [ ] 回归 API Center 日志刷新、测试下拉、API 开关真实 503/恢复。
+- [ ] 将 VERSION / ver.txt / ver.json / Release Notes 收口为 `2026091805` 后跑正式 Release 全门禁和在线更新 E2E。
 
 ## 保持不变的稳定边界
 
-- 不改变旧 `appstore / appstore_v2` 公共字段、加密 envelope 和 URL。
-- V3 不支持与业务拒绝必须严格区分：只有 `supported=0` 才能 fallback。
-- day/week/month/quarter/year 仍为 1/7/30/90/360 天。
-- 卡密仍一次性消费，授权时长可叠加；`transfer_count` 仍表示剩余换绑次数。
-- BaoTa 部署契约和 `BT_DB_*` 占位符保持。
-- `App-mb.php` / `Index2.php` 不得恢复。
-- ThinkPHP 5.0.24 / FastAdmin 升级继续延期，直到集成测试覆盖足够。
-
-其他长期问题见 `KNOWN_ISSUES.md`。
+- 不改变旧 `appstore / appstore_v2` 公共字段、URL 和加密 envelope。
+- 不改变卡密一次性消费、授权时长叠加及 `transfer_count` 剩余换绑次数语义。
+- 不恢复 `App-mb.php` / `Index2.php`。
+- 不无计划迁移 `fa_category` 物理字段。
+- 远程 `dylib()` 内部授权逻辑继续延期，除非另开独立阶段。

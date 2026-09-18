@@ -1,5 +1,18 @@
 # Known Issues and Refactor Backlog
 
+## P0 — Phase 19.4 发布前真实环境验证
+
+- 仓库 `nginx.rewrite` 已修复 `/LICENSE` / `/license` 大小写冲突并由 CI 契约覆盖，但尚未证明生产 BaoTa 活动 vhost 已应用并 reload。
+- 必须真实验证 `/LICENSE -> 404`、`/license GET -> 200`、`/license POST`、`/unbind`。
+- 动态公告的 PHP 7.0、缓存隔离和包内容已 CI 通过；iOS 明文/普通加密/V2 与四种授权状态仍待真机回归。
+- `VERSION` 仍是 `2026091804`；Phase 19.4 当前是开发分支，不是正式 1805 Release。
+
+## P0 — Release Notes E2E 字面量门禁
+
+- 1804 ZONOE Source Release Run `35291515730` 的 PHP/MySQL/负载/package-and-release 均成功，最终 E2E 因 Release Notes 缺少字面量 `更新内容` 失败。
+- `tests/phase13_github_online_update_e2e.php` 当前显式检查该字符串。
+- 1805 Release Notes 已预置 `更新内容`；正式发布前不得删除。
+
 ## P0 — 稳定兼容边界
 
 - Runtime remains ThinkPHP 5.0.24 / FastAdmin-style；框架升级延期。

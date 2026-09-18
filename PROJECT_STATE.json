@@ -1,68 +1,46 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "branch": "release/2026091801-phase19-client-sync",
-    "phase": "19.1",
-    "version": "2026091801",
-    "commit": "6e3c7a3af25843c3f329207bd6b4c4e06e182e57",
-    "release": "source-v2026091801",
-    "release_ci_run": 35262273073,
-    "release_ci_result": "success",
-    "online_update_from": "2026091714",
-    "online_update_e2e": "passed"
+    "branch": "release/2026091804-phase19-3-1-concurrency-api-center",
+    "phase": "19.3.1",
+    "version": "2026091804",
+    "commit": "34fc713346eafe92f23d1f5fcf470526daf8ddb6",
+    "release": "source-v2026091804",
+    "phase_gate_run": 35291515475,
+    "phase_gate_result": "success",
+    "release_run": 35291515730,
+    "release_package_job": "success",
+    "release_e2e": "failed_release_notes_literal_marker"
   },
-  "feature_validation": {
-    "branch": "feature/phase19-1-client-sync-contract-v1",
-    "commit": "894a9b5b3380ac367a479536c380de37fe10f2bf",
-    "ci_run": 35261910066,
+  "active_development": {
+    "branch": "feature/2026091805-phase19-4-dynamic-announcement-license",
+    "phase": "19.4",
+    "version_file": "2026091804",
+    "code_commit": "391de96f6a8f4da3d1f75b505acc876b07101608",
+    "ci_run": 35296525450,
     "ci_result": "success"
   },
   "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
-  "runtime_changes": true,
-  "architecture": {
-    "legacy_source": "/appstore -> application/index/controller/App.php::list",
-    "v3_meta": "/appstore/v3/meta -> application/index/controller/SourceV3.php::meta",
-    "v3_full_sync": "/appstore/v3/apps -> SourceSyncV3::page",
-    "v3_delta": "/appstore/v3/delta -> SourceSyncV3::delta",
-    "v3_revision_log": "application/common/library/SourceChangeLog.php",
-    "payload_mapper": "application/common/library/AppStorePayload.php",
-    "source_config": "application/common/library/SourceConfigRepository.php",
-    "update_pipeline": "Config -> UpdateManager -> GitHub/Nuosike source -> UpdateInstaller -> backup/sql -> UpdateRuntimeStore"
-  },
-  "phase19_1_completed": [
-    "Full-sync pages support snapshot_revision and reject mixed-revision snapshots",
-    "V3 meta exposes min_delta_since",
-    "Delta exposes min_since/reset_required/reset_reason",
-    "History gaps and future client revisions explicitly require full resync",
-    "Legacy /appstore and V3 fallback/business-error semantics remain compatible",
-    "PHP 7.0 and MySQL 5.7 Phase19 CI passed",
-    "Online update ZIP contains all Phase19 runtime files",
-    "Real GitHub Release E2E upgraded 2026091714 to 2026091801 successfully"
-  ],
-  "client_source": {
-    "present_in_this_repository": false,
-    "objective_c_code_search": 0,
-    "sqlite3_code_search": 0,
-    "status": "requires corresponding iOS client repository for Phase 19.2"
-  },
-  "validation": {
-    "php70_full_regression": "passed",
-    "mysql57_migrations": "passed",
-    "phase19_contract": "passed",
-    "phase19_mysql57_delta_window": "passed",
-    "release_package_and_sha256": "passed",
-    "github_release_online_update_e2e": "passed",
-    "production_baota_server_smoke": "not_run",
-    "ios_real_device_sqlite_sync": "not_run"
+  "phase19_4": {
+    "dynamic_announcement": "implemented",
+    "cache_safe_sentinel_injection": "implemented",
+    "admin_token_insert": "implemented",
+    "admin_udid_preview": "implemented",
+    "license_nginx_contract": "implemented",
+    "online_update_manifest": "implemented",
+    "php70_ci": "passed",
+    "production_nginx_reload": "not_run",
+    "public_license_get_post": "not_run",
+    "ios_real_device_plain_normal_v2": "not_run"
   },
   "compatibility_boundaries": [
-    "Do not change legacy appstore/appstore_v2 public keys or encoding behavior",
-    "Only supported=0 is a protocol fallback condition; authorization/blacklist errors remain supported=1",
-    "Keep one-time card activation and existing authorization stacking semantics",
+    "Do not change legacy appstore/appstore_v2 public keys or encryption envelope",
+    "Keep one-time card activation and scope-separated entitlement semantics",
     "Keep transfer_count as remaining device-transfer quota",
     "Do not restore App-mb.php or Index2.php",
-    "Keep Nuosike updater alongside GitHub updater"
+    "Do not claim production Nginx or iOS validation before real verification"
   ],
-  "next_task": "Phase 19.2: integrate the published V3 snapshot/delta contract into the actual iOS software-source client repository with transactional SQLite state and real-device E2E.",
+  "known_release_gate_note": "phase13_github_online_update_e2e requires release changelog to contain literal 更新内容",
+  "next_task": "Real BaoTa Nginx + /license verification, then iOS plain/normal/V2 dynamic-announcement regression and 2026091805 release candidate.",
   "roadmap": "ROADMAP.md"
 }

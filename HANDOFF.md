@@ -1,106 +1,83 @@
 # Software Source Development Handoff
 
-## Repository / stable baseline
+## Repository / baselines
 
 - Repository: `a7987083/app-`
-- Stable branch: `release/2026091801-phase19-client-sync`
-- Stable phase/version: `Phase 19.1 / 2026091801`
-- Release commit: `6e3c7a3af25843c3f329207bd6b4c4e06e182e57`
-- Release: `source-v2026091801`
-- Feature CI: `35261910066` — SUCCESS
-- Release CI: `35262273073` — SUCCESS
-- Online-update E2E: `2026091714 -> 2026091801` — SUCCESS
-- `main` is stale and is not the active baseline.
+- Stable branch: `release/2026091804-phase19-3-1-concurrency-api-center`
+- Stable version/phase: `2026091804 / Phase 19.3.1`
+- Stable commit: `34fc713346eafe92f23d1f5fcf470526daf8ddb6`
+- Stable release: `source-v2026091804`
+- Active development branch: `feature/2026091805-phase19-4-dynamic-announcement-license`
+- Phase19.4 code commit: `391de96f6a8f4da3d1f75b505acc876b07101608`
+- Phase19.4 CI Run: `35296525450` — SUCCESS
+- VERSION is intentionally still `2026091804`; do not call this a released 1805 build yet.
 
-## What Phase 19.1 changed
+## Phase 19.4 implementation
 
-Phase 18 already provided additive V3 endpoints. Phase 19.1 makes those endpoints safe for a transactional local client database.
+Public source path remains:
 
-### Full sync
+`/appstore -> App::list -> AppStorePayload -> SourceLegacyCache/SourceResponse -> encryption -> transport`.
 
-`/appstore/v3/apps` now accepts `snapshot_revision`.
+Dynamic announcements are implemented by `SourceAnnouncementTemplate`.
 
-- First page establishes a snapshot revision.
-- Following pages keep the same revision.
-- `SourceSyncV3::page()` checks the change-log revision before and after the page query.
-- If the snapshot changed, response contains `snapshot_valid=0` and `restart_required=1` with no mixed app rows.
-- A client must roll back its temporary SQLite transaction and restart from `after_id=0` using the new revision.
+Critical cache boundary:
 
-### Delta sync
+1. Source config keeps the original announcement template.
+2. Shared plain/encrypted JSON caches store a fixed sentinel instead of per-UDID rendered text.
+3. Current-request context is calculated from app rows and card scopes.
+4. Cached JSON/body is retrieved.
+5. Sentinel is replaced with the rendered announcement.
+6. Encryption/transport runs afterwards.
 
-`SourceChangeLog::minDeltaSince()` defines the oldest client revision that can still consume every retained change.
+This prevents full-source/verify/App-scope/guest announcement state from contaminating shared 120-second caches.
 
-- meta exposes `min_delta_since`.
-- delta exposes `min_since`, `reset_required`, `reset_reason`.
-- `history_gap`: local revision is older than retained change history; perform full sync.
-- `future_revision`: local revision is ahead of server current revision; perform full sync.
-- Normal delta retains `next_since`, `has_more`, `upserts`, `deleted`.
+Supported variables:
+`[刷新时间]`, `[软件个数]`, `[今日更新]`, `[七日更新]`, `[授权状态]`, `[全源到期时间]`, `[全源剩余时间]`, `[验证到期时间]`, `[指定APP数量]`, `[授权摘要]`, `[源名称]`, `[服务器时间]`.
+Default syntax: `[变量|默认值]`.
 
-### Compatibility
+Admin General Config now exposes clickable tokens and live preview. Preview without UDID behaves as guest; with UDID it reads that device's current cards.
 
-- Legacy `/appstore` is unchanged.
-- `source_v3=0` remains `supported=0` + `fallback=appstore`.
-- Authorization/blacklist/business failures remain `supported=1`; fallback cannot bypass them.
-- Plain / normal encryption / V2 encryption behavior is unchanged.
+## /license fix
 
-## Online update path
+The source route/controller/view already existed. The 404 root cause was production Nginx case-insensitive security matching of `LICENSE`.
 
-`admin/general/Config`
--> `UpdateManager`
--> `GitHubUpdateSource`
--> HTTPS + SHA256
--> `UpdateInstaller`
--> file/database backup
--> SQL/file install
--> integrity verification
--> `UpdateRuntimeStore` history/status.
+Repository contract now defines:
 
-Phase19 runtime files are already in `release/online-update-files.txt`:
+- exact `/LICENSE` -> 404
+- exact `/license` -> ThinkPHP rewrite
+- generic `location /` unchanged
 
-- `application/index/controller/SourceV3.php`
-- `application/common/library/SourceSyncV3.php`
-- `application/common/library/SourceChangeLog.php`
+Online-update manifest now includes:
 
-The release pipeline built and published `zonoe-online-update.zip` plus `.sha256`. The real Release E2E resolved previous stable version `2026091714` and finished with:
+- `application/common/library/AuthorizationLicense.php`
+- `application/index/view/index/license.html`
+- `application/index/view/index/unbind.html`
+- `nginx.rewrite`
 
-`OK ... real_release=2026091801 base=2026091714 self_update=passed progress=passed history=passed db_migration=yes`
+Important: copying `nginx.rewrite` into the project does not prove the active BaoTa Nginx vhost has reloaded it. Production verification is still required.
 
-## Validation status
+## CI evidence
 
-Verified:
+Run `35296525450`, Job `php70-contract`:
 
-- PHP 7.0 Phase18 compatibility + Phase19 contract tests.
-- MySQL 5.7 source-change migration and retention-window tests.
-- Full PHP 7.0 regression.
-- Full MySQL 5.7 migration chain.
-- Release metadata and source integrity manifest.
-- Online-update ZIP content and SHA256.
-- Real GitHub Release download/install E2E from `2026091714` to `2026091801`.
+- PHP 7.0 lint: success
+- JS syntax: success
+- `phase19_4_dynamic_announcement_test`: success
+- `source_response_test`: success
+- Legacy response cache regression: success
+- Phase19.3.1 API Center regression: success
+- deployment contract: success
+- card access / App scope regressions: success
+- online-update package build and required file assertions: success
 
-Not claimed:
+## Pre-existing 1804 release note issue
 
-- Production BaoTa server/browser smoke for `2026091801`.
-- iOS real-device SQLite synchronization.
+Stable commit Run `35291515730`:
+PHP 7.0, MySQL 5.7, HTTP load and package-and-release jobs all succeeded. Final online-update E2E failed because `phase13_github_online_update_e2e.php` requires Release Notes changelog to contain literal Chinese `更新内容`. The 1805 candidate notes include this marker.
 
-## Client-source boundary
+## Next task
 
-This repository contains the server. Repository code search finds no Objective-C and no `sqlite3` client implementation. Therefore do not claim that the iOS browser client itself has been modified in this repo.
-
-The next engineer/AI must locate the actual client repository and implement Phase 19.2 against the now-stable server contract:
-
-1. probe `/v3/meta`;
-2. transactional SQLite full sync with `snapshot_revision`;
-3. delta upsert/delete with `next_since`;
-4. full reset on `restart_required/reset_required`;
-5. fallback only on protocol unsupported (`supported=0`);
-6. real-device validation for plain/normal/V2 encryption and authorization/blacklist cases.
-
-## Stable compatibility boundaries
-
-- Do not change public legacy AppStore field/encryption semantics without a separately versioned protocol.
-- Keep existing card duration, one-time activation, entitlement stacking and transfer quota behavior.
-- Keep BaoTa deployment/update contract and both Nuosike/GitHub updater paths.
-- Do not restore `App-mb.php` or `Index2.php`.
-- Do not physically migrate legacy Category columns without a dedicated migration and rollback plan.
-
-See `ROADMAP.md`, `PROJECT_STATE.json`, `KNOWN_ISSUES.md`, and `CHANGELOG_DEV.md` before starting new work.
+1. Apply Nginx rewrite on a real BaoTa site and reload Nginx.
+2. Verify `/LICENSE`, `/license` GET/POST and `/unbind`.
+3. Run iOS source refresh against static and dynamic announcements in plain/normal/V2 modes and all card scopes.
+4. If green, create 2026091805 release candidate metadata and run formal release/E2E.
