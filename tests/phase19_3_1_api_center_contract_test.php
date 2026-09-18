@@ -42,9 +42,13 @@ p1931ApiAssert(strpos($js, 'sessionStorage') !== false, 'API tab persistence mis
 
 p1931ApiAssert(strpos($controller, '\'enabled\' => $enabled ? 1 : 0') !== false, 'toggle response must return persisted target state');
 p1931ApiAssert(strpos($controller, "post('endpoint_key'") !== false, 'API test must use endpoint key');
-p1931ApiAssert(strpos($controller, 'where(\'endpoint_key\', $endpointKey)') !== false, 'API test lookup by endpoint key missing');
+p1931ApiAssert(strpos($controller, 'ApiEndpointRegistry::endpoint($endpointKey)') !== false, 'API test registry lookup by endpoint key missing');
+p1931ApiAssert(strpos($controller, 'ApiEndpointRegistry::testSchema($endpointKey)') !== false, 'API test schema lookup missing');
+p1931ApiAssert(strpos($controller, "post('test_params/a'") !== false, 'typed API test parameters missing');
 
+p1931ApiAssert(strpos($registry, 'public static function endpoint($endpointKey)') !== false, 'registry endpoint lookup missing');
+p1931ApiAssert(strpos($registry, "where('endpoint_key', $endpointKey)") !== false, 'registry must resolve endpoint by endpoint_key');
 p1931ApiAssert(strpos($registry, 'API不存在或尚未完成数据库迁移') !== false, 'toggle missing-row guard missing');
 p1931ApiAssert(strpos($registry, '接口开关写入后校验失败') !== false, 'toggle post-write verification missing');
 
-fwrite(STDOUT, "OK phase19_3_1_api_center_contract_test ajax_logs=passed toggle=real test_dropdown=passed tab_state=passed\n");
+fwrite(STDOUT, "OK phase19_3_1_api_center_contract_test ajax_logs=passed toggle=real registry_lookup=passed typed_test=passed tab_state=passed\n");
