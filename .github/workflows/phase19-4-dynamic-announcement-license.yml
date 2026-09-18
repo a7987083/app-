@@ -24,6 +24,7 @@ on:
       - 'application/route.php'
       - 'nginx.rewrite'
       - 'release/online-update-files.txt'
+      - 'tests/phase19_3_1_api_center_contract_test.php'
       - 'tests/phase19_4_dynamic_announcement_test.php'
       - 'tests/phase19_4_1_hotfix_test.php'
       - 'tests/phase19_4_2_unified_announcement_test.php'
@@ -57,6 +58,7 @@ jobs:
           php -l application/common/library/SourceResponse.php
           php -l application/index/controller/App.php
           php -l application/admin/controller/general/Config.php
+          php -l tests/phase19_3_1_api_center_contract_test.php
           php -l tests/phase19_4_dynamic_announcement_test.php
           php -l tests/phase19_4_1_hotfix_test.php
           php -l tests/phase19_4_2_unified_announcement_test.php
