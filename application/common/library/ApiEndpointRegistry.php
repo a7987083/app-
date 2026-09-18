@@ -21,6 +21,7 @@ class ApiEndpointRegistry
     protected static $requestEndpoint = '';
     protected static $requestLoggingRegistered = false;
     protected static $bypassHandler = '';
+    protected static $systemSyncAttempted = false;
 
     public static function systemDefinitions()
     {
@@ -35,6 +36,11 @@ class ApiEndpointRegistry
                 'handler_key' => 'appstore',
                 'enabled' => 1,
                 'description' => '添加、刷新软件源与卡密激活',
+                'test_method' => 'GET',
+                'test_fields' => [
+                    ['name' => 'udid', 'label' => 'UDID', 'required' => true, 'placeholder' => '设备 UDID'],
+                    ['name' => 'code', 'label' => '卡密', 'required' => false, 'placeholder' => '激活时填写；仅刷新可留空'],
+                ],
             ],
             'dylib_config' => [
                 'endpoint_key' => 'dylib_config',
@@ -46,6 +52,10 @@ class ApiEndpointRegistry
                 'handler_key' => 'dylib_config',
                 'enabled' => 1,
                 'description' => '远程Dylib配置与授权状态',
+                'test_method' => 'GET',
+                'test_fields' => [
+                    ['name' => 'udid', 'label' => 'UDID', 'required' => true, 'placeholder' => '设备 UDID'],
+                ],
             ],
             'dylib_auth' => [
                 'endpoint_key' => 'dylib_auth',
@@ -57,6 +67,11 @@ class ApiEndpointRegistry
                 'handler_key' => 'dylib_auth',
                 'enabled' => 1,
                 'description' => '动态库授权验证',
+                // Dylib/HMAC protocol is intentionally not redesigned in this closeout.
+                'test_method' => 'GET',
+                'test_fields' => [
+                    ['name' => 'udid', 'label' => 'UDID', 'required' => true, 'placeholder' => '设备 UDID'],
+                ],
             ],
             'unbind' => [
                 'endpoint_key' => 'unbind',
@@ -68,6 +83,12 @@ class ApiEndpointRegistry
                 'handler_key' => 'unbind',
                 'enabled' => 1,
                 'description' => '设备换绑页面与提交',
+                'test_method' => 'POST',
+                'test_fields' => [
+                    ['name' => 'code', 'label' => '卡密', 'required' => true, 'placeholder' => '卡密'],
+                    ['name' => 'old_udid', 'label' => '原 UDID', 'required' => true, 'placeholder' => '原设备 UDID'],
+                    ['name' => 'new_udid', 'label' => '新 UDID', 'required' => true, 'placeholder' => '新设备 UDID'],
+                ],
             ],
             'unbind_query' => [
                 'endpoint_key' => 'unbind_query',
@@ -79,6 +100,10 @@ class ApiEndpointRegistry
                 'handler_key' => 'unbind_query',
                 'enabled' => 1,
                 'description' => '查询换绑状态',
+                'test_method' => 'GET',
+                'test_fields' => [
+                    ['name' => 'udid', 'label' => 'UDID', 'required' => true, 'placeholder' => '设备 UDID'],
+                ],
             ],
             'license' => [
                 'endpoint_key' => 'license',
@@ -90,8 +115,78 @@ class ApiEndpointRegistry
                 'handler_key' => 'license',
                 'enabled' => 1,
                 'description' => '查询授权信息；/license 保留兼容，若 Nginx 拦截请使用 /authorization',
+                'test_method' => 'POST',
+                'test_fields' => [
+                    ['name' => 'code', 'label' => '卡密', 'required' => true, 'placeholder' => '卡密'],
+                    ['name' => 'udid', 'label' => 'UDID', 'required' => true, 'placeholder' => '设备 UDID'],
+                ],
             ],
         ];
+    }
+
+    protected static function persistentDefinition(array $row)
+    {
+        $keys = ['endpoint_key', 'name', 'path', 'method', 'source', 'auth', 'handler_key', 'description'];
+        $data = [];
+        foreach ($keys as $key) {
+            $data[$key] = isset($row[$key]) ? $row[$key] : '';
+        }
+        return $data;
+    }
+
+    /**
+     * System definition is the single source of truth for system API metadata.
+     * The operator-owned enabled flag is deliberately preserved.
+     */
+    public static function syncSystemDefinitions()
+    {
+        if (self::$systemSyncAttempted) {
+            return true;
+        }
+        self::$systemSyncAttempted = true;
+        $now = time();
+        try {
+            foreach (self::systemDefinitions() as $key => $definition) {
+                $row = Db::table('fa_api_endpoint')->where('endpoint_key', $key)->find();
+                $data = self::persistentDefinition($definition);
+                $data['updatetime'] = $now;
+                if ($row) {
+                    // Never convert a user-created custom row into a system row.
+                    if (isset($row['source']) && (string)$row['source'] !== '' && (string)$row['source'] !== 'system') {
+                        continue;
+                    }
+                    Db::table('fa_api_endpoint')->where('id', (int)$row['id'])->update($data);
+                } else {
+                    $data['enabled'] = !empty($definition['enabled']) ? 1 : 0;
+                    $data['createtime'] = $now;
+                    Db::table('fa_api_endpoint')->insert($data);
+                }
+            }
+            self::forget();
+            return true;
+        } catch (\Throwable $e) {
+            // A missing/mid-migration table must not break public APIs or admin.
+            return false;
+        }
+    }
+
+    protected static function overlaySystemDefinition(array $row)
+    {
+        $key = isset($row['endpoint_key']) ? (string)$row['endpoint_key'] : '';
+        $definitions = self::systemDefinitions();
+        if (!isset($definitions[$key]) || (isset($row['source']) && (string)$row['source'] !== 'system')) {
+            return $row;
+        }
+        $enabled = isset($row['enabled']) ? (int)$row['enabled'] : (int)$definitions[$key]['enabled'];
+        $id = isset($row['id']) ? $row['id'] : null;
+        $created = isset($row['createtime']) ? $row['createtime'] : null;
+        $updated = isset($row['updatetime']) ? $row['updatetime'] : null;
+        $row = array_merge($row, $definitions[$key]);
+        $row['enabled'] = $enabled;
+        if ($id !== null) $row['id'] = $id;
+        if ($created !== null) $row['createtime'] = $created;
+        if ($updated !== null) $row['updatetime'] = $updated;
+        return $row;
     }
 
     public static function handlerOptions()
@@ -105,6 +200,7 @@ class ApiEndpointRegistry
 
     public static function all($domain = '')
     {
+        self::syncSystemDefinitions();
         $rows = [];
         try {
             $rows = Db::table('fa_api_endpoint')->order('source asc,id asc')->select();
@@ -130,6 +226,7 @@ class ApiEndpointRegistry
         }
 
         foreach ($rows as &$row) {
+            $row = self::overlaySystemDefinition($row);
             $key = isset($row['endpoint_key']) ? (string)$row['endpoint_key'] : '';
             $stat = isset($stats[$key]) ? $stats[$key] : [];
             $row['today_requests'] = isset($stat['today_requests']) ? (int)$stat['today_requests'] : 0;
@@ -140,6 +237,58 @@ class ApiEndpointRegistry
         unset($row);
 
         return $rows;
+    }
+
+    public static function endpoint($endpointKey)
+    {
+        $endpointKey = trim((string)$endpointKey);
+        if ($endpointKey === '') {
+            return null;
+        }
+        self::syncSystemDefinitions();
+        try {
+            $row = Db::table('fa_api_endpoint')->where('endpoint_key', $endpointKey)->find();
+            if (!$row) {
+                return null;
+            }
+            return self::overlaySystemDefinition($row);
+        } catch (\Throwable $e) {
+            $definitions = self::systemDefinitions();
+            return isset($definitions[$endpointKey]) ? $definitions[$endpointKey] : null;
+        }
+    }
+
+    public static function testSchema($endpointKey)
+    {
+        $row = self::endpoint($endpointKey);
+        if (!$row) {
+            return null;
+        }
+        $definitions = self::systemDefinitions();
+        $definition = null;
+        if (isset($row['source']) && (string)$row['source'] === 'system' && isset($definitions[$endpointKey])) {
+            $definition = $definitions[$endpointKey];
+        } else {
+            $handler = isset($row['handler_key']) ? (string)$row['handler_key'] : '';
+            if (isset($definitions[$handler])) {
+                $definition = $definitions[$handler];
+            }
+        }
+        $fields = $definition && isset($definition['test_fields']) && is_array($definition['test_fields'])
+            ? $definition['test_fields'] : [];
+        $testMethod = $definition && !empty($definition['test_method'])
+            ? strtoupper((string)$definition['test_method']) : strtoupper((string)$row['method']);
+        if (!in_array($testMethod, ['GET', 'POST'], true)) {
+            $testMethod = strpos(strtoupper((string)$row['method']), 'POST') !== false ? 'POST' : 'GET';
+        }
+        return [
+            'endpoint_key' => $endpointKey,
+            'name' => isset($row['name']) ? (string)$row['name'] : $endpointKey,
+            'path' => isset($row['path']) ? (string)$row['path'] : '',
+            'method' => $testMethod,
+            'auth' => isset($row['auth']) ? (string)$row['auth'] : '',
+            'fields' => $fields,
+        ];
     }
 
     public static function recentLogs($limit = 100)
@@ -208,7 +357,6 @@ class ApiEndpointRegistry
             Cache::set(self::STATE_CACHE_KEY, $states, self::STATE_CACHE_TTL);
             return $states;
         } catch (\Throwable $e) {
-            // Fail open on migration/cache/database errors.
             return [];
         }
     }
@@ -228,6 +376,7 @@ class ApiEndpointRegistry
             throw new \InvalidArgumentException('接口标识不能为空');
         }
 
+        self::syncSystemDefinitions();
         $row = Db::table('fa_api_endpoint')->where('endpoint_key', $endpointKey)->find();
         if (!$row) {
             throw new \InvalidArgumentException('API不存在或尚未完成数据库迁移');
@@ -383,7 +532,6 @@ class ApiEndpointRegistry
                     'addtime' => time(),
                 ]);
             } catch (\Throwable $e) {
-                // API logging is observational only; never break the endpoint.
             }
         });
     }
