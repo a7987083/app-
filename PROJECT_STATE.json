@@ -1,46 +1,45 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "branch": "release/2026091806-announcement-expiry-authorization-hotfix",
-    "phase": "19.4.1",
-    "version": "2026091806",
-    "commit": "634b5ae92cb6009c99586f7301b73dd420965017",
-    "release": "source-v2026091806",
-    "hotfix_ci_run": 35303572776,
-    "hotfix_ci_result": "success",
-    "release_run": 35303639979,
+    "branch": "release/2026091807-unified-announcement-expiry",
+    "phase": "19.4.2",
+    "version": "2026091807",
+    "commit": "1ef93306dec0a7b09bb99df55b785511d5b8b4c6",
+    "release": "source-v2026091807",
+    "feature_ci_run": 35306216020,
+    "feature_ci_result": "success",
+    "release_run": 35306308086,
     "release_result": "success",
-    "online_update_from": "2026091805",
+    "online_update_from": "2026091806",
     "online_update_e2e": "passed"
   },
   "online_update": {
-    "tag": "source-v2026091806",
+    "tag": "source-v2026091807",
     "zip": "zonoe-online-update.zip",
     "sha256_asset": "zonoe-online-update.zip.sha256",
-    "release_asset_sha256": "6ed4ea34c6345ee6f251b197a5a8cffffef05f13eb0a5550f4f27fa64695d753",
+    "release_asset_sha256": "f5d7d82249440c862d3a19a4711e3df3d89387b0e92de48705d4b99fdc570c06",
     "self_update": "passed",
     "progress": "passed",
     "history": "passed",
     "db_migration": "yes"
   },
-  "phase19_4_1": {
-    "authorization_priority": "full_source > partial_apps > verify_only",
-    "generic_expiry_variables": [
+  "announcement": {
+    "public_time_model": "single_clock",
+    "public_variables": [
+      "授权状态",
       "到期时间",
       "剩余时间"
     ],
-    "partial_expiry_variables": [
-      "部分到期时间",
-      "部分剩余时间"
-    ],
-    "legacy_message_token_migration": "released",
-    "safe_authorization_route": "/authorization",
-    "legacy_license_route": "/license retained but production Nginx may still block before PHP"
+    "priority": "full_source > partial_apps > verify_only",
+    "inactive_text": "已过期或未解锁本源",
+    "legacy_scope_time_tokens": "hidden_from_editor_and_mapped_to_generic_clock",
+    "migration": "release/sql/2026091807_unified_announcement_expiry.sql"
   },
-  "unresolved_environment_issue": {
-    "exact_license_url": "requires active Nginx vhost/rewrite change if /license must work exactly",
-    "reason": "production case-insensitive LICENSE rule intercepts before ThinkPHP"
+  "authorization_page": {
+    "safe_route": "/authorization",
+    "legacy_route": "/license",
+    "exact_license_nginx_issue": "production Nginx may still intercept /license before PHP"
   },
-  "next_task": "Use 2026091806 online update; verify /authorization. Change active Nginx rule only if exact /license URL is required.",
+  "next_task": "Verify 2026091807 on production UI/source refresh; use /authorization for authorization lookup unless active Nginx /license rule is fixed.",
   "roadmap": "ROADMAP.md"
 }

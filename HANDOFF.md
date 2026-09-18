@@ -1,33 +1,32 @@
 # Software Source Development Handoff
 
-## Repository / stable baseline
+## Stable baseline
 
 - Repository: `a7987083/app-`
-- Stable branch: `release/2026091806-announcement-expiry-authorization-hotfix`
-- Stable phase/version: `Phase 19.4.1 / 2026091806`
-- Release commit: `634b5ae92cb6009c99586f7301b73dd420965017`
-- Release: `source-v2026091806`
-- Hotfix CI Run: `35303572776` — SUCCESS
-- Formal Release Run: `35303639979` — SUCCESS
-- Online-update E2E: `2026091805 -> 2026091806` — SUCCESS
-- Online-update assets: `zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`
+- Stable branch: `release/2026091807-unified-announcement-expiry`
+- Stable phase/version: `Phase 19.4.2 / 2026091807`
+- Release commit: `1ef93306dec0a7b09bb99df55b785511d5b8b4c6`
+- Release: `source-v2026091807`
+- Unified-announcement CI: `35306216020` — SUCCESS
+- Formal Release Run: `35306308086` — SUCCESS
+- Online-update E2E: `2026091806 -> 2026091807` — SUCCESS
 
-## 2026091806 hotfix
+## Announcement contract
 
-### Announcement authorization clock
+The announcement editor exposes one authorization clock only:
 
-Generic `[到期时间]` / `[剩余时间]` now choose the effective authorization by strict priority:
+- `[授权状态]`
+- `[到期时间]`
+- `[剩余时间]`
 
-1. whole-source authorization;
-2. partial App authorization;
-3. verification-only authorization.
+Internal entitlement scopes remain separate. The effective clock is selected by priority:
+whole source -> partial Apps -> verify-only.
 
-Partial App status uses the latest active App-scoped card expiry. Existing announcement templates using `[全源到期时间]` / `[全源剩余时间]` are migrated by `release/sql/2026091806_announcement_priority.sql`.
+If no active entitlement exists, all three public fields use:
+`已过期或未解锁本源`.
 
-### Authorization page route
+Legacy scope-specific time tokens are hidden from the editor and mapped to the same generic clock at runtime. SQL migration `2026091807_unified_announcement_expiry.sql` rewrites historical templates to the generic tokens.
 
-- Legacy application route `/license` remains.
-- Safe equivalent route `/authorization` maps to the same `Index::license()` action.
-- API Center now advertises `/authorization`.
+## Authorization page
 
-The production `/license` 404 is outside ThinkPHP: a case-insensitive Nginx LICENSE security rule intercepts that URI before PHP. Online update can update the site files but cannot reliably modify/reload the active BaoTa Nginx vhost. Therefore `/authorization` is the online-update-safe route; exact `/license` requires a one-time active Nginx rule change.
+`/authorization` remains the online-update-safe public lookup URL. `/license` remains routed in ThinkPHP but can still be intercepted by the production Nginx LICENSE rule before PHP.

@@ -3,25 +3,22 @@
 ## 当前稳定基线
 
 - Repository: `a7987083/app-`
-- Stable release branch: `release/2026091806-announcement-expiry-authorization-hotfix`
-- Stable phase/version: `Phase 19.4.1 / 2026091806`
-- Release commit: `634b5ae92cb6009c99586f7301b73dd420965017`
-- Release: `source-v2026091806`
-- Hotfix CI: Run `35303572776` — SUCCESS
-- Formal Release Run: `35303639979` — SUCCESS
-- Online-update E2E: `2026091805 -> 2026091806` — SUCCESS
+- Stable release branch: `release/2026091807-unified-announcement-expiry`
+- Stable phase/version: `Phase 19.4.2 / 2026091807`
+- Release commit: `1ef93306dec0a7b09bb99df55b785511d5b8b4c6`
+- Release: `source-v2026091807`
+- Unified-announcement CI Run `35306216020`: SUCCESS
+- Formal Release Run `35306308086`: SUCCESS
+- Online-update E2E `2026091806 -> 2026091807`: SUCCESS
 
-## Phase 19.4.1 — 已发布
+## Phase 19.4.2 — 已发布
 
-- [x] 修复部分 App 授权无到期时间/剩余时间。
-- [x] 当前授权优先级：全解锁 → 部分 App → 仅验证。
-- [x] 新增 `[到期时间]`、`[剩余时间]`、`[部分到期时间]`、`[部分剩余时间]`。
-- [x] 在线更新自动迁移公告旧变量。
-- [x] 新增 `/authorization` 等价授权查询入口。
-- [x] API Center 授权查询 URL 改为 `/authorization`。
-- [x] 正式在线更新包与 SHA256 发布。
-- [x] 1805 → 1806 GitHub Release 在线更新 E2E 通过。
-
-## 环境级剩余项
-
-- [ ] 若必须继续使用精确 URL `/license`，需要修改生产 BaoTa/Nginx 当前生效的大小写不敏感 LICENSE 拦截规则；这发生在 PHP 之前，不能由应用路由本身覆盖。
+- [x] 公告只暴露一套授权时间。
+- [x] 后台移除全源/部分/验证独立时间按钮。
+- [x] `[授权状态]` / `[到期时间]` / `[剩余时间]` 共用同一有效授权选择逻辑。
+- [x] 优先级：全软件源 → 指定 App → 仅验证。
+- [x] 无有效授权统一显示“已过期或未解锁本源”。
+- [x] `[授权摘要]` 收敛为单一时间模型。
+- [x] 历史公告变量自动迁移。
+- [x] 旧变量运行时兼容并映射到同一时钟。
+- [x] 1806 → 1807 在线更新 E2E 通过。
