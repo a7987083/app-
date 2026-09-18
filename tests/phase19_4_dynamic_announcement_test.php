@@ -55,6 +55,10 @@ namespace app\common\library {
 }
 
 namespace {
+    if (!defined('ROOT_PATH')) {
+        define('ROOT_PATH', sys_get_temp_dir() . '/zonoe_phase19_4_runtime_' . getmypid() . '/');
+    }
+    require __DIR__ . '/../application/common/library/SourceServerRuntime.php';
     require __DIR__ . '/../application/common/library/SourceAnnouncementTemplate.php';
 
     use app\common\library\SourceAnnouncementTemplate;
@@ -80,19 +84,19 @@ namespace {
         ['id' => 4, 'jh' => 1, 'card_scope' => 1, 'endtime' => $now - 1],
     ];
     $access = ['unlock_all' => true, 'app_ids' => [9, 7, 9]];
-    $template = "[源名称]\n刷新：[刷新时间]\nApp：[软件个数] 今日：[今日更新] 七日：[七日更新]\n状态：[授权状态]\n全源：[全源到期时间|未解锁] / [全源剩余时间|0]\n验证：[验证到期时间|未开通]\n指定：[指定APP数量]\n[授权摘要]";
+    $template = "刷新：[刷新时间]\nApp：[软件个数] 今日：[今日更新] 七日：[七日更新]\n状态：[授权状态]\n剩余：[剩余时间]\n运行：[服务器运行时间]";
 
     $context = SourceAnnouncementTemplate::buildContext($template, 'ZONOE', $apps, $cards, $access, $now);
     SourceAnnouncementTemplate::begin($context);
     $rendered = SourceAnnouncementTemplate::render($template);
 
-    p194_assert(strpos($rendered, 'ZONOE') !== false, 'source name rendered');
     p194_assert(strpos($rendered, 'App：3') !== false, 'app count rendered');
     p194_assert(strpos($rendered, '今日：1') !== false, 'today count rendered');
     p194_assert(strpos($rendered, '七日：2') !== false, 'seven day count rendered');
     p194_assert(strpos($rendered, '状态：已授权') !== false, 'authorization status rendered');
     p194_assert(strpos($rendered, '3天2小时') !== false, 'remaining duration rendered');
-    p194_assert(strpos($rendered, '指定：2') !== false, 'deduplicated app authorization count rendered');
+    p194_assert(strpos($rendered, '运行：0分钟') !== false, 'server runtime rendered');
+    p194_assert(strpos($rendered, 'ZONOE') === false, 'retired source name must not be injected');
 
     $payload = ['name' => 'ZONOE', 'message' => $template, 'apps' => []];
     $placeholder = SourceAnnouncementTemplate::placeholderPayload($payload);
@@ -103,14 +107,17 @@ namespace {
     p194_assert(strpos($injected, '已授权') !== false, 'rendered value injected into encoded JSON');
 
     $guest = SourceAnnouncementTemplate::authorizationContext([], ['unlock_all' => false, 'app_ids' => []], $now);
-    $guestRendered = SourceAnnouncementTemplate::render(
-        '[授权状态] [到期时间] [剩余时间]',
-        $guest
-    );
+    $guestRendered = SourceAnnouncementTemplate::render('[授权状态] [剩余时间]', $guest);
     p194_assert(
-        $guestRendered === '已过期或未解锁本源 已过期或未解锁本源 已过期或未解锁本源',
-        'guest/expired announcement uses unified fallback'
+        $guestRendered === '已过期或未解锁本源 已过期或未解锁本源',
+        'guest/expired announcement uses fallback'
     );
+
+    $retired = SourceAnnouncementTemplate::render(
+        '[到期时间]|[授权摘要]|[源名称]|[指定APP数量]',
+        []
+    );
+    p194_assert($retired === '|||', 'retired announcement tokens must render empty');
 
     $static = '普通公告，不含变量';
     p194_assert(SourceAnnouncementTemplate::render($static) === $static, 'static announcement remains byte-identical');
@@ -130,9 +137,10 @@ namespace {
     p194_assert(strpos($cache, 'SourceAnnouncementTemplate::injectEncodedMessage') !== false, 'encrypted cache injection missing');
     p194_assert(strpos($config, 'announcement_preview') !== false, 'admin announcement preview endpoint missing');
     p194_assert(strpos($manifest, "application/common/library/SourceAnnouncementTemplate.php\n") !== false, 'announcement runtime missing from update manifest');
+    p194_assert(strpos($manifest, "application/common/library/SourceServerRuntime.php\n") !== false, 'server runtime missing from update manifest');
     p194_assert(strpos($manifest, "application/index/view/index/license.html\n") !== false, 'license view missing from update manifest');
     p194_assert(strpos($manifest, "application/index/view/index/unbind.html\n") !== false, 'unbind view missing from update manifest');
     p194_assert(strpos($manifest, "application/common/library/AuthorizationLicense.php\n") !== false, 'AuthorizationLicense missing from update manifest');
 
-    echo "OK phase19_4_dynamic_announcement_test cache_safe=passed auth_isolated=passed defaults=passed admin=passed manifest=passed\n";
+    echo "OK phase19_4_dynamic_announcement_test cache_safe=passed auth_isolated=passed runtime=passed retired=passed admin=passed manifest=passed\n";
 }
