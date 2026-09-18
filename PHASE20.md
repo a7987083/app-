@@ -4,14 +4,27 @@ Baseline: `source-v2026091809` / `21307ba5ec9b65ce0b5f0643555ccc7f7bec0ad9`.
 
 ## Stages
 
-- 20.0 UI/menu/auth skeleton
-- 20.1 persistence, task, idempotency and audit foundations
+- 20.0 UI/menu/auth skeleton — implemented on feature branch
+- 20.1 persistence, task, idempotency and audit foundations — implemented on feature branch
 - 20.2 OpenList discovery and incremental scan
 - 20.3 HTTP Range IPA parser and metadata/icon extraction
 - 20.4 persistent IPA ↔ category binding
 - 20.5 metadata-to-database write-back templates
 - 20.6 governance preview/apply/verify workflow
 - 20.7 production hardening: batch operations, retries, interrupted recovery, retention and Range metrics
+
+## Phase 20.1 persistence
+
+Core tables:
+
+- `fa_ipa_metadata`: parser-versioned raw + normalized metadata and content identity.
+- `fa_ipa_binding`: strict one-to-one current binding between `fa_category` and metadata.
+- `fa_ipa_scan_task` / `fa_ipa_scan_task_item`: checkpointable background-work state.
+- `fa_ipa_governance_issue`: detected anomaly, ignore window and repair-plan hash.
+- `fa_ipa_operation_log`: audit trail plus unique idempotency key for mutations.
+- `fa_ipa_writeback_rule`: versioned global write-back template rules.
+
+`IpaFoundation` centralizes remote-path identity, canonical plan hashes, idempotency keys, parser version, task states and field confidence levels.
 
 ## Safety invariants
 
