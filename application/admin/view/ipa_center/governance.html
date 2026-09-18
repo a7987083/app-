@@ -1,14 +1,25 @@
 <div class="panel panel-default panel-intro">
     <div class="panel-heading"><h3 class="panel-title">数据治理</h3></div>
     <div class="panel-body">
-        <p class="text-muted">仅治理已绑定记录。正式流程：发现 → 原因 → 修复预览 → 确认 → 执行 → 二次验证 → 审计。</p>
-        <div class="row ipa-stat-row ipa-governance-cards">
-            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="duplicate"><strong>重复 Bundle ID</strong><div class="ipa-stat-value">0</div></div></div>
-            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="mismatch"><strong>元数据不一致</strong><div class="ipa-stat-value">0</div></div></div>
-            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="missing"><strong>IPA 缺失 / 路径异常</strong><div class="ipa-stat-value">0</div></div></div>
-            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="version"><strong>版本异常</strong><div class="ipa-stat-value">0</div></div></div>
+        <p class="text-muted">仅治理已绑定记录。流程固定为：发现 → 修复预览 → 确认 → 执行 → 二次验证 → 审计。旧计划发生漂移时拒绝执行。</p>
+        <div class="btn-toolbar" style="margin-bottom:15px">
+            <button type="button" class="btn btn-primary btn-ipa-governance-refresh"><i class="fa fa-refresh"></i> 重新检测全部</button>
+            <span class="text-muted" style="line-height:34px">OpenList 路径修复禁止覆盖已存在目标文件。</span>
         </div>
-        <div class="alert alert-warning">Phase 20.6 才启用修复操作；20.0 不允许对数据库或 OpenList 做任何修改。</div>
-        <table class="table table-striped table-bordered"><thead><tr><th>应用</th><th>数据库值</th><th>实际值</th><th>判定原因</th><th>修复操作</th><th>验证状态</th></tr></thead><tbody><tr><td colspan="6" class="text-center text-muted">暂无治理异常</td></tr></tbody></table>
+        <div class="row ipa-stat-row ipa-governance-cards">
+            <div class="col-sm-3"><div class="well ipa-governance-card ipa-active" data-kind="duplicate"><strong>重复 Bundle ID</strong><div class="ipa-stat-value" id="ipa-gov-duplicate">0</div></div></div>
+            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="mismatch"><strong>元数据不一致</strong><div class="ipa-stat-value" id="ipa-gov-mismatch">0</div></div></div>
+            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="missing"><strong>IPA 缺失 / 路径异常</strong><div class="ipa-stat-value" id="ipa-gov-missing">0</div></div></div>
+            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="version"><strong>版本异常</strong><div class="ipa-stat-value" id="ipa-gov-version">0</div></div></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered" id="ipa-governance-table">
+                <thead><tr><th>应用</th><th>问题</th><th>数据库值</th><th>实际值</th><th>判定原因</th><th>修复操作</th><th>验证状态</th></tr></thead>
+                <tbody><tr><td colspan="7" class="text-center text-muted">点击“重新检测全部”生成治理异常</td></tr></tbody>
+            </table>
+        </div>
+        <div class="alert alert-info">
+            <strong>自动修复边界：</strong>版本/名称/大小可按 IPA 写数据库；路径异常可“以 OpenList 为准改数据库”或“以数据库为准改 OpenList”。真正缺失的 IPA、重复 Bundle ID 不自动修改，必须人工处理或重新检测。
+        </div>
     </div>
 </div>
