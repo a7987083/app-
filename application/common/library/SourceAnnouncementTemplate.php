@@ -32,23 +32,40 @@ class SourceAnnouncementTemplate
         return self::$context;
     }
 
+    /**
+     * Public editor variables after the Phase 19.4.x closeout.
+     * Authorization intentionally exposes status + remaining time only.
+     */
     public static function variables()
     {
-        // Announcement authors get one authorization clock only. The runtime
-        // still understands legacy scope-specific tokens for backward
-        // compatibility, but they are intentionally hidden from the editor.
         return [
             ['key' => '刷新时间', 'description' => '当前软件源请求时间'],
             ['key' => '软件个数', 'description' => '当前软件源 App 总数'],
             ['key' => '今日更新', 'description' => '今天更新的 App 数量'],
             ['key' => '七日更新', 'description' => '最近 7 天更新的 App 数量'],
             ['key' => '授权状态', 'description' => '当前有效授权状态'],
-            ['key' => '到期时间', 'description' => '当前有效授权到期时间'],
             ['key' => '剩余时间', 'description' => '当前有效授权剩余时间'],
-            ['key' => '指定APP数量', 'description' => '当前有效指定 App 授权数量'],
-            ['key' => '授权摘要', 'description' => '当前有效授权摘要'],
-            ['key' => '源名称', 'description' => '软件源名称'],
-            ['key' => '服务器时间', 'description' => '服务器当前时间'],
+            ['key' => '服务器运行时间', 'description' => '本软件源服务累计运行时间；持久化保存'],
+        ];
+    }
+
+    /**
+     * Tokens removed from the public announcement contract. They remain
+     * recognized only so historical templates never leak raw placeholders.
+     */
+    public static function deprecatedRemovedKeys()
+    {
+        return [
+            '授权摘要',
+            '到期时间',
+            '源名称',
+            '指定APP数量',
+            '全源到期时间',
+            '全源剩余时间',
+            '部分到期时间',
+            '部分剩余时间',
+            '验证到期时间',
+            '验证剩余时间',
         ];
     }
 
@@ -58,17 +75,9 @@ class SourceAnnouncementTemplate
         foreach (self::variables() as $variable) {
             $keys[$variable['key']] = true;
         }
-
-        // Deprecated in 2026091807. Keep parsing support so historical
-        // templates never leak raw tokens even if the SQL migration is skipped.
-        foreach ([
-            '全源到期时间',
-            '全源剩余时间',
-            '部分到期时间',
-            '部分剩余时间',
-            '验证到期时间',
-            '验证剩余时间',
-        ] as $key) {
+        // 服务器时间 is migrated to 服务器运行时间 and remains a runtime alias.
+        $keys['服务器时间'] = true;
+        foreach (self::deprecatedRemovedKeys() as $key) {
             $keys[$key] = true;
         }
         return array_keys($keys);
@@ -100,6 +109,28 @@ class SourceAnnouncementTemplate
         return $required;
     }
 
+    /**
+     * Normalize a stored template when it is edited/saved.
+     * - old 服务器时间 becomes 服务器运行时间 (default value syntax preserved)
+     * - removed variables are deleted, including [key|default] forms
+     */
+    public static function normalizeTemplate($template)
+    {
+        $template = (string)$template;
+        $template = preg_replace_callback('/\[服务器时间(?:\|([^\[\]]*))?\]/u', function ($matches) {
+            return isset($matches[1]) ? '[服务器运行时间|' . $matches[1] . ']' : '[服务器运行时间]';
+        }, $template);
+
+        $quoted = [];
+        foreach (self::deprecatedRemovedKeys() as $key) {
+            $quoted[] = preg_quote($key, '/');
+        }
+        if ($quoted) {
+            $template = preg_replace('/\[(?:' . implode('|', $quoted) . ')(?:\|[^\[\]]*)?\]/u', '', $template);
+        }
+        return (string)$template;
+    }
+
     public static function render($template, array $context = null)
     {
         $template = (string)$template;
@@ -107,9 +138,15 @@ class SourceAnnouncementTemplate
             return $template;
         }
         $context = $context === null ? self::$context : $context;
+        $removed = array_flip(self::deprecatedRemovedKeys());
 
-        return preg_replace_callback('/\[([^\[\]\|]+)(?:\|([^\[\]]*))?\]/u', function ($matches) use ($context) {
+        return preg_replace_callback('/\[([^\[\]\|]+)(?:\|([^\[\]]*))?\]/u', function ($matches) use ($context, $removed) {
             $key = trim((string)$matches[1]);
+            // Removed tokens are always deleted. Their historical |default is
+            // intentionally ignored so they cannot continue to surface.
+            if (isset($removed[$key])) {
+                return '';
+            }
             if (!array_key_exists($key, $context)) {
                 return $matches[0];
             }
@@ -152,10 +189,12 @@ class SourceAnnouncementTemplate
         }
 
         $formattedNow = date('Y-m-d H:i:s', $now);
+        $runtime = SourceServerRuntime::display($now);
         $context = [
             '刷新时间' => $formattedNow,
-            '服务器时间' => $formattedNow,
-            '源名称' => (string)$sourceName,
+            '服务器运行时间' => $runtime,
+            // Legacy alias: old templates now show elapsed runtime rather than wall time.
+            '服务器时间' => $runtime,
         ];
 
         if (isset($required['软件个数'])) {
@@ -184,17 +223,7 @@ class SourceAnnouncementTemplate
             }
         }
 
-        $needsAuthorization = isset($required['授权状态'])
-            || isset($required['到期时间'])
-            || isset($required['剩余时间'])
-            || isset($required['指定APP数量'])
-            || isset($required['授权摘要'])
-            || isset($required['全源到期时间'])
-            || isset($required['全源剩余时间'])
-            || isset($required['部分到期时间'])
-            || isset($required['部分剩余时间'])
-            || isset($required['验证到期时间'])
-            || isset($required['验证剩余时间']);
+        $needsAuthorization = isset($required['授权状态']) || isset($required['剩余时间']);
         if ($needsAuthorization) {
             $authorization = self::authorizationContext($cardRows, $sourceAccess, $now);
             foreach ($authorization as $key => $value) {
@@ -232,9 +261,8 @@ class SourceAnnouncementTemplate
             : [];
         $appCount = count($appIds);
 
-        // One and only one effective authorization clock is exposed to the
-        // announcement layer. Permission scope remains separate internally.
-        // Business priority: full source -> partial Apps -> verify-only.
+        // Permission scopes stay separate internally; the announcement chooses
+        // one effective clock in business priority order.
         $activeExpire = 0;
         if ($fullExpire > $now) {
             $status = '已授权';
@@ -250,31 +278,11 @@ class SourceAnnouncementTemplate
         }
 
         $fallback = '已过期或未解锁本源';
-        $activeTime = $activeExpire > $now ? date('Y-m-d H:i:s', $activeExpire) : $fallback;
         $activeRemaining = $activeExpire > $now ? self::formatRemaining($activeExpire - $now) : $fallback;
-
-        $summary = '授权状态：' . $status
-            . "\n到期时间：" . $activeTime
-            . "\n剩余时间：" . $activeRemaining;
-        if ($status === '部分App授权') {
-            $summary .= "\n指定App：" . $appCount . '个';
-        }
 
         return [
             '授权状态' => $status,
-            '到期时间' => $activeTime,
             '剩余时间' => $activeRemaining,
-            '指定APP数量' => (string)$appCount,
-            '授权摘要' => $summary,
-
-            // Deprecated aliases. All resolve to the same effective clock.
-            // This deliberately removes the old multi-clock announcement model.
-            '全源到期时间' => $activeTime,
-            '全源剩余时间' => $activeRemaining,
-            '部分到期时间' => $activeTime,
-            '部分剩余时间' => $activeRemaining,
-            '验证到期时间' => $activeTime,
-            '验证剩余时间' => $activeRemaining,
         ];
     }
 
