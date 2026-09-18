@@ -1,19 +1,17 @@
-ZONOE 软件源 Release 2026091805
-版本：2026091805
-基线：2026091804
-阶段：Phase 19.4 — Dynamic Announcement + License Routing
+ZONOE 软件源 Release 2026091806
+版本：2026091806
+基线：2026091805
+阶段：Phase 19.4.1 — Announcement Expiry Priority + Authorization Route Hotfix
 
 更新内容：
-1. 软件源公告板新增动态变量系统，支持刷新时间、软件数量、今日/七日更新、授权状态、全源/验证到期时间、指定 App 数、授权摘要、源名称和服务器时间。
-2. 支持默认值语法，例如 [全源到期时间|未解锁]。
-3. Guest / 全源 / 仅验证 / 指定 App 授权状态独立计算，不混用到期时间。
-4. 动态公告采用共享缓存 sentinel + 请求后注入，避免不同 UDID 污染 120 秒公共缓存。
-5. 后台公告配置增加变量快捷插入和可选 UDID 实时预览。
-6. 修复 /LICENSE 与 /license 大小写冲突：/LICENSE 保持 404，/license 进入 ThinkPHP。
-7. 在线更新清单补齐 SourceAnnouncementTemplate.php、AuthorizationLicense.php、license.html、unbind.html、nginx.rewrite。
-8. Phase 19.4 专项 CI Run 35296525450 已通过 PHP 7.0、Legacy cache、SourceResponse、API Center、deployment、card scope 和在线更新包覆盖测试。
+1. 修复部分 App 授权时到期时间、剩余时间为空。
+2. 当前授权优先级固定为：全解锁 -> 部分 App -> 仅验证。
+3. 新增 [到期时间] / [剩余时间] / [部分到期时间] / [部分剩余时间]。
+4. 自动迁移公告旧变量 [全源到期时间]、[全源剩余时间] 到通用变量。
+5. 保留 /license，并新增 /authorization 等价授权查询入口。
+6. API Center 授权查询地址改为 /authorization，绕开生产 Nginx LICENSE 误拦。
+7. 正式在线更新包包含 2026091806_announcement_priority.sql。
 
 在线更新：
-- GitHub Release 标签：source-v2026091805。
+- GitHub Release 标签：source-v2026091806。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 正式 Release 使用现有 GitHub 在线更新链路。
