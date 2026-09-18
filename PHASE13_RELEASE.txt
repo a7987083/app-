@@ -1,21 +1,19 @@
-ZONOE 软件源 Release 2026091804
-版本：2026091804
-基线：2026091803
-阶段：Phase 19.3.1 — High Concurrency / Large Catalog / Encrypted Path Completion + API Center Fix
+ZONOE 软件源 Release 2026091805
+版本：2026091805
+基线：2026091804
+阶段：Phase 19.4 — Dynamic Announcement + License Routing
 
 更新内容：
-1. 修复 API Center 请求日志刷新跳回基础配置：改为 AJAX 局部刷新并保持 API Tab。
-2. 修复 API列表“测试/关闭”实机不可用：FastAdmin Backend.api.ajax + ThinkPHP 真实后台 URL；开关写入后再次读取校验。
-3. 测试API新增项目接口下拉列表，自动显示完整 URL / Method / 鉴权并按 endpoint_key 测试。
-4. 新增真实 HTTP 高并发门禁：MySQL5.7 + PHP7.0 8 worker + Nginx + wrk，覆盖 5k/10k/20k App、明文/加密、Guest/全源授权、c8/c16/c32。
-5. 最终 feature gate Run 35291222266 九个负载场景错误率全部为0；20k明文c16约20.86 RPS/P95 1044.7ms，20k加密c8约11.40 RPS/P95 743.1ms。仅代表CI测试环境。
-6. Legacy RC4 大响应新增 keystream 缓存 + 二进制字符串 XOR；异常自动回退原RC4。
-7. 本地加密跳过 JSON→Base64→Base64 decode 往返，仅外部 Nuosike/fallback 构造Base64。
-8. 6.5MB RC4 CI 微基准 cache-hit 约12ms vs 参考实现约1.13s，观测约91x；新旧密文字节等价。
-9. 保留 Legacy 固定向量、bkey缓存、加密策略、V2模式回归；V2不复用Legacy keystream。
-10. Release package-and-release 从本版开始必须等待 PHP7、MySQL5.7、真实HTTP负载三道门禁。
+1. 软件源公告板新增动态变量系统，支持刷新时间、软件数量、今日/七日更新、授权状态、全源/验证到期时间、指定 App 数、授权摘要、源名称和服务器时间。
+2. 支持默认值语法，例如 [全源到期时间|未解锁]。
+3. Guest / 全源 / 仅验证 / 指定 App 授权状态独立计算，不混用到期时间。
+4. 动态公告采用共享缓存 sentinel + 请求后注入，避免不同 UDID 污染 120 秒公共缓存。
+5. 后台公告配置增加变量快捷插入和可选 UDID 实时预览。
+6. 修复 /LICENSE 与 /license 大小写冲突：/LICENSE 保持 404，/license 进入 ThinkPHP。
+7. 在线更新清单补齐 SourceAnnouncementTemplate.php、AuthorizationLicense.php、license.html、unbind.html、nginx.rewrite。
+8. Phase 19.4 专项 CI Run 35296525450 已通过 PHP 7.0、Legacy cache、SourceResponse、API Center、deployment、card scope 和在线更新包覆盖测试。
 
 在线更新：
-- GitHub Release 标签：source-v2026091804。
+- GitHub Release 标签：source-v2026091805。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 正式 Release 必须完成 2026091803 -> 2026091804 GitHub Release 在线更新 E2E。
+- 正式 Release 使用现有 GitHub 在线更新链路。
