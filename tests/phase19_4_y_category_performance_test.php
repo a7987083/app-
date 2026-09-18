@@ -30,8 +30,8 @@ $manifest = read_text($root . '/release/online-update-files.txt');
 expect_true(strpos($controller, 'buildParentList') === false, 'Category controller must not contain buildParentList');
 expect_true(strpos($controller, 'Category::select()') === false, 'edit path must not call Category::select() full-table load');
 expect_true(strpos($controller, 'use fast\\Tree;') === false, 'Category controller must not depend on Tree');
-expect_true(strpos($controller, "$params['pid'] = 0;") !== false, 'add must force pid=0');
-expect_true(strpos($controller, "$params['pid'] = (int)$row['pid'];") !== false, 'edit must preserve existing pid');
+expect_true(strpos($controller, '$params[\'pid\'] = 0;') !== false, 'add must force pid=0');
+expect_true(strpos($controller, '$params[\'pid\'] = (int)$row[\'pid\'];') !== false, 'edit must preserve existing pid');
 
 // Hidden parent selectpicker must be replaced by one cheap hidden input.
 expect_true(strpos($add, 'name="row[pid]" type="hidden" value="0"') !== false, 'add must use hidden pid=0');
@@ -43,10 +43,12 @@ expect_true(strpos($add, 'id="c-pid"') === false && strpos($edit, 'id="c-pid"') 
 expect_true(strpos($js, 'pageSize: 1000') !== false, 'category list must keep pageSize 1000');
 expect_true(strpos($js, 'pageList: [200, 500, 1000]') !== false, 'category list must keep 200/500/1000 page sizes');
 
-// add/edit close only; delete removes rows locally and must suppress FastAdmin full refresh.
+// add/edit close only; both row and toolbar delete remove rows locally and suppress full refresh.
 expect_true(substr_count($js, 'Controller.api.bindevent(Controller.api.closeWithoutParentRefresh)') >= 2, 'add/edit must use no-refresh success callback');
 expect_true(strpos($js, "bootstrapTable('remove'") !== false, 'delete success must remove row locally');
-expect_true(strpos($js, 'return false;') !== false, 'delete/add/edit callbacks must be able to suppress parent refresh');
+expect_true(strpos($js, '#toolbar .btn-del') !== false, 'toolbar delete must install no-refresh callback');
+expect_true(strpos($js, '.btn-delone') !== false, 'row delete must install no-refresh callback');
+expect_true(strpos($js, 'return false;') !== false, 'CRUD callbacks must suppress FastAdmin automatic refresh');
 
 foreach ([
     'application/admin/controller/Category.php',
