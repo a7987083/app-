@@ -39,9 +39,13 @@ class SourceAnnouncementTemplate
             ['key' => '软件个数', 'description' => '当前软件源 App 总数'],
             ['key' => '今日更新', 'description' => '今天更新的 App 数量'],
             ['key' => '七日更新', 'description' => '最近 7 天更新的 App 数量'],
-            ['key' => '授权状态', 'description' => '未授权 / 仅验证 / 部分App授权 / 已授权'],
+            ['key' => '授权状态', 'description' => '按 全解锁 → 部分App → 仅验证 选择当前有效授权'],
+            ['key' => '到期时间', 'description' => '当前有效授权到期时间（全解锁 → 部分App → 仅验证）'],
+            ['key' => '剩余时间', 'description' => '当前有效授权剩余时间（全解锁 → 部分App → 仅验证）'],
             ['key' => '全源到期时间', 'description' => '全软件源授权到期时间'],
             ['key' => '全源剩余时间', 'description' => '全软件源授权剩余时间'],
+            ['key' => '部分到期时间', 'description' => '指定 App 授权最晚到期时间'],
+            ['key' => '部分剩余时间', 'description' => '指定 App 授权剩余时间'],
             ['key' => '验证到期时间', 'description' => '仅验证授权到期时间'],
             ['key' => '指定APP数量', 'description' => '当前有效指定 App 授权数量'],
             ['key' => '授权摘要', 'description' => '当前设备授权概要'],
@@ -162,8 +166,12 @@ class SourceAnnouncementTemplate
         }
 
         $needsAuthorization = isset($required['授权状态'])
+            || isset($required['到期时间'])
+            || isset($required['剩余时间'])
             || isset($required['全源到期时间'])
             || isset($required['全源剩余时间'])
+            || isset($required['部分到期时间'])
+            || isset($required['部分剩余时间'])
             || isset($required['验证到期时间'])
             || isset($required['指定APP数量'])
             || isset($required['授权摘要']);
@@ -181,6 +189,7 @@ class SourceAnnouncementTemplate
     {
         $now = $now === null ? time() : (int)$now;
         $fullExpire = 0;
+        $appExpire = 0;
         $verifyExpire = 0;
 
         foreach ($cardRows as $row) {
@@ -191,6 +200,8 @@ class SourceAnnouncementTemplate
             $scope = CardAccessPolicy::scopeForRow($row);
             if ($scope === CardAccessPolicy::SCOPE_SOURCE && $endtime > $fullExpire) {
                 $fullExpire = $endtime;
+            } elseif ($scope === CardAccessPolicy::SCOPE_APPS && $endtime > $appExpire) {
+                $appExpire = $endtime;
             } elseif ($scope === CardAccessPolicy::SCOPE_VERIFY && $endtime > $verifyExpire) {
                 $verifyExpire = $endtime;
             }
@@ -201,28 +212,43 @@ class SourceAnnouncementTemplate
             : [];
         $appCount = count($appIds);
 
+        // One generic "current authorization" clock is selected by business
+        // priority, never by whichever card happens to have the latest endtime.
+        // Priority: full source -> partial App scope -> verification-only.
+        $activeExpire = 0;
         if ($fullExpire > $now) {
             $status = '已授权';
-        } elseif ($appCount > 0) {
+            $activeExpire = $fullExpire;
+        } elseif ($appCount > 0 && $appExpire > $now) {
             $status = '部分App授权';
+            $activeExpire = $appExpire;
         } elseif ($verifyExpire > $now) {
             $status = '仅验证';
+            $activeExpire = $verifyExpire;
         } else {
             $status = '未授权';
         }
 
+        $activeTime = $activeExpire > $now ? date('Y-m-d H:i:s', $activeExpire) : '';
+        $activeRemaining = $activeExpire > $now ? self::formatRemaining($activeExpire - $now) : '';
         $fullTime = $fullExpire > $now ? date('Y-m-d H:i:s', $fullExpire) : '';
+        $appTime = ($appCount > 0 && $appExpire > $now) ? date('Y-m-d H:i:s', $appExpire) : '';
         $verifyTime = $verifyExpire > $now ? date('Y-m-d H:i:s', $verifyExpire) : '';
+
         $summary = [
             '全软件源：' . ($fullTime !== '' ? '有效至 ' . $fullTime : '未解锁'),
-            '指定App：' . $appCount . '个',
+            '指定App：' . $appCount . '个' . ($appTime !== '' ? '，有效至 ' . $appTime : ''),
             '仅验证：' . ($verifyTime !== '' ? '有效至 ' . $verifyTime : '未开通'),
         ];
 
         return [
             '授权状态' => $status,
+            '到期时间' => $activeTime,
+            '剩余时间' => $activeRemaining,
             '全源到期时间' => $fullTime,
             '全源剩余时间' => $fullExpire > $now ? self::formatRemaining($fullExpire - $now) : '',
+            '部分到期时间' => $appTime,
+            '部分剩余时间' => ($appCount > 0 && $appExpire > $now) ? self::formatRemaining($appExpire - $now) : '',
             '验证到期时间' => $verifyTime,
             '指定APP数量' => (string)$appCount,
             '授权摘要' => implode("\n", $summary),

@@ -83,13 +83,13 @@ class ApiEndpointRegistry
             'license' => [
                 'endpoint_key' => 'license',
                 'name' => '授权查询',
-                'path' => '/license',
+                'path' => '/authorization',
                 'method' => 'GET,POST',
                 'source' => 'system',
                 'auth' => '卡密+UDID',
                 'handler_key' => 'license',
                 'enabled' => 1,
-                'description' => '查询授权信息',
+                'description' => '查询授权信息；/license 保留兼容，若 Nginx 拦截请使用 /authorization',
             ],
         ];
     }

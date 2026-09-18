@@ -5,6 +5,7 @@ on:
     branches:
       - 'feature/2026091805-phase19-4-dynamic-announcement-license'
       - 'release/**'
+      - 'hotfix/2026091806-announcement-expiry-authorization-route'
     paths:
       - 'application/index/controller/App.php'
       - 'application/common/library/SourceAnnouncementTemplate.php'
@@ -20,6 +21,8 @@ on:
       - 'nginx.rewrite'
       - 'release/online-update-files.txt'
       - 'tests/phase19_4_dynamic_announcement_test.php'
+      - 'tests/phase19_4_1_hotfix_test.php'
+      - 'release/sql/2026091806_announcement_priority.sql'
       - 'tests/source_response_test.php'
       - 'tests/deployment_contract_test.php'
       - '.github/workflows/phase19-4-dynamic-announcement-license.yml'
@@ -45,6 +48,7 @@ jobs:
           php -l application/index/controller/App.php
           php -l application/admin/controller/general/Config.php
           php -l tests/phase19_4_dynamic_announcement_test.php
+          php -l tests/phase19_4_1_hotfix_test.php
           php -l tests/source_response_test.php
           php -l tests/deployment_contract_test.php
           node --check public/assets/js/backend/general/config.js
@@ -53,6 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           php tests/phase19_4_dynamic_announcement_test.php
+          php tests/phase19_4_1_hotfix_test.php
           php tests/source_response_test.php
           php tests/phase19_2_legacy_response_cache_test.php
           php tests/phase19_3_1_api_center_contract_test.php
