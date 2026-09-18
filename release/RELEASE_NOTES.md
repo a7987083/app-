@@ -1,92 +1,92 @@
-# ZONOE 软件源 2026091803
+# ZONOE 软件源 2026091804
 
-## Phase 19.3 — 高并发性能优化 + API 管理中心 + 授权日志修复
+## Phase 19.3.1 — 高并发 / 大数据量 / 加密路径完善 + API Center 真机修复
 
-本版本以 `2026091802` 为稳定基线。客户端协议与原添加源地址保持不变，继续使用原 `/appstore`；远程 Dylib API 本版仅纳入统一管理，不重构其内部业务逻辑。
+本版本以 `2026091803` 为稳定基线，继续完成 Phase 19.3 原定的高并发、大数据量和加密路径性能目标，并修复 1803 真机测试暴露的 API Center 三个交互问题。客户端协议、原 `/appstore` 地址和授权边界保持不变。
 
-## 更新内容
+## API Center 真机修复
 
-### 授权中心清空修复
+- “请求日志 → 刷新日志”改为 AJAX 局部刷新，不再使用 `location.reload()`，不会跳回“基础配置”。
+- API Center 外层/内层 Tab 使用 sessionStorage 保持状态，必要的整页刷新后仍返回原 API 页签。
+- API列表“开启/关闭”改为 FastAdmin `Backend.api.ajax` + ThinkPHP 生成的后台 URL；数据库写入后重新读取校验，只有真实持久化成功才返回成功。
+- API列表“测试”改为真实动作，并自动跳转到“测试API”且选中对应接口。
+- “测试API”新增接口下拉列表，自动带出完整 URL、Method、鉴权说明；提交按 `endpoint_key` 查找，不再依赖隐藏数据库 ID。
+- 请求日志增加 50/100/200 条选择和局部刷新状态提示。
+- FastAdmin 原生 `/api/*` 仍不纳入项目 API Center。
 
-- 修复“清空换绑记录”数据库实际删除成功、前端却提示“清空换绑记录失败”的问题。
-- 修复“清空授权事件”数据库实际删除成功、前端却提示“清空授权事件失败”的问题。
-- 根因是 FastAdmin `$this->success()` 通过 `HttpResponseException` 中断请求，而旧代码把成功响应包在 `catch (\Exception)` 范围内，导致成功被再次捕获成失败。
-- 成功响应现在位于数据库异常处理范围之外，前端 FastAdmin AJAX 成功回调可正常执行，页面状态会自动刷新。
+## Phase 19.3.1 高并发验证
 
-### 系统设置 — API 管理中心
+新增真实 HTTP 负载门禁，不再只做 PHP 函数级测试。CI 拓扑：
 
-系统设置新增第三个页签“API接口”，并按项目结构提供：
+- MySQL 5.7
+- 8 个 PHP 7.0 HTTP worker
+- Nginx upstream
+- wrk 并发请求真实 `/appstore`
+- 5,000 / 10,000 / 20,000 App
+- 明文 / 普通加密
+- Guest / 全源授权
+- c8 / c16 / c32
+- 记录 RPS、P50、P95、P99、错误率、响应大小、冷/热请求耗时
 
-- API列表
-- 新增API
-- 编辑API
-- 测试API
-- 请求日志
+最终 Phase 19.3.1 feature gate Run `35291222266` 九个场景全部零 HTTP/Socket 错误。该结果用于版本回归和瓶颈比较，不代表生产服务器的容量承诺。
 
-API 列表显示名称、完整接口地址、Method、来源、鉴权、状态、今日请求、最后请求、平均耗时和操作。
+最终门禁中的代表数据：
 
-本版只管理项目自己的接口，不纳入 FastAdmin 原生 `/api/*`：
+- 20,000 App 明文 Guest c16：约 20.86 RPS，P95 约 1044.7 ms，响应约 6.69 MB，错误 0。
+- 20,000 App 明文 Guest c32：约 22.89 RPS，P95 约 1592.8 ms，响应约 6.69 MB，错误 0；增加并发后吞吐基本不再线性增长，测试机进入大响应体/worker 饱和区。
+- 20,000 App 加密 Guest c8：约 11.40 RPS，P95 约 743.1 ms，响应约 9.08 MB，错误 0。
+- 20,000 App 加密全源授权 c8：约 10.88 RPS，P95 约 712.3 ms，错误 0。
 
-- `/appstore`
-- `/index/index/dylib`
-- `/index/index/apiface`
-- `/unbind`
-- `/unbind/query`
-- `/license`
+## 加密热路径优化
 
-完整 URL 根据当前访问域名自动生成，不写死域名。
+- Legacy RC4 大响应新增 keystream 文件缓存；相同 bkey 下复用确定性 RC4 keystream。
+- 实际大块 XOR 使用 PHP 二进制字符串 XOR，而不是每个响应对数百万字节执行 PHP 层逐字节循环。
+- keystream 文件位于非 Web 根目录，使用锁、临时文件原子替换和 0600 权限；异常时 fail-open 回退到原 RC4 实现。
+- 本地加密新增直接 JSON 入口，移除旧路径中“JSON → Base64 → 立刻 Base64 decode”的大块内存往返。
+- 只有真正走外部 Nuosike 或本地失败回退时才创建 Base64 content。
+- V2 随机 key 路径继续使用原参考实现，不使用 Legacy keystream 复用。
 
-### API 真开关与安全自定义别名
+6.5 MB Legacy RC4 微基准在 Phase 19.3.1 CI 中验证：
 
-- 六个项目系统 API 接入统一运行时开关；关闭后请求会真实停止进入业务逻辑并返回 503。
-- 开关状态使用短时共享缓存，数据库/缓存异常时 fail-open，避免升级中断导致软件源不可用。
-- 系统 API 不允许删除，只允许开启/关闭。
-- 自定义 API 使用 `/project-api/<slug>` 安全别名，只能映射到现有项目处理器。
-- 后台不提供任意 PHP 执行能力，不会把 API 管理页变成在线代码执行入口。
-- API 请求日志记录 endpoint、Method、路径、IP、HTTP 状态、耗时与时间，不记录请求正文和卡密内容。
+- 原逐字节参考实现约 1.13 s。
+- keystream cache hit 约 12 ms。
+- 本轮观测约 91× 快速路径加速。
+- 原实现、缓存快路径、兼容 `encryptEncodedContent`、新 `encryptJson` 的密文均做字节等价验证。
 
-### Phase 19.3 性能优化
+真实 HTTP 同口径矩阵中，加入直接 JSON 本地加密后，20,000 App 加密 Guest 在一轮优化验证中从约 10.45 RPS / P95 937.8 ms 观测到约 13.39 RPS / P95 658.8 ms；CI runner 存在硬件波动，因此该差异作为优化验证数据，不作为生产容量承诺。
 
-- `fa_kami` 新增 UDID/有效授权复合索引和卡密查询索引。
-- `fa_black` 新增 UDID 查询索引。
-- `fa_kami_app` 新增卡密-App 映射索引。
-- `SourceAppRepository` 行缓存由 15 秒提升到 120 秒；仍由 generation/revision 主动失效，后台正常增删改 App 后不会等待 TTL。
-- 加密路径新增静态 JSON 片段缓存：大 App 列表不再每个请求完整重新 JSON 编码；每次仅重新拼接请求级 `UDID/Time`，随后继续走原加密流程。
-- 最终加密结果不共享缓存，不会跨用户复用动态字段。
-- 性能日志新增 Legacy 缓存命中状态。
+## 大数据量
 
-### 2 万 App 验证
+- 继续保留 20,000 App 映射/JSON 契约。
+- 20,000 App JSON 约 6.9 MB。
+- 新旧加密前 JSON 字节完全一致。
+- MySQL 5.7 热路径索引、120 秒 App 行缓存、generation/revision 主动失效机制继续保留。
 
-Phase 19.3 CI 使用 20,000 条模拟 App 进行真实映射和 JSON 构建：
+## 发布门禁
 
-- App 数：20,000
-- JSON 大小约 6.9 MB
-- 映射约 77 ms
-- 原始 JSON 编码约 49 ms
-- 峰值内存约 63.8 MB
-- 新加密前 JSON 构建结果与旧 `json_encode()` 字节完全一致
+从本版开始，正式 Release 的 `package-and-release` 必须同时等待：
 
-该测试用于验证大数据量兼容性，不代表生产环境 10 万用户或特定并发 RPS 的容量承诺。
+1. PHP 7.0 全量回归；
+2. MySQL 5.7 迁移回归；
+3. Phase 19.3.1 真实 HTTP 负载矩阵。
+
+任意一项失败都不会创建正式在线更新 Release。
+
+同时保留 Legacy RC4 固定向量、bkey 缓存、加密策略和 V2 模式兼容测试。
 
 ## 兼容性
 
 - 客户端无需更新。
-- 软件源地址无需修改。
-- Legacy `/appstore` 返回字段保持不变。
-- Guest / 全源卡 / 指定 App 卡授权边界保持隔离。
+- `/appstore` 地址不变。
+- Guest / 全源卡 / 指定 App 卡权限隔离不变。
+- 普通加密输出协议保持兼容。
+- V2 加密协议保持兼容。
+- 远程 `dylib()` 内部授权逻辑本版仍不重构。
 - PHP 7.0、MySQL 5.7 继续作为发布兼容基线。
-- `dylib()` 内部授权逻辑本版不重构，仅纳入 API 中心管理。
-
-## 验证
-
-- Phase 19.3 feature CI Run `35287755570`：SUCCESS。
-- PHP 7.0：19.2 回归、19.3 API 中心、授权清空、在线更新包、2万 App 等价测试通过。
-- MySQL 5.7：迁移重复执行两次通过，API 表与热路径索引通过。
-- 正式 Release 流水线继续执行完整 PHP 7.0 回归、MySQL 5.7 迁移、ZIP/SHA256，并执行 `2026091802 -> 2026091803` GitHub Release 在线更新 E2E。
 
 ## 在线更新
 
-- 正式版本：`2026091803`
-- 基线：`2026091802`
-- GitHub Release：`source-v2026091803`
+- 正式版本：`2026091804`
+- 基线：`2026091803`
+- GitHub Release：`source-v2026091804`
 - 发布资产：`zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`
