@@ -95,7 +95,7 @@ for port in "${PORTS[@]}"; do
   SOURCE_LEGACY_KEYSTREAM_CACHE_DIR="$KEYSTREAM_DIR" \
   SOURCE_HTTP_GZIP=0 \
   SOURCE_PERF_LOG=0 \
-  php -d display_errors=0 -S "127.0.0.1:$port" -t public public/index.php >"/tmp/zonoe-php-$port.log" 2>&1 &
+  php -d display_errors=0 -S "127.0.0.1:$port" -t "$ROOT/public" "$ROOT/public/index.php" >"/tmp/zonoe-php-$port.log" 2>&1 &
   PHP_PIDS+=("$!")
 done
 
