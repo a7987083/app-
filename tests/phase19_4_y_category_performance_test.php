@@ -37,7 +37,8 @@ expect_true(strpos($controller, '$params[\'pid\'] = (int)$row[\'pid\'];') !== fa
 expect_true(strpos($add, 'name="row[pid]" type="hidden" value="0"') !== false, 'add must use hidden pid=0');
 expect_true(strpos($edit, 'name="row[pid]" type="hidden" value="{$row.pid}"') !== false, 'edit must keep original pid in hidden input');
 expect_true(strpos($add, 'parentList') === false && strpos($edit, 'parentList') === false, 'templates must not render parentList');
-expect_true(strpos($add, 'id="c-pid"') === false && strpos($edit, 'id="c-pid"') === false, 'templates must not initialize hidden pid selectpicker');
+expect_true(strpos($add, '<select id="c-pid"') === false && strpos($edit, '<select id="c-pid"') === false, 'templates must not render pid select/selectpicker');
+expect_true(strpos($add, 'selectpicker" name="row[pid]"') === false && strpos($edit, 'selectpicker" name="row[pid]"') === false, 'pid must not use selectpicker');
 
 // User explicitly keeps 1000 rows/page.
 expect_true(strpos($js, 'pageSize: 1000') !== false, 'category list must keep pageSize 1000');
