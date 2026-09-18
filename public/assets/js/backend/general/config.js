@@ -279,6 +279,223 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         });
     }
 
+
+    function apiCenterRoot() {
+        return $('#api-center');
+    }
+
+    function apiCenterUrl(name) {
+        var root = apiCenterRoot();
+        var value = root.data(name + '-url') || '';
+        return value ? String(value) : '';
+    }
+
+    function rememberApiTab(tab) {
+        try {
+            window.sessionStorage.setItem('zonoe.api.outerTab', '#api-center');
+            if (tab) window.sessionStorage.setItem('zonoe.api.innerTab', tab);
+        } catch (e) {}
+    }
+
+    function restoreApiTab() {
+        try {
+            if (window.sessionStorage.getItem('zonoe.api.outerTab') !== '#api-center') return;
+            $('a[href="#api-center"]').tab('show');
+            var inner = window.sessionStorage.getItem('zonoe.api.innerTab') || '#project-api-list';
+            $('a[href="' + inner + '"]').tab('show');
+        } catch (e) {}
+    }
+
+    function apiRequest(name, data, onSuccess) {
+        var url = apiCenterUrl(name);
+        if (!url) {
+            Layer.alert('API管理接口地址缺失: ' + name, {icon: 2});
+            return;
+        }
+        Backend.api.ajax({
+            url: url,
+            data: data || {}
+        }, function (data, ret) {
+            if (typeof onSuccess === 'function') onSuccess(data || {}, ret || {});
+            return false;
+        });
+    }
+
+    function syncApiTestMeta() {
+        var option = $('#project-api-test-key option:selected');
+        $('#project-api-test-url').val(option.data('url') || '');
+        $('#project-api-test-method').val(option.data('method') || '');
+        $('#project-api-test-auth').val(option.data('auth') || '');
+        $('#project-api-test-result').hide().text('');
+    }
+
+    function selectApiForTest(key) {
+        $('#project-api-test-key').val(String(key || ''));
+        syncApiTestMeta();
+        rememberApiTab('#project-api-test');
+        $('a[href="#api-center"]').tab('show');
+        $('a[href="#project-api-test"]').tab('show');
+    }
+
+    function formatApiLogTime(ts) {
+        ts = parseInt(ts || 0, 10);
+        if (!ts) return '-';
+        var d = new Date(ts * 1000);
+        function pad(v) { return v < 10 ? '0' + v : String(v); }
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' +
+            pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+
+    function renderApiLogs(rows) {
+        var body = $('#project-api-log-body');
+        if (!body.length) return;
+        rows = $.isArray(rows) ? rows : [];
+        if (!rows.length) {
+            body.html('<tr><td colspan="8" class="text-muted text-center">暂无API请求日志</td></tr>');
+            return;
+        }
+        var html = '';
+        $.each(rows, function (_, row) {
+            html += '<tr>' +
+                '<td>' + esc(row.id) + '</td>' +
+                '<td>' + esc(row.endpoint_key) + '</td>' +
+                '<td>' + esc(row.method) + '</td>' +
+                '<td>' + esc(row.path) + '</td>' +
+                '<td>' + esc(row.ip) + '</td>' +
+                '<td>' + esc(row.status_code) + '</td>' +
+                '<td>' + esc(row.duration_ms) + ' ms</td>' +
+                '<td>' + esc(formatApiLogTime(row.addtime)) + '</td>' +
+                '</tr>';
+        });
+        body.html(html);
+    }
+
+    function refreshApiLogs() {
+        var url = apiCenterUrl('logs');
+        if (!url) {
+            Layer.alert('请求日志接口地址缺失', {icon: 2});
+            return;
+        }
+        var button = $('#project-api-logs-refresh');
+        var status = $('#project-api-logs-status');
+        button.prop('disabled', true);
+        status.text('刷新中…');
+        $.ajax({
+            type: 'GET',
+            url: url,
+            dataType: 'json',
+            data: {limit: $('#project-api-logs-limit').val() || 100},
+            success: function (ret) {
+                if (!ret || ret.code !== 1) {
+                    Layer.alert((ret && ret.msg) || '读取请求日志失败', {icon: 2});
+                    return;
+                }
+                renderApiLogs(ret.data || []);
+                status.text('已刷新 ' + formatApiLogTime(Math.floor(Date.now() / 1000)));
+            },
+            error: function (xhr) {
+                Layer.alert('读取请求日志失败 HTTP ' + xhr.status, {icon: 2});
+            },
+            complete: function () {
+                button.prop('disabled', false);
+            }
+        });
+    }
+
+    function bindApiCenter() {
+        $(document).off('shown.bs.tab.zonoeApiOuter').on('shown.bs.tab.zonoeApiOuter', 'a[data-toggle="tab"]', function () {
+            var href = $(this).attr('href') || '';
+            if (href === '#api-center') rememberApiTab();
+            if ($(this).closest('#api-center').length && href.indexOf('#project-api-') === 0) rememberApiTab(href);
+        });
+
+        $(document).off('click.zonoeApiToggle').on('click.zonoeApiToggle', '.api-toggle-btn', function () {
+            var button = $(this);
+            var enabled = parseInt(button.data('enabled'), 10) ? 1 : 0;
+            var row = button.closest('tr');
+            button.prop('disabled', true);
+            apiRequest('toggle', {endpoint_key: button.data('key'), enabled: enabled}, function (data) {
+                var actual = parseInt(data.enabled, 10) ? 1 : 0;
+                var status = row.find('td').eq(5).find('.label');
+                status.removeClass('label-success label-default')
+                    .addClass(actual ? 'label-success' : 'label-default')
+                    .text(actual ? '开启' : '关闭');
+                button.removeClass('btn-success btn-warning')
+                    .addClass(actual ? 'btn-warning' : 'btn-success')
+                    .text(actual ? '关闭' : '开启')
+                    .data('enabled', actual ? 0 : 1)
+                    .prop('disabled', false);
+            });
+        });
+
+        $(document).off('click.zonoeApiTestSelect').on('click.zonoeApiTestSelect', '.api-test-select', function () {
+            selectApiForTest($(this).data('key'));
+        });
+
+        $(document).off('change.zonoeApiTest').on('change.zonoeApiTest', '#project-api-test-key', syncApiTestMeta);
+
+        $(document).off('click.zonoeApiTest').on('click.zonoeApiTest', '#project-api-test-submit', function () {
+            var key = $('#project-api-test-key').val();
+            if (!key) {
+                Layer.alert('请先选择API接口', {icon: 0});
+                return;
+            }
+            apiRequest('test', $('#project-api-test-form').serialize(), function (data) {
+                $('#project-api-test-result').show().text(JSON.stringify(data || {}, null, 2));
+            });
+        });
+
+        $(document).off('click.zonoeApiLogs').on('click.zonoeApiLogs', '#project-api-logs-refresh', function () {
+            rememberApiTab('#project-api-logs');
+            refreshApiLogs();
+        });
+
+        $(document).off('change.zonoeApiLogs').on('change.zonoeApiLogs', '#project-api-logs-limit', refreshApiLogs);
+
+        $(document).off('click.zonoeApiAdd').on('click.zonoeApiAdd', '#project-api-add-submit', function () {
+            apiRequest('save', $('#project-api-add-form').serialize(), function () {
+                rememberApiTab('#project-api-list');
+                location.reload();
+            });
+        });
+
+        $(document).off('click.zonoeApiEditSelect').on('click.zonoeApiEditSelect', '.api-edit-select', function () {
+            var button = $(this);
+            $('#project-api-edit-id').val(button.data('id'));
+            $('#project-api-edit-name').val(button.data('name'));
+            $('#project-api-edit-slug').val(String(button.data('path') || '').replace(/^\/project-api\//, ''));
+            $('#project-api-edit-handler').val(button.data('handler'));
+            $('#project-api-edit-method').val(button.data('method'));
+            $('#project-api-edit-auth').val(button.data('auth'));
+            $('#project-api-edit-description').val(button.data('description'));
+            $('#project-api-edit-enabled').prop('checked', parseInt(button.data('enabled'), 10) === 1);
+            $('#project-api-edit-empty').addClass('hide');
+            $('#project-api-edit-form').removeClass('hide');
+            rememberApiTab('#project-api-edit');
+            $('a[href="#project-api-edit"]').tab('show');
+        });
+
+        $(document).off('click.zonoeApiEdit').on('click.zonoeApiEdit', '#project-api-edit-submit', function () {
+            apiRequest('save', $('#project-api-edit-form').serialize(), function () {
+                rememberApiTab('#project-api-list');
+                location.reload();
+            });
+        });
+
+        $(document).off('click.zonoeApiDelete').on('click.zonoeApiDelete', '.api-delete-btn', function () {
+            var button = $(this);
+            Layer.confirm('确定删除自定义API“' + String(button.data('name') || '') + '”吗？', {icon: 3, title: '确认删除'}, function (index) {
+                Layer.close(index);
+                apiRequest('delete', {id: button.data('id')}, function () {
+                    button.closest('tr').remove();
+                });
+            });
+        });
+
+        restoreApiTab();
+        syncApiTestMeta();
+    }
+
     var Controller = {
         index: function () {
             Table.api.init({
@@ -383,6 +600,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     runRollback(id);
                 });
             });
+
+            bindApiCenter();
         },
         add: function () { Controller.api.bindevent(); },
         edit: function () { Controller.api.bindevent(); },
