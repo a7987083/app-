@@ -63,7 +63,7 @@ namespace {
     ];
     $ctx = SourceAnnouncementTemplate::authorizationContext($full, ['unlock_all' => true, 'app_ids' => [7, 9]], $now);
     p1941_assert($ctx['授权状态'] === '已授权', 'full source must win priority');
-    p1941_assert($ctx['到期时间'] === date('Y-m-d H:i:s', $now + 86400), 'full source expiry must win over later lower-priority cards');
+    p1941_assert($ctx['剩余时间'] === '1天0小时', 'full source remaining must win over later lower-priority cards');
 
     $partial = [
         ['jh' => 1, 'card_scope' => 3, 'endtime' => $now + 86400 * 2],
@@ -72,28 +72,28 @@ namespace {
     ];
     $ctx = SourceAnnouncementTemplate::authorizationContext($partial, ['unlock_all' => false, 'app_ids' => [7, 9]], $now);
     p1941_assert($ctx['授权状态'] === '部分App授权', 'partial App scope must win over verify');
-    p1941_assert($ctx['到期时间'] === date('Y-m-d H:i:s', $now + 86400 * 5), 'partial App expiry must use latest active App-scoped card');
-    p1941_assert($ctx['剩余时间'] === '5天0小时', 'partial App remaining time must be rendered');
-    p1941_assert($ctx['部分到期时间'] === $ctx['到期时间'], 'partial specific expiry mismatch');
+    p1941_assert($ctx['剩余时间'] === '5天0小时', 'partial App remaining must use latest active App-scoped card');
 
     $verify = [
         ['jh' => 1, 'card_scope' => 2, 'endtime' => $now + 7200],
     ];
     $ctx = SourceAnnouncementTemplate::authorizationContext($verify, ['unlock_all' => false, 'app_ids' => []], $now);
     p1941_assert($ctx['授权状态'] === '仅验证', 'verify must be selected when no source/App authorization exists');
-    p1941_assert($ctx['到期时间'] === date('Y-m-d H:i:s', $now + 7200), 'verify expiry mismatch');
     p1941_assert($ctx['剩余时间'] === '2小时0分钟', 'verify remaining mismatch');
+
+    foreach (['到期时间','全源到期时间','部分到期时间','验证到期时间'] as $removed) {
+        p1941_assert(!array_key_exists($removed, $ctx), 'retired expiry key returned: ' . $removed);
+    }
 
     $root = dirname(__DIR__);
     $route = file_get_contents($root . '/application/route.php');
     $registry = file_get_contents($root . '/application/common/library/ApiEndpointRegistry.php');
-    $sql = file_get_contents($root . '/release/sql/2026091806_announcement_priority.sql');
+    $sql = file_get_contents($root . '/release/sql/2026091808_phase19_4_x_closeout.sql');
 
     p1941_assert(strpos($route, "Route::rule('license','index/Index/license')") !== false, 'legacy /license route must remain');
     p1941_assert(strpos($route, "Route::rule('authorization','index/Index/license')") !== false, 'safe /authorization route missing');
     p1941_assert(strpos($registry, "'path' => '/authorization'") !== false, 'API Center must advertise safe authorization URL');
-    p1941_assert(strpos($sql, "'[全源到期时间]', '[到期时间]'") !== false, 'legacy expiry placeholder migration missing');
-    p1941_assert(strpos($sql, "'[全源剩余时间]', '[剩余时间]'") !== false, 'legacy remaining placeholder migration missing');
+    p1941_assert(strpos($sql, "`path`='/authorization'") !== false, 'database authorization path migration missing');
 
-    echo "OK phase19_4_1_hotfix_test priority=full>partial>verify partial_expiry=passed authorization_route=passed migration=passed\n";
+    echo "OK phase19_4_1_hotfix_test priority=full>partial>verify remaining=passed authorization_route=passed migration=passed\n";
 }
