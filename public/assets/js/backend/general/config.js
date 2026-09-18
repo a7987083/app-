@@ -22,8 +22,18 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         };
     }
 
-    function stageListHtml(currentStage) {
+    function normalizedStage(currentStage, progress) {
+        currentStage = String(currentStage || '');
+        progress = parseInt(progress || 0, 10);
+        if (currentStage === 'preparing' && progress >= 8) return 'download';
+        if (currentStage === 'package_complete') return 'complete';
+        return currentStage;
+    }
+
+    function stageListHtml(currentStage, progress) {
+        currentStage = normalizedStage(currentStage, progress);
         var stages = [
+            ['preparing', '准备更新任务'],
             ['source', '读取更新源'],
             ['download', '下载更新包'],
             ['sha256', 'SHA256 校验'],
@@ -55,6 +65,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         if (progress > 100) progress = 100;
         var statusText = data.message || '正在准备更新';
         var versions = '';
+        var updated = data.updated_at ? '<div style="margin-top:7px;font-size:12px;color:#999;">最后更新：' + esc(data.updated_at) + '</div>' : '';
         if (data.from_version || data.to_version) {
             versions = '<div style="margin-bottom:10px;color:#666;">版本：<b>' + esc(data.from_version || '-') + '</b> → <b>' + esc(data.to_version || '-') + '</b></div>';
         }
@@ -62,7 +73,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             versions +
             '<div style="font-size:16px;font-weight:600;margin-bottom:8px;">' + esc(statusText) + '</div>' +
             '<div class="progress" style="height:20px;margin-bottom:5px;"><div class="progress-bar progress-bar-striped active" role="progressbar" style="width:' + progress + '%;min-width:2em;">' + progress + '%</div></div>' +
-            stageListHtml(data.stage || '') +
+            updated +
+            stageListHtml(data.stage || '', progress) +
             '</div>';
     }
 
@@ -87,82 +99,147 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         return html + '</div>';
     }
 
+    function activeUpdateStore(value) {
+        try {
+            if (value) window.sessionStorage.setItem('zonoe.update.active', JSON.stringify(value));
+            else window.sessionStorage.removeItem('zonoe.update.active');
+        } catch (e) {}
+    }
+
     function pollProgress(job, layerIndex, onDone) {
         var stopped = false;
-        var timer = setInterval(function () {
+        var timer = null;
+        function schedule(delay) {
+            if (stopped) return;
+            timer = setTimeout(tick, typeof delay === 'number' ? delay : 700);
+        }
+        function tick() {
             if (stopped) return;
             $.ajax({
                 type: 'GET',
                 url: 'general/config/update_status',
+                cache: false,
                 dataType: 'json',
-                data: {job_id: job},
+                data: {job_id: job, _ts: new Date().getTime()},
                 success: function (ret) {
-                    if (!ret || ret.code !== 200 || !ret.data) return;
+                    if (!ret || ret.code !== 200 || !ret.data) {
+                        schedule(900);
+                        return;
+                    }
                     var data = ret.data;
                     if (data.status === 'success' || data.status === 'failed') {
                         stopped = true;
-                        clearInterval(timer);
+                        if (timer) clearTimeout(timer);
+                        activeUpdateStore(null);
                         layer.title(data.status === 'success' ? '更新完成' : '更新失败', layerIndex);
                         $('#layui-layer' + layerIndex + ' .layui-layer-content').html(resultHtml(data, data.status === 'success'));
                         $('#layui-layer' + layerIndex + ' .layui-layer-btn').show();
                         if (typeof onDone === 'function') onDone(data);
                     } else {
                         $('#layui-layer' + layerIndex + ' .layui-layer-content').html(progressHtml(data));
+                        schedule(700);
                     }
+                },
+                error: function () {
+                    // A transient status request must never turn the progress UI
+                    // into a dead page. Keep the last real state and retry.
+                    schedule(1100);
                 }
             });
-        }, 700);
+        }
+        tick();
         return function () {
             stopped = true;
-            clearInterval(timer);
+            if (timer) clearTimeout(timer);
         };
     }
 
-    function runUpdate(source, force) {
+    function openUpdateProgress(source, job, initial) {
         var cfg = sourceConfig(source);
-        var job = jobId('update');
         var layerIndex = layer.open({
             type: 1,
             title: cfg.title,
             area: ['560px', 'auto'],
             shadeClose: false,
             closeBtn: 0,
-            content: '<div style="padding:16px;">' + progressHtml({progress: 2, stage: 'source', message: '正在启动更新任务'}) + '</div>',
+            content: '<div style="padding:16px;">' + progressHtml(initial || {progress: 3, stage: 'preparing', message: '正在准备更新'}) + '</div>',
             btn: ['完成'],
             yes: function (idx) {
                 layer.close(idx);
                 location.reload();
             },
-            success: function () {
-                $('#layui-layer' + layerIndex + ' .layui-layer-btn').hide();
+            success: function (layero) {
+                $(layero).find('.layui-layer-btn').hide();
             }
         });
-        var stopPoll = pollProgress(job, layerIndex);
+        pollProgress(job, layerIndex);
+        return layerIndex;
+    }
+
+    function runUpdate(source, force) {
+        var cfg = sourceConfig(source);
+        var job = jobId('update');
+        activeUpdateStore({job: job, source: source});
+        var layerIndex = openUpdateProgress(source, job, {progress: 3, stage: 'preparing', message: '正在启动更新任务'});
         $.ajax({
             type: 'POST',
             url: cfg.installUrl,
             dataType: 'json',
             data: {force: force ? 1 : 0, job_id: job},
             success: function (ret) {
+                // The status channel is authoritative. Even a non-200 install
+                // response is allowed to finish through the job status store.
                 if (ret && (ret.code === 200 || ret.code === 204)) return;
                 setTimeout(function () {
-                    $.getJSON('general/config/update_status', {job_id: job}, function (statusRet) {
-                        if (statusRet && statusRet.code === 200 && statusRet.data) {
-                            $('#layui-layer' + layerIndex + ' .layui-layer-content').html(resultHtml(statusRet.data, false));
-                            $('#layui-layer' + layerIndex + ' .layui-layer-btn').show();
-                        } else {
-                            stopPoll();
-                            $('#layui-layer' + layerIndex + ' .layui-layer-content').html(resultHtml({message: (ret && ret.msg) || '更新请求失败'}, false));
-                            $('#layui-layer' + layerIndex + ' .layui-layer-btn').show();
+                    $.ajax({
+                        type: 'GET',
+                        url: 'general/config/update_status',
+                        cache: false,
+                        dataType: 'json',
+                        data: {job_id: job, _ts: new Date().getTime()},
+                        success: function (statusRet) {
+                            if (statusRet && statusRet.code === 200 && statusRet.data && statusRet.data.status === 'failed') {
+                                $('#layui-layer' + layerIndex + ' .layui-layer-content').html(resultHtml(statusRet.data, false));
+                                $('#layui-layer' + layerIndex + ' .layui-layer-btn').show();
+                                activeUpdateStore(null);
+                            }
                         }
                     });
                 }, 800);
             },
             error: function () {
-                stopPoll();
-                $('#layui-layer' + layerIndex + ' .layui-layer-content').html(resultHtml({message: cfg.title + '请求失败'}, false));
-                $('#layui-layer' + layerIndex + ' .layui-layer-btn').show();
+                // Do not stop polling here: PHP may still be running the update
+                // after a reverse-proxy/client connection interruption.
             }
+        });
+    }
+
+    function restoreActiveUpdate() {
+        var stored = null;
+        try {
+            stored = JSON.parse(window.sessionStorage.getItem('zonoe.update.active') || 'null');
+        } catch (e) {
+            stored = null;
+        }
+        if (!stored || !stored.job || !stored.source) return;
+        $.ajax({
+            type: 'GET',
+            url: 'general/config/update_status',
+            cache: false,
+            dataType: 'json',
+            data: {job_id: stored.job, _ts: new Date().getTime()},
+            success: function (ret) {
+                if (!ret || ret.code !== 200 || !ret.data) {
+                    activeUpdateStore(null);
+                    return;
+                }
+                if (ret.data.status === 'running') {
+                    openUpdateProgress(stored.source, stored.job, ret.data);
+                } else {
+                    activeUpdateStore(null);
+                }
+            },
+            error: function () {}
         });
     }
 
@@ -257,10 +334,10 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             area: ['560px', 'auto'],
             shadeClose: false,
             closeBtn: 0,
-            content: '<div style="padding:16px;">' + progressHtml({progress: 5, stage: 'rollback', message: '正在启动回滚任务'}) + '</div>',
+            content: '<div style="padding:16px;">' + progressHtml({progress: 3, stage: 'preparing', message: '正在启动回滚任务'}) + '</div>',
             btn: ['完成'],
             yes: function (i) { layer.close(i); location.reload(); },
-            success: function () { $('#layui-layer' + idx + ' .layui-layer-btn').hide(); }
+            success: function (layero) { $(layero).find('.layui-layer-btn').hide(); }
         });
         pollProgress(job, idx);
         $.ajax({
@@ -278,7 +355,6 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             shadeClose: false
         });
     }
-
 
     function apiCenterRoot() {
         return $('#api-center');
@@ -321,12 +397,77 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         });
     }
 
+    function apiTestFieldRoot() {
+        var root = $('#project-api-test-fields');
+        if (root.length) return root;
+        var legacy = $('#project-api-test-params');
+        var group = legacy.closest('.form-group');
+        if (!group.length) return $();
+        group.attr('id', 'project-api-test-fields-group');
+        group.html('<label class="control-label col-xs-12 col-sm-2">参数</label><div class="col-xs-12 col-sm-7" id="project-api-test-fields"><span class="text-muted">请选择API接口</span></div>');
+        return $('#project-api-test-fields');
+    }
+
+    function renderApiTestFields(schema) {
+        var root = apiTestFieldRoot();
+        if (!root.length) return;
+        schema = schema || {};
+        var fields = $.isArray(schema.fields) ? schema.fields : [];
+        if (!fields.length) {
+            root.html('<span class="text-muted">此接口无需输入参数</span>');
+            return;
+        }
+        var html = '';
+        $.each(fields, function (_, field) {
+            var name = String(field.name || '');
+            if (!name) return;
+            var required = field.required ? 1 : 0;
+            html += '<div class="form-group" style="margin-left:0;margin-right:0;margin-bottom:10px;">' +
+                '<label style="display:block;margin-bottom:4px;">' + esc(field.label || name) + (required ? ' <span class="text-danger">*</span>' : '') + '</label>' +
+                '<input type="text" class="form-control api-test-field" data-required="' + required + '" data-label="' + esc(field.label || name) + '" name="test_params[' + esc(name) + ']" placeholder="' + esc(field.placeholder || '') + '">' +
+                '</div>';
+        });
+        root.html(html);
+    }
+
+    function loadApiTestSchema(key) {
+        var root = apiTestFieldRoot();
+        if (!key) {
+            if (root.length) root.html('<span class="text-muted">请选择API接口</span>');
+            return;
+        }
+        if (root.length) root.html('<span class="text-muted"><i class="fa fa-spinner fa-spin"></i> 正在读取接口参数…</span>');
+        $.ajax({
+            type: 'GET',
+            url: 'general/config/api_test_schema',
+            cache: false,
+            dataType: 'json',
+            data: {endpoint_key: key, _ts: new Date().getTime()},
+            success: function (ret) {
+                if (!ret || ret.code !== 1 || !ret.data) {
+                    renderApiTestFields({fields: []});
+                    Layer.alert((ret && ret.msg) || '读取API参数失败', {icon: 2});
+                    return;
+                }
+                $('#project-api-test-url').val(ret.data.url || $('#project-api-test-url').val());
+                $('#project-api-test-method').val(ret.data.method || '');
+                $('#project-api-test-auth').val(ret.data.auth || '');
+                renderApiTestFields(ret.data);
+            },
+            error: function (xhr) {
+                if (root.length) root.html('<span class="text-danger">读取参数失败 HTTP ' + esc(xhr.status) + '</span>');
+            }
+        });
+    }
+
     function syncApiTestMeta() {
         var option = $('#project-api-test-key option:selected');
+        var key = $('#project-api-test-key').val() || '';
         $('#project-api-test-url').val(option.data('url') || '');
         $('#project-api-test-method').val(option.data('method') || '');
         $('#project-api-test-auth').val(option.data('auth') || '');
         $('#project-api-test-result').hide().text('');
+        loadApiTestSchema(key);
     }
 
     function selectApiForTest(key) {
@@ -501,6 +642,16 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 Layer.alert('请先选择API接口', {icon: 0});
                 return;
             }
+            var missing = '';
+            $('#project-api-test-fields .api-test-field').each(function () {
+                if (!missing && parseInt($(this).data('required'), 10) === 1 && $.trim($(this).val()) === '') {
+                    missing = String($(this).data('label') || '必填参数');
+                }
+            });
+            if (missing) {
+                Layer.alert(missing + '不能为空', {icon: 0});
+                return;
+            }
             apiRequest('test', $('#project-api-test-form').serialize(), function (data) {
                 $('#project-api-test-result').show().text(JSON.stringify(data || {}, null, 2));
             });
@@ -664,6 +815,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
 
             bindAnnouncementTools();
             bindApiCenter();
+            restoreActiveUpdate();
         },
         add: function () { Controller.api.bindevent(); },
         edit: function () { Controller.api.bindevent(); },
