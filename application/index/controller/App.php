@@ -184,14 +184,15 @@ class App
                 $json = json_encode($payload, $jsonFlags);
             }
             $jsonMs = (microtime(true) - $jsonStartedAt) * 1000;
-            $content = base64_encode($json);
 
             $encryptStartedAt = microtime(true);
-            $encrypted = $this->encryptedSourcePayload($content, $appType);
+            $encryptedResult = $this->encryptedSourcePayload($json, $appType);
             $encryptMs = (microtime(true) - $encryptStartedAt) * 1000;
+            $encrypted = isset($encryptedResult['payload']) ? $encryptedResult['payload'] : false;
+            $inputBytes = isset($encryptedResult['input_bytes']) ? (int)$encryptedResult['input_bytes'] : strlen((string)$json);
             $body = SourceResponse::encryptedBody($appType, $encrypted, $replaceMarkers);
 
-            $this->logSourcePerformance($payload, $appType, true, $jsonMs, $encryptMs, strlen((string)$json), strlen($content), strlen((string)$body));
+            $this->logSourcePerformance($payload, $appType, true, $jsonMs, $encryptMs, strlen((string)$json), $inputBytes, strlen((string)$body));
             SourceResponse::send($body);
         }
 
@@ -222,25 +223,34 @@ class App
         ]);
     }
 
-    protected function encryptedSourcePayload($content, $appType)
+    protected function encryptedSourcePayload($json, $appType)
     {
         $localRequested = SourceEncryptionPolicy::localRequested()
             && SourceEncryptionPolicy::localAllowedForAppType($appType);
 
         if ($localRequested) {
             try {
-                $result = SourceEncryptionProvider::encryptEncodedContent($content, $appType);
+                $result = SourceEncryptionProvider::encryptJson($json, $appType);
                 $this->lastEncryptionProvider = 'local';
-                return $result;
+                return [
+                    'payload' => $result,
+                    'input_bytes' => strlen((string)$json),
+                ];
             } catch (\Exception $e) {
                 error_log('[App::encryptedSourcePayload] local encryption failed: ' . $e->getMessage());
                 if (!SourceEncryptionPolicy::fallbackAllowed()) {
                     $this->lastEncryptionProvider = 'local-failed';
-                    return false;
+                    return [
+                        'payload' => false,
+                        'input_bytes' => strlen((string)$json),
+                    ];
                 }
             }
         }
 
+        // The external Nuosike protocol still expects Base64 content. Build it
+        // only when the request actually uses/falls back to that provider.
+        $content = base64_encode((string)$json);
         $result = SourceHttpClient::postForm(
             SourceEncryptionPolicy::nuosikeUrl($appType),
             ['content' => $content]
@@ -249,7 +259,10 @@ class App
 
         // Legacy curl_exec() failures serialized as boolean false. Preserve
         // that envelope while logging/timeout/TLS handling is improved.
-        return $result['transport_ok'] ? $result['body'] : false;
+        return [
+            'payload' => $result['transport_ok'] ? $result['body'] : false,
+            'input_bytes' => strlen($content),
+        ];
     }
 
     /**
