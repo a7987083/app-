@@ -25,6 +25,14 @@ $cacheDir = sys_get_temp_dir() . '/zonoe_phase1931_keystream_' . getmypid();
 @mkdir($cacheDir, 0700, true);
 putenv('SOURCE_LEGACY_KEYSTREAM_CACHE_DIR=' . $cacheDir);
 
+$bkeyFile = $cacheDir . '/legacy_bkey.json';
+file_put_contents($bkeyFile, json_encode([
+    'version' => 1,
+    'fetched_at' => time(),
+    'bkey' => base64_encode($key),
+]));
+putenv('SOURCE_LEGACY_BKEY_CACHE_FILE=' . $bkeyFile);
+
 putenv('SOURCE_LEGACY_KEYSTREAM_CACHE=0');
 $started = microtime(true);
 $baseline = \app\common\library\SourceEncryptionProvider::encryptLegacyJson($payload, $key);
@@ -45,6 +53,7 @@ p1931Assert($baseline === $hit, 'keystream cache-hit output differs from referen
 $encoded = \app\common\library\SourceEncryptionProvider::encryptEncodedContent(base64_encode($payload), 'appstore');
 $direct = \app\common\library\SourceEncryptionProvider::encryptJson($payload, 'appstore');
 p1931Assert($encoded === $direct, 'direct JSON provider output differs from encoded compatibility entrypoint');
+p1931Assert($direct === $baseline, 'direct JSON provider output differs from legacy reference output');
 p1931Assert($hitMs > 0, 'cache-hit timing is invalid');
 
 $speedup = $baselineMs / $hitMs;
