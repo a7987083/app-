@@ -1,0 +1,14 @@
+<div class="panel panel-default panel-intro">
+    <div class="panel-heading"><h3 class="panel-title">数据治理</h3></div>
+    <div class="panel-body">
+        <p class="text-muted">仅治理已绑定记录。正式流程：发现 → 原因 → 修复预览 → 确认 → 执行 → 二次验证 → 审计。</p>
+        <div class="row ipa-stat-row ipa-governance-cards">
+            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="duplicate"><strong>重复 Bundle ID</strong><div class="ipa-stat-value">0</div></div></div>
+            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="mismatch"><strong>元数据不一致</strong><div class="ipa-stat-value">0</div></div></div>
+            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="missing"><strong>IPA 缺失 / 路径异常</strong><div class="ipa-stat-value">0</div></div></div>
+            <div class="col-sm-3"><div class="well ipa-governance-card" data-kind="version"><strong>版本异常</strong><div class="ipa-stat-value">0</div></div></div>
+        </div>
+        <div class="alert alert-warning">Phase 20.6 才启用修复操作；20.0 不允许对数据库或 OpenList 做任何修改。</div>
+        <table class="table table-striped table-bordered"><thead><tr><th>应用</th><th>数据库值</th><th>实际值</th><th>判定原因</th><th>修复操作</th><th>验证状态</th></tr></thead><tbody><tr><td colspan="6" class="text-center text-muted">暂无治理异常</td></tr></tbody></table>
+    </div>
+</div>
