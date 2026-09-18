@@ -27,6 +27,7 @@ application/common/library/SourcePerformance.php
 application/common/library/SourceResponse.php
 application/common/library/AuthorizationSchema.php
 application/common/library/DataIntegrityAudit.php
+application/common/library/SourceServerRuntime.php
 application/admin/controller/Authorization.php
 application/admin/controller/Category.php
 application/admin/controller/Ajax.php
