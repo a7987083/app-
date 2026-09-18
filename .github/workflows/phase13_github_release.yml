@@ -154,6 +154,10 @@ jobs:
           php tests/phase19_3_large_catalog_test.php
           php tests/phase19_3_1_api_center_contract_test.php
           php tests/phase19_3_1_encryption_benchmark.php
+          php tests/source_encryption_provider_test.php
+          php tests/source_encryption_bkey_cache_test.php
+          php tests/source_encryption_policy_test.php
+          php tests/phase18_2_encryption_mode_contract_test.php
           php tests/appstore_payload_test.php
           php tests/appstore_equivalence_test.php
           php tests/appstore_semantic_equivalence_test.php
