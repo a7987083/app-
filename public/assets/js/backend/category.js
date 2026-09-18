@@ -51,9 +51,30 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 ]
             };
 
+            var bindDeleteWithoutRefresh = function () {
+                $(".btn-delone", table).each(function () {
+                    var button = this;
+                    $(button).data("success", function () {
+                        var rowIndex = parseInt($(button).attr("data-row-index"), 10);
+                        var row = Table.api.getrowdata(table, rowIndex);
+                        var options = table.bootstrapTable('getOptions');
+                        if (row && typeof row[options.pk] !== 'undefined') {
+                            table.bootstrapTable('remove', {
+                                field: options.pk,
+                                values: [row[options.pk]]
+                            });
+                        }
+                        // 阻止 require-table.js 在删除成功后执行整表 refresh。
+                        return false;
+                    });
+                });
+            };
+
+            table.on('post-body.bs.table', bindDeleteWithoutRefresh);
             table.bootstrapTable(tableOptions);
             $(".fixed-table-toolbar .search input").attr("placeholder", "搜索应用名称");
             Table.api.bindevent(table);
+            bindDeleteWithoutRefresh();
 
             $('a[data-toggle="tab"]').on('shown.bs.tab', function () {
                 currentType = $(this).attr("href").replace('#', '');
@@ -62,22 +83,20 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             });
         },
         add: function () {
-            // 新增成功后只关闭当前窗口，不自动刷新父级 1000 条列表。
-            Controller.api.bindevent(function (data, ret) {
+            Controller.api.bindevent(Controller.api.closeWithoutParentRefresh);
+        },
+        edit: function () {
+            Controller.api.bindevent(Controller.api.closeWithoutParentRefresh);
+        },
+        api: {
+            closeWithoutParentRefresh: function (data, ret) {
                 var msg = ret && ret.hasOwnProperty("msg") && ret.msg !== "" ? ret.msg : __('Operation completed');
                 parent.Toastr.success(msg);
                 var index = parent.Layer.getFrameIndex(window.name);
                 parent.Layer.close(index);
+                // FastAdmin 表单成功回调返回 false，父级列表由管理员手动刷新。
                 return false;
-            });
-            setTimeout(function () {
-                $("#c-type").trigger("change");
-            }, 100);
-        },
-        edit: function () {
-            Controller.api.bindevent();
-        },
-        api: {
+            },
             toPickerValue: function (val) {
                 var hex = String(val || "").replace(/^#/, "").trim();
                 if (/^[0-9a-fA-F]{3}$/.test(hex)) {
@@ -121,12 +140,6 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 });
             },
             bindevent: function (success) {
-                $(document).on("change", "#c-type", function () {
-                    $("#c-pid option[data-type='all']").prop("selected", true);
-                    $("#c-pid option").removeClass("hide");
-                    $("#c-pid option[data-type!='" + $(this).val() + "'][data-type!='all']").addClass("hide");
-                    $("#c-pid").data("selectpicker") && $("#c-pid").selectpicker("refresh");
-                });
                 Controller.api.initColorPicker();
                 Form.api.bindevent($("form[role=form]"), success);
             }
