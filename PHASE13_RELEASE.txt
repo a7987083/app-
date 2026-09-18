@@ -2,6 +2,7 @@ ZONOE 软件源 Release 2026091808
 版本：2026091808
 基线：2026091807
 阶段：Phase 19.4.x — Closeout Stabilization
+发布分支：release/2026091808-phase19-4-x-closeout
 
 更新内容：
 1. 修复 GitHub 在线更新进度弹窗，释放长任务 Session 锁并使用真实后台阶段轮询。
