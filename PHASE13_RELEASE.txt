@@ -3,7 +3,7 @@ ZONOE 软件源 Release 2026091809
 基线：2026091808
 阶段：Phase 19.4.y — Category Performance Hotfix
 发布分支：release/2026091809-category-performance
-发布状态：触发正式 Release Workflow
+发布状态：重新触发正式 Release Workflow（已升级旧 category listing 回归契约）
 
 更新内容：
 1. 项目管理新增/编辑不再加载全量 parentList / Tree，避免 2 万级数据下无意义的全表扫描和海量 option 渲染。
@@ -14,6 +14,7 @@ ZONOE 软件源 Release 2026091809
 6. 删除成功后只从 BootstrapTable 本地移除对应行，阻止 FastAdmin 自动整表 refresh；工具栏删除同样应用该策略。
 7. 新增 Phase 19.4.y 性能回归门禁，禁止 add/edit 路径重新出现全量 Category Tree / Category::select()。
 8. 在线更新包明确包含 Category.php、add.html、edit.html、category.js。
+9. 升级历史 category_listing_contract_test，使其与 1809 的 no-tree / no-refresh 性能契约一致。
 
 在线更新：
 - GitHub Release 标签：source-v2026091809。
