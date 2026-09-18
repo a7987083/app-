@@ -1,17 +1,17 @@
-ZONOE 软件源 Release 2026091806
-版本：2026091806
-基线：2026091805
-阶段：Phase 19.4.1 — Announcement Expiry Priority + Authorization Route Hotfix
+ZONOE 软件源 Release 2026091807
+版本：2026091807
+基线：2026091806
+阶段：Phase 19.4.2 — Unified Announcement Expiry
 
 更新内容：
-1. 修复部分 App 授权时到期时间、剩余时间为空。
-2. 当前授权优先级固定为：全解锁 -> 部分 App -> 仅验证。
-3. 新增 [到期时间] / [剩余时间] / [部分到期时间] / [部分剩余时间]。
-4. 自动迁移公告旧变量 [全源到期时间]、[全源剩余时间] 到通用变量。
-5. 保留 /license，并新增 /authorization 等价授权查询入口。
-6. API Center 授权查询地址改为 /authorization，绕开生产 Nginx LICENSE 误拦。
-7. 正式在线更新包包含 2026091806_announcement_priority.sql。
+1. 公告层只保留一套 [到期时间] / [剩余时间]。
+2. 底层权限优先级保持：全软件源 -> 指定 App -> 仅验证。
+3. 没有有效解锁或全部到期时，授权状态、到期时间、剩余时间统一显示“已过期或未解锁本源”。
+4. 后台移除全源/部分/验证三套到期时间按钮。
+5. 授权摘要收敛为单一状态、到期时间、剩余时间。
+6. 自动迁移旧公告变量到通用变量。
+7. 运行时继续兼容旧变量，全部映射到同一有效授权时钟。
 
 在线更新：
-- GitHub Release 标签：source-v2026091806。
+- GitHub Release 标签：source-v2026091807。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
