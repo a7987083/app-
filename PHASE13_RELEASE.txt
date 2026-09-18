@@ -3,6 +3,7 @@ ZONOE 软件源 Release 2026091809
 基线：2026091808
 阶段：Phase 19.4.y — Category Performance Hotfix
 发布分支：release/2026091809-category-performance
+发布状态：触发正式 Release Workflow
 
 更新内容：
 1. 项目管理新增/编辑不再加载全量 parentList / Tree，避免 2 万级数据下无意义的全表扫描和海量 option 渲染。
