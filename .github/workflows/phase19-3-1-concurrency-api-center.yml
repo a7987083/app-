@@ -27,6 +27,7 @@ on:
       - 'tests/load/phase19_3_1_http_load.sh'
       - 'tests/load/wrk_metrics.lua'
       - '.github/workflows/phase19-3-1-concurrency-api-center.yml'
+      - '.github/workflows/phase13_github_release.yml'
   workflow_dispatch:
 
 jobs:
