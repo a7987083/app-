@@ -7,9 +7,9 @@ Baseline: `source-v2026091809` / `21307ba5ec9b65ce0b5f0643555ccc7f7bec0ad9`.
 - 20.0 UI/menu/auth skeleton — implemented on feature branch
 - 20.1 persistence, task, idempotency and audit foundations — implemented on feature branch
 - 20.2 OpenList discovery and incremental scan — implemented on feature branch
-- 20.3 HTTP Range IPA parser and metadata/icon extraction
-- 20.4 persistent IPA ↔ category binding
-- 20.5 metadata-to-database write-back templates
+- 20.3 HTTP Range IPA parser and metadata/icon extraction — implemented on feature branch
+- 20.4 persistent IPA ↔ category binding — implemented on feature branch
+- 20.5 metadata-to-database write-back templates — implemented on feature branch
 - 20.6 governance preview/apply/verify workflow
 - 20.7 production hardening: batch operations, retries, interrupted recovery, retention and Range metrics
 
@@ -37,6 +37,17 @@ Core tables:
 - CLI worker: `php think ipa:scan --task=<id>`, `--pending`, or `--schedule`.
 - Manual admin scan creates a task and attempts a detached CLI worker; if process spawning is unavailable, cron/CLI can consume queued tasks.
 - Existing `fa_category` rows are not read or written by Phase 20.2.
+
+## Phase 20.5 global write-back template
+
+- The template is global, not IPA-specific.
+- Allowed category targets are explicitly whitelisted: `name`, `nickname`, `image`, `bt1a`, `bt2a`, `keywords`.
+- Template changes create immutable versions and operation-log audit entries.
+- Duplicate enabled rules targeting the same category column are rejected.
+- Strategies: `preview`, `empty`, `changed`, `always`, `managed_block`, `ignore`.
+- `keywords` uses a controlled `IPA_META_START` / `IPA_META_END` block so human text is preserved and metadata is replaced rather than repeatedly appended.
+- Random testing selects only a successfully parsed IPA that already has a stable binding and produces a database old-value vs parsed-value preview.
+- Phase 20.5 remains preview-first. Category mutation is reserved for Phase 20.6 preview → confirm → execute → verify.
 
 ## Safety invariants
 
