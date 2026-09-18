@@ -57,14 +57,17 @@ namespace {
         $keys[] = $row['key'];
     }
 
-    p1942_assert(in_array('到期时间', $keys, true), 'generic expiry missing');
-    p1942_assert(in_array('剩余时间', $keys, true), 'generic remaining missing');
-    foreach (['全源到期时间','全源剩余时间','部分到期时间','部分剩余时间','验证到期时间'] as $legacy) {
-        p1942_assert(!in_array($legacy, $keys, true), 'legacy scope-specific variable still exposed: ' . $legacy);
+    foreach (['刷新时间','软件个数','今日更新','七日更新','授权状态','剩余时间','服务器运行时间'] as $required) {
+        p1942_assert(in_array($required, $keys, true), 'public variable missing: ' . $required);
+    }
+    foreach ([
+        '到期时间','授权摘要','源名称','指定APP数量','服务器时间',
+        '全源到期时间','全源剩余时间','部分到期时间','部分剩余时间','验证到期时间','验证剩余时间'
+    ] as $removed) {
+        p1942_assert(!in_array($removed, $keys, true), 'retired variable still exposed: ' . $removed);
     }
 
     $now = strtotime('2026-09-18 12:00:00');
-
     $partialRows = [
         ['jh' => 1, 'card_scope' => 3, 'endtime' => $now + 86400 * 2],
         ['jh' => 1, 'card_scope' => 3, 'endtime' => $now + 86400 * 5],
@@ -76,30 +79,27 @@ namespace {
         $now
     );
     p1942_assert($partial['授权状态'] === '部分App授权', 'partial status');
-    p1942_assert($partial['到期时间'] === date('Y-m-d H:i:s', $now + 86400 * 5), 'partial generic expiry');
-    p1942_assert($partial['剩余时间'] === '5天0小时', 'partial generic remaining');
-
-    foreach (['全源到期时间','部分到期时间','验证到期时间'] as $legacy) {
-        p1942_assert($partial[$legacy] === $partial['到期时间'], 'legacy expiry alias must use generic clock');
-    }
-    foreach (['全源剩余时间','部分剩余时间','验证剩余时间'] as $legacy) {
-        p1942_assert($partial[$legacy] === $partial['剩余时间'], 'legacy remaining alias must use generic clock');
+    p1942_assert($partial['剩余时间'] === '5天0小时', 'partial remaining');
+    foreach (['到期时间','授权摘要','指定APP数量','全源到期时间','部分到期时间','验证到期时间'] as $removed) {
+        p1942_assert(!array_key_exists($removed, $partial), 'retired authorization key returned: ' . $removed);
     }
 
     $none = SourceAnnouncementTemplate::authorizationContext([], ['unlock_all' => false, 'app_ids' => []], $now);
     p1942_assert($none['授权状态'] === '已过期或未解锁本源', 'inactive status fallback');
-    p1942_assert($none['到期时间'] === '已过期或未解锁本源', 'inactive expiry fallback');
     p1942_assert($none['剩余时间'] === '已过期或未解锁本源', 'inactive remaining fallback');
-    p1942_assert(strpos($none['授权摘要'], '全软件源：') === false, 'summary must not expose multi-clock model');
-    p1942_assert(strpos($none['授权摘要'], '到期时间：已过期或未解锁本源') !== false, 'summary fallback');
+
+    $legacyTemplate = "状态：[授权状态]\n到期：[到期时间]\n摘要：[授权摘要]\n源：[源名称]\n数量：[指定APP数量]\n时间：[服务器时间]";
+    $normalized = SourceAnnouncementTemplate::normalizeTemplate($legacyTemplate);
+    p1942_assert(strpos($normalized, '[到期时间]') === false, 'expiry token not removed');
+    p1942_assert(strpos($normalized, '[授权摘要]') === false, 'summary token not removed');
+    p1942_assert(strpos($normalized, '[源名称]') === false, 'source token not removed');
+    p1942_assert(strpos($normalized, '[指定APP数量]') === false, 'app count token not removed');
+    p1942_assert(strpos($normalized, '[服务器运行时间]') !== false, 'server time token not migrated');
 
     $root = dirname(__DIR__);
-    $view = file_get_contents($root . '/application/admin/view/general/config/index.html');
-    $sql = file_get_contents($root . '/release/sql/2026091807_unified_announcement_expiry.sql');
+    $sql = file_get_contents($root . '/release/sql/2026091808_phase19_4_x_closeout.sql');
+    p1942_assert(strpos($sql, "`path`='/authorization'") !== false, 'authorization API migration missing');
+    p1942_assert(strpos($sql, '[服务器运行时间]') !== false, 'runtime token migration missing');
 
-    p1942_assert(strpos($view, '[全源到期时间|未解锁]') === false, 'old editor hint still present');
-    p1942_assert(strpos($view, '[到期时间] / [剩余时间]') !== false, 'unified editor hint missing');
-    p1942_assert(substr_count($sql, "UPDATE `fa_config`") >= 10, 'migration coverage incomplete');
-
-    echo "OK phase19_4_2_unified_announcement_test one_clock=passed fallback=passed legacy_alias=passed migration=passed\n";
+    echo "OK phase19_4_2_unified_announcement_test closeout=passed remaining=passed retired_tokens=passed migration=passed\n";
 }
