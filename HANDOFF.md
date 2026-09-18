@@ -3,14 +3,15 @@
 ## Repository / baselines
 
 - Repository: `a7987083/app-`
-- Stable branch: `release/2026091804-phase19-3-1-concurrency-api-center`
-- Stable version/phase: `2026091804 / Phase 19.3.1`
-- Stable commit: `34fc713346eafe92f23d1f5fcf470526daf8ddb6`
-- Stable release: `source-v2026091804`
-- Active development branch: `feature/2026091805-phase19-4-dynamic-announcement-license`
-- Phase19.4 code commit: `391de96f6a8f4da3d1f75b505acc876b07101608`
-- Phase19.4 CI Run: `35296525450` — SUCCESS
-- VERSION is intentionally still `2026091804`; do not call this a released 1805 build yet.
+- Stable branch: `release/2026091805-phase19-4-dynamic-announcement`
+- Stable version/phase: `2026091805 / Phase 19.4`
+- Release commit: `7126b378e031c6c7f5965d0f78b3e753b28c27df`
+- Stable release: `source-v2026091805`
+- Feature code commit: `391de96f6a8f4da3d1f75b505acc876b07101608`
+- Phase19.4 feature CI Run: `35296525450` — SUCCESS
+- Formal Release Run: `35300195897` — SUCCESS
+- Online-update E2E: `2026091804 -> 2026091805` — SUCCESS
+- Online-update assets: `zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`
 
 ## Phase 19.4 implementation
 
@@ -77,7 +78,6 @@ PHP 7.0, MySQL 5.7, HTTP load and package-and-release jobs all succeeded. Final 
 
 ## Next task
 
-1. Apply Nginx rewrite on a real BaoTa site and reload Nginx.
-2. Verify `/LICENSE`, `/license` GET/POST and `/unbind`.
-3. Run iOS source refresh against static and dynamic announcements in plain/normal/V2 modes and all card scopes.
-4. If green, create 2026091805 release candidate metadata and run formal release/E2E.
+Online update is complete. Remaining work is optional post-release validation:
+1. Verify real BaoTa/Nginx `/LICENSE`, `/license` GET/POST and `/unbind`.
+2. Verify dynamic announcements on iOS in plain/normal/V2 modes and each card scope.

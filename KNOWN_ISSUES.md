@@ -1,17 +1,16 @@
 # Known Issues and Refactor Backlog
 
-## P0 — Phase 19.4 发布前真实环境验证
+## P1 — Phase 19.4 发布后真实环境验证
 
-- 仓库 `nginx.rewrite` 已修复 `/LICENSE` / `/license` 大小写冲突并由 CI 契约覆盖，但尚未证明生产 BaoTa 活动 vhost 已应用并 reload。
-- 必须真实验证 `/LICENSE -> 404`、`/license GET -> 200`、`/license POST`、`/unbind`。
-- 动态公告的 PHP 7.0、缓存隔离和包内容已 CI 通过；iOS 明文/普通加密/V2 与四种授权状态仍待真机回归。
-- `VERSION` 仍是 `2026091804`；Phase 19.4 当前是开发分支，不是正式 1805 Release。
+- `source-v2026091805` 已发布，Release Run `35300195897` 与 `2026091804 -> 2026091805` 在线更新 E2E 已通过。
+- 仓库 `nginx.rewrite` 已修复 `/LICENSE` / `/license` 大小写冲突，但生产 BaoTa 活动 vhost 是否已应用仍需单独验证。
+- 动态公告已进入正式在线更新包；iOS 明文/普通加密/V2 与四种授权状态仍可做后续真机验收。
 
-## P0 — Release Notes E2E 字面量门禁
+## P2 — Release Notes E2E 字面量门禁
 
 - 1804 ZONOE Source Release Run `35291515730` 的 PHP/MySQL/负载/package-and-release 均成功，最终 E2E 因 Release Notes 缺少字面量 `更新内容` 失败。
 - `tests/phase13_github_online_update_e2e.php` 当前显式检查该字符串。
-- 1805 Release Notes 已预置 `更新内容`；正式发布前不得删除。
+- 1805 Release Notes 已包含 `更新内容`，正式 Release E2E 已通过；后续版本继续保留该兼容要求。
 
 ## P0 — 稳定兼容边界
 

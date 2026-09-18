@@ -3,12 +3,13 @@
 ## 当前稳定基线
 
 - Repository: `a7987083/app-`
-- Stable release branch: `release/2026091804-phase19-3-1-concurrency-api-center`
-- Stable phase/version: `Phase 19.3.1 / 2026091804`
-- Stable commit: `34fc713346eafe92f23d1f5fcf470526daf8ddb6`
-- Release: `source-v2026091804`
-- Phase 19.3.1 gate: Run `35291515475` — SUCCESS
-- ZONOE Source Release Run `35291515730`: package/release SUCCESS, final online-update E2E FAILURE only because Release Notes lacked literal `更新内容`.
+- Stable release branch: `release/2026091805-phase19-4-dynamic-announcement`
+- Stable phase/version: `Phase 19.4 / 2026091805`
+- Release commit: `7126b378e031c6c7f5965d0f78b3e753b28c27df`
+- Release: `source-v2026091805`
+- Phase 19.4 feature CI: Run `35296525450` — SUCCESS
+- Formal Release Run: `35300195897` — SUCCESS
+- Online-update E2E: `2026091804 -> 2026091805` — SUCCESS
 - `main` 不是活动开发/发布基线。
 
 ## Phase 19.4 — Dynamic Announcement + License Routing
@@ -28,14 +29,15 @@ Development branch: `feature/2026091805-phase19-4-dynamic-announcement-license`
 - [x] online-update manifest 补齐 `license.html`、`unbind.html`、`AuthorizationLicense.php`、动态公告运行时和 `nginx.rewrite`。
 - [x] Phase 19.4 PHP 7.0 / Legacy / deployment / update-package gate：Run `35296525450` SUCCESS。
 
-### 发布前剩余
+### 发布状态
 
-- [ ] 在真实 BaoTa/Nginx 将新版 rewrite 应用到活动站点配置并 reload。
-- [ ] 验证 `/LICENSE -> 404`、`/license GET -> 200`、`/license POST` 卡密+UDID 查询。
-- [ ] 实机验证静态公告与动态公告在明文/普通加密/V2 下均正确。
-- [ ] 实机验证 Guest / 全源卡 / 指定 App 卡 / 仅验证卡公告隔离。
-- [ ] 回归 API Center 日志刷新、测试下拉、API 开关真实 503/恢复。
-- [ ] 将 VERSION / ver.txt / ver.json / Release Notes 收口为 `2026091805` 后跑正式 Release 全门禁和在线更新 E2E。
+- [x] VERSION / ver.txt / ver.json 已收口为 `2026091805`。
+- [x] GitHub Release `source-v2026091805` 已发布。
+- [x] 正式资产 `zonoe-online-update.zip` + `.sha256` 已发布。
+- [x] Release Run `35300195897` 全部成功。
+- [x] 真实 GitHub Release 在线更新 E2E `2026091804 -> 2026091805` 成功。
+- [ ] 生产 BaoTa/Nginx 的 `/license` 路由仍需单独实机验证。
+- [ ] iOS 明文/普通加密/V2 动态公告显示仍可继续做真机验收，但不影响在线更新发布。
 
 ## 保持不变的稳定边界
 

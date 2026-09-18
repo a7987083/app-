@@ -1,5 +1,16 @@
 # Development Changelog
 
+## 2026-09-18 — Phase 19.4 Formal Online Update Release 2026091805
+
+- Formal Release: `source-v2026091805`
+- Release branch: `release/2026091805-phase19-4-dynamic-announcement`
+- Release commit: `7126b378e031c6c7f5965d0f78b3e753b28c27df`
+- Release Run: `35300195897` — SUCCESS
+- Assets: `zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`
+- Real GitHub Release online-update E2E: `2026091804 -> 2026091805` — SUCCESS
+- E2E output: `self_update=passed progress=passed history=passed db_migration=yes`.
+
+
 ## 2026-09-18 — Phase 19.4 Dynamic Announcement + License Routing
 
 Baseline: `source-v2026091804@34fc713346eafe92f23d1f5fcf470526daf8ddb6`

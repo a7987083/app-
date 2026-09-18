@@ -1,46 +1,39 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "branch": "release/2026091804-phase19-3-1-concurrency-api-center",
-    "phase": "19.3.1",
-    "version": "2026091804",
-    "commit": "34fc713346eafe92f23d1f5fcf470526daf8ddb6",
-    "release": "source-v2026091804",
-    "phase_gate_run": 35291515475,
-    "phase_gate_result": "success",
-    "release_run": 35291515730,
-    "release_package_job": "success",
-    "release_e2e": "failed_release_notes_literal_marker"
-  },
-  "active_development": {
-    "branch": "feature/2026091805-phase19-4-dynamic-announcement-license",
+    "branch": "release/2026091805-phase19-4-dynamic-announcement",
     "phase": "19.4",
-    "version_file": "2026091804",
-    "code_commit": "391de96f6a8f4da3d1f75b505acc876b07101608",
-    "ci_run": 35296525450,
-    "ci_result": "success"
+    "version": "2026091805",
+    "commit": "7126b378e031c6c7f5965d0f78b3e753b28c27df",
+    "release": "source-v2026091805",
+    "feature_ci_run": 35296525450,
+    "feature_ci_result": "success",
+    "release_run": 35300195897,
+    "release_result": "success",
+    "online_update_from": "2026091804",
+    "online_update_e2e": "passed"
   },
-  "framework": "ThinkPHP 5.0.24 / FastAdmin-style",
+  "online_update": {
+    "tag": "source-v2026091805",
+    "zip": "zonoe-online-update.zip",
+    "sha256_asset": "zonoe-online-update.zip.sha256",
+    "release_asset_sha256": "7ade472271e4e31a488846e9195f913449ac67e296344d21151d8174eb680319",
+    "self_update": "passed",
+    "progress": "passed",
+    "history": "passed",
+    "db_migration": "yes"
+  },
   "phase19_4": {
-    "dynamic_announcement": "implemented",
-    "cache_safe_sentinel_injection": "implemented",
-    "admin_token_insert": "implemented",
-    "admin_udid_preview": "implemented",
-    "license_nginx_contract": "implemented",
-    "online_update_manifest": "implemented",
-    "php70_ci": "passed",
+    "dynamic_announcement": "released",
+    "cache_safe_sentinel_injection": "released",
+    "admin_token_insert": "released",
+    "admin_udid_preview": "released",
+    "license_nginx_contract": "released",
+    "online_update_manifest": "released",
     "production_nginx_reload": "not_run",
     "public_license_get_post": "not_run",
     "ios_real_device_plain_normal_v2": "not_run"
   },
-  "compatibility_boundaries": [
-    "Do not change legacy appstore/appstore_v2 public keys or encryption envelope",
-    "Keep one-time card activation and scope-separated entitlement semantics",
-    "Keep transfer_count as remaining device-transfer quota",
-    "Do not restore App-mb.php or Index2.php",
-    "Do not claim production Nginx or iOS validation before real verification"
-  ],
-  "known_release_gate_note": "phase13_github_online_update_e2e requires release changelog to contain literal 更新内容",
-  "next_task": "Real BaoTa Nginx + /license verification, then iOS plain/normal/V2 dynamic-announcement regression and 2026091805 release candidate.",
+  "next_task": "Optional post-release production Nginx and iOS real-device validation.",
   "roadmap": "ROADMAP.md"
 }
