@@ -6,7 +6,6 @@ use app\common\controller\Backend;
 use app\common\library\SourceAppRepository;
 use app\common\library\SourceChangeLog;
 use app\common\model\Category as CategoryModel;
-use fast\Tree;
 use think\Db;
 
 /**
@@ -22,7 +21,6 @@ class Category extends Backend
      * @var \app\common\model\Category
      */
     protected $model = null;
-    protected $categorylist = [];
     protected $noNeedRight = ['selectpage'];
     protected $searchFields = 'name';
     protected $renewalEntryAvailable = false;
@@ -37,13 +35,13 @@ class Category extends Backend
         $this->view->assign("typeList", $typeList);
         $this->assignconfig('typeList', $typeList);
 
-        // 列表页改为数据库分页后，不再为每次 index AJAX 请求加载整张分类表和构建 Tree。
-        // add/edit 仍保留原 parentList 行为，避免改变历史的父分类选择语义。
+        // 项目管理的 pid 控件历史上一直隐藏。2 万级数据下为隐藏控件构建整张分类树
+        // 会导致 add/edit 无意义地全表扫描、PHP Tree 运算和海量 option 渲染。
+        // 新增固定 pid=0；编辑保持原 pid，不再加载 parentList。
         $action = strtolower((string)$this->request->action());
         if ($action === 'add' || $action === 'edit') {
             $this->renewalEntryAvailable = $this->ensureRenewalEntryColumn();
             $this->view->assign('renewalEntryAvailable', $this->renewalEntryAvailable);
-            $this->view->assign("parentList", $this->buildParentList());
         }
     }
 
@@ -100,22 +98,6 @@ class Category extends Backend
     }
 
     /**
-     * 仅 add/edit 需要完整父分类树，避免列表请求重复加载全部项目。
-     */
-    protected function buildParentList()
-    {
-        $tree = Tree::instance();
-        $tree->init(collection($this->model->order('weigh desc,id desc')->select())->toArray(), 'pid');
-        $this->categorylist = $tree->getTreeList($tree->getTreeArray(0), 'name');
-
-        $categorydata = [0 => ['type' => 'all', 'name' => __('None')]];
-        foreach ($this->categorylist as $v) {
-            $categorydata[$v['id']] = $v;
-        }
-        return $categorydata;
-    }
-
-    /**
      * 编辑
      */
     public function edit($ids = null)
@@ -135,16 +117,11 @@ class Category extends Backend
                 $params = $this->preExcludeFields($params);
                 $modify = isset($params['modify']) ? $params['modify'] : null;
                 unset($params['modify']);
-                $params = $this->normalizeWriteParams($params, true);
 
-                if (isset($params['pid']) && $params['pid'] != $row['pid']) {
-                    $childrenIds = Tree::instance()
-                        ->init(collection(\app\common\model\Category::select())->toArray())
-                        ->getChildrenIds($row['id'], true);
-                    if (in_array($params['pid'], $childrenIds)) {
-                        $this->error(__('Can not change the parent to child or itself'));
-                    }
-                }
+                // pid 不在项目管理 UI 中开放修改。即使客户端手工提交其它 pid，也保持原值，
+                // 从而彻底避免为父子循环校验再次全表加载 Category。
+                $params['pid'] = (int)$row['pid'];
+                $params = $this->normalizeWriteParams($params, true);
 
                 try {
                     if ($this->modelValidate) {
@@ -204,6 +181,8 @@ class Category extends Backend
         if ($this->request->isPost()) {
             $params = $this->request->post("row/a");
             if ($params) {
+                // 项目新增固定为根级 App，不接受客户端构造父分类。
+                $params['pid'] = 0;
                 $params = $this->normalizeWriteParams($params, false);
                 $category = new CategoryModel();
                 $category->allowField(true)->save($params);
