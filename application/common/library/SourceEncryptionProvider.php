@@ -24,6 +24,8 @@ class SourceEncryptionProvider
     const LEGACY_KEY_URL = 'https://api.nuosike.com/key.json';
     const LEGACY_BKEY_CACHE_TTL = 900;
     const LEGACY_BKEY_STALE_TTL = 86400;
+    const LEGACY_KEYSTREAM_MIN_BYTES = 262144;
+    const LEGACY_KEYSTREAM_MAX_BYTES = 16777216;
     const V2_MAGIC = 0xFEEDFACF;
     const V2_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const V2_KEY_LENGTH = 15;
@@ -82,7 +84,7 @@ class SourceEncryptionProvider
             throw new \RuntimeException('Legacy bkey is empty');
         }
 
-        return base64_encode(self::rc4($json, $bkey));
+        return base64_encode(self::rc4LegacyCached($json, $bkey));
     }
 
     public static function encryptV2Json($json, $keyText = null)
@@ -110,7 +112,7 @@ class SourceEncryptionProvider
             throw new \RuntimeException('V2 RSA key encryption failed');
         }
 
-        $payload = self::rc4($json, $keyText);
+        $payload = self::rc4Reference($json, $keyText);
         $container = pack('V', self::V2_MAGIC)
             . pack('V', strlen($rsaBlob))
             . $rsaBlob
@@ -329,7 +331,122 @@ class SourceEncryptionProvider
         return $json;
     }
 
-    protected static function rc4($data, $keyText)
+    /**
+     * Legacy RC4 fast path.
+     *
+     * The protocol reuses the same legacy bkey, therefore the RC4 keystream is
+     * deterministic. Large responses cache that keystream outside the public
+     * web root and perform the actual XOR with PHP's binary string operator,
+     * which runs in C instead of one PHP loop iteration per payload byte.
+     */
+    protected static function rc4LegacyCached($data, $keyText)
+    {
+        $length = strlen($data);
+        if (!self::legacyKeystreamEnabled()
+            || $length < self::LEGACY_KEYSTREAM_MIN_BYTES
+            || $length > self::LEGACY_KEYSTREAM_MAX_BYTES) {
+            return self::rc4Reference($data, $keyText);
+        }
+
+        try {
+            $stream = self::legacyKeystream($keyText, $length);
+            if (is_string($stream) && strlen($stream) === $length) {
+                return $data ^ $stream;
+            }
+        } catch (\Throwable $e) {
+            error_log('[SourceEncryptionProvider] legacy keystream fast path failed: ' . $e->getMessage());
+        }
+
+        return self::rc4Reference($data, $keyText);
+    }
+
+    protected static function legacyKeystreamEnabled()
+    {
+        $value = getenv('SOURCE_LEGACY_KEYSTREAM_CACHE');
+        if ($value === false || trim((string)$value) === '') {
+            return true;
+        }
+        return !in_array(strtolower(trim((string)$value)), ['0', 'false', 'off', 'no'], true);
+    }
+
+    protected static function legacyKeystream($keyText, $length)
+    {
+        $file = self::legacyKeystreamCacheFile($keyText);
+        $stream = self::readKeystreamPrefix($file, $length);
+        if (is_string($stream)) {
+            return $stream;
+        }
+
+        $dir = dirname($file);
+        if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
+            throw new \RuntimeException('Unable to create legacy keystream cache directory');
+        }
+
+        $lockFile = $file . '.lock';
+        $lock = @fopen($lockFile, 'c');
+        if (!$lock) {
+            throw new \RuntimeException('Unable to open legacy keystream cache lock');
+        }
+
+        try {
+            if (!@flock($lock, LOCK_EX)) {
+                throw new \RuntimeException('Unable to lock legacy keystream cache');
+            }
+
+            $stream = self::readKeystreamPrefix($file, $length);
+            if (is_string($stream)) {
+                @flock($lock, LOCK_UN);
+                fclose($lock);
+                return $stream;
+            }
+
+            $stream = self::rc4Reference(str_repeat("\0", $length), $keyText);
+            $tmp = $file . '.tmp.' . getmypid() . '.' . mt_rand(1000, 9999);
+            if (@file_put_contents($tmp, $stream, LOCK_EX) !== $length) {
+                @unlink($tmp);
+                throw new \RuntimeException('Unable to write legacy keystream cache');
+            }
+            @chmod($tmp, 0600);
+            if (!@rename($tmp, $file)) {
+                @unlink($tmp);
+                throw new \RuntimeException('Unable to publish legacy keystream cache');
+            }
+            @flock($lock, LOCK_UN);
+            fclose($lock);
+            return $stream;
+        } catch (\Throwable $e) {
+            @flock($lock, LOCK_UN);
+            fclose($lock);
+            throw $e;
+        }
+    }
+
+    protected static function legacyKeystreamCacheFile($keyText)
+    {
+        $custom = getenv('SOURCE_LEGACY_KEYSTREAM_CACHE_DIR');
+        if ($custom !== false && trim((string)$custom) !== '') {
+            $dir = rtrim(trim((string)$custom), '/\\');
+        } else {
+            $runtime = defined('RUNTIME_PATH') ? RUNTIME_PATH : dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR;
+            $dir = rtrim($runtime, '/\\') . DIRECTORY_SEPARATOR . 'source_crypto';
+        }
+        return $dir . DIRECTORY_SEPARATOR . 'legacy_rc4_' . hash('sha256', (string)$keyText) . '.bin';
+    }
+
+    protected static function readKeystreamPrefix($file, $length)
+    {
+        if (!is_file($file) || !is_readable($file) || filesize($file) < $length) {
+            return null;
+        }
+        $stream = @file_get_contents($file, false, null, 0, $length);
+        return is_string($stream) && strlen($stream) === $length ? $stream : null;
+    }
+
+    /**
+     * Reference RC4 implementation kept for V2's per-request random key and as
+     * a fail-open fallback for the legacy disk keystream optimization.
+     */
+    protected static function rc4Reference($data, $keyText)
     {
         $key = self::legacyKeyBytes($keyText);
         $keyLength = count($key);
