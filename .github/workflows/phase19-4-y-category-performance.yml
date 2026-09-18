@@ -6,6 +6,8 @@ on:
       - 'hotfix/2026091809-category-performance'
       - 'release/**'
     paths:
+      - 'VERSION'
+      - 'PHASE13_RELEASE.txt'
       - 'application/admin/controller/Category.php'
       - 'application/admin/view/category/add.html'
       - 'application/admin/view/category/edit.html'
