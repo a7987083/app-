@@ -1,20 +1,21 @@
-ZONOE 软件源 Release 2026091808
-版本：2026091808
-基线：2026091807
-阶段：Phase 19.4.x — Closeout Stabilization
-发布分支：release/2026091808-phase19-4-x-closeout
+ZONOE 软件源 Release 2026091809
+版本：2026091809
+基线：2026091808
+阶段：Phase 19.4.y — Category Performance Hotfix
+发布分支：release/2026091809-category-performance
 
 更新内容：
-1. 修复 GitHub 在线更新进度弹窗，释放长任务 Session 锁并使用真实后台阶段轮询。
-2. 系统 API 元数据自动同步，授权查询使用 /authorization。
-3. API 测试按真实参数 schema 生成输入框；授权查询为“卡密 + UDID”双输入框。
-4. 清理公告旧变量：[授权摘要]、[到期时间]、[源名称]、[指定APP数量] 及历史分作用域时间变量。
-5. 公告保留 [授权状态]、[剩余时间] 等必要变量。
-6. [服务器时间] 改为 [服务器运行时间]，运行起点持久化到 runtime/persistent/server_runtime.json。
-7. 新增 2026091808_phase19_4_x_closeout.sql，支持 MySQL 5.7 重复执行。
-8. Dylib 授权/HMAC 协议本版本不修改，留待后续单独阶段处理。
+1. 项目管理新增/编辑不再加载全量 parentList / Tree，避免 2 万级数据下无意义的全表扫描和海量 option 渲染。
+2. 新增项目服务端强制 pid=0；编辑项目保持原 pid，不再触发 Category::select() 全表子节点校验。
+3. 移除隐藏 pid selectpicker，改为轻量 hidden input。
+4. 项目列表按用户要求保持默认 1000 条/页，pageList 保持 200/500/1000。
+5. 新增、编辑成功后只关闭弹窗，不自动刷新当前 1000 行列表；管理员按需手动刷新。
+6. 删除成功后只从 BootstrapTable 本地移除对应行，阻止 FastAdmin 自动整表 refresh；工具栏删除同样应用该策略。
+7. 新增 Phase 19.4.y 性能回归门禁，禁止 add/edit 路径重新出现全量 Category Tree / Category::select()。
+8. 在线更新包明确包含 Category.php、add.html、edit.html、category.js。
 
 在线更新：
-- GitHub Release 标签：source-v2026091808。
+- GitHub Release 标签：source-v2026091809。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 发布前门禁：PHP 7.0、MySQL 5.7、HTTP load、更新包完整性、1807 -> 1808 在线更新 E2E。
+- file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity 监控的 4 个关键文件。
+- 发布前门禁：专项 PHP 7.0/JS/性能契约、正式 PHP 7.0 全回归、MySQL 5.7、HTTP load、更新包完整性、1808 -> 1809 在线更新 E2E。

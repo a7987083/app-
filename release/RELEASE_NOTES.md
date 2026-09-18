@@ -1,53 +1,50 @@
-# ZONOE 软件源 2026091808
+# ZONOE 软件源 2026091809
 
 ## 更新内容
 
-本版本用于完成 Phase 19.4.x 收尾，不引入 Phase 20 功能。
+本版本是项目管理性能 Hotfix，不引入 Phase 20 功能。
 
-### 在线更新进度
+### 项目管理性能
 
-- 长时间安装请求在进入更新执行前释放 PHP Session 锁，允许状态轮询并发读取真实进度。
-- 更新状态接口禁用缓存，前端继续按真实 job 状态刷新，不使用伪造动画百分比。
-- 前端补齐 preparing / package_complete 等真实阶段，并显示最后更新时间。
-- 更新请求出现瞬时网络错误时，不立即终止状态轮询。
+- 新增/编辑页面不再为隐藏的父分类字段构建完整 `parentList` / Tree。
+- 新增项目服务端固定 `pid=0`；编辑项目保留原 `pid`。
+- 移除编辑路径中的 `Category::select()` 全表子节点校验，避免 2 万级数据下额外全表读取。
+- 隐藏父级字段由 select/selectpicker 改成普通 hidden input。
+- 项目列表继续保持默认 1000 条/页，分页选项保持 200 / 500 / 1000。
 
-### API Center
+### CRUD 不自动刷新
 
-- 系统 API 元数据由代码定义同步到数据库，避免数据库旧记录长期覆盖新地址。
-- 授权查询统一使用 `/authorization` 作为安全入口，`/license` 仅保留兼容语义。
-- API 测试页按接口真实参数 schema 动态生成输入框。
-- 授权查询测试明确显示两个独立参数：卡密 + UDID。
-- 必填参数在服务端再次校验，测试请求不再依赖手工拼接 `a=1&b=2`。
-- Dylib 授权协议和 HMAC 本版本不处理。
+- 新增成功后只关闭弹窗，不刷新父级 1000 行列表。
+- 编辑成功后只关闭弹窗，不刷新父级 1000 行列表。
+- 单行删除成功后使用 `bootstrapTable('remove')` 本地移除对应行，并阻止 FastAdmin 默认整表 refresh。
+- 工具栏批量删除同样注册 no-refresh 回调，删除完成后本地移除已删除行。
 
-### 动态公告收尾
+### 性能回归门禁
 
-公告编辑器公开变量收敛为：
+新增 `tests/phase19_4_y_category_performance_test.php`，持续检查：
 
-- `[刷新时间]`
-- `[软件个数]`
-- `[今日更新]`
-- `[七日更新]`
-- `[授权状态]`
-- `[剩余时间]`
-- `[服务器运行时间]`
+- Category 控制器不得重新出现 `buildParentList`。
+- add/edit 路径不得重新出现 `Category::select()` 全表加载。
+- 不得重新依赖 `fast\Tree` 构建隐藏父级树。
+- add 固定 `pid=0`，edit 保留原 `pid`。
+- 模板不得重新渲染 pid select/selectpicker 或 `parentList`。
+- 默认分页必须保持 1000 条。
+- 新增/编辑/删除不得恢复自动整表刷新。
+- 在线更新清单必须包含本次 4 个业务文件。
 
-清理旧变量，包括 `[授权摘要]`、`[到期时间]`、`[源名称]`、`[指定APP数量]` 以及全源/部分/验证的旧时间变量。
+### 在线更新
 
-### 服务器运行时间
+在线更新包包含：
 
-- `[服务器时间]` 改为 `[服务器运行时间]`。
-- 首次记录时间持久化到 `runtime/persistent/server_runtime.json`。
-- 使用原子写入并保留备份恢复逻辑；PHP/Nginx 重启和正常在线更新不会把运行时间重置。
+- `application/admin/controller/Category.php`
+- `application/admin/view/category/add.html`
+- `application/admin/view/category/edit.html`
+- `public/assets/js/backend/category.js`
 
-### 数据迁移
-
-- `2026091808_phase19_4_x_closeout.sql` 同步授权查询系统 API 元数据。
-- 迁移旧公告模板变量，并将 `[服务器时间]` 转换为 `[服务器运行时间]`。
-- SQL 设计为 MySQL 5.7 可重复执行。
+`file_sign` 继续为 `f3f6e072f814d06403ce5e393967c9e2`，因为本版本没有修改 `UpdateIntegrity::files()` 监控的 4 个关键文件。
 
 ### 验证
 
-- Phase 19.4.x PHP 7.0 / JS / legacy regression 门禁。
-- 2026091808 MySQL 5.7 迁移真实执行两遍门禁。
-- 正式 Release 继续执行 PHP 7.0 全回归、MySQL 5.7、HTTP load、更新包校验和 2026091807 → 2026091808 GitHub Release 在线更新 E2E。
+- Phase 19.4.y 专项 PHP 7.0 / JS / 性能契约 / 在线更新包门禁。
+- 正式 Release 继续执行 PHP 7.0 全回归、MySQL 5.7、HTTP load、更新包校验。
+- 正式执行 `2026091808 → 2026091809` GitHub Release 在线更新 E2E。
