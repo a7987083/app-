@@ -1,0 +1,53 @@
+name: Phase 19.4.y Category Performance Hotfix
+
+on:
+  push:
+    branches:
+      - 'hotfix/2026091809-category-performance'
+      - 'release/**'
+    paths:
+      - 'application/admin/controller/Category.php'
+      - 'application/admin/view/category/add.html'
+      - 'application/admin/view/category/edit.html'
+      - 'public/assets/js/backend/category.js'
+      - 'release/online-update-files.txt'
+      - 'tests/phase19_4_y_category_performance_test.php'
+      - '.github/workflows/phase19-4-y-category-performance.yml'
+  workflow_dispatch:
+
+jobs:
+  php70-category-performance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, zip
+
+      - name: Lint category performance hotfix
+        run: |
+          set -euo pipefail
+          php -l application/admin/controller/Category.php
+          php -l tests/phase19_4_y_category_performance_test.php
+          node --check public/assets/js/backend/category.js
+
+      - name: Run category performance contract
+        run: |
+          set -euo pipefail
+          php tests/phase19_4_y_category_performance_test.php
+
+      - name: Verify online update contains category hotfix
+        run: |
+          set -euo pipefail
+          grep -Fx 'application/admin/controller/Category.php' release/online-update-files.txt
+          grep -Fx 'application/admin/view/category/add.html' release/online-update-files.txt
+          grep -Fx 'application/admin/view/category/edit.html' release/online-update-files.txt
+          grep -Fx 'public/assets/js/backend/category.js' release/online-update-files.txt
+          php tools/build_online_update.php "$PWD/category-performance-online-update.zip"
+          unzip -t category-performance-online-update.zip >/dev/null
+          unzip -Z1 category-performance-online-update.zip | grep -Fx 'program/application/admin/controller/Category.php'
+          unzip -Z1 category-performance-online-update.zip | grep -Fx 'program/application/admin/view/category/add.html'
+          unzip -Z1 category-performance-online-update.zip | grep -Fx 'program/application/admin/view/category/edit.html'
+          unzip -Z1 category-performance-online-update.zip | grep -Fx 'program/public/assets/js/backend/category.js'
