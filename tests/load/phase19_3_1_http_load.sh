@@ -51,7 +51,7 @@ mysql_cmd < tests/fixtures/phase19_3_1_load_schema.sql
 mysql_cmd < release/sql/2026091803_api_center_performance.sql
 
 mkdir -p "$KEYSTREAM_DIR"
-php -r '$f=getenv("BKEY_FILE"); $p=["version"=>1,"fetched_at"=>time(),"bkey"=>base64_encode("phase1931-benchmark-key")]; file_put_contents($f,json_encode($p));' BKEY_FILE="$BKEY_FILE"
+BKEY_FILE="$BKEY_FILE" php -r '$f=getenv("BKEY_FILE"); $p=["version"=>1,"fetched_at"=>time(),"bkey"=>base64_encode("phase1931-benchmark-key")]; file_put_contents($f,json_encode($p));'
 
 cat > "$NGINX_CONF" <<EOF
 pid $NGINX_PID;
