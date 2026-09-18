@@ -34,24 +34,44 @@ class SourceAnnouncementTemplate
 
     public static function variables()
     {
+        // Announcement authors get one authorization clock only. The runtime
+        // still understands legacy scope-specific tokens for backward
+        // compatibility, but they are intentionally hidden from the editor.
         return [
             ['key' => '刷新时间', 'description' => '当前软件源请求时间'],
             ['key' => '软件个数', 'description' => '当前软件源 App 总数'],
             ['key' => '今日更新', 'description' => '今天更新的 App 数量'],
             ['key' => '七日更新', 'description' => '最近 7 天更新的 App 数量'],
-            ['key' => '授权状态', 'description' => '按 全解锁 → 部分App → 仅验证 选择当前有效授权'],
-            ['key' => '到期时间', 'description' => '当前有效授权到期时间（全解锁 → 部分App → 仅验证）'],
-            ['key' => '剩余时间', 'description' => '当前有效授权剩余时间（全解锁 → 部分App → 仅验证）'],
-            ['key' => '全源到期时间', 'description' => '全软件源授权到期时间'],
-            ['key' => '全源剩余时间', 'description' => '全软件源授权剩余时间'],
-            ['key' => '部分到期时间', 'description' => '指定 App 授权最晚到期时间'],
-            ['key' => '部分剩余时间', 'description' => '指定 App 授权剩余时间'],
-            ['key' => '验证到期时间', 'description' => '仅验证授权到期时间'],
+            ['key' => '授权状态', 'description' => '当前有效授权状态'],
+            ['key' => '到期时间', 'description' => '当前有效授权到期时间'],
+            ['key' => '剩余时间', 'description' => '当前有效授权剩余时间'],
             ['key' => '指定APP数量', 'description' => '当前有效指定 App 授权数量'],
-            ['key' => '授权摘要', 'description' => '当前设备授权概要'],
+            ['key' => '授权摘要', 'description' => '当前有效授权摘要'],
             ['key' => '源名称', 'description' => '软件源名称'],
             ['key' => '服务器时间', 'description' => '服务器当前时间'],
         ];
+    }
+
+    protected static function recognizedVariableKeys()
+    {
+        $keys = [];
+        foreach (self::variables() as $variable) {
+            $keys[$variable['key']] = true;
+        }
+
+        // Deprecated in 2026091807. Keep parsing support so historical
+        // templates never leak raw tokens even if the SQL migration is skipped.
+        foreach ([
+            '全源到期时间',
+            '全源剩余时间',
+            '部分到期时间',
+            '部分剩余时间',
+            '验证到期时间',
+            '验证剩余时间',
+        ] as $key) {
+            $keys[$key] = true;
+        }
+        return array_keys($keys);
     }
 
     public static function hasVariables($template)
@@ -60,8 +80,8 @@ class SourceAnnouncementTemplate
         if ($template === '') {
             return false;
         }
-        foreach (self::variables() as $variable) {
-            if (strpos($template, '[' . $variable['key']) !== false) {
+        foreach (self::recognizedVariableKeys() as $key) {
+            if (strpos($template, '[' . $key) !== false) {
                 return true;
             }
         }
@@ -72,8 +92,7 @@ class SourceAnnouncementTemplate
     {
         $required = [];
         $template = (string)$template;
-        foreach (self::variables() as $variable) {
-            $key = $variable['key'];
+        foreach (self::recognizedVariableKeys() as $key) {
             if (strpos($template, '[' . $key . ']') !== false || strpos($template, '[' . $key . '|') !== false) {
                 $required[$key] = true;
             }
@@ -168,13 +187,14 @@ class SourceAnnouncementTemplate
         $needsAuthorization = isset($required['授权状态'])
             || isset($required['到期时间'])
             || isset($required['剩余时间'])
+            || isset($required['指定APP数量'])
+            || isset($required['授权摘要'])
             || isset($required['全源到期时间'])
             || isset($required['全源剩余时间'])
             || isset($required['部分到期时间'])
             || isset($required['部分剩余时间'])
             || isset($required['验证到期时间'])
-            || isset($required['指定APP数量'])
-            || isset($required['授权摘要']);
+            || isset($required['验证剩余时间']);
         if ($needsAuthorization) {
             $authorization = self::authorizationContext($cardRows, $sourceAccess, $now);
             foreach ($authorization as $key => $value) {
@@ -212,9 +232,9 @@ class SourceAnnouncementTemplate
             : [];
         $appCount = count($appIds);
 
-        // One generic "current authorization" clock is selected by business
-        // priority, never by whichever card happens to have the latest endtime.
-        // Priority: full source -> partial App scope -> verification-only.
+        // One and only one effective authorization clock is exposed to the
+        // announcement layer. Permission scope remains separate internally.
+        // Business priority: full source -> partial Apps -> verify-only.
         $activeExpire = 0;
         if ($fullExpire > $now) {
             $status = '已授权';
@@ -226,32 +246,35 @@ class SourceAnnouncementTemplate
             $status = '仅验证';
             $activeExpire = $verifyExpire;
         } else {
-            $status = '未授权';
+            $status = '已过期或未解锁本源';
         }
 
-        $activeTime = $activeExpire > $now ? date('Y-m-d H:i:s', $activeExpire) : '';
-        $activeRemaining = $activeExpire > $now ? self::formatRemaining($activeExpire - $now) : '';
-        $fullTime = $fullExpire > $now ? date('Y-m-d H:i:s', $fullExpire) : '';
-        $appTime = ($appCount > 0 && $appExpire > $now) ? date('Y-m-d H:i:s', $appExpire) : '';
-        $verifyTime = $verifyExpire > $now ? date('Y-m-d H:i:s', $verifyExpire) : '';
+        $fallback = '已过期或未解锁本源';
+        $activeTime = $activeExpire > $now ? date('Y-m-d H:i:s', $activeExpire) : $fallback;
+        $activeRemaining = $activeExpire > $now ? self::formatRemaining($activeExpire - $now) : $fallback;
 
-        $summary = [
-            '全软件源：' . ($fullTime !== '' ? '有效至 ' . $fullTime : '未解锁'),
-            '指定App：' . $appCount . '个' . ($appTime !== '' ? '，有效至 ' . $appTime : ''),
-            '仅验证：' . ($verifyTime !== '' ? '有效至 ' . $verifyTime : '未开通'),
-        ];
+        $summary = '授权状态：' . $status
+            . "\n到期时间：" . $activeTime
+            . "\n剩余时间：" . $activeRemaining;
+        if ($status === '部分App授权') {
+            $summary .= "\n指定App：" . $appCount . '个';
+        }
 
         return [
             '授权状态' => $status,
             '到期时间' => $activeTime,
             '剩余时间' => $activeRemaining,
-            '全源到期时间' => $fullTime,
-            '全源剩余时间' => $fullExpire > $now ? self::formatRemaining($fullExpire - $now) : '',
-            '部分到期时间' => $appTime,
-            '部分剩余时间' => ($appCount > 0 && $appExpire > $now) ? self::formatRemaining($appExpire - $now) : '',
-            '验证到期时间' => $verifyTime,
             '指定APP数量' => (string)$appCount,
-            '授权摘要' => implode("\n", $summary),
+            '授权摘要' => $summary,
+
+            // Deprecated aliases. All resolve to the same effective clock.
+            // This deliberately removes the old multi-clock announcement model.
+            '全源到期时间' => $activeTime,
+            '全源剩余时间' => $activeRemaining,
+            '部分到期时间' => $activeTime,
+            '部分剩余时间' => $activeRemaining,
+            '验证到期时间' => $activeTime,
+            '验证剩余时间' => $activeRemaining,
         ];
     }
 

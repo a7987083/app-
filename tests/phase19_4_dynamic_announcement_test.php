@@ -104,10 +104,13 @@ namespace {
 
     $guest = SourceAnnouncementTemplate::authorizationContext([], ['unlock_all' => false, 'app_ids' => []], $now);
     $guestRendered = SourceAnnouncementTemplate::render(
-        '[授权状态] [全源到期时间|未解锁] [验证到期时间|未开通]',
+        '[授权状态] [到期时间] [剩余时间]',
         $guest
     );
-    p194_assert($guestRendered === '未授权 未解锁 未开通', 'default value syntax works for guest');
+    p194_assert(
+        $guestRendered === '已过期或未解锁本源 已过期或未解锁本源 已过期或未解锁本源',
+        'guest/expired announcement uses unified fallback'
+    );
 
     $static = '普通公告，不含变量';
     p194_assert(SourceAnnouncementTemplate::render($static) === $static, 'static announcement remains byte-identical');

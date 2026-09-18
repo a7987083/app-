@@ -6,6 +6,7 @@ on:
       - 'feature/2026091805-phase19-4-dynamic-announcement-license'
       - 'release/**'
       - 'hotfix/2026091806-announcement-expiry-authorization-route'
+      - 'hotfix/2026091807-unified-announcement-expiry'
     paths:
       - 'application/index/controller/App.php'
       - 'application/common/library/SourceAnnouncementTemplate.php'
@@ -22,7 +23,9 @@ on:
       - 'release/online-update-files.txt'
       - 'tests/phase19_4_dynamic_announcement_test.php'
       - 'tests/phase19_4_1_hotfix_test.php'
+      - 'tests/phase19_4_2_unified_announcement_test.php'
       - 'release/sql/2026091806_announcement_priority.sql'
+      - 'release/sql/2026091807_unified_announcement_expiry.sql'
       - 'tests/source_response_test.php'
       - 'tests/deployment_contract_test.php'
       - '.github/workflows/phase19-4-dynamic-announcement-license.yml'
@@ -49,6 +52,7 @@ jobs:
           php -l application/admin/controller/general/Config.php
           php -l tests/phase19_4_dynamic_announcement_test.php
           php -l tests/phase19_4_1_hotfix_test.php
+          php -l tests/phase19_4_2_unified_announcement_test.php
           php -l tests/source_response_test.php
           php -l tests/deployment_contract_test.php
           node --check public/assets/js/backend/general/config.js
@@ -58,6 +62,7 @@ jobs:
           set -euo pipefail
           php tests/phase19_4_dynamic_announcement_test.php
           php tests/phase19_4_1_hotfix_test.php
+          php tests/phase19_4_2_unified_announcement_test.php
           php tests/source_response_test.php
           php tests/phase19_2_legacy_response_cache_test.php
           php tests/phase19_3_1_api_center_contract_test.php
@@ -73,6 +78,7 @@ jobs:
           grep -Fx 'application/index/view/index/license.html' release/online-update-files.txt
           grep -Fx 'application/index/view/index/unbind.html' release/online-update-files.txt
           grep -Fx 'nginx.rewrite' release/online-update-files.txt
+          test -s release/sql/2026091807_unified_announcement_expiry.sql
           php tools/build_online_update.php "$PWD/phase19-4-online-update.zip"
           unzip -t phase19-4-online-update.zip >/dev/null
           unzip -Z1 phase19-4-online-update.zip | grep -Fx 'program/application/common/library/SourceAnnouncementTemplate.php'
@@ -80,3 +86,4 @@ jobs:
           unzip -Z1 phase19-4-online-update.zip | grep -Fx 'program/application/index/view/index/license.html'
           unzip -Z1 phase19-4-online-update.zip | grep -Fx 'program/application/index/view/index/unbind.html'
           unzip -Z1 phase19-4-online-update.zip | grep -Fx 'program/nginx.rewrite'
+          unzip -Z1 phase19-4-online-update.zip | grep -Fx 'mysql/2026091807_unified_announcement_expiry.sql'

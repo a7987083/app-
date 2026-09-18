@@ -143,7 +143,7 @@
                                             {/switch}
                                             {if $item.name == 'message'}
                                             <div class="announcement-template-tools" style="margin-top:10px;padding:10px;border:1px solid #e5e5e5;border-radius:4px;background:#fafafa;">
-                                                <div style="margin-bottom:6px;"><strong><i class="fa fa-magic"></i> 动态公告变量</strong> <span class="text-muted">点击即可插入；支持默认值，例如 [全源到期时间|未解锁]</span></div>
+                                                <div style="margin-bottom:6px;"><strong><i class="fa fa-magic"></i> 动态公告变量</strong> <span class="text-muted">点击即可插入；授权时间统一使用 [到期时间] / [剩余时间]</span></div>
                                                 <div class="announcement-variable-list" style="margin-bottom:8px;">
                                                     {foreach $announcementVariables as $announcementVariable}
                                                     <button type="button" class="btn btn-xs btn-default announcement-variable" data-token="[{$announcementVariable.key}]" title="{$announcementVariable.description|htmlentities}" style="margin:0 4px 4px 0;">[{$announcementVariable.key}]</button>

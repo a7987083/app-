@@ -44,6 +44,7 @@ on:
       - 'tests/phase19_3_1_load_result_gate.php'
       - 'tests/phase19_4_dynamic_announcement_test.php'
       - 'tests/phase19_4_1_hotfix_test.php'
+      - 'tests/phase19_4_2_unified_announcement_test.php'
       - 'tests/fixtures/phase19_3_1_load_schema.sql'
       - 'tests/load/phase19_3_1_http_load.sh'
       - 'tests/load/wrk_metrics.lua'
@@ -106,6 +107,7 @@ jobs:
           php -l tests/phase19_3_1_load_result_gate.php
           php -l tests/phase19_4_dynamic_announcement_test.php
           php -l tests/phase19_4_1_hotfix_test.php
+          php -l tests/phase19_4_2_unified_announcement_test.php
           bash -n tests/load/phase19_3_1_http_load.sh
           php -l application/common/library/update/UpdateRuntimeStore.php
           php -l application/common/library/update/UpdateInstaller.php
@@ -163,6 +165,7 @@ jobs:
           php tests/phase19_3_1_encryption_benchmark.php
           php tests/phase19_4_dynamic_announcement_test.php
           php tests/phase19_4_1_hotfix_test.php
+          php tests/phase19_4_2_unified_announcement_test.php
           php tests/source_encryption_provider_test.php
           php tests/source_encryption_bkey_cache_test.php
           php tests/source_encryption_policy_test.php
@@ -349,6 +352,7 @@ jobs:
           test -s release/sql/2026091705_renewal_entry_repair.sql
           test -s release/sql/2026091803_api_center_performance.sql
           test -s release/sql/2026091806_announcement_priority.sql
+          test -s release/sql/2026091807_unified_announcement_expiry.sql
           ! grep -F 'FastStorageManager.php' release/online-update-files.txt
           ! grep -F 'FastStorageManagerCompat.php' release/online-update-files.txt
           ! grep -F 'SiteStorageManager.php' release/online-update-files.txt
@@ -394,6 +398,7 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026091705_renewal_entry_repair.sql'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026091803_api_center_performance.sql'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026091806_announcement_priority.sql'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026091807_unified_announcement_expiry.sql'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Config.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Updatemaintenance.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/general/updatemaintenance/panel.html'
