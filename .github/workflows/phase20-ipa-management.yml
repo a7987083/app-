@@ -7,9 +7,11 @@ on:
   pull_request:
     paths:
       - 'application/admin/controller/IpaCenter.php'
+      - 'application/admin/command/IpaScan.php'
+      - 'application/command.php'
       - 'application/admin/view/ipa_center/**'
       - 'application/admin/command/Install/phase20_ipa_*.sql'
-      - 'application/common/library/IpaFoundation.php'
+      - 'application/common/library/Ipa*.php'
       - 'public/assets/js/backend/ipa_center.js'
       - 'tests/phase20_*'
       - '.github/workflows/phase20-ipa-management.yml'
@@ -26,10 +28,23 @@ jobs:
       - name: PHP syntax
         run: |
           php -l application/admin/controller/IpaCenter.php
+          php -l application/admin/command/IpaScan.php
           php -l application/common/library/IpaFoundation.php
+          php -l application/common/library/IpaRemoteFile.php
+          php -l application/common/library/IpaScanPlanner.php
+          php -l application/common/library/IpaOpenListClient.php
+          php -l application/common/library/IpaInventoryCache.php
+          php -l application/common/library/IpaSourceConfig.php
+          php -l application/common/library/IpaScanService.php
           php -l tests/phase20_foundation_contract_test.php
           php -l tests/phase20_ui_contract_test.php
+          php -l tests/phase20_scan_planner_test.php
+          php -l tests/phase20_scan_contract_test.php
       - name: Phase 20 foundation contract
         run: php tests/phase20_foundation_contract_test.php
       - name: Phase 20 UI contract
         run: php tests/phase20_ui_contract_test.php
+      - name: Phase 20 scan planner
+        run: php tests/phase20_scan_planner_test.php
+      - name: Phase 20 scan contract
+        run: php tests/phase20_scan_contract_test.php

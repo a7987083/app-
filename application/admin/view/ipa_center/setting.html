@@ -1,11 +1,22 @@
 <div class="panel panel-default panel-intro">
-    <div class="panel-heading"><h3 class="panel-title">IPA 管理设置</h3></div>
+    <div class="panel-heading"><div class="panel-lead"><em>IPA 网络源设置</em>Phase 20.2 使用 OpenList API 只做目录发现。Token 加密存储，页面只显示尾号提示。</div></div>
     <div class="panel-body">
-        <form class="form-horizontal">
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">IPA 网络源</label><div class="col-xs-12 col-sm-8"><input class="form-control" disabled placeholder="Phase 20.2 接入 OpenList URL / API Path / 加密 Token"></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">自动解析</label><div class="col-xs-12 col-sm-8"><input class="form-control" disabled value="关闭"></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Parser Version</label><div class="col-xs-12 col-sm-8"><input class="form-control" disabled value="1"></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">安全策略</label><div class="col-xs-12 col-sm-8"><p class="form-control-static">高风险写库 / OpenList rename、move 使用独立权限节点；所有写操作必须审计。</p></div></div>
+        <form id="ipa-source-form" class="form-horizontal" method="post">
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">来源名称</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="name" value="{$source.name|default='OpenList'}"></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Base URL</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="base_url" placeholder="http://yun.zonoeios.xyz" value="{$source.base_url|default=''}"></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">API Base</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="api_base" value="{$source.api_base|default='/api'}"></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">扫描目录</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="scan_path" placeholder="/a/app" value="{$source.scan_path|default='/a/app'}"></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">公开下载模板</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="public_url_template" placeholder="http://yun.zonoeios.xyz/d/{path}" value="{$source.public_url_template|default=''}"><span class="help-block"><code>{path}</code> 会替换成 OpenList 内部路径（去掉开头 /）。</span></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">OpenList Token</label><div class="col-xs-12 col-sm-8"><input class="form-control" type="password" name="token" autocomplete="new-password" placeholder="留空表示不修改 {$source.token_hint|default=''}"></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">启用来源</label><div class="col-xs-12 col-sm-8"><label><input type="checkbox" name="enabled" value="1" {if condition="!empty($source.enabled)"}checked{/if}> 启用</label></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">自动扫描</label><div class="col-xs-12 col-sm-8"><label><input type="checkbox" name="schedule_enabled" value="1" {if condition="!empty($source.schedule_enabled)"}checked{/if}> 启用</label></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">扫描间隔</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="5" max="1440" name="interval_minutes" value="{$source.interval_minutes|default='10'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">分钟（5–1440）</p></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">每批解析上限</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="1" max="100" name="batch_size" value="{$source.batch_size|default='20'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">Phase 20.3 Parser 消费此上限</p></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">目录缓存</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="60" max="86400" name="cache_ttl" value="{$source.cache_ttl|default='1800'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">秒</p></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">超时 / 重试</label><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="3" max="120" name="request_timeout" value="{$source.request_timeout|default='15'}"></div><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="0" max="5" name="request_retries" value="{$source.request_retries|default='2'}"></div></div>
+            <input type="hidden" name="source_key" value="openlist">
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">健康状态</label><div class="col-xs-12 col-sm-8"><p class="form-control-static">{$source.last_health|default='unknown'} {if condition="!empty($source.last_checked_at)"} / {$source.last_checked_at|date='Y-m-d H:i:s',###}{/if}</p></div></div>
+            <div class="form-group"><div class="col-xs-12 col-sm-offset-2 col-sm-8"><button type="button" class="btn btn-success btn-ipa-source-save">保存</button> <button type="button" class="btn btn-default btn-ipa-source-test">测试连接</button></div></div>
         </form>
     </div>
 </div>
