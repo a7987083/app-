@@ -41,6 +41,11 @@ $hitMs = (microtime(true) - $started) * 1000;
 
 p1931Assert($baseline === $warm, 'keystream warm output differs from reference RC4');
 p1931Assert($baseline === $hit, 'keystream cache-hit output differs from reference RC4');
+
+$encoded = \app\common\library\SourceEncryptionProvider::encryptEncodedContent(base64_encode($payload), 'appstore');
+$direct = \app\common\library\SourceEncryptionProvider::encryptJson($payload, 'appstore');
+p1931Assert($encoded === $direct, 'direct JSON provider output differs from encoded compatibility entrypoint');
+p1931Assert($direct === $baseline, 'direct JSON provider output differs from legacy reference output');
 p1931Assert($hitMs > 0, 'cache-hit timing is invalid');
 
 $speedup = $baselineMs / $hitMs;
@@ -55,7 +60,7 @@ foreach ((array)$files as $file) {
 @rmdir($cacheDir);
 
 fwrite(STDOUT, sprintf(
-    "OK phase19_3_1_encryption_benchmark bytes=%d baseline_ms=%.2f warm_ms=%.2f hit_ms=%.2f speedup=%.2fx equivalent=yes\n",
+    "OK phase19_3_1_encryption_benchmark bytes=%d baseline_ms=%.2f warm_ms=%.2f hit_ms=%.2f speedup=%.2fx equivalent=yes direct_json=yes\n",
     $bytes,
     $baselineMs,
     $warmMs,
