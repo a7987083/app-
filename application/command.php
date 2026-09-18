@@ -8,4 +8,5 @@ return [
     'app\admin\command\Addon',
     'app\admin\command\Api',
     'app\admin\command\IpaScan',
+    'app\admin\command\IpaParse',
 ];
