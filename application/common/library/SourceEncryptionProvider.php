@@ -65,6 +65,19 @@ class SourceEncryptionProvider
             throw new \InvalidArgumentException('content is not valid Base64');
         }
 
+        return self::encryptJson($json, $appType);
+    }
+
+    /**
+     * Direct local-provider entrypoint. Avoids the historical JSON -> Base64 ->
+     * Base64 decode round trip when encryption happens in this process.
+     */
+    public static function encryptJson($json, $appType = 'appstore')
+    {
+        if (!is_string($json)) {
+            throw new \InvalidArgumentException('Source JSON must be a string');
+        }
+
         return $appType === 'appstore_v2'
             ? self::encryptV2Json($json)
             : self::encryptLegacyJson($json);
