@@ -47,7 +47,7 @@ p1931ApiAssert(strpos($controller, 'ApiEndpointRegistry::testSchema($endpointKey
 p1931ApiAssert(strpos($controller, "post('test_params/a'") !== false, 'typed API test parameters missing');
 
 p1931ApiAssert(strpos($registry, 'public static function endpoint($endpointKey)') !== false, 'registry endpoint lookup missing');
-p1931ApiAssert(strpos($registry, "where('endpoint_key', $endpointKey)") !== false, 'registry must resolve endpoint by endpoint_key');
+p1931ApiAssert(strpos($registry, 'where(\'endpoint_key\', $endpointKey)') !== false, 'registry must resolve endpoint by endpoint_key');
 p1931ApiAssert(strpos($registry, 'API不存在或尚未完成数据库迁移') !== false, 'toggle missing-row guard missing');
 p1931ApiAssert(strpos($registry, '接口开关写入后校验失败') !== false, 'toggle post-write verification missing');
 
