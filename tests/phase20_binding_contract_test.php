@@ -1,0 +1,5 @@
+<?php
+require_once dirname(__DIR__).'/application/common/library/IpaBindingService.php';
+use app\common\library\IpaBindingService;
+function ba($c,$m){if(!$c){fwrite(STDERR,"FAIL phase20_binding_contract_test: $m\n");exit(1);}}
+$m=['public_url'=>'http://yun.example/d/a/app/Demo.ipa','package_name'=>'Demo','package_version'=>'1.2'];$c=['bt1a'=>'http://yun.example/d/a/app/Demo.ipa','name'=>'Wrong','nickname'=>'9.9'];$r=IpaBindingService::compareCandidate($m,$c);ba($r['authoritative']===true,'exact URL authoritative');ba($r['score']===100,'exact URL score');$c2=['bt1a'=>'','name'=>'Demo','nickname'=>'1.2'];$r2=IpaBindingService::compareCandidate($m,$c2);ba($r2['authoritative']===false,'name/version never authoritative');ba(in_array('name_exact_hint',$r2['reasons'],true),'name hint');$src=file_get_contents(dirname(__DIR__).'/application/common/library/IpaBindingService.php');ba(strpos($src,"where('bt1a'")!==false,'exact bt1a candidate');ba(strpos($src,'like')===false,'no fuzzy LIKE authoritative matching');ba(strpos($src,"Db::name('ipa_operation_log')")!==false,'binding mutations audited');echo "OK phase20_binding_contract_test\n";

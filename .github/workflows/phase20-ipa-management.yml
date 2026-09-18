@@ -18,10 +18,8 @@ on:
       - 'tests/phase20_*'
       - '.github/workflows/phase20-ipa-management.yml'
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   phase20-contract:
     runs-on: ubuntu-latest
@@ -42,12 +40,15 @@ jobs:
           php -l application/common/library/IpaParserRunner.php
           php -l application/common/library/IpaMetadataNormalizer.php
           php -l application/common/library/IpaParserService.php
+          php -l application/common/library/IpaBindingService.php
           php -l tests/phase20_foundation_contract_test.php
           php -l tests/phase20_ui_contract_test.php
           php -l tests/phase20_scan_planner_test.php
           php -l tests/phase20_scan_contract_test.php
           php -l tests/phase20_metadata_normalizer_test.php
           php -l tests/phase20_parser_contract_test.php
+          php -l tests/phase20_binding_contract_test.php
+          php -l tests/phase20_binding_ui_contract_test.php
       - name: Phase 20 foundation contract
         run: php tests/phase20_foundation_contract_test.php
       - name: Phase 20 UI contract
@@ -62,3 +63,7 @@ jobs:
         run: php tests/phase20_metadata_normalizer_test.php
       - name: Phase 20 parser contract
         run: php tests/phase20_parser_contract_test.php
+      - name: Phase 20 binding contract
+        run: php tests/phase20_binding_contract_test.php
+      - name: Phase 20 binding UI contract
+        run: php tests/phase20_binding_ui_contract_test.php
