@@ -1,17 +1,19 @@
-ZONOE 软件源 Release 2026091807
-版本：2026091807
-基线：2026091806
-阶段：Phase 19.4.2 — Unified Announcement Expiry
+ZONOE 软件源 Release 2026091808
+版本：2026091808
+基线：2026091807
+阶段：Phase 19.4.x — Closeout Stabilization
 
 更新内容：
-1. 公告层只保留一套 [到期时间] / [剩余时间]。
-2. 底层权限优先级保持：全软件源 -> 指定 App -> 仅验证。
-3. 没有有效解锁或全部到期时，授权状态、到期时间、剩余时间统一显示“已过期或未解锁本源”。
-4. 后台移除全源/部分/验证三套到期时间按钮。
-5. 授权摘要收敛为单一状态、到期时间、剩余时间。
-6. 自动迁移旧公告变量到通用变量。
-7. 运行时继续兼容旧变量，全部映射到同一有效授权时钟。
+1. 修复 GitHub 在线更新进度弹窗，释放长任务 Session 锁并使用真实后台阶段轮询。
+2. 系统 API 元数据自动同步，授权查询使用 /authorization。
+3. API 测试按真实参数 schema 生成输入框；授权查询为“卡密 + UDID”双输入框。
+4. 清理公告旧变量：[授权摘要]、[到期时间]、[源名称]、[指定APP数量] 及历史分作用域时间变量。
+5. 公告保留 [授权状态]、[剩余时间] 等必要变量。
+6. [服务器时间] 改为 [服务器运行时间]，运行起点持久化到 runtime/persistent/server_runtime.json。
+7. 新增 2026091808_phase19_4_x_closeout.sql，支持 MySQL 5.7 重复执行。
+8. Dylib 授权/HMAC 协议本版本不修改，留待后续单独阶段处理。
 
 在线更新：
-- GitHub Release 标签：source-v2026091807。
+- GitHub Release 标签：source-v2026091808。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
+- 发布前门禁：PHP 7.0、MySQL 5.7、HTTP load、更新包完整性、1807 -> 1808 在线更新 E2E。

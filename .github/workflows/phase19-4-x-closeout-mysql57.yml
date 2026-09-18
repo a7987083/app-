@@ -1,0 +1,46 @@
+name: Phase 19.4.x Closeout MySQL 5.7
+
+on:
+  push:
+    branches:
+      - 'feature/2026091808-phase19-4-x-closeout'
+      - 'release/2026091808-phase19-4-x-closeout'
+    paths:
+      - 'release/sql/2026091808_phase19_4_x_closeout.sql'
+      - 'tests/phase19_4_x_mysql57_test.php'
+      - '.github/workflows/phase19-4-x-closeout-mysql57.yml'
+  workflow_dispatch:
+
+jobs:
+  mysql57-closeout:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: mysqli
+      - name: Lint closeout MySQL migration test
+        run: php -l tests/phase19_4_x_mysql57_test.php
+      - name: Run 2026091808 migration twice on MySQL 5.7
+        env:
+          ZONOE_MYSQL_HOST: 127.0.0.1
+          ZONOE_MYSQL_PORT: 3306
+          ZONOE_MYSQL_USER: root
+          ZONOE_MYSQL_PASSWORD: root
+          ZONOE_MYSQL_DATABASE: zonoe_test
+        run: php tests/phase19_4_x_mysql57_test.php
