@@ -8,6 +8,7 @@
             <button type="button" class="btn btn-success" id="ipa-writeback-random"><i class="fa fa-random"></i> 随机选择已绑定 IPA 测试</button>
             <span class="text-muted" style="line-height:34px">当前模板：v<span id="ipa-writeback-version">{$templateVersion|default=0}</span>。Phase 20.5 只预览；真正写库在 20.6 执行。</span>
         </div>
+        <p class="text-muted"><small>允许写回字段：<code>category.name</code>、<code>category.nickname</code>、<code>category.image</code>、<code>category.bt1a</code>、<code>category.bt2a</code>、<code>category.keywords</code>。其他字段不会进入模板目标白名单。</small></p>
         <div class="row">
             <div class="col-md-5">
                 <div class="panel panel-default">
