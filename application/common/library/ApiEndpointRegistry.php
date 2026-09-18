@@ -228,15 +228,29 @@ class ApiEndpointRegistry
             throw new \InvalidArgumentException('接口标识不能为空');
         }
 
+        $row = Db::table('fa_api_endpoint')->where('endpoint_key', $endpointKey)->find();
+        if (!$row) {
+            throw new \InvalidArgumentException('API不存在或尚未完成数据库迁移');
+        }
+
+        $target = $enabled ? 1 : 0;
         $updated = Db::table('fa_api_endpoint')
             ->where('endpoint_key', $endpointKey)
             ->update([
-                'enabled' => $enabled ? 1 : 0,
+                'enabled' => $target,
                 'updatetime' => time(),
             ]);
         if ($updated === false) {
             throw new \RuntimeException('接口开关更新失败');
         }
+
+        $verified = Db::table('fa_api_endpoint')
+            ->where('endpoint_key', $endpointKey)
+            ->value('enabled');
+        if ((int)$verified !== $target) {
+            throw new \RuntimeException('接口开关写入后校验失败');
+        }
+
         self::forget();
         return true;
     }
