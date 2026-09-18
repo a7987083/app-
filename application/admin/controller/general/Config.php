@@ -27,7 +27,7 @@ class Config extends Backend
      * @var \app\common\model\Config
      */
     protected $model = null;
-    protected $noNeedRight = ['check', 'rulelist', 'version_notice', 'update_status', 'update_history', 'update_rollback', 'api_toggle', 'api_save', 'api_delete', 'api_test', 'api_logs', 'announcement_preview'];
+    protected $noNeedRight = ['check', 'rulelist', 'version_notice', 'update_status', 'update_history', 'update_rollback', 'api_toggle', 'api_save', 'api_delete', 'api_test', 'api_test_schema', 'api_logs', 'announcement_preview'];
 
     public function _initialize()
     {
@@ -134,6 +134,9 @@ class Config extends Backend
                 foreach ($this->model->all() as $v) {
                     if (isset($row[$v['name']])) {
                         $value = $row[$v['name']];
+                        if ($v['name'] === 'message' && !is_array($value)) {
+                            $value = SourceAnnouncementTemplate::normalizeTemplate((string)$value);
+                        }
                         if (is_array($value) && isset($value['field'])) {
                             $value = json_encode(ConfigModel::getArrayData($value), JSON_UNESCAPED_UNICODE);
                         } else {
@@ -295,6 +298,7 @@ class Config extends Backend
     {
         $force = intval($this->request->param('force', 0)) === 1;
         $jobId = (string)$this->request->param('job_id', '');
+        $this->releaseUpdateSession();
         return json($this->updateManager()->install('nuosike', $force, $jobId));
     }
 
@@ -310,6 +314,7 @@ class Config extends Backend
     {
         $force = intval($this->request->param('force', 0)) === 1;
         $jobId = (string)$this->request->param('job_id', '');
+        $this->releaseUpdateSession();
         return json($this->updateManager()->install('github', $force, $jobId));
     }
 
@@ -318,6 +323,10 @@ class Config extends Backend
      */
     public function update_status()
     {
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+        }
         $jobId = (string)$this->request->param('job_id', '');
         return json($this->updateManager()->status($jobId));
     }
@@ -338,6 +347,7 @@ class Config extends Backend
     {
         $historyId = (string)$this->request->param('history_id', '');
         $jobId = (string)$this->request->param('job_id', '');
+        $this->releaseUpdateSession();
         return json($this->updateManager()->rollback($historyId, $jobId));
     }
 
@@ -383,43 +393,80 @@ class Config extends Backend
         return json(['code' => 1, 'data' => ApiEndpointRegistry::recentLogs((int)$this->request->get('limit', 100))]);
     }
 
+    public function api_test_schema()
+    {
+        $endpointKey = trim((string)$this->request->get('endpoint_key', ''));
+        $schema = ApiEndpointRegistry::testSchema($endpointKey);
+        if (!$schema) {
+            $this->error('API不存在');
+        }
+        $this->success('ok', null, $schema);
+    }
+
     public function api_test()
     {
         $endpointKey = trim((string)$this->request->post('endpoint_key', ''));
-        $params = trim((string)$this->request->post('params', ''));
         try {
             if ($endpointKey === '') {
                 throw new \InvalidArgumentException('请选择API接口');
             }
-            $row = Db::table('fa_api_endpoint')->where('endpoint_key', $endpointKey)->find();
-            if (!$row) {
+            $row = ApiEndpointRegistry::endpoint($endpointKey);
+            $schema = ApiEndpointRegistry::testSchema($endpointKey);
+            if (!$row || !$schema) {
                 throw new \InvalidArgumentException('API不存在');
             }
 
+            $input = $this->request->post('test_params/a', []);
+            if (!is_array($input)) {
+                $input = [];
+            }
+            $clean = [];
+            foreach ((array)$schema['fields'] as $field) {
+                $name = isset($field['name']) ? (string)$field['name'] : '';
+                if ($name === '') {
+                    continue;
+                }
+                $value = trim(isset($input[$name]) ? (string)$input[$name] : '');
+                if (!empty($field['required']) && $value === '') {
+                    throw new \InvalidArgumentException((isset($field['label']) ? $field['label'] : $name) . '不能为空');
+                }
+                if ($value !== '') {
+                    $clean[$name] = $value;
+                }
+            }
+
+            // Compatibility with the old single params field while 1807-era
+            // pages are still open in a browser during the upgrade.
+            if (!$clean) {
+                $legacy = trim((string)$this->request->post('params', ''));
+                if ($legacy !== '') {
+                    parse_str(ltrim($legacy, '?&'), $legacyValues);
+                    if (is_array($legacyValues)) {
+                        $clean = $legacyValues;
+                    }
+                }
+            }
+
             $url = rtrim($this->request->domain(), '/') . (string)$row['path'];
-            $method = strtoupper((string)$row['method']);
-            if ($method === 'ANY' || strpos($method, 'GET') !== false) {
-                if ($params !== '') {
-                    $url .= (strpos($url, '?') === false ? '?' : '&') . ltrim($params, '?&');
+            $method = strtoupper(isset($schema['method']) ? (string)$schema['method'] : (string)$row['method']);
+            $encoded = http_build_query($clean, '', '&');
+            $ch = null;
+            if ($method === 'GET') {
+                if ($encoded !== '') {
+                    $url .= (strpos($url, '?') === false ? '?' : '&') . $encoded;
                 }
                 $ch = curl_init($url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 8);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-                $body = curl_exec($ch);
             } else {
                 $ch = curl_init($url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 8);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-                $body = curl_exec($ch);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $encoded);
             }
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+            $body = curl_exec($ch);
             $error = curl_error($ch);
             $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $elapsed = (float)curl_getinfo($ch, CURLINFO_TOTAL_TIME) * 1000;
@@ -430,6 +477,8 @@ class Config extends Backend
             }
             $result = [
                 'url' => $url,
+                'method' => $method,
+                'params' => $clean,
                 'status' => $status,
                 'elapsed_ms' => round($elapsed, 2),
                 'body' => mb_substr((string)$body, 0, 4000, 'UTF-8'),
@@ -472,6 +521,13 @@ class Config extends Backend
             'message' => SourceAnnouncementTemplate::render($template, $context),
             'context' => $context,
         ]);
+    }
+
+    protected function releaseUpdateSession()
+    {
+        if (function_exists('session_status') && session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
     }
 
     protected function updateManager()
