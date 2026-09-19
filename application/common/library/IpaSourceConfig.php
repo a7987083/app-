@@ -31,7 +31,7 @@ class IpaSourceConfig
         if (!$existing) $existing=self::importLegacyDatabaseConfig();
         $candidate=self::candidate($input,$existing,true);
         $token=trim((string)$candidate['token']);
-        if ($token==='') throw new RuntimeException('请填写 OpenList 令牌（OpenList 设置 → 其他 → 令牌）');
+        if ($token==='') throw new RuntimeException('首次配置 OpenList 必须填写令牌（OpenList 设置 → 其他 → 令牌）');
         $now=time();
         $row=[
             'version'=>self::FORMAT_VERSION,
@@ -55,16 +55,37 @@ class IpaSourceConfig
             'updated_at'=>$now,
         ];
         self::writeConfig($row);
+
+        // Match the mature ipaxiazaizhan- behaviour: a successful save must
+        // also prove that the persisted encrypted token can be read back.
+        $saved=self::readConfig();
+        if (!$saved || empty($saved['token_ciphertext'])) throw new RuntimeException('OpenList 配置保存后读取失败，请检查 runtime/ipa 写权限');
+        $roundTrip=self::openToken($saved['token_ciphertext']);
+        if (!hash_equals($token,$roundTrip)) throw new RuntimeException('OpenList 令牌保存校验失败');
         return 1;
     }
 
+    /**
+     * Compatibility entry point kept for the existing controller/JS.
+     * Testing intentionally ignores unsaved form values and uses the saved
+     * encrypted configuration, matching ipaxiazaizhan- 2026091233.
+     */
     public static function testInput(array $input)
     {
-        $existing=self::readConfig();
-        if (!$existing) $existing=self::importLegacyDatabaseConfig();
-        $candidate=self::candidate($input,$existing,true);
-        if (empty($candidate['token'])) throw new RuntimeException('请填写 OpenList 令牌（OpenList 设置 → 其他 → 令牌）');
-        return self::clientFromRow($candidate)->health($candidate['scan_path']);
+        return self::testSaved();
+    }
+
+    public static function testSaved()
+    {
+        $row=self::readConfig();
+        if (!$row) $row=self::importLegacyDatabaseConfig();
+        if (!$row) throw new RuntimeException('请先保存 OpenList 配置');
+
+        $source=self::publicRow($row,true);
+        if (empty($source['base_url']) || empty($source['token'])) throw new RuntimeException('请先保存 OpenList URL 和令牌');
+        $health=self::clientFromRow($source)->health($source['scan_path']);
+        $health['path']=$source['scan_path'];
+        return $health;
     }
 
     public static function updateState(array $patch)
@@ -109,13 +130,19 @@ class IpaSourceConfig
     protected static function publicRow(array $row,$withToken)
     {
         $token='';
+        $tokenError='';
         if (!empty($row['token_ciphertext'])) {
-            try {$token=self::openToken($row['token_ciphertext']);} catch (\Exception $e) { if ($withToken) throw $e; }
+            try {$token=self::openToken($row['token_ciphertext']);}
+            catch (\Exception $e) {
+                $tokenError=$e->getMessage();
+                if ($withToken) throw $e;
+            }
         }
         $out=$row;
         $out['id']=1;$out['source_key']='openlist';$out['source_type']='openlist';$out['name']='OpenList';$out['api_base']=self::API_BASE;
         $out['token_configured']=$token!=='';
         $out['token_hint']=$token!==''?'已配置':'';
+        $out['token_error']=$tokenError;
         if ($withToken) $out['token']=$token;
         unset($out['token_ciphertext']);
         return $out;
