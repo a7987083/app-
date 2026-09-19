@@ -20,6 +20,7 @@ class IpaParserService
         $items=$query->limit($limit)->select();
         $summary=['selected'=>count((array)$items),'parsed'=>0,'reused'=>0,'failed'=>0,'retrying'=>0,'range_bytes'=>0,'range_requests'=>0];
         foreach((array)$items as $item){try{$result=self::parseOne($item);if(!empty($result['reused']))$summary['reused']++;else$summary['parsed']++;$summary['range_bytes']+=isset($result['range_bytes'])?(int)$result['range_bytes']:0;$summary['range_requests']+=isset($result['range_requests'])?(int)$result['range_requests']:0;}catch(\Exception $e){$state=self::recordFailure($item,$e->getMessage());$summary['failed']++;if($state==='retrying')$summary['retrying']++;}catch(Throwable $e){$state=self::recordFailure($item,$e->getMessage());$summary['failed']++;if($state==='retrying')$summary['retrying']++;}}
+        IpaScanService::pruneTaskItems();
         return $summary;
     }
 
@@ -27,7 +28,7 @@ class IpaParserService
     {
         $metadata=Db::name('ipa_metadata')->where('id',(int)$item['metadata_id'])->find();
         if(!$metadata)throw new RuntimeException('Metadata row not found');
-        $source=Db::name('ipa_source')->where('source_key',$metadata['source_key'])->find();
+        $source=IpaSourceConfig::first(true);
         if(!$source||empty($source['enabled']))throw new RuntimeException('IPA source unavailable');
         Db::name('ipa_scan_task_item')->where('id',(int)$item['id'])->update(['state'=>'running','stage'=>'parsing','updatetime'=>time()]);
 
