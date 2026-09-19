@@ -8,37 +8,52 @@ use RuntimeException;
 /**
  * Phase 20 OpenList configuration store.
  *
- * Configuration is intentionally kept outside MySQL.  The runtime file is
- * small, atomically replaced and protected with an installation-local key.
- * Existing fa_ipa_source data is imported lazily once for upgrade safety.
+ * MySQL (fa_ipa_source) is the durable source of truth.  Older releases kept
+ * the configuration under runtime/ipa; that file is now migration-only so a
+ * cache/runtime cleanup can no longer erase production connection settings.
  */
 class IpaSourceConfig
 {
     const API_BASE = '/api';
-    const FORMAT_VERSION = 2;
+    const FORMAT_VERSION = 3;
 
     public static function first($withToken=false)
     {
-        $row=self::readConfig();
-        if (!$row) $row=self::importLegacyDatabaseConfig();
+        $row=self::readDatabaseConfig();
+        if (!$row) {
+            try {$row=self::migrateRuntimeConfig();}
+            catch (\Exception $e) {
+                // Keep the settings page recoverable if an old runtime key was
+                // already lost.  A newly entered token can still repair it.
+                $runtime=self::readRuntimeConfig();
+                if (!$runtime) return null;
+                return self::publicRow($runtime,$withToken);
+            }
+        }
         if (!$row) return null;
         return self::publicRow($row,$withToken);
     }
 
     public static function save(array $input,$adminId=0)
     {
-        $existing=self::readConfig();
-        if (!$existing) $existing=self::importLegacyDatabaseConfig();
+        $existing=self::readDatabaseConfig();
+        if (!$existing) {
+            try {$existing=self::migrateRuntimeConfig();} catch (\Exception $e) {$existing=null;}
+        }
         $candidate=self::candidate($input,$existing,true);
         $token=trim((string)$candidate['token']);
         if ($token==='') throw new RuntimeException('首次配置 OpenList 必须填写令牌（OpenList 设置 → 其他 → 令牌）');
+
         $now=time();
         $row=[
-            'version'=>self::FORMAT_VERSION,
             'source_key'=>'openlist',
+            'source_type'=>'openlist',
+            'name'=>'OpenList',
             'base_url'=>$candidate['base_url'],
+            'api_base'=>self::API_BASE,
             'scan_path'=>$candidate['scan_path'],
             'public_url_template'=>$candidate['public_url_template'],
+            'token_ciphertext'=>self::sealToken($token),
             'enabled'=>!empty($input['enabled'])?1:0,
             'schedule_enabled'=>!empty($input['schedule_enabled'])?1:0,
             'interval_minutes'=>max(5,min(1440,(int)(isset($input['interval_minutes'])?$input['interval_minutes']:(isset($existing['interval_minutes'])?$existing['interval_minutes']:10)))),
@@ -46,30 +61,24 @@ class IpaSourceConfig
             'cache_ttl'=>max(60,min(86400,(int)(isset($input['cache_ttl'])?$input['cache_ttl']:(isset($existing['cache_ttl'])?$existing['cache_ttl']:1800)))),
             'request_timeout'=>max(3,min(120,(int)$candidate['request_timeout'])),
             'request_retries'=>max(0,min(5,(int)$candidate['request_retries'])),
-            'token_ciphertext'=>self::sealToken($token),
             'last_health'=>isset($existing['last_health'])?$existing['last_health']:'unknown',
             'last_checked_at'=>isset($existing['last_checked_at'])?(int)$existing['last_checked_at']:0,
             'last_scan_at'=>isset($existing['last_scan_at'])?(int)$existing['last_scan_at']:0,
             'admin_id'=>(int)$adminId,
-            'created_at'=>isset($existing['created_at'])?(int)$existing['created_at']:$now,
-            'updated_at'=>$now,
+            'createtime'=>isset($existing['createtime'])?(int)$existing['createtime']:$now,
+            'updatetime'=>$now,
         ];
-        self::writeConfig($row);
+        $id=self::writeDatabaseConfig($row,$existing);
 
-        // Match the mature ipaxiazaizhan- behaviour: a successful save must
-        // also prove that the persisted encrypted token can be read back.
-        $saved=self::readConfig();
-        if (!$saved || empty($saved['token_ciphertext'])) throw new RuntimeException('OpenList 配置保存后读取失败，请检查 runtime/ipa 写权限');
+        // A successful save must prove that the database ciphertext can be
+        // read back before the UI reports success.
+        $saved=self::readDatabaseConfig();
+        if (!$saved || empty($saved['token_ciphertext'])) throw new RuntimeException('OpenList 配置保存后读取失败，请检查 fa_ipa_source');
         $roundTrip=self::openToken($saved['token_ciphertext']);
         if (!hash_equals($token,$roundTrip)) throw new RuntimeException('OpenList 令牌保存校验失败');
-        return 1;
+        return $id;
     }
 
-    /**
-     * Compatibility entry point kept for the existing controller/JS.
-     * Testing intentionally ignores unsaved form values and uses the saved
-     * encrypted configuration, matching ipaxiazaizhan- 2026091233.
-     */
     public static function testInput(array $input)
     {
         return self::testSaved();
@@ -77,11 +86,8 @@ class IpaSourceConfig
 
     public static function testSaved()
     {
-        $row=self::readConfig();
-        if (!$row) $row=self::importLegacyDatabaseConfig();
-        if (!$row) throw new RuntimeException('请先保存 OpenList 配置');
-
-        $source=self::publicRow($row,true);
+        $source=self::first(true);
+        if (!$source) throw new RuntimeException('请先保存 OpenList 配置');
         if (empty($source['base_url']) || empty($source['token'])) throw new RuntimeException('请先保存 OpenList URL 和令牌');
         $health=self::clientFromRow($source)->health($source['scan_path']);
         $health['path']=$source['scan_path'];
@@ -90,14 +96,17 @@ class IpaSourceConfig
 
     public static function updateState(array $patch)
     {
-        $row=self::readConfig();
-        if (!$row) return false;
+        $allowed=[];
         foreach (['last_health','last_checked_at','last_scan_at'] as $key) {
-            if (array_key_exists($key,$patch)) $row[$key]=$patch[$key];
+            if (array_key_exists($key,$patch)) $allowed[$key]=$patch[$key];
         }
-        $row['updated_at']=time();
-        self::writeConfig($row);
-        return true;
+        if (!$allowed) return true;
+        $allowed['updatetime']=time();
+        try {
+            return Db::name('ipa_source')->where('source_key','openlist')->update($allowed)!==false;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     protected static function candidate(array $input,$existing=null,$withStoredToken=false)
@@ -129,8 +138,7 @@ class IpaSourceConfig
 
     protected static function publicRow(array $row,$withToken)
     {
-        $token='';
-        $tokenError='';
+        $token='';$tokenError='';
         if (!empty($row['token_ciphertext'])) {
             try {$token=self::openToken($row['token_ciphertext']);}
             catch (\Exception $e) {
@@ -139,40 +147,65 @@ class IpaSourceConfig
             }
         }
         $out=$row;
-        $out['id']=1;$out['source_key']='openlist';$out['source_type']='openlist';$out['name']='OpenList';$out['api_base']=self::API_BASE;
-        $out['token_configured']=$token!=='';
-        $out['token_hint']=$token!==''?'已配置':'';
-        $out['token_error']=$tokenError;
+        $out['id']=isset($row['id'])?(int)$row['id']:1;
+        $out['source_key']='openlist';$out['source_type']='openlist';$out['name']='OpenList';$out['api_base']=self::API_BASE;
+        $out['token_configured']=$token!=='';$out['token_hint']=$token!==''?'已配置':'';$out['token_error']=$tokenError;
         if ($withToken) $out['token']=$token;
         unset($out['token_ciphertext']);
         return $out;
     }
 
-    protected static function importLegacyDatabaseConfig()
+    protected static function readDatabaseConfig()
     {
-        try {
-            $row=Db::name('ipa_source')->where('source_key','openlist')->find();
-            if (!$row) return null;
-            $token='';
-            if (!empty($row['token_ciphertext'])) {
-                try {$token=self::openLegacyToken($row['token_ciphertext']);} catch (\Exception $e) {$token='';}
-            }
-            $now=time();
-            $new=[
-                'version'=>self::FORMAT_VERSION,'source_key'=>'openlist','base_url'=>(string)$row['base_url'],'scan_path'=>(string)$row['scan_path'],
-                'public_url_template'=>(string)$row['public_url_template'],'enabled'=>(int)$row['enabled'],'schedule_enabled'=>(int)$row['schedule_enabled'],
-                'interval_minutes'=>(int)$row['interval_minutes'],'batch_size'=>(int)$row['batch_size'],'cache_ttl'=>(int)$row['cache_ttl'],
-                'request_timeout'=>(int)$row['request_timeout'],'request_retries'=>(int)$row['request_retries'],'token_ciphertext'=>$token!==''?self::sealToken($token):'',
-                'last_health'=>isset($row['last_health'])?$row['last_health']:'unknown','last_checked_at'=>isset($row['last_checked_at'])?(int)$row['last_checked_at']:0,
-                'last_scan_at'=>isset($row['last_scan_at'])?(int)$row['last_scan_at']:0,'admin_id'=>isset($row['admin_id'])?(int)$row['admin_id']:0,
-                'created_at'=>isset($row['createtime'])?(int)$row['createtime']:$now,'updated_at'=>$now,
-            ];
-            self::writeConfig($new);
-            return $new;
-        } catch (\Exception $e) { return null; }
+        try {return Db::name('ipa_source')->where('source_key','openlist')->find();}
+        catch (\Exception $e) {throw new RuntimeException('无法读取 IPA 网络源配置：'.$e->getMessage());}
     }
 
-    protected static function readConfig()
+    protected static function writeDatabaseConfig(array $row,$existing=null)
+    {
+        try {
+            if ($existing && !empty($existing['id'])) {
+                Db::name('ipa_source')->where('id',(int)$existing['id'])->update($row);
+                return (int)$existing['id'];
+            }
+            return (int)Db::name('ipa_source')->insertGetId($row);
+        } catch (\Exception $e) {
+            throw new RuntimeException('无法保存 IPA 网络源配置到 fa_ipa_source：'.$e->getMessage());
+        }
+    }
+
+    /** Import the pre-DB-primary runtime configuration exactly once. */
+    protected static function migrateRuntimeConfig()
+    {
+        $legacy=self::readRuntimeConfig();
+        if (!$legacy) return null;
+        $token='';
+        if (!empty($legacy['token_ciphertext'])) $token=self::openToken($legacy['token_ciphertext']);
+        if ($token==='') return null;
+        $now=time();
+        $row=[
+            'source_key'=>'openlist','source_type'=>'openlist','name'=>'OpenList',
+            'base_url'=>(string)$legacy['base_url'],'api_base'=>self::API_BASE,
+            'scan_path'=>isset($legacy['scan_path'])?(string)$legacy['scan_path']:'/',
+            'public_url_template'=>isset($legacy['public_url_template'])?(string)$legacy['public_url_template']:'',
+            'token_ciphertext'=>self::sealToken($token),
+            'enabled'=>!empty($legacy['enabled'])?1:0,'schedule_enabled'=>!empty($legacy['schedule_enabled'])?1:0,
+            'interval_minutes'=>isset($legacy['interval_minutes'])?(int)$legacy['interval_minutes']:10,
+            'batch_size'=>isset($legacy['batch_size'])?(int)$legacy['batch_size']:20,
+            'cache_ttl'=>isset($legacy['cache_ttl'])?(int)$legacy['cache_ttl']:1800,
+            'request_timeout'=>isset($legacy['request_timeout'])?(int)$legacy['request_timeout']:15,
+            'request_retries'=>isset($legacy['request_retries'])?(int)$legacy['request_retries']:2,
+            'last_health'=>isset($legacy['last_health'])?$legacy['last_health']:'unknown',
+            'last_checked_at'=>isset($legacy['last_checked_at'])?(int)$legacy['last_checked_at']:0,
+            'last_scan_at'=>isset($legacy['last_scan_at'])?(int)$legacy['last_scan_at']:0,
+            'admin_id'=>isset($legacy['admin_id'])?(int)$legacy['admin_id']:0,
+            'createtime'=>isset($legacy['created_at'])?(int)$legacy['created_at']:$now,'updatetime'=>$now,
+        ];
+        $id=self::writeDatabaseConfig($row,null);$row['id']=$id;
+        return $row;
+    }
+
+    protected static function readRuntimeConfig()
     {
         $file=self::configPath();
         if (!is_file($file)) return null;
@@ -180,34 +213,30 @@ class IpaSourceConfig
         return is_array($row)?$row:null;
     }
 
-    protected static function writeConfig(array $row)
-    {
-        $dir=self::runtimeDir();
-        if (!is_dir($dir) && !@mkdir($dir,0750,true) && !is_dir($dir)) throw new RuntimeException('无法创建 IPA runtime 目录：'.$dir);
-        $json=json_encode($row,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
-        if ($json===false) throw new RuntimeException('OpenList 配置编码失败');
-        $file=self::configPath();$tmp=$file.'.tmp.'.getmypid().'.'.mt_rand(1000,9999);
-        if (@file_put_contents($tmp,$json."\n",LOCK_EX)===false) throw new RuntimeException('无法写入 OpenList 配置，请检查 runtime/ipa 写权限');
-        @chmod($tmp,0640);
-        if (!@rename($tmp,$file)) {@unlink($tmp);throw new RuntimeException('无法原子替换 OpenList 配置文件');}
-    }
-
     public static function sealToken($plain)
     {
         $plain=(string)$plain;if($plain==='')return '';
         if(!function_exists('openssl_encrypt'))throw new RuntimeException('OpenSSL extension is required to protect OpenList token');
-        $key=self::secretKey();$iv=random_bytes(16);$cipher=openssl_encrypt($plain,'AES-256-CBC',$key,OPENSSL_RAW_DATA,$iv);
+        $key=self::stableKey();$iv=random_bytes(16);$cipher=openssl_encrypt($plain,'AES-256-CBC',$key,OPENSSL_RAW_DATA,$iv);
         if($cipher===false)throw new RuntimeException('Failed to encrypt OpenList token');
         $mac=hash_hmac('sha256',$iv.$cipher,$key,true);
-        return 'v2:'.base64_encode($iv.$mac.$cipher);
+        return 'v3:'.base64_encode($iv.$mac.$cipher);
     }
 
     public static function openToken($sealed)
     {
         $sealed=trim((string)$sealed);if($sealed==='')return '';
-        if(strpos($sealed,'v2:')!==0||!function_exists('openssl_decrypt'))throw new RuntimeException('Unsupported OpenList token ciphertext');
+        if(strpos($sealed,'v1:')===0)return self::openLegacyToken($sealed);
+        if(strpos($sealed,'v2:')===0)return self::openWithKey($sealed,self::runtimeSecretKey(false),'v2');
+        if(strpos($sealed,'v3:')===0)return self::openWithKey($sealed,self::stableKey(),'v3');
+        throw new RuntimeException('Unsupported OpenList token ciphertext');
+    }
+
+    protected static function openWithKey($sealed,$key,$version)
+    {
+        if(!function_exists('openssl_decrypt'))throw new RuntimeException('OpenSSL extension is required to open OpenList token');
         $raw=base64_decode(substr($sealed,3),true);if($raw===false||strlen($raw)<49)throw new RuntimeException('Invalid OpenList token ciphertext');
-        $iv=substr($raw,0,16);$mac=substr($raw,16,32);$cipher=substr($raw,48);$key=self::secretKey();
+        $iv=substr($raw,0,16);$mac=substr($raw,16,32);$cipher=substr($raw,48);
         if(!hash_equals(hash_hmac('sha256',$iv.$cipher,$key,true),$mac))throw new RuntimeException('OpenList token ciphertext integrity check failed');
         $plain=openssl_decrypt($cipher,'AES-256-CBC',$key,OPENSSL_RAW_DATA,$iv);if($plain===false)throw new RuntimeException('Failed to decrypt OpenList token');
         return $plain;
@@ -215,7 +244,6 @@ class IpaSourceConfig
 
     protected static function openLegacyToken($sealed)
     {
-        $sealed=trim((string)$sealed);if($sealed==='')return '';
         if(strpos($sealed,'v1:')!==0||!function_exists('openssl_decrypt'))throw new RuntimeException('Unsupported legacy token ciphertext');
         $raw=base64_decode(substr($sealed,3),true);if($raw===false||strlen($raw)<49)throw new RuntimeException('Invalid legacy token ciphertext');
         $iv=substr($raw,0,16);$mac=substr($raw,16,32);$cipher=substr($raw,48);
@@ -226,15 +254,26 @@ class IpaSourceConfig
         return $plain;
     }
 
-    protected static function secretKey()
+    /** Stable across runtime/cache cleanup; IPA_CONFIG_KEY remains the preferred override. */
+    protected static function stableKey()
+    {
+        $env=getenv('IPA_CONFIG_KEY');
+        if($env!==false&&strlen(trim($env))>=16)return hash('sha256',trim($env),true);
+        $host=(string)\think\Config::get('database.hostname');$name=(string)\think\Config::get('database.database');
+        $user=(string)\think\Config::get('database.username');$password=(string)\think\Config::get('database.password');
+        return hash('sha256','phase20-openlist-v3|'.$host.'|'.$name.'|'.$user.'|'.$password,true);
+    }
+
+    /** Used only to decrypt configurations produced by 2026091908-1911. */
+    protected static function runtimeSecretKey($create=false)
     {
         $env=getenv('IPA_CONFIG_KEY');
         if($env!==false&&strlen(trim($env))>=16)return hash('sha256',trim($env),true);
         $file=self::keyPath();
         if(is_file($file)){$raw=trim((string)@file_get_contents($file));if($raw!=='')return hash('sha256',$raw,true);}
+        if(!$create)throw new RuntimeException('旧 OpenList 配置密钥已丢失，请重新填写令牌后保存');
         $dir=self::runtimeDir();if(!is_dir($dir)&&!@mkdir($dir,0750,true)&&!is_dir($dir))throw new RuntimeException('无法创建 IPA runtime 目录');
-        $raw=bin2hex(random_bytes(32));
-        if(@file_put_contents($file,$raw."\n",LOCK_EX)===false)throw new RuntimeException('无法创建 OpenList 配置密钥文件');
+        $raw=bin2hex(random_bytes(32));if(@file_put_contents($file,$raw."\n",LOCK_EX)===false)throw new RuntimeException('无法创建 OpenList 配置密钥文件');
         @chmod($file,0600);return hash('sha256',$raw,true);
     }
 
