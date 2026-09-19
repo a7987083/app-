@@ -1,6 +1,6 @@
 {
-  "status": "passed",
-  "environment": "pre-production",
+  "status": "pending",
+  "environment": "replace-with-environment",
   "verified_at": "2026-09-19T00:00:00+09:00",
   "acceptance_commit": "0000000000000000000000000000000000000000",
   "readiness_run": "0",
