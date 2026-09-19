@@ -20,7 +20,7 @@ class IpaParserService
         $items=$query->limit($limit)->select();
         $summary=['selected'=>count((array)$items),'parsed'=>0,'reused'=>0,'failed'=>0,'retrying'=>0,'range_bytes'=>0,'range_requests'=>0];
         foreach((array)$items as $item){try{$result=self::parseOne($item);if(!empty($result['reused']))$summary['reused']++;else$summary['parsed']++;$summary['range_bytes']+=isset($result['range_bytes'])?(int)$result['range_bytes']:0;$summary['range_requests']+=isset($result['range_requests'])?(int)$result['range_requests']:0;}catch(\Exception $e){$state=self::recordFailure($item,$e->getMessage());$summary['failed']++;if($state==='retrying')$summary['retrying']++;}catch(Throwable $e){$state=self::recordFailure($item,$e->getMessage());$summary['failed']++;if($state==='retrying')$summary['retrying']++;}}
-        IpaScanService::pruneTaskItems();
+        IpaScanService::pruneTaskItems(90);
         return $summary;
     }
 
@@ -40,9 +40,19 @@ class IpaParserService
         if($rawUrl==='')throw new RuntimeException('OpenList 未返回 raw_url');
         $parsed=IpaParserRunner::parse($rawUrl,$size);$normalized=IpaMetadataNormalizer::normalize($parsed);$columns=$normalized['columns'];
         $rawSelected=isset($parsed['raw_selected'])&&is_array($parsed['raw_selected'])?$parsed['raw_selected']:[];$rangeBytes=isset($parsed['range_bytes'])?(int)$parsed['range_bytes']:0;$rangeRequests=isset($parsed['range_requests'])?(int)$parsed['range_requests']:0;
+        $normalizedPayload=$normalized['normalized'];
+        if(!isset($normalizedPayload['_parser'])||!is_array($normalizedPayload['_parser']))$normalizedPayload['_parser']=[];
+        $normalizedPayload['_parser']['range_bytes']=$rangeBytes;$normalizedPayload['_parser']['range_requests']=$rangeRequests;
+        IpaMetadataPayloadStore::save((int)$metadata['id'],['confidence'=>$normalized['confidence'],'raw'=>$rawSelected,'normalized'=>$normalizedPayload]);
         Db::startTrans();
         try{
-            Db::name('ipa_metadata')->where('id',(int)$metadata['id'])->update(['file_size'=>$size>0?$size:(int)$metadata['file_size'],'bundle_id'=>$columns['bundle_id'],'package_name'=>$columns['package_name'],'package_version'=>$columns['package_version'],'package_build'=>$columns['package_build'],'minimum_ios'=>$columns['minimum_ios'],'executable'=>$columns['executable'],'parse_state'=>'success','parser_version'=>IpaFoundation::PARSER_VERSION,'confidence_json'=>json_encode($normalized['confidence'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'raw_metadata_json'=>json_encode($rawSelected,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'normalized_metadata_json'=>json_encode($normalized['normalized'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'parse_error'=>'','parsed_at'=>time(),'updatetime'=>time()]);
+            Db::name('ipa_metadata')->where('id',(int)$metadata['id'])->update([
+                'file_size'=>$size>0?$size:(int)$metadata['file_size'],'bundle_id'=>$columns['bundle_id'],'package_name'=>$columns['package_name'],'package_version'=>$columns['package_version'],'package_build'=>$columns['package_build'],'minimum_ios'=>$columns['minimum_ios'],'executable'=>$columns['executable'],
+                'parse_state'=>'success','parser_version'=>IpaFoundation::PARSER_VERSION,
+                // Keep legacy columns for schema compatibility, but stop growing MySQL with parser payload blobs.
+                'confidence_json'=>'','raw_metadata_json'=>'','normalized_metadata_json'=>'',
+                'parse_error'=>'','parsed_at'=>time(),'updatetime'=>time()
+            ]);
             Db::name('ipa_scan_task_item')->where('id',(int)$item['id'])->update(['state'=>'success','stage'=>'parsed','retry_after'=>0,'result_json'=>json_encode(['discovery_type'=>self::discoveryType($item),'parser_version'=>IpaFoundation::PARSER_VERSION,'range_bytes'=>$rangeBytes,'range_requests'=>$rangeRequests,'reused'=>false],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'error_code'=>'','error_message'=>'','updatetime'=>time()]);
             Db::commit();
         }catch(\Exception $e){Db::rollback();throw $e;}catch(Throwable $e){Db::rollback();throw $e;}
@@ -52,14 +62,16 @@ class IpaParserService
     protected static function findReusableMetadata(array $metadata)
     {
         $md5=strtolower(trim((string)$metadata['md5']));if($md5===''||(int)$metadata['file_size']<=0)return null;
-        return Db::name('ipa_metadata')->where('id','<>',(int)$metadata['id'])->where('md5',$md5)->where('file_size',(int)$metadata['file_size'])->where('parser_version',IpaFoundation::PARSER_VERSION)->where('parse_state','success')->where('normalized_metadata_json','<>','')->order('parsed_at','desc')->find();
+        return Db::name('ipa_metadata')->where('id','<>',(int)$metadata['id'])->where('md5',$md5)->where('file_size',(int)$metadata['file_size'])->where('parser_version',IpaFoundation::PARSER_VERSION)->where('parse_state','success')->order('parsed_at','desc')->find();
     }
 
     protected static function applyReusableMetadata(array $metadata,array $cached,array $item)
     {
+        $payload=IpaMetadataPayloadStore::hydrateLegacyRow($cached);
+        if($payload)IpaMetadataPayloadStore::save((int)$metadata['id'],['confidence'=>$payload['confidence'],'raw'=>$payload['raw'],'normalized'=>$payload['normalized']]);
         Db::startTrans();
         try{
-            Db::name('ipa_metadata')->where('id',(int)$metadata['id'])->update(['bundle_id'=>$cached['bundle_id'],'package_name'=>$cached['package_name'],'package_version'=>$cached['package_version'],'package_build'=>$cached['package_build'],'minimum_ios'=>$cached['minimum_ios'],'executable'=>$cached['executable'],'parse_state'=>'success','parser_version'=>IpaFoundation::PARSER_VERSION,'confidence_json'=>$cached['confidence_json'],'raw_metadata_json'=>$cached['raw_metadata_json'],'normalized_metadata_json'=>$cached['normalized_metadata_json'],'parse_error'=>'','parsed_at'=>time(),'updatetime'=>time()]);
+            Db::name('ipa_metadata')->where('id',(int)$metadata['id'])->update(['bundle_id'=>$cached['bundle_id'],'package_name'=>$cached['package_name'],'package_version'=>$cached['package_version'],'package_build'=>$cached['package_build'],'minimum_ios'=>$cached['minimum_ios'],'executable'=>$cached['executable'],'parse_state'=>'success','parser_version'=>IpaFoundation::PARSER_VERSION,'confidence_json'=>'','raw_metadata_json'=>'','normalized_metadata_json'=>'','parse_error'=>'','parsed_at'=>time(),'updatetime'=>time()]);
             Db::name('ipa_scan_task_item')->where('id',(int)$item['id'])->update(['state'=>'success','stage'=>'parsed','retry_after'=>0,'result_json'=>json_encode(['discovery_type'=>self::discoveryType($item),'parser_version'=>IpaFoundation::PARSER_VERSION,'reused'=>true,'reused_from_metadata_id'=>(int)$cached['id'],'range_bytes'=>0,'range_requests'=>0],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'error_code'=>'','error_message'=>'','updatetime'=>time()]);
             Db::commit();
         }catch(\Exception $e){Db::rollback();throw $e;}catch(Throwable $e){Db::rollback();throw $e;}
