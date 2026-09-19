@@ -3,6 +3,7 @@ ZONOE 软件源 Release 2026091902
 基线：2026091901
 阶段：Phase 20 — OpenList Settings Hotfix
 发布分支：release/2026091902-phase20-openlist-settings-hotfix
+发布状态：触发正式 Release Workflow
 
 更新内容：
 1. OpenList 设置页统一使用官方“令牌”术语，并明确令牌来源为「设置 → 其他 → 令牌」。
