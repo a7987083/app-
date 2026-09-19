@@ -9,10 +9,12 @@
   },
   "development": {
     "branch": "feature/phase20-ipa-management-v1",
-    "phase": "20.7.3",
-    "verified_head": "a573d6f2945edcd0ca7c44a2002f1212b4a19bb2",
-    "ci_run": 35409913235,
-    "ci_result": "success"
+    "phase": "20.7",
+    "status": "code_ci_complete",
+    "verified_head": "438db0823a2d03e220401509ce736da57bc99ab9",
+    "ci_run": 35410113307,
+    "ci_result": "success",
+    "production_e2e": "not_verified"
   },
   "phase20_7": {
     "batch_governance": "completed_ci_passed",
@@ -20,6 +22,8 @@
     "retry_interrupted": "completed_ci_passed",
     "range_metrics": "completed_ci_passed",
     "retention": "completed_ci_passed",
+    "ignore_lifecycle": "completed_ci_passed",
+    "permission_ui_gating": "completed_ci_passed",
     "production_e2e": "not_verified"
   },
   "safety_contracts": {
@@ -27,8 +31,10 @@
     "retry_old_plan_reuse": "forbidden",
     "retention_protected_states": ["running", "failed", "interrupted", "queued", "retrying"],
     "retention_preview_required": true,
-    "retention_plan_hash_required": true
+    "retention_plan_hash_required": true,
+    "lifecycle_batch_limit": 100,
+    "retention_delete_limit_per_table": 1000
   },
-  "next_task": "Phase 20.7.4: batch ignore/ignore_until lifecycle, finer high-risk permissions, production audit summaries, then OpenList + MySQL production E2E and release-candidate closeout.",
+  "next_task": "Phase 20 RC closeout: controlled OpenList + MySQL production E2E, real admin permission verification, backup/rollback validation, release-candidate packaging and online-update checklist.",
   "roadmap": "ROADMAP.md"
 }
