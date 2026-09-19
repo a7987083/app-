@@ -6,18 +6,19 @@
         </div>
     </div>
     <div class="panel-body">
-        <form id="ipa-source-form" class="form-horizontal" method="post" autocomplete="off">
+        <form id="ipa-source-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="{:url('ipa_center/source_save')}" autocomplete="off">
+            {:token()}
             <div class="form-group">
                 <label class="control-label col-xs-12 col-sm-2">OpenList 地址</label>
                 <div class="col-xs-12 col-sm-8">
-                    <input class="form-control" name="base_url" placeholder="https://yun.zonoeios.xyz" value="{$source.base_url|default=''}" autocomplete="off">
+                    <input class="form-control" name="base_url" data-rule="required;url" placeholder="https://yun.zonoeios.xyz" value="{$source.base_url|default=''}" autocomplete="off">
                     <span class="help-block">只填写站点根地址，不需要填写 <code>/api</code>。</span>
                 </div>
             </div>
             <div class="form-group">
                 <label class="control-label col-xs-12 col-sm-2">IPA 根目录</label>
                 <div class="col-xs-12 col-sm-8">
-                    <input class="form-control" name="scan_path" placeholder="/a/app" value="{$source.scan_path|default='/a/app'}" autocomplete="off">
+                    <input class="form-control" name="scan_path" data-rule="required" placeholder="/a/app" value="{$source.scan_path|default='/a/app'}" autocomplete="off">
                     <span class="help-block">OpenList 内部路径，例如 <code>/a/app</code>。</span>
                 </div>
             </div>
@@ -37,19 +38,19 @@
             </div>
             <div class="form-group"><label class="control-label col-xs-12 col-sm-2">启用来源</label><div class="col-xs-12 col-sm-8"><label><input type="checkbox" name="enabled" value="1" {if condition="!empty($source.enabled)"}checked{/if}> 启用</label></div></div>
             <div class="form-group"><label class="control-label col-xs-12 col-sm-2">自动扫描</label><div class="col-xs-12 col-sm-8"><label><input type="checkbox" name="schedule_enabled" value="1" {if condition="!empty($source.schedule_enabled)"}checked{/if}> 启用</label></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">扫描间隔</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="5" max="1440" name="interval_minutes" value="{$source.interval_minutes|default='10'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">分钟（5–1440）</p></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">每批解析上限</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="1" max="100" name="batch_size" value="{$source.batch_size|default='20'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">Range Parser 每轮消费上限</p></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">目录缓存</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="60" max="86400" name="cache_ttl" value="{$source.cache_ttl|default='1800'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">秒</p></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">超时 / 重试</label><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="3" max="120" name="request_timeout" value="{$source.request_timeout|default='15'}"></div><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="0" max="5" name="request_retries" value="{$source.request_retries|default='2'}"></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">扫描间隔</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="5" max="1440" name="interval_minutes" value="{$source.interval_minutes|default='10'}" data-rule="required;integer;range(5~1440)"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">分钟（5–1440）</p></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">每批解析上限</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="1" max="100" name="batch_size" value="{$source.batch_size|default='20'}" data-rule="required;integer;range(1~100)"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">Range Parser 每轮消费上限</p></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">目录缓存</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="60" max="86400" name="cache_ttl" value="{$source.cache_ttl|default='1800'}" data-rule="required;integer;range(60~86400)"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">秒</p></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">超时 / 重试</label><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="3" max="120" name="request_timeout" value="{$source.request_timeout|default='15'}" data-rule="required;integer;range(3~120)"></div><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="0" max="5" name="request_retries" value="{$source.request_retries|default='2'}" data-rule="required;integer;range(0~5)"></div></div>
             <div class="form-group">
                 <label class="control-label col-xs-12 col-sm-2">健康状态</label>
-                <div class="col-xs-12 col-sm-8"><p class="form-control-static">{$source.last_health|default='unknown'} {if condition="!empty($source.last_checked_at)"} / {$source.last_checked_at|date='Y-m-d H:i:s',###}{/if}</p></div>
+                <div class="col-xs-12 col-sm-8"><p class="form-control-static"><span id="ipa-source-health">{$source.last_health|default='unknown'} {if condition="!empty($source.last_checked_at)"} / {$source.last_checked_at|date='Y-m-d H:i:s',###}{/if}</span></p></div>
             </div>
             <div class="form-group">
                 <div class="col-xs-12 col-sm-offset-2 col-sm-8">
-                    <button type="button" class="btn btn-success btn-ipa-source-save">保存</button>
-                    <button type="button" class="btn btn-default btn-ipa-source-test">测试连接</button>
-                    <span class="help-block" style="display:inline-block;margin-left:10px">修改地址、目录或令牌后，请先保存，再测试连接。</span>
+                    <button type="submit" class="btn btn-success btn-embossed"><i class="fa fa-check"></i> 确定</button>
+                    <button type="button" class="btn btn-info btn-embossed btn-ipa-source-test"><i class="fa fa-plug"></i> 测试连接</button>
+                    <span class="help-block" style="display:inline-block;margin-left:10px">测试连接会直接使用当前表单内容，不需要先保存。</span>
                 </div>
             </div>
         </form>
