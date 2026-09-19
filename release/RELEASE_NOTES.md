@@ -1,46 +1,51 @@
-# ZONOE 软件源 2026091906
+# ZONOE 软件源 2026091907
 
 ## 更新内容
 
-本版本基于 `2026091905`，针对 `/appstore` 大响应在 PHP 7.0 / 128M 内存限制下出现间歇性 HTTP 500 的问题做性能收口，重点降低大对象生命周期与加密/传输阶段的峰值内存，不改变既有授权、缓存隔离和 appstore/appstore_v2 协议语义。
+本版本基于 `2026091906`，在保留上一版 `/appstore` 内存优化成果的基础上，完成 `appstore_v2` CPU 第一阶段优化，并将 IPA 管理中心后台交互统一迁移到 FastAdmin 原生 Table/Form 生命周期。既有授权、缓存隔离、OpenList 服务层和 appstore/appstore_v2 wire protocol 语义保持不变。
 
-### 1. App 响应大对象提前释放
+### 1. appstore_v2 CPU 第一阶段优化
 
-- `application/index/controller/App.php` 在 JSON 构建完成后不再继续持有完整 `$payload['apps']` 大数组。
-- `app_count` 在释放前提前提取，`SourcePerformance` 日志不再为了统计数量保留整个 payload。
-- 加密完成后继续提前释放 JSON、加密结果包装和密文临时引用，减少响应 envelope 生成阶段的并存大字符串。
+- `application/common/library/SourceEncryptionProvider.php` 保留 RC4、RSA PKCS#1 v1.5、V2 magic、字节序、alphabet 与 variable-width codec 规则不变。
+- V2 路径由“先完整生成 RC4 payload，再重新全量扫描 payload 编码”调整为 RC4 输出直接馈入 V2 codec state，去掉完整中间 `$payload` 字符串。
+- 减少大字符串写入、二次遍历和内存带宽占用，目标是在单核 PHP 7.0 环境缩短 V2 加密阶段 CPU 满载持续时间。
+- 保留 reference/equivalence contract，确保优化实现与原协议输出语义一致。
 
-### 2. 大响应 PHP gzip 内存保护
+### 2. IPA 管理中心 FastAdmin 化
 
-- `application/common/library/SourceResponse.php` 为 PHP 一次性 `gzencode()` 增加大响应保护。
-- 默认 `SOURCE_HTTP_GZIP_MAX_BYTES=8388608`（8 MiB）；超过阈值时跳过 PHP 层 one-shot gzip，直接保持应用层响应字节不变。
-- 仍保留 `SOURCE_HTTP_GZIP` / `SOURCE_HTTP_GZIP_MIN_BYTES` 以及新增上限配置，未删除原 gzip 功能。
-- `encryptedBody()` 在不存在 `@@@` marker 时避免无意义的大字符串替换扫描，同时保留原 marker 兼容行为。
+- Dashboard、Metadata、Binding、Task、Setting、Writeback、Governance 页面统一接入 FastAdmin 的 BootstrapTable / Form 生命周期。
+- Setting 页改为标准 FastAdmin Form：使用 validator、CSRF token 和标准 submit，不再由自定义保存按钮单独拼 AJAX 生命周期。
+- “测试连接”改为直接测试当前表单输入，不再只测试磁盘中已经保存的旧 OpenList 配置。
+- Metadata / Binding / Task / Governance 的列表刷新与操作事件收回 FastAdmin Table/event 模式，减少手写 `<tbody>`、字符串拼接和重复刷新逻辑。
+- Governance 移除页面内独立 inline `require()` 生命周期，统一由 IPA 后台 JS 控制器管理，同时保留原治理、恢复、lifecycle、metrics、retention 等业务服务和权限边界。
 
-### 3. appstore_v2 去除完整 container 副本
+### 3. 兼容与安全边界
 
-- `application/common/library/SourceEncryptionProvider.php` 保留原 V2 container 字节布局与 variable-width codec 规则。
-- 编码阶段改为 header + RC4 payload 分段送入 codec，避免再构造一份与 payload 同量级的完整 `$container` 字符串。
-- codec 的 bit buffer / bit count 跨分段连续保留，输出语义与原实现一致。
+- 不修改授权判定、paid `downloadURL` 裁剪、entitlement cache 隔离、动态公告 sentinel、Nuosike fallback 和 OpenList 安全存储语义。
+- 不修改现有 Phase 20 数据库 schema 与底层 Service 业务规则，仅重构后台表现层和 V2 加密执行路径。
+- PHP 7.0 兼容语法保持不变。
 
-### 4. 回归与兼容性
+### 4. CI / 发布验证
 
-- 不修改 RC4 key 规则、RSA PKCS#1 v1.5、V2 magic、V2 alphabet、JSON 外层 key、授权判定、downloadURL 裁剪、缓存 entitlement 隔离及 Nuosike fallback 语义。
-- 已补 V2 multipart codec 边界等价测试，覆盖 1/5/6/7/31/32/63/64/65/127/128/129/255/256 等分割位置及多段组合。
-- 已补 App payload 提前释放与大响应 gzip guard contract。
-- Phase 19.2 Legacy AppStore Performance PHP 7.0 lint、regression contracts、online update package verify 已通过当前候选。
+- PHP 7.0 lint / regression contracts。
+- Phase 20 OpenList HTTP E2E 与 updater rollback E2E。
+- MySQL 5.7 migrations 双次幂等验证。
+- `/appstore` release-gating concurrency matrix。
+- GitHub Release package build / SHA256 / online-update E2E。
 
 ### 发布与在线更新
 
-- 版本由 `2026091905` 升级为 `2026091906`，用于让现有在线更新面板识别为新版本。
-- 在线更新包继续由既有 `release/online-update-files.txt` + `tools/build_online_update.php` 生成，不修改 `ZONOE Source Release` workflow 语义。
-- `App.php`、`SourceEncryptionProvider.php`、`SourceResponse.php` 均已在现有在线更新 manifest 中。
-- 本次运行代码修改未涉及 `UpdateIntegrity::files()` 中的四个签名文件，因此 `file_sign` 继续使用 `8be29c04c34ba1d1cc7ec77d392b2bee`；正式 Release workflow 仍会重新计算并校验。
+- 版本由 `2026091906` 升级为 `2026091907`，确保现有在线更新面板能够识别本轮 V2 CPU 与 IPA FastAdmin 重构为新版本。
+- 目标 GitHub Release 标签：`source-v2026091907`。
+- 在线更新包继续由现有 `release/online-update-files.txt` + `tools/build_online_update.php` 生成，不修改 `ZONOE Source Release` workflow 语义。
+- `VERSION`、`public/update/ver.txt`、`ver.json` 同步更新到 `2026091907`。
+- 本轮未修改 `UpdateIntegrity::files()` 中签名文件，`file_sign` 继续使用 `8be29c04c34ba1d1cc7ec77d392b2bee`，正式 workflow 会再次计算并严格校验。
 
 ### 发布后验证
 
-正式在线更新完成后，继续验证真实 9 MiB 级 `/appstore`：
+在线更新到 `2026091907` 后：
 
-- 连续请求 30～50 次确认 HTTP 500 / OOM 是否归零。
-- 对比 `memory_peak_mb`、`encryption_ms`、`total_ms`、`response_bytes`。
-- 检查 PHP error log 是否仍出现 `Allowed memory size exhausted`。
+- 确认 IPA 管理中心 Setting 保存与“测试连接”均正常，不再出现原自定义按钮 Error。
+- 检查 Metadata / Binding / Task / Governance 的 FastAdmin 表格分页、刷新、操作和权限行为。
+- 对真实 9 MiB 级 `appstore_v2` 比较 `encryption_ms`、`total_ms` 与 CPU 100% 持续时间。
+- 继续检查 PHP error log 是否存在 OOM、fatal error 或更新回滚异常。
