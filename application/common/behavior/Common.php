@@ -39,13 +39,21 @@ class Common
         if (!Config::get('upload.cdnurl')) {
             Config::set('upload.cdnurl', $url);
         }
-        // 给 CSS/JS 追加版本号，避免浏览器一直加载缓存的旧脚本
+        // 给 CSS/JS 追加版本号，避免浏览器一直加载缓存的旧脚本。
+        // 不能只看 backend/*.js：fast.js / require-backend.js 等核心脚本也会被在线更新替换。
         $assetVersion = (string)Config::get('site.version');
-        $backendJsDir = ROOT_PATH . 'public' . DS . 'assets' . DS . 'js' . DS . 'backend';
+        $jsRoot = ROOT_PATH . 'public' . DS . 'assets' . DS . 'js';
+        $backendJsDir = $jsRoot . DS . 'backend';
         $jsMtime = 0;
         if (is_dir($backendJsDir)) {
             foreach (glob($backendJsDir . DS . '*.js') ?: [] as $jsFile) {
                 $jsMtime = max($jsMtime, (int)filemtime($jsFile));
+            }
+        }
+        foreach (['fast.js', 'require-backend.js', 'backend.js', 'backend-init.js'] as $coreJs) {
+            $corePath = $jsRoot . DS . $coreJs;
+            if (is_file($corePath)) {
+                $jsMtime = max($jsMtime, (int)filemtime($corePath));
             }
         }
         if ($jsMtime) {
