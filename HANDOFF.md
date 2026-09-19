@@ -7,26 +7,38 @@
 - Stable phase/version: `Phase 19.4.2 / 2026091807`
 - Release commit: `1ef93306dec0a7b09bb99df55b785511d5b8b4c6`
 - Release: `source-v2026091807`
-- Unified-announcement CI: `35306216020` — SUCCESS
-- Formal Release Run: `35306308086` — SUCCESS
-- Online-update E2E: `2026091806 -> 2026091807` — SUCCESS
 
-## Announcement contract
+## Active development
 
-The announcement editor exposes one authorization clock only:
+- Branch: `feature/phase20-ipa-management-v1`
+- Phase: `20.7.3`
+- Last verified development HEAD: `a573d6f2945edcd0ca7c44a2002f1212b4a19bb2`
+- CI Run: `35409913235` — SUCCESS
 
-- `[授权状态]`
-- `[到期时间]`
-- `[剩余时间]`
+### Completed production enhancements
 
-Internal entitlement scopes remain separate. The effective clock is selected by priority:
-whole source -> partial Apps -> verify-only.
+- Phase 20.7.1: batch governance, batch plan hash, failure queue.
+- Phase 20.7.2: failed/interrupted recovery, stale-running scan, safe re-preview retry, superseded audit linkage.
+- Phase 20.7.3: Range metrics and preview-first retention cleanup.
 
-If no active entitlement exists, all three public fields use:
-`已过期或未解锁本源`.
+### Safety invariants
 
-Legacy scope-specific time tokens are hidden from the editor and mapped to the same generic clock at runtime. SQL migration `2026091807_unified_announcement_expiry.sql` rewrites historical templates to the generic tokens.
+- Batch governance never moves OpenList files automatically.
+- Recovery never reuses an old governance plan.
+- Retention requires preview + plan hash and only removes old completed history.
+- Retention must not delete `running`, `failed`, `interrupted`, `queued`, or `retrying` records.
+- Retention is bounded to 1000 candidate rows per table per execution.
 
-## Authorization page
+## Next phase
 
-`/authorization` remains the online-update-safe public lookup URL. `/license` remains routed in ThinkPHP but can still be intercepted by the production Nginx LICENSE rule before PHP.
+Phase 20.7.4:
+
+- batch ignore / ignore_until lifecycle and expiry recovery view;
+- finer high-risk permission separation and UI capability gating;
+- production audit summaries;
+- real OpenList + MySQL production E2E;
+- Phase 20 release-candidate closeout.
+
+## Existing production caveat
+
+`/authorization` remains the online-update-safe authorization lookup URL. `/license` remains routed in ThinkPHP but can still be intercepted by the production Nginx LICENSE rule before PHP.
