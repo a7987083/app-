@@ -11,11 +11,13 @@
 ## Active development
 
 - Branch: `feature/phase20-ipa-management-v1`
-- Phase: `20.7 code/CI complete; RC repository + integration gates complete`
-- Verified code HEAD: `3dc03a314c9f3f3ae8811025d3d9274f71558421`
-- Phase 20 CI Run: `35412127806` / Run #70 — SUCCESS
-- RC artifact: `phase20-rc-35412127806`
-- Production / real pre-production E2E: NOT VERIFIED
+- Phase: `20.7 code/CI complete; RC repository + integration + release-readiness gates complete`
+- Verified readiness code HEAD: `747582446f1f11ac058b7382e2a497260baf8fca`
+- Phase 20 CI Run: `35412521746` / Run #81 — SUCCESS
+- Phase 20 Release Readiness Run: `35412521749` / Run #8 — SUCCESS
+- Release-readiness artifact: `phase20-release-readiness-35412521749`
+- Release-readiness artifact digest: `sha256:ccacde350daf990540c977208acdd3710787bb0d2d593e48ae6d6bb2749c35f1`
+- External pre-production / production acceptance: NOT VERIFIED
 
 ## Phase 20.7 completed capabilities
 
@@ -29,10 +31,11 @@
 
 ## RC repository / CI gates verified
 
-- Full Phase 20 contract suite: PASS.
+- Full Phase 20 / Phase 20.7 contract suite: PASS.
+- Release-readiness contract suite on PHP 7.0: PASS.
 - PHP 7.0 online-update package build: PASS.
-- Package SHA256 verification: PASS.
-- Package contents include the required Phase 20 program payload and ordered `2026091901` ~ `2026091909` migration payload: PASS.
+- Package SHA256 verification and ZIP integrity check: PASS.
+- Package contents include required Phase 20 program payload and ordered `2026091901` ~ `2026091909` migration payload: PASS.
 - Real MySQL 5.7 service migration gate: PASS.
 - All nine Phase 20 migrations execute twice successfully on MySQL 5.7: PASS.
 - Key Phase 20 tables and high-risk permission rules are present after migration, with no duplicate auth-rule names: PASS.
@@ -42,7 +45,22 @@
 - Updater automatic rollback after a forced post-copy failure: PASS.
 - Rollback restores overwritten files, removes update-created files, preserves old version metadata, retains backup/database dump, and reports rollback success: PASS.
 - Legacy update rollback regression: PASS.
-- RC ZIP + SHA256 are retained as the GitHub Actions artifact `phase20-rc-35412127806` for 14 days.
+- Release-readiness ZIP + SHA256 are retained as GitHub Actions artifact `phase20-release-readiness-35412521749` for 30 days.
+
+## Formal release fail-closed guard
+
+`tools/build_online_update.php` now blocks a Phase 20 package when it is executed by the write-enabled `ZONOE Source Release` workflow unless `release/PHASE20_EXTERNAL_ACCEPTANCE.json` exists and contains real passed acceptance evidence.
+
+The formal acceptance record must include:
+
+- `status = passed`.
+- Real `environment` and `operator` values.
+- ISO-8601 `verified_at` with timezone.
+- A non-zero 40-character `acceptance_commit`.
+- A positive `readiness_run` workflow ID.
+- Non-placeholder evidence for OpenList scan, Range metrics, governance, retry/ignore/retention, permissions, backup/restore, and failed-install rollback.
+
+`release/PHASE20_EXTERNAL_ACCEPTANCE.example.json` intentionally fails closed with `status = pending`, zero commit/run values, and placeholders. It must never be renamed and used unchanged as production acceptance.
 
 ## Safety invariants
 
@@ -52,10 +70,12 @@
 - Retention never selects `running`, `failed`, `interrupted`, `queued`, or `retrying` records.
 - Retention is bounded to 1000 candidate rows per table per execution.
 - Ignore lifecycle batches are bounded to 100 issues.
+- CI/mock integration evidence must never be presented as external production acceptance.
+- Formal Phase 20 release packaging fails closed until external acceptance evidence is recorded.
 
 ## Remaining external-environment acceptance
 
-These checks require a real controlled deployment, real OpenList contents, real application data, or real FastAdmin admin groups. CI/mock results must not be presented as production verification.
+These checks require a real controlled deployment, real OpenList contents, real application data, or real FastAdmin admin groups. Repository CI cannot truthfully complete them.
 
 1. Run full scan and representative IPA Range parsing against the intended OpenList endpoint.
 2. Bind representative real IPA metadata to real categories and inspect governance anomalies.
@@ -70,7 +90,7 @@ These checks require a real controlled deployment, real OpenList contents, real 
 
 ## RC promotion rule
 
-Do not change formal release metadata or create a Phase 20 tag/release until the external-environment acceptance above is recorded as passed. After that, select the RC version, update version metadata and release notes, run the formal release workflow, and create the RC only from a green release run.
+Do not create `release/PHASE20_EXTERNAL_ACCEPTANCE.json`, change formal release metadata, or create a Phase 20 tag/release until the external-environment acceptance above has actually passed and evidence has been recorded. After that, select the RC version, update version metadata/release notes, run Release Readiness and the formal release workflow, and create the RC only from green runs.
 
 ## Existing production caveat
 
