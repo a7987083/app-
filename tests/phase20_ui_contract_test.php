@@ -20,17 +20,21 @@ foreach (['ipa_center/index','ipa_center/metadata','ipa_center/binding','ipa_cen
     phase20UiAssert(strpos($menuSql, "'{$rule}'") !== false, "menu rule {$rule}");
 }
 
-$gov = file_get_contents($root . '/application/admin/view/ipa_center/governance.html');
+$views = [];
+foreach (['index','metadata','binding','governance','task','writeback','setting'] as $name) {
+    $views[$name] = file_get_contents($root . '/application/admin/view/ipa_center/' . $name . '.html');
+}
+$gov = $views['governance'];
 foreach (['重复 Bundle ID','元数据不一致','IPA 缺失 / 路径异常','版本异常'] as $label) {
     phase20UiAssert(strpos($gov, $label) !== false, "governance card {$label}");
 }
 
-$writeback = file_get_contents($root . '/application/admin/view/ipa_center/writeback.html');
+$writeback = $views['writeback'];
 foreach (['category.name','category.nickname','category.image','category.bt1a','category.bt2a','category.keywords'] as $field) {
     phase20UiAssert(strpos($writeback, $field) !== false, "writeback target {$field}");
 }
 
-$setting = file_get_contents($root . '/application/admin/view/ipa_center/setting.html');
+$setting = $views['setting'];
 $sourceConfig = file_get_contents($root . '/application/common/library/IpaSourceConfig.php');
 $payloadStore = file_get_contents($root . '/application/common/library/IpaMetadataPayloadStore.php');
 $backendJs = file_get_contents($root . '/public/assets/js/backend/ipa_center.js');
@@ -47,11 +51,26 @@ phase20UiAssert(strpos($setting, 'name="api_base"') === false, 'API prefix is no
 phase20UiAssert(strpos($setting, 'name="token"') !== false, 'token is submitted to sourceSave contract');
 phase20UiAssert(strpos($setting, 'autocomplete="new-password"') !== false, 'token input discourages browser credential autofill');
 phase20UiAssert(strpos($setting, 'data-lpignore="true"') !== false, 'token input discourages password-manager autofill');
-phase20UiAssert(strpos($setting, 'btn-ipa-source-save') !== false, 'save button uses FastAdmin controller binding');
-phase20UiAssert(strpos($setting, 'btn-ipa-source-test') !== false, 'test button uses FastAdmin controller binding');
+phase20UiAssert(strpos($setting, 'role="form"') !== false, 'settings use FastAdmin form role');
+phase20UiAssert(strpos($setting, 'data-toggle="validator"') !== false, 'settings use FastAdmin validator');
+phase20UiAssert(strpos($setting, "action=\"{:url('ipa_center/source_save')}\"") !== false, 'settings submit to source_save through FastAdmin form');
+phase20UiAssert(strpos($setting, '{:token()}') !== false, 'settings include CSRF token');
+phase20UiAssert(strpos($setting, 'type="submit"') !== false, 'settings use native submit button');
+phase20UiAssert(strpos($setting, 'btn-ipa-source-save') === false, 'legacy custom save button removed');
+phase20UiAssert(strpos($setting, 'btn-ipa-source-test') !== false, 'test connection remains an explicit action');
 phase20UiAssert(strpos($setting, '<script>') === false, 'settings do not depend on inline script execution');
-phase20UiAssert(strpos($backendJs, "$('.btn-ipa-source-save').on('click'") !== false, 'FastAdmin controller binds save button');
-phase20UiAssert(strpos($backendJs, "$('.btn-ipa-source-test').on('click'") !== false, 'FastAdmin controller binds test button');
+phase20UiAssert(strpos($backendJs, 'Form.api.bindevent') !== false, 'FastAdmin Form lifecycle is bound');
+phase20UiAssert(strpos($backendJs, "url:'ipa_center/source_test',data:form.serialize()") !== false, 'test connection uses current form values');
+phase20UiAssert(strpos($controller, 'IpaSourceConfig::testInput($this->request->post())') !== false, 'source test validates unsaved current form input');
+
+foreach (['metadata'=>'ipa-meta-table','binding'=>'ipa-binding-table','task'=>'ipa-task-table','writeback'=>'ipa-writeback-rule-table','governance'=>'ipa-governance-table'] as $page=>$tableId) {
+    phase20UiAssert(strpos($views[$page], 'id="' . $tableId . '"') !== false, "{$page} has FastAdmin table");
+    phase20UiAssert(strpos($views[$page], '<tbody>') === false, "{$page} no longer hand-renders tbody");
+}
+phase20UiAssert(strpos($gov, 'ipa_governance_production.js') === false, 'governance no longer loads a second page lifecycle');
+phase20UiAssert(strpos($gov, '<script>') === false, 'governance does not use inline require');
+phase20UiAssert(substr_count($backendJs, 'bootstrapTable') >= 10, 'IPA pages use BootstrapTable lifecycle');
+
 phase20UiAssert(strpos($sourceConfig, "const API_BASE = '/api';") !== false, 'OpenList API prefix fixed in application code');
 phase20UiAssert(strpos($sourceConfig, "'api_base'=>self::API_BASE") !== false, 'runtime source always uses provider API prefix');
 phase20UiAssert(strpos($sourceConfig, 'isset($input[\'api_base\'])') === false, 'user input cannot override provider API prefix');
@@ -59,15 +78,14 @@ phase20UiAssert(strpos($sourceConfig, "'token_ciphertext'=>self::sealToken") !==
 phase20UiAssert(strpos($sourceConfig, "runtimeDir().'openlist.json'") !== false, 'OpenList config is stored under runtime/ipa');
 phase20UiAssert(strpos($sourceConfig, "Db::name('ipa_source')->where") !== false, 'legacy DB config is import-only for upgrade compatibility');
 phase20UiAssert(substr_count($sourceConfig, "Db::name('ipa_source')") === 1, 'new OpenList configuration no longer writes to source table');
-phase20UiAssert(strpos($controller, "protected \$noNeedRight=['source_save','source_test']") !== false, 'save/test bypass names exactly match underscore actions');
-phase20UiAssert(strpos($controller, "['sourcesave','sourcetest']") === false, 'camelized noNeedRight regression is forbidden');
+phase20UiAssert((bool)preg_match('/protected\s+\$noNeedRight\s*=\s*\[[^\]]*source_save[^\]]*source_test[^\]]*\]/', $controller), 'save/test bypass names match underscore actions');
 phase20UiAssert(strpos($controller, "check('ipa_center/setting')") !== false, 'save/test inherit visible setting permission');
 phase20UiAssert(substr_count($controller, 'catch(\\Throwable $e)') >= 2, 'save/test catch PHP 7 Throwable failures');
 phase20UiAssert(strpos($fastJs, 'xhr.responseJSON') !== false && strpos($fastJs, 'xhr.responseText') !== false, 'HTTP failures surface backend error details instead of generic error');
 foreach (['fast.js','require-backend.js','backend.js','backend-init.js'] as $coreJs) {
     phase20UiAssert(strpos($commonBehavior, "'{$coreJs}'") !== false, "asset cache version tracks {$coreJs}");
 }
-phase20UiAssert(strpos($payloadStore, "metadata-detail") !== false, 'large IPA parser payloads live outside MySQL');
+phase20UiAssert(strpos($payloadStore, 'metadata-detail') !== false, 'large IPA parser payloads live outside MySQL');
 phase20UiAssert(strpos($parserService, "'confidence_json'=>'','raw_metadata_json'=>'','normalized_metadata_json'=>''") !== false, 'new parser results keep legacy blob columns empty');
 phase20UiAssert(strpos($scanService, 'TASK_ITEM_RETENTION_DAYS = 90') !== false, 'task item history is bounded to metrics window');
 
