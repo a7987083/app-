@@ -70,6 +70,11 @@ p192_assert(substr_count($app, '$payload = [];') >= 2, 'encrypted and plain resp
 p192_assert(strpos($app, 'protected function logSourcePerformance($appCount') !== false, 'performance logging must not retain the full payload array');
 p192_assert(strpos($app, "'app_count' => (int)\$appCount") !== false, 'performance logging must preserve app_count after payload release');
 
+$provider = $read('application/common/library/SourceEncryptionProvider.php');
+p192_assert(strpos($provider, 'return self::encodeV2Parts([$header, $payload]);') !== false, 'V2 encoder must avoid building a duplicate full container string');
+p192_assert(strpos($provider, 'protected static function encodeV2Parts(array $parts)') !== false, 'V2 multipart codec helper missing');
+p192_assert(strpos($provider, '$container = pack(') === false, 'V2 path must not restore the full container allocation');
+
 $repo = $read('application/common/library/SourceAppRepository.php');
 p192_assert(strpos($repo, 'GENERATION_KEY') !== false, 'cross-worker source generation missing');
 p192_assert(strpos($repo, 'public static function generation()') !== false, 'source generation accessor missing');
@@ -82,8 +87,10 @@ p192_assert(strpos($change, 'public static function currentRevision()') !== fals
 
 require_once $root . '/application/common/library/SourceLegacyCache.php';
 require_once $root . '/application/common/library/SourceResponse.php';
+require_once $root . '/application/common/library/SourceEncryptionProvider.php';
 $cacheClass = 'app\\common\\library\\SourceLegacyCache';
 $responseClass = 'app\\common\\library\\SourceResponse';
+$providerClass = 'app\\common\\library\\SourceEncryptionProvider';
 $guest = $cacheClass::accessSignature('guest', ['unlock_all' => true, 'app_ids' => [1, 2]]);
 $all = $cacheClass::accessSignature('licensed', ['unlock_all' => true, 'app_ids' => []]);
 $appsA = $cacheClass::accessSignature('licensed', ['unlock_all' => false, 'app_ids' => [9, 2, 9, 4]]);
@@ -111,4 +118,25 @@ putenv('SOURCE_HTTP_GZIP');
 putenv('SOURCE_HTTP_GZIP_MIN_BYTES');
 putenv('SOURCE_HTTP_GZIP_MAX_BYTES');
 
-echo "OK phase19_2_legacy_response_cache_test legacy_route=passed entitlement_cache=isolated revision=retained v3=retired manifest=passed payload_release=passed gzip_guard=passed\n";
+$rawCodecFixture = '';
+for ($i = 0; $i < 257; $i++) {
+    $rawCodecFixture .= chr(($i * 37) & 0xff);
+}
+$wholeCodec = $providerClass::encodeV2Codec($rawCodecFixture);
+$partsMethod = new ReflectionMethod($providerClass, 'encodeV2Parts');
+$partsMethod->setAccessible(true);
+foreach ([1, 5, 6, 7, 31, 32, 63, 64, 65, 127, 128, 129, 255, 256] as $splitAt) {
+    $parts = [substr($rawCodecFixture, 0, $splitAt), substr($rawCodecFixture, $splitAt)];
+    $splitCodec = $partsMethod->invoke(null, $parts);
+    p192_assert($splitCodec === $wholeCodec, 'V2 multipart codec mismatch at split ' . $splitAt);
+}
+$multiParts = [
+    substr($rawCodecFixture, 0, 1),
+    substr($rawCodecFixture, 1, 5),
+    substr($rawCodecFixture, 6, 58),
+    substr($rawCodecFixture, 64, 65),
+    substr($rawCodecFixture, 129),
+];
+p192_assert($partsMethod->invoke(null, $multiParts) === $wholeCodec, 'V2 multipart codec mismatch across multiple boundaries');
+
+echo "OK phase19_2_legacy_response_cache_test legacy_route=passed entitlement_cache=isolated revision=retained v3=retired manifest=passed payload_release=passed gzip_guard=passed v2_codec=equivalent\n";
