@@ -5,6 +5,13 @@ define(['jquery'], function ($) {
         return $('<div/>').text(v == null ? '' : String(v)).html();
     };
 
+    var formatBytes = function (bytes, unit) {
+        bytes = parseInt(bytes || 0, 10);
+        unit = unit || 'MB';
+        var div = unit === 'KB' ? 1024 : 1024 * 1024;
+        return (bytes / div).toFixed(2) + ' ' + unit;
+    };
+
     var selectedIds = function () {
         var ids = [];
         $('#ipa-governance-table .ipa-gov-select:checked').each(function () {
@@ -57,6 +64,21 @@ define(['jquery'], function ($) {
                     '<td><button type="button" class="btn btn-xs btn-warning btn-ipa-governance-retry" data-operation="' + html(r.operation_id || '') + '">重新预览并重试</button></td>' +
                     '</tr>');
             });
+            return false;
+        }, function () { return false; });
+    };
+
+    var loadRangeMetrics = function () {
+        var days = parseInt($('#ipa-range-window').val() || 7, 10);
+        Fast.api.ajax({url: 'ipa_production/metrics', type: 'GET', loading: false, data: {days: days}}, function (data) {
+            $('#ipa-range-parsed').text(data.parsed || 0);
+            $('#ipa-range-reused').text(data.reused || 0);
+            $('#ipa-range-bytes').text(formatBytes(data.range_bytes || 0, 'MB'));
+            $('#ipa-range-requests').text(data.range_requests || 0);
+            $('#ipa-range-avg-request').text(formatBytes(data.avg_range_bytes_per_request || 0, 'KB'));
+            var note = '窗口 ' + (data.days || days) + ' 天；task items ' + (data.window_items || 0) + '，统计样本 ' + (data.sampled_items || 0) + '。';
+            if (data.truncated) note += ' 当前窗口超过 5000 条，仅聚合最近 5000 条样本。';
+            $('#ipa-range-note').text(note);
             return false;
         }, function () { return false; });
     };
@@ -123,7 +145,32 @@ define(['jquery'], function ($) {
             });
         });
 
+        $('.btn-ipa-range-refresh').on('click', loadRangeMetrics);
+        $('#ipa-range-window').on('change', loadRangeMetrics);
+
+        $('.btn-ipa-retention-preview').on('click', function () {
+            var days = parseInt($('#ipa-retention-days').val() || 90, 10);
+            Fast.api.ajax({url: 'ipa_production/retention_preview', data: {days: days}}, function (data) {
+                var text = '保留期：' + data.days + ' 天\n' +
+                    '可删除 scan task：' + data.task_count + '\n' +
+                    '对应 task item：' + data.task_item_count + '\n' +
+                    '可删除 success/superseded 审计：' + data.operation_log_count + '\n' +
+                    'plan_hash：' + data.plan_hash + '\n\n' +
+                    '受保护状态：' + (data.protected_states || []).join(', ');
+                if (data.capped) text += '\n\n当前候选达到单表 1000 条上限，本次只处理这一批。';
+                Layer.confirm('<pre style="white-space:pre-wrap">' + html(text) + '</pre><p class="text-danger">这是不可逆历史清理；执行前会重新计算计划，计划变化则拒绝执行。</p>', {title: 'Retention 预览'}, function (index) {
+                    Layer.close(index);
+                    Fast.api.ajax({url: 'ipa_production/retention_apply', data: {days: days, plan_hash: data.plan_hash}}, function (result) {
+                        Toastr.success('已清理 task ' + (result.deleted_tasks || 0) + '、item ' + (result.deleted_task_items || 0) + '、audit ' + (result.deleted_operation_logs || 0));
+                        return false;
+                    });
+                });
+                return false;
+            });
+        });
+
         $('.btn-ipa-governance-failures-refresh').on('click', loadFailures);
         loadFailures();
+        loadRangeMetrics();
     };
 });
