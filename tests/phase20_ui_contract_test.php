@@ -41,6 +41,6 @@ phase20UiAssert(strpos($setting, '保存并测试') !== false, 'current form can
 phase20UiAssert(strpos($setting, 'xhr.responseJSON') !== false && strpos($setting, 'xhr.responseText') !== false, 'transport failures expose real server error');
 phase20UiAssert(strpos($sourceConfig, "const API_BASE = '/api';") !== false, 'OpenList API prefix fixed in application code');
 phase20UiAssert(strpos($sourceConfig, "'api_base'=>self::API_BASE") !== false, 'saved source always uses provider API prefix');
-phase20UiAssert(strpos($sourceConfig, "isset($input['api_base'])") === false, 'user input cannot override provider API prefix');
+phase20UiAssert(strpos($sourceConfig, 'isset($input[\'api_base\'])') === false, 'user input cannot override provider API prefix');
 
 echo "OK phase20_ui_contract_test\n";
