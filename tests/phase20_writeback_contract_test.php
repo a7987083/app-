@@ -1,4 +1,5 @@
 <?php
+require_once dirname(__DIR__) . '/thinkphp/library/think/Exception.php';
 require_once dirname(__DIR__) . '/application/common/library/IpaWritebackTemplate.php';
 
 use app\common\library\IpaWritebackTemplate;
