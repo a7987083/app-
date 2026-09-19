@@ -2,10 +2,13 @@
 
 ## P1 — Phase 20 production E2E not yet verified
 
-- Phase 20.7.1–20.7.3 have passed repository contract/CI checks.
-- Real production OpenList mutation/recovery and MySQL retention execution have not yet been run end-to-end against the production environment.
+- Phase 20.7.1–20.7.4 have passed repository contract/CI checks.
+- Final verified code HEAD: `438db0823a2d03e220401509ce736da57bc99ab9`.
+- Final code/UI CI Run: `35410113307` — SUCCESS.
+- Real production OpenList mutation/recovery and MySQL Retention execution have not yet been run end-to-end against the production environment.
 - Do not treat CI success as production verification.
-- Before release candidate: verify batch governance, failed/interrupted retry, Range metrics, Retention preview, Retention apply, and audit linkage on a controlled production/staging dataset.
+- Before release candidate: verify batch governance, one explicit OpenList path mutation, failed/interrupted retry, ignore expiry, Range metrics, Retention preview/apply, audit linkage, and real admin permission behavior on a controlled dataset.
+- Retention apply must not be enabled operationally until backup/restore has been validated for the target database.
 
 ## P1 — Exact /license production Nginx interception
 
