@@ -1,0 +1,54 @@
+<div class="panel panel-default panel-intro">
+    <div class="panel-heading">
+        <div class="panel-lead"><em>MySQL 软件源</em>软件源默认只读；连接配置和写回权限分离，修改连接信息不会自动开启数据库写回。</div>
+    </div>
+    <div class="panel-body">
+        <form id="mysql-source-form" class="form-horizontal" role="form" data-toggle="validator" method="POST">
+            {:token()}
+            <input type="hidden" name="id" value="">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">名称</label><div class="col-xs-8"><input class="form-control" name="name" type="text" required></div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">Slug</label><div class="col-xs-8"><input class="form-control" name="slug" type="text" placeholder="例如 app2" required></div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">MySQL Host</label><div class="col-xs-8"><input class="form-control" name="host" type="text" value="127.0.0.1" required></div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">Port</label><div class="col-xs-8"><input class="form-control" name="port" type="number" value="3306" min="1" max="65535" required></div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">Database</label><div class="col-xs-8"><input class="form-control" name="database" type="text" required></div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">Username</label><div class="col-xs-8"><input class="form-control" name="username" type="text" required></div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">Password</label><div class="col-xs-8"><input class="form-control" name="password" type="password" autocomplete="new-password"><span class="help-block">新增必须填写；编辑时留空表示不修改。</span></div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">应用表</label><div class="col-xs-8"><input class="form-control" name="table" type="text" value="fa_category" required></div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">优先级</label><div class="col-xs-8"><input class="form-control" name="priority" type="number" value="100"></div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group"><label class="control-label col-xs-4">启用</label><div class="col-xs-8"><input name="enabled" type="hidden" value="0"><label class="checkbox-inline"><input name="enabled" type="checkbox" value="1" checked> 启用</label></div></div>
+                </div>
+            </div>
+            <div class="form-group layer-footer">
+                <label class="control-label col-xs-12 col-sm-2"></label>
+                <div class="col-xs-12 col-sm-8">
+                    <button type="button" id="btn-source-save" class="btn btn-success"><i class="fa fa-check"></i> <span class="save-label">新增软件源</span></button>
+                    <button type="button" id="btn-source-cancel" class="btn btn-default hide">取消编辑</button>
+                </div>
+            </div>
+        </form>
+
+        <hr>
+        <h4>已配置软件源</h4>
+        <table id="mysql-source-table" class="table table-striped table-bordered table-hover table-nowrap" width="100%"></table>
+    </div>
+</div>
