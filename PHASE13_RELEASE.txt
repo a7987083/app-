@@ -1,22 +1,24 @@
-ZONOE 软件源 Release 2026091905
-版本：2026091905
-基线：2026091904
-阶段：Phase 20 — OpenList Settings Permission + Ajax Cache Hotfix
+ZONOE 软件源 Release 2026091906
+版本：2026091906
+基线：2026091905
+阶段：AppStore Memory/Performance Hotfix
 发布分支：release/2026091905-phase20-setting-hotfix
-发布状态：重新触发正式 Release Workflow（完整性签名已校正）
+发布状态：准备触发正式 Release Workflow
 
 更新内容：
-1. 修复 source_save/source_test 权限继承实际未生效的问题：noNeedRight 改为真实 action 名 source_save/source_test。
-2. 保存/测试仍显式要求 ipa_center/setting 权限，不扩大高风险治理或写回权限。
-3. 修复 FastAdmin 核心 JS 缓存版本只跟踪 backend/*.js 的缺陷；fast.js、require-backend.js、backend.js、backend-init.js 现在参与动态 asset version。
-4. 解决 2026091904 已更新 fast.js 但浏览器仍可能执行 2026091903 缓存脚本、继续只显示 error 的问题。
-5. sourceSave/sourceTest 改为捕获 PHP 7 Throwable，覆盖 Exception、Error、TypeError 等运行时失败。
-6. 保留 2026091904 的 OpenList runtime 配置与数据库瘦身架构，不回退到 fa_ipa_source 写入。
-7. 不修改既有 ZONOE Source Release 发布语义；正式发布仍由原 workflow 生成更新包并执行上一稳定版 -> 2026091905 在线更新 E2E。
+1. App.php 在 JSON 构建完成后提前释放大型 payload/apps 数组，性能日志只保留 app_count，不再长期持有完整 payload。
+2. App.php 在本地/远程加密完成后继续提前释放 JSON、encryptedResult 和 encrypted 临时引用，降低后半段峰值内存。
+3. SourceResponse.php 为 PHP one-shot gzencode 增加默认 8 MiB 上限；超大响应跳过 PHP gzip，避免 body + compressed + zlib workspace 同时占用。
+4. SourceResponse.php 在无 @@@ marker 时跳过无意义的大字符串替换扫描，同时保留原 marker 兼容行为。
+5. SourceEncryptionProvider.php 的 appstore_v2 改为 header + payload 分段送入同一 codec state，去掉完整 container 副本；RC4/RSA/V2 wire protocol 不变。
+6. 增加 payload release、gzip guard、V2 multipart codec 边界等价 contract，继续使用原 Phase 19.2 PHP 7.0 回归与在线更新包验证流程。
+7. 不修改授权、downloadURL 裁剪、entitlement cache、Nuosike fallback、原 ZONOE Source Release workflow 语义。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091905。
+- 目标 GitHub Release 标签：source-v2026091906。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- application/common/behavior/Common.php 属于 UpdateIntegrity::files() 监控文件；正式门禁计算出的 file_sign 为 8be29c04c34ba1d1cc7ec77d392b2bee，ver.json 已同步更新。
-- 最终候选验证：Phase 20 IPA Management #116、Regression Checks #245、Phase14 Production Hardening #99 已通过。
-- 正式 Run #98 首次尝试因旧 file_sign 被完整性门禁正确拦截；本提交校正签名并重新触发正式发布。
+- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091906。
+- App.php、SourceEncryptionProvider.php、SourceResponse.php 已在 release/online-update-files.txt 中。
+- 本次优化未修改 UpdateIntegrity::files() 中的签名文件，ver.json 暂保持 file_sign=8be29c04c34ba1d1cc7ec77d392b2bee；正式 Release workflow 会重新计算并严格校验。
+- 当前候选已通过 Phase 19.2 Legacy AppStore Performance 的 PHP 7.0 lint、regression contracts 与 online update package verify。
+- 正式发布后仍需执行 2026091905 -> 2026091906 在线更新 E2E，并在真实 9 MiB 级 /appstore 上复核 OOM/500、memory_peak_mb 与响应耗时。
