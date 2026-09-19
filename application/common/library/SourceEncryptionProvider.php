@@ -126,13 +126,15 @@ class SourceEncryptionProvider
         }
 
         $payload = self::rc4Reference($json, $keyText);
-        $container = pack('V', self::V2_MAGIC)
+        $header = pack('V', self::V2_MAGIC)
             . pack('V', strlen($rsaBlob))
             . $rsaBlob
-            . pack('V', strlen($payload))
-            . $payload;
+            . pack('V', strlen($payload));
 
-        return self::encodeV2Codec($container);
+        // Preserve the exact container byte stream while avoiding an additional
+        // full-size $container allocation. The codec carries its bit state from
+        // the small header directly into the already-built RC4 payload.
+        return self::encodeV2Parts([$header, $payload]);
     }
 
     public static function encodeV2Codec($raw)
@@ -141,31 +143,42 @@ class SourceEncryptionProvider
             throw new \InvalidArgumentException('V2 container must be bytes');
         }
 
+        return self::encodeV2Parts([$raw]);
+    }
+
+    protected static function encodeV2Parts(array $parts)
+    {
         $alphabet = self::V2_ALPHABET;
         $buffer = 0;
         $bitCount = 0;
         $output = '';
-        $length = strlen($raw);
 
-        for ($i = 0; $i < $length; $i++) {
-            $buffer |= ord($raw[$i]) << $bitCount;
-            $bitCount += 8;
+        foreach ($parts as $raw) {
+            if (!is_string($raw)) {
+                throw new \InvalidArgumentException('V2 container part must be bytes');
+            }
 
-            while ($bitCount >= 5) {
-                $value5 = $buffer & 31;
-                if ($value5 === 30 || $value5 === 31) {
-                    $output .= $alphabet[$value5];
-                    $buffer >>= 5;
-                    $bitCount -= 5;
-                    continue;
+            $length = strlen($raw);
+            for ($i = 0; $i < $length; $i++) {
+                $buffer |= ord($raw[$i]) << $bitCount;
+                $bitCount += 8;
+
+                while ($bitCount >= 5) {
+                    $value5 = $buffer & 31;
+                    if ($value5 === 30 || $value5 === 31) {
+                        $output .= $alphabet[$value5];
+                        $buffer >>= 5;
+                        $bitCount -= 5;
+                        continue;
+                    }
+                    if ($bitCount < 6) {
+                        break;
+                    }
+                    $value6 = $buffer & 63;
+                    $output .= $alphabet[$value6];
+                    $buffer >>= 6;
+                    $bitCount -= 6;
                 }
-                if ($bitCount < 6) {
-                    break;
-                }
-                $value6 = $buffer & 63;
-                $output .= $alphabet[$value6];
-                $buffer >>= 6;
-                $bitCount -= 6;
             }
         }
 
