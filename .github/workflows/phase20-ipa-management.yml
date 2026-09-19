@@ -21,6 +21,9 @@ on:
       - 'public/assets/js/backend/ipa_governance_production.js'
       - 'tests/phase20_*'
       - 'tests/phase207_*'
+      - 'release/online-update-files.txt'
+      - 'release/PHASE20_RC_CHECKLIST.md'
+      - 'tools/build_online_update.php'
       - '.github/workflows/phase20-ipa-management.yml'
   workflow_dispatch:
 permissions:
@@ -56,6 +59,7 @@ jobs:
           php -l application/common/library/IpaGovernanceLifecycleService.php
           php -l application/common/library/IpaRangeMetricsService.php
           php -l application/common/library/IpaRetentionService.php
+          php -l tools/build_online_update.php
           php -l tests/phase20_foundation_contract_test.php
           php -l tests/phase20_ui_contract_test.php
           php -l tests/phase20_scan_planner_test.php
@@ -69,6 +73,7 @@ jobs:
           php -l tests/phase207_production_contract_test.php
           php -l tests/phase207_metrics_retention_contract_test.php
           php -l tests/phase207_lifecycle_contract_test.php
+          php -l tests/phase20_rc_release_contract_test.php
       - name: Phase 20 foundation contract
         run: php tests/phase20_foundation_contract_test.php
       - name: Phase 20 UI contract
@@ -97,3 +102,5 @@ jobs:
         run: php tests/phase207_metrics_retention_contract_test.php
       - name: Phase 20.7 ignore lifecycle contract
         run: php tests/phase207_lifecycle_contract_test.php
+      - name: Phase 20 RC release contract
+        run: php tests/phase20_rc_release_contract_test.php
