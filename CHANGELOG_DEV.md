@@ -6,11 +6,12 @@
 - Added Phase 20.7.1 batch governance with batch plan hashing, per-item plan validation, safe-mode restrictions, and a governance failure queue.
 - Added Phase 20.7.2 failed/interrupted recovery. Retry always re-previews current state, uses a separate recovery idempotency key, and marks recovered source operations `superseded`.
 - Added Phase 20.7.3 Range metrics from parser task `result_json`: parsed/reused counts, transferred bytes, request count, averages, and bounded 7/30/90-day windows.
-- Added preview-first retention cleanup with plan hashing, protected failure/in-flight states, and bounded batches of at most 1000 rows per table.
-- Added production permissions for Range metrics and Retention preview/apply.
-- Added governance UI for batch repair, recovery queue, retry, Range metrics, and Retention preview/apply.
-- Phase 20.7 metrics/retention UI CI Run `35409913235` — SUCCESS at `a573d6f2945edcd0ca7c44a2002f1212b4a19bb2`.
-- Real production OpenList + MySQL E2E remains not verified.
+- Added preview-first Retention cleanup with plan hashing, protected failure/in-flight states, and bounded batches of at most 1000 rows per table.
+- Added Phase 20.7.4 ignore lifecycle: batch ignore/unignore, `ignore_until` expiry sweep, ignored/expired queue, and audit operations.
+- Added FastAdmin `$auth->check()` UI gating for high-risk batch governance, retry, retention, and lifecycle controls.
+- Added production permissions for Range metrics, Retention, recovery, and lifecycle endpoints.
+- Final Phase 20.7 code/UI CI Run `35410113307` — SUCCESS at `438db0823a2d03e220401509ce736da57bc99ab9`.
+- Real production OpenList + MySQL E2E remains not verified; next step is RC closeout validation.
 
 ## 2026-09-18 — Phase 19.4.2 / Release 2026091807
 
