@@ -29,26 +29,26 @@ SET @ipa_root := (SELECT `id` FROM `fa_auth_rule` WHERE `name`='ipa_center' LIMI
 SET @ipa_task := (SELECT `id` FROM `fa_auth_rule` WHERE `name`='ipa_center/task' LIMIT 1);
 
 INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
-SELECT 'file',@ipa_root,'ipa_center/mysql_source','MySQL 软件源','fa fa-database','','Phase20 software-source management',1,@now,@now,65,'normal'
-WHERE @ipa_root IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_center/mysql_source');
+SELECT 'file',@ipa_root,'ipa_mysql_source/index','MySQL 软件源','fa fa-database','','Phase20 software-source management',1,@now,@now,65,'normal'
+WHERE @ipa_root IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_mysql_source/index');
 
-SET @mysql_page := (SELECT `id` FROM `fa_auth_rule` WHERE `name`='ipa_center/mysql_source' LIMIT 1);
-
-INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
-SELECT 'file',@mysql_page,'ipa_center/mysql_source_list','软件源列表','fa fa-circle-o','','Read software-source configuration',0,@now,@now,0,'normal'
-WHERE @mysql_page IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_center/mysql_source_list');
+SET @mysql_page := (SELECT `id` FROM `fa_auth_rule` WHERE `name`='ipa_mysql_source/index' LIMIT 1);
 
 INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
-SELECT 'file',@mysql_page,'ipa_center/mysql_source_save','保存软件源','fa fa-circle-o','','Create/update software-source configuration',0,@now,@now,0,'normal'
-WHERE @mysql_page IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_center/mysql_source_save');
+SELECT 'file',@mysql_page,'ipa_mysql_source/source_list','软件源列表','fa fa-circle-o','','Read software-source configuration',0,@now,@now,0,'normal'
+WHERE @mysql_page IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_mysql_source/source_list');
 
 INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
-SELECT 'file',@mysql_page,'ipa_center/mysql_source_test','测试软件源','fa fa-circle-o','','Test software-source connection',0,@now,@now,0,'normal'
-WHERE @mysql_page IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_center/mysql_source_test');
+SELECT 'file',@mysql_page,'ipa_mysql_source/source_save','保存软件源','fa fa-circle-o','','Create/update software-source configuration',0,@now,@now,0,'normal'
+WHERE @mysql_page IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_mysql_source/source_save');
 
 INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
-SELECT 'file',@mysql_page,'ipa_center/mysql_source_delete','删除软件源','fa fa-circle-o','','Delete software-source configuration only',0,@now,@now,0,'normal'
-WHERE @mysql_page IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_center/mysql_source_delete');
+SELECT 'file',@mysql_page,'ipa_mysql_source/source_test','测试软件源','fa fa-circle-o','','Test software-source connection',0,@now,@now,0,'normal'
+WHERE @mysql_page IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_mysql_source/source_test');
+
+INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
+SELECT 'file',@mysql_page,'ipa_mysql_source/source_delete','删除软件源','fa fa-circle-o','','Delete software-source configuration only',0,@now,@now,0,'normal'
+WHERE @mysql_page IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_mysql_source/source_delete');
 
 INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
 SELECT 'file',@ipa_task,'ipa_center/parse_one','解析 1 个 IPA','fa fa-circle-o','','Parse one eligible pending IPA',0,@now,@now,0,'normal'
