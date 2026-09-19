@@ -59,6 +59,8 @@ $response = $read('application/common/library/SourceResponse.php');
 p192_assert(strpos($response, 'SourceLegacyCache::getPlainBody') !== false, 'plain response cache read missing');
 p192_assert(strpos($response, 'SourceLegacyCache::storePlainBody') !== false, 'plain response cache write missing');
 p192_assert(strpos($response, 'AppStorePayload::withoutRuntimeFields') !== false, 'legacy runtime-field stripping must remain intact');
+p192_assert(strpos($response, 'const GZIP_MAX_BYTES = 8388608;') !== false, 'large-response gzip memory guard missing');
+p192_assert(strpos($response, 'SOURCE_HTTP_GZIP_MAX_BYTES') !== false, 'gzip upper bound must remain configurable');
 
 $app = $read('application/index/controller/App.php');
 p192_assert(strpos($app, 'protected function emitPayload(array &$payload') !== false, 'App response path must release caller payload by reference');
@@ -79,7 +81,9 @@ p192_assert(strpos($change, 'REVISION_CACHE_KEY') !== false, 'shared revision ca
 p192_assert(strpos($change, 'public static function currentRevision()') !== false, 'current revision accessor missing');
 
 require_once $root . '/application/common/library/SourceLegacyCache.php';
+require_once $root . '/application/common/library/SourceResponse.php';
 $cacheClass = 'app\\common\\library\\SourceLegacyCache';
+$responseClass = 'app\\common\\library\\SourceResponse';
 $guest = $cacheClass::accessSignature('guest', ['unlock_all' => true, 'app_ids' => [1, 2]]);
 $all = $cacheClass::accessSignature('licensed', ['unlock_all' => true, 'app_ids' => []]);
 $appsA = $cacheClass::accessSignature('licensed', ['unlock_all' => false, 'app_ids' => [9, 2, 9, 4]]);
@@ -92,4 +96,19 @@ p192_assert($appsA === $appsB, 'App entitlement signature must be order/duplicat
 p192_assert($appsA !== $appsC, 'different App entitlement sets must not share cache');
 p192_assert($guest !== $all && $all !== $appsA, 'guest/all/App caches must remain isolated');
 
-echo "OK phase19_2_legacy_response_cache_test legacy_route=passed entitlement_cache=isolated revision=retained v3=retired manifest=passed payload_release=passed\n";
+$legacyEnvelope = str_replace('@@@', '\\n', json_encode(['appstore' => 'abc@@@def']));
+p192_assert($responseClass::encryptedBody('appstore', 'abc@@@def', true) === $legacyEnvelope, 'encrypted response marker behavior changed');
+p192_assert($responseClass::encryptedBody('appstore', false, true) === '{"appstore":false}', 'transport-failure envelope changed');
+
+putenv('SOURCE_HTTP_GZIP=1');
+putenv('SOURCE_HTTP_GZIP_MIN_BYTES=1');
+putenv('SOURCE_HTTP_GZIP_MAX_BYTES=64');
+$largeBody = str_repeat('A', 65);
+$transport = $responseClass::transportBody($largeBody, 'gzip');
+p192_assert(is_array($transport) && $transport['gzip'] === false, 'large body must bypass one-shot PHP gzip');
+p192_assert($transport['body'] === $largeBody, 'gzip guard must not change application bytes');
+putenv('SOURCE_HTTP_GZIP');
+putenv('SOURCE_HTTP_GZIP_MIN_BYTES');
+putenv('SOURCE_HTTP_GZIP_MAX_BYTES');
+
+echo "OK phase19_2_legacy_response_cache_test legacy_route=passed entitlement_cache=isolated revision=retained v3=retired manifest=passed payload_release=passed gzip_guard=passed\n";
