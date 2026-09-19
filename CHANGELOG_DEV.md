@@ -1,5 +1,17 @@
 # Development Changelog
 
+## 2026-09-19 — Phase 20.7 production enhancement line
+
+- Restored Phase 20.6 CI by loading `think\Exception` in the isolated writeback contract test.
+- Added Phase 20.7.1 batch governance with batch plan hashing, per-item plan validation, safe-mode restrictions, and a governance failure queue.
+- Added Phase 20.7.2 failed/interrupted recovery. Retry always re-previews current state, uses a separate recovery idempotency key, and marks recovered source operations `superseded`.
+- Added Phase 20.7.3 Range metrics from parser task `result_json`: parsed/reused counts, transferred bytes, request count, averages, and bounded 7/30/90-day windows.
+- Added preview-first retention cleanup with plan hashing, protected failure/in-flight states, and bounded batches of at most 1000 rows per table.
+- Added production permissions for Range metrics and Retention preview/apply.
+- Added governance UI for batch repair, recovery queue, retry, Range metrics, and Retention preview/apply.
+- Phase 20.7 metrics/retention UI CI Run `35409913235` — SUCCESS at `a573d6f2945edcd0ca7c44a2002f1212b4a19bb2`.
+- Real production OpenList + MySQL E2E remains not verified.
+
 ## 2026-09-18 — Phase 19.4.2 / Release 2026091807
 
 - Collapsed announcement expiry/remaining-time into one public authorization clock.
