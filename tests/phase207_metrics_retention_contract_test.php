@@ -19,5 +19,7 @@ $metrics=file_get_contents(dirname(__DIR__).'/application/common/library/IpaRang
 foreach(['range_bytes','range_requests','reused','MAX_SAMPLE_ROWS','truncated'] as $needle)phase207mrAssert(strpos($metrics,$needle)!==false,'range metrics '.$needle);
 $controller=file_get_contents(dirname(__DIR__).'/application/admin/controller/IpaProduction.php');
 foreach(['function metrics(','function retentionPreview(','function retentionApply('] as $needle)phase207mrAssert(strpos($controller,$needle)!==false,'production controller '.$needle);
+$sql=file_get_contents(dirname(__DIR__).'/application/admin/command/Install/phase20_ipa_production.sql');
+foreach(['ipa_production/metrics','ipa_production/retention_preview','ipa_production/retention_apply'] as $needle)phase207mrAssert(strpos($sql,$needle)!==false,'production auth '.$needle);
 
 echo "OK phase207_metrics_retention_contract_test\n";
