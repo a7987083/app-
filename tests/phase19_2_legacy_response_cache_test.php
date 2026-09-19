@@ -71,7 +71,9 @@ p192_assert(strpos($app, 'protected function logSourcePerformance($appCount') !=
 p192_assert(strpos($app, "'app_count' => (int)\$appCount") !== false, 'performance logging must preserve app_count after payload release');
 
 $provider = $read('application/common/library/SourceEncryptionProvider.php');
-p192_assert(strpos($provider, 'return self::encodeV2Parts([$header, $payload]);') !== false, 'V2 encoder must avoid building a duplicate full container string');
+p192_assert(strpos($provider, 'return self::encodeV2EncryptedJson($header, $json, $keyText);') !== false, 'V2 encoder must use the fused RC4/codec path');
+p192_assert(strpos($provider, 'protected static function encodeV2EncryptedJson($header, $json, $keyText)') !== false, 'V2 fused encoder helper missing');
+p192_assert(strpos($provider, '$payload = self::rc4Reference($json, $keyText);') === false, 'V2 path must not rebuild a full RC4 payload');
 p192_assert(strpos($provider, 'protected static function encodeV2Parts(array $parts)') !== false, 'V2 multipart codec helper missing');
 p192_assert(strpos($provider, '$container = pack(') === false, 'V2 path must not restore the full container allocation');
 
@@ -139,4 +141,4 @@ $multiParts = [
 ];
 p192_assert($partsMethod->invoke(null, $multiParts) === $wholeCodec, 'V2 multipart codec mismatch across multiple boundaries');
 
-echo "OK phase19_2_legacy_response_cache_test legacy_route=passed entitlement_cache=isolated revision=retained v3=retired manifest=passed payload_release=passed gzip_guard=passed v2_codec=equivalent\n";
+echo "OK phase19_2_legacy_response_cache_test legacy_route=passed entitlement_cache=isolated revision=retained v3=retired manifest=passed payload_release=passed gzip_guard=passed v2_codec=equivalent fused_v2=passed\n";
