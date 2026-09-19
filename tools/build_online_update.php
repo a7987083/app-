@@ -42,6 +42,51 @@ function release_safe_path($relative)
     return true;
 }
 
+function release_phase20_formal_gate($root, array $files)
+{
+    if ((string)getenv('GITHUB_WORKFLOW') !== 'ZONOE Source Release') {
+        return;
+    }
+
+    if (!in_array('application/admin/controller/IpaCenter.php', $files, true)) {
+        return;
+    }
+
+    $acceptanceFile = $root . '/release/PHASE20_EXTERNAL_ACCEPTANCE.json';
+    if (!is_file($acceptanceFile)) {
+        release_fail('Phase 20 formal release requires release/PHASE20_EXTERNAL_ACCEPTANCE.json');
+    }
+
+    $raw = @file_get_contents($acceptanceFile);
+    $acceptance = $raw !== false ? json_decode($raw, true) : null;
+    if (!is_array($acceptance)) {
+        release_fail('Phase 20 external acceptance record is invalid JSON');
+    }
+
+    $status = isset($acceptance['status']) ? strtolower(trim((string)$acceptance['status'])) : '';
+    $environment = isset($acceptance['environment']) ? trim((string)$acceptance['environment']) : '';
+    $verifiedAt = isset($acceptance['verified_at']) ? trim((string)$acceptance['verified_at']) : '';
+    $acceptanceCommit = isset($acceptance['acceptance_commit']) ? strtolower(trim((string)$acceptance['acceptance_commit'])) : '';
+    $readinessRun = isset($acceptance['readiness_run']) ? trim((string)$acceptance['readiness_run']) : '';
+    $operator = isset($acceptance['operator']) ? trim((string)$acceptance['operator']) : '';
+
+    if ($status !== 'passed') {
+        release_fail('Phase 20 external acceptance status must be passed');
+    }
+    if ($environment === '' || $operator === '') {
+        release_fail('Phase 20 external acceptance requires environment and operator');
+    }
+    if (!preg_match('/^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:Z|[+-][0-9]{2}:[0-9]{2})$/', $verifiedAt)) {
+        release_fail('Phase 20 external acceptance verified_at must be ISO-8601 with timezone');
+    }
+    if (!preg_match('/^[a-f0-9]{40}$/', $acceptanceCommit)) {
+        release_fail('Phase 20 external acceptance acceptance_commit must be a 40-char commit SHA');
+    }
+    if (!preg_match('/^[0-9]+$/', $readinessRun)) {
+        release_fail('Phase 20 external acceptance readiness_run must be a workflow run id');
+    }
+}
+
 if (!is_file($manifest)) {
     release_fail('release/online-update-files.txt missing');
 }
@@ -71,6 +116,8 @@ foreach ($lines as $line) {
 if (!$files) {
     release_fail('update manifest is empty');
 }
+
+release_phase20_formal_gate($root, $files);
 
 foreach ($phase20Sql as $targetName => $sourcePath) {
     if (!preg_match('/^[A-Za-z0-9._-]+\.sql$/', $targetName)) {
