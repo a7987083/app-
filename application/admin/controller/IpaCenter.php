@@ -8,6 +8,7 @@ use app\common\library\IpaSourceConfig;
 use app\common\library\IpaBindingService;
 use app\common\library\IpaWritebackTemplate;
 use app\common\library\IpaGovernanceService;
+use app\common\library\IpaGovernanceBatchService;
 use think\Db;
 use RuntimeException;
 
@@ -40,6 +41,9 @@ class IpaCenter extends Backend
     public function governanceApply(){if(!$this->request->isPost())$this->error('Method not allowed');try{$result=IpaGovernanceService::apply((int)$this->request->post('issue_id/d',0),trim((string)$this->request->post('mode','')),trim((string)$this->request->post('plan_hash','')),(int)$this->auth->id);$this->success('修复完成并通过验证',null,$result);}catch(\Exception $e){$this->error($e->getMessage());}}
     public function governanceIgnore(){if(!$this->request->isPost())$this->error('Method not allowed');try{$days=max(1,min(365,(int)$this->request->post('days/d',30)));IpaGovernanceService::ignore((int)$this->request->post('issue_id/d',0),time()+$days*86400,(int)$this->auth->id);$this->success('已忽略该异常');}catch(\Exception $e){$this->error($e->getMessage());}}
     public function governanceVerify(){if(!$this->request->isPost())$this->error('Method not allowed');try{$ok=IpaGovernanceService::verifyIssue((int)$this->request->post('issue_id/d',0));$this->success($ok?'重新检测：已恢复':'重新检测：异常仍存在',null,['resolved'=>$ok]);}catch(\Exception $e){$this->error($e->getMessage());}}
+    public function governanceBatchPreview(){if(!$this->request->isPost())$this->error('Method not allowed');try{$ids=json_decode((string)$this->request->post('issue_ids_json','[]'),true);if(!is_array($ids))throw new RuntimeException('issue_ids_json 无效');$this->success('批量治理预览已生成',null,IpaGovernanceBatchService::preview($ids));}catch(\Exception $e){$this->error($e->getMessage());}}
+    public function governanceBatchApply(){if(!$this->request->isPost())$this->error('Method not allowed');try{$ids=json_decode((string)$this->request->post('issue_ids_json','[]'),true);if(!is_array($ids))throw new RuntimeException('issue_ids_json 无效');$result=IpaGovernanceBatchService::apply($ids,trim((string)$this->request->post('batch_hash','')),(int)$this->auth->id);$this->success('批量治理执行完成',null,$result);}catch(\Exception $e){$this->error($e->getMessage());}}
+    public function governanceFailures(){try{$this->success('',null,['stats'=>IpaGovernanceBatchService::failureStats(),'rows'=>IpaGovernanceBatchService::failedOperations((int)$this->request->get('limit/d',100))]);}catch(\Exception $e){$this->error($e->getMessage());}}
 
     public function writebackRules(){try{$rules=IpaWritebackTemplate::loadActiveRules();$this->success('',null,['version'=>IpaWritebackTemplate::activeVersion(),'rules'=>$rules,'strategies'=>IpaWritebackTemplate::allowedStrategies(),'targets'=>IpaWritebackTemplate::allowedTargets()]);}catch(\Exception $e){$this->error($e->getMessage());}}
     public function writebackSeed(){if(!$this->request->isPost())$this->error('Method not allowed');try{$created=IpaWritebackTemplate::seedDefaults((int)$this->auth->id);$this->success($created?'默认模板已初始化':'模板已经存在',null,['created'=>$created,'version'=>IpaWritebackTemplate::activeVersion()]);}catch(\Exception $e){$this->error($e->getMessage());}}
