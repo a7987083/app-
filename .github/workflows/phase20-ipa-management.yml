@@ -8,6 +8,7 @@ on:
     paths:
       - 'application/admin/controller/IpaCenter.php'
       - 'application/admin/controller/IpaRecovery.php'
+      - 'application/admin/controller/IpaProduction.php'
       - 'application/admin/command/IpaScan.php'
       - 'application/admin/command/IpaParse.php'
       - 'application/command.php'
@@ -32,6 +33,7 @@ jobs:
         run: |
           php -l application/admin/controller/IpaCenter.php
           php -l application/admin/controller/IpaRecovery.php
+          php -l application/admin/controller/IpaProduction.php
           php -l application/admin/command/IpaScan.php
           php -l application/admin/command/IpaParse.php
           php -l application/common/library/IpaFoundation.php
@@ -49,6 +51,8 @@ jobs:
           php -l application/common/library/IpaGovernanceService.php
           php -l application/common/library/IpaGovernanceBatchService.php
           php -l application/common/library/IpaGovernanceRecoveryService.php
+          php -l application/common/library/IpaRangeMetricsService.php
+          php -l application/common/library/IpaRetentionService.php
           php -l tests/phase20_foundation_contract_test.php
           php -l tests/phase20_ui_contract_test.php
           php -l tests/phase20_scan_planner_test.php
@@ -60,6 +64,7 @@ jobs:
           php -l tests/phase20_writeback_contract_test.php
           php -l tests/phase20_governance_contract_test.php
           php -l tests/phase207_production_contract_test.php
+          php -l tests/phase207_metrics_retention_contract_test.php
       - name: Phase 20 foundation contract
         run: php tests/phase20_foundation_contract_test.php
       - name: Phase 20 UI contract
@@ -84,3 +89,5 @@ jobs:
         run: php tests/phase20_governance_contract_test.php
       - name: Phase 20.7 production governance contract
         run: php tests/phase207_production_contract_test.php
+      - name: Phase 20.7 metrics retention contract
+        run: php tests/phase207_metrics_retention_contract_test.php
