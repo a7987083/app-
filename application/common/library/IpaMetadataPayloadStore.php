@@ -2,6 +2,7 @@
 
 namespace app\common\library;
 
+use think\Db;
 use RuntimeException;
 
 /**
@@ -65,6 +66,34 @@ class IpaMetadataPayloadStore
             'normalized'=>is_array($normalized)?$normalized:[],
             'updated_at'=>isset($row['updatetime'])?(int)$row['updatetime']:0,
         ];
+    }
+
+    /**
+     * Gradually migrates already-existing payload blobs out of MySQL.
+     * A small batch keeps request/scan latency bounded; subsequent scans
+     * continue until the legacy rows are compacted.
+     */
+    public static function compactLegacy($limit=50)
+    {
+        $limit=max(1,min(500,(int)$limit));
+        $rows=Db::name('ipa_metadata')
+            ->where(function($q){
+                $q->where('confidence_json','<>','')->whereOr('raw_metadata_json','<>','')->whereOr('normalized_metadata_json','<>','');
+            })
+            ->order('id','asc')
+            ->limit($limit)
+            ->select();
+        $migrated=0;$failed=0;
+        foreach((array)$rows as $row){
+            try{
+                $payload=self::hydrateLegacyRow($row);
+                if(!$payload)continue;
+                self::save((int)$row['id'],['confidence'=>$payload['confidence'],'raw'=>$payload['raw'],'normalized'=>$payload['normalized']]);
+                Db::name('ipa_metadata')->where('id',(int)$row['id'])->update(['confidence_json'=>'','raw_metadata_json'=>'','normalized_metadata_json'=>'']);
+                $migrated++;
+            }catch(\Exception $e){$failed++;}
+        }
+        return ['selected'=>count((array)$rows),'migrated'=>$migrated,'failed'=>$failed];
     }
 
     protected static function path($metadataId)
