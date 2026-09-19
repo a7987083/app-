@@ -3,7 +3,7 @@ ZONOE 软件源 Release 2026091904
 基线：2026091903
 阶段：Phase 20 — Storage Slimming + OpenList Settings Save Hotfix
 发布分支：release/2026091904-phase20-storage-slim-hotfix
-发布状态：候选版本，等待正式 Release Workflow
+发布状态：触发正式 Release Workflow
 
 更新内容：
 1. 修复 IPA 网络源设置页保存/测试请求在升级环境中可能被新增隐藏权限节点拦截的问题；保存/测试现在继承可见的 ipa_center/setting 权限。
@@ -21,4 +21,4 @@ ZONOE 软件源 Release 2026091904
 - 目标 GitHub Release 标签：source-v2026091904。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
 - file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity::files() 监控的关键文件。
-- 候选验证：Phase 20 IPA Management #104、Regression Checks #233、Phase14 Production Hardening #87、Phase 17.2 Authorization Integrity #18 已通过；版本元数据更新后需再次以最终 HEAD 验证。
+- 最终候选验证：Phase 20 IPA Management #110、Regression Checks #239、Phase14 Production Hardening #93、Phase 17.2 Authorization Integrity #24 已通过。
