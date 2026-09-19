@@ -9,6 +9,7 @@ use Throwable;
 class IpaScanService
 {
     const STALE_SECONDS = 600;
+    const TASK_ITEM_RETENTION_DAYS = 90;
 
     public static function createTask($sourceId,$triggerType='manual',$adminId=0,$forceRefresh=false)
     {
@@ -56,7 +57,8 @@ class IpaScanService
             $summary['directories']=$listed['directories']; $summary['scan_path']=$source['scan_path']; $summary['force_refresh']=$forceRefresh; $summary['cache_hit']=!empty($listed['cache_hit']); $summary['discovery_completed_at']=time();
             Db::name('ipa_scan_task')->where('id',$taskId)->update(['state'=>'success','stage'=>'discovery_complete','progress_current'=>count($remoteRows),'progress_total'=>count($remoteRows),'cursor_json'=>json_encode($summary,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'heartbeat_at'=>time(),'finished_at'=>time(),'updatetime'=>time()]);
             IpaSourceConfig::updateState(['last_scan_at'=>time(),'last_health'=>'ok','last_checked_at'=>time()]);
-            self::pruneTaskItems();
+            self::pruneTaskItems(self::TASK_ITEM_RETENTION_DAYS);
+            IpaMetadataPayloadStore::compactLegacy(50);
             return Db::name('ipa_scan_task')->where('id',$taskId)->find();
         } catch (\Exception $e) { self::failTask($taskId,'scan_failed',$e->getMessage()); throw $e; }
         catch (Throwable $e) { self::failTask($taskId,'scan_failed',$e->getMessage()); throw $e; }
@@ -96,11 +98,11 @@ class IpaScanService
         Db::name('ipa_scan_task_item')->insert(['task_id'=>(int)$taskId,'metadata_id'=>(int)$metadataId,'item_key'=>$itemKey,'state'=>$state,'stage'=>$stage,'retry_after'=>0,'retry_count'=>0,'result_json'=>json_encode($result,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'createtime'=>time(),'updatetime'=>time()]);
     }
 
-    /** Short-lived queue only: parsed/missing rows are not a permanent history store. */
-    public static function pruneTaskItems($retentionDays=30)
+    /** Short-lived queue only; 90 days matches the maximum Range metrics window. */
+    public static function pruneTaskItems($retentionDays=self::TASK_ITEM_RETENTION_DAYS)
     {
         $cutoff=time()-max(1,(int)$retentionDays)*86400;
-        return Db::name('ipa_scan_task_item')->where('state','in',['success'])->where('updatetime','<',$cutoff)->delete();
+        return Db::name('ipa_scan_task_item')->where('state','success')->where('updatetime','<',$cutoff)->delete();
     }
 
     public static function markStaleInterrupted($staleSeconds=self::STALE_SECONDS)
