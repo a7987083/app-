@@ -3,6 +3,7 @@ name: Phase 20 Release Readiness
 on:
   push:
     branches:
+      - 'feature/phase20-ipa-management-v1'
       - 'release/**'
     paths:
       - 'VERSION'
