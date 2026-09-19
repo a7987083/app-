@@ -1,10 +1,15 @@
+<div id="ipa-phase207-capabilities"
+     data-can-retry="{:$auth->check('ipa_recovery/retry')?1:0}"
+     data-can-lifecycle-list="{:$auth->check('ipa_lifecycle/ignored_list')?1:0}"
+     data-can-unignore="{:$auth->check('ipa_lifecycle/unignore_batch')?1:0}"></div>
 <div class="panel panel-default panel-intro">
     <div class="panel-heading"><h3 class="panel-title">数据治理</h3></div>
     <div class="panel-body">
         <p class="text-muted">仅治理已绑定记录。流程固定为：发现 → 修复预览 → 确认 → 执行 → 二次验证 → 审计。旧计划发生漂移时拒绝执行。</p>
         <div class="btn-toolbar" style="margin-bottom:15px">
             <button type="button" class="btn btn-primary btn-ipa-governance-refresh"><i class="fa fa-refresh"></i> 重新检测全部</button>
-            <button type="button" class="btn btn-success btn-ipa-governance-batch"><i class="fa fa-check-square-o"></i> 批量预览并修复</button>
+            <button type="button" class="btn btn-success btn-ipa-governance-batch {:$auth->check('ipa_center/governance_batch_apply')?'':'hide'}"><i class="fa fa-check-square-o"></i> 批量预览并修复</button>
+            <button type="button" class="btn btn-default btn-ipa-ignore-batch {:$auth->check('ipa_lifecycle/ignore_batch')?'':'hide'}"><i class="fa fa-eye-slash"></i> 批量忽略</button>
             <span class="text-muted" style="line-height:34px">批量模式最多 100 条；不会批量移动 OpenList 文件。</span>
         </div>
         <div class="row ipa-stat-row ipa-governance-cards">
@@ -27,7 +32,7 @@
         <div class="clearfix" style="margin-bottom:10px">
             <h4 class="pull-left" style="margin:6px 0">治理恢复队列 <span class="label label-danger">failed <span id="ipa-gov-failed-count">0</span></span> <span class="label label-warning">interrupted <span id="ipa-gov-interrupted-count">0</span></span></h4>
             <div class="pull-right">
-                <button type="button" class="btn btn-warning btn-sm btn-ipa-governance-scan-interrupted"><i class="fa fa-exclamation-triangle"></i> 扫描 5 分钟无更新的 running</button>
+                <button type="button" class="btn btn-warning btn-sm btn-ipa-governance-scan-interrupted {:$auth->check('ipa_recovery/scan_interrupted')?'':'hide'}"><i class="fa fa-exclamation-triangle"></i> 扫描 5 分钟无更新的 running</button>
                 <button type="button" class="btn btn-default btn-sm btn-ipa-governance-failures-refresh"><i class="fa fa-refresh"></i> 刷新恢复队列</button>
             </div>
         </div>
@@ -39,6 +44,22 @@
                 <thead><tr><th>Operation</th><th>Issue</th><th>状态</th><th>操作类型</th><th>Category / Metadata</th><th>错误</th><th>开始</th><th>结束</th><th>恢复</th></tr></thead>
                 <tbody><tr><td colspan="9" class="text-center text-muted">正在加载恢复队列</td></tr></tbody>
             </table>
+        </div>
+
+        <hr>
+        <div class="clearfix" style="margin-bottom:10px">
+            <h4 class="pull-left" style="margin:6px 0">忽略生命周期 <span class="label label-default">ignored <span id="ipa-ignore-count">0</span></span> <span class="label label-warning">expired <span id="ipa-ignore-expired-count">0</span></span></h4>
+            <div class="pull-right">
+                <button type="button" class="btn btn-warning btn-sm btn-ipa-ignore-sweep {:$auth->check('ipa_lifecycle/sweep_expired')?'':'hide'}"><i class="fa fa-clock-o"></i> 恢复已到期忽略项</button>
+                <button type="button" class="btn btn-default btn-sm btn-ipa-ignore-refresh {:$auth->check('ipa_lifecycle/ignored_list')?'':'hide'}"><i class="fa fa-refresh"></i> 刷新忽略队列</button>
+            </div>
+        </div>
+        <div class="table-responsive {:$auth->check('ipa_lifecycle/ignored_list')?'':'hide'}">
+            <table class="table table-striped table-bordered" id="ipa-ignore-table">
+                <thead><tr><th style="width:36px"><input type="checkbox" id="ipa-ignore-select-all"></th><th>Issue</th><th>类型</th><th>字段</th><th>原因</th><th>忽略到期</th><th>状态</th></tr></thead>
+                <tbody><tr><td colspan="7" class="text-center text-muted">正在加载忽略队列</td></tr></tbody>
+            </table>
+            <button type="button" class="btn btn-default btn-sm btn-ipa-unignore-batch {:$auth->check('ipa_lifecycle/unignore_batch')?'':'hide'}">恢复所选忽略项</button>
         </div>
 
         <hr>
@@ -70,7 +91,7 @@
                     <option value="180">保留 180 天</option>
                     <option value="365">保留 365 天</option>
                 </select>
-                <button type="button" class="btn btn-warning btn-sm btn-ipa-retention-preview"><i class="fa fa-search"></i> 预览清理</button>
+                <button type="button" class="btn btn-warning btn-sm btn-ipa-retention-preview {:$auth->check('ipa_production/retention_apply')?'':'hide'}"><i class="fa fa-search"></i> 预览清理</button>
                 <span class="text-muted">仅清理已完成 scan task/items 与 success/superseded 审计；running/failed/interrupted/queued/retrying 永久不在本次清理集合。</span>
             </div>
         </div>
