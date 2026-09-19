@@ -65,8 +65,12 @@ foreach ($orderedSql as $target => $source) {
 }
 
 phase20RcAssert(strpos($builder, "'mysql/' . \$targetName") !== false, 'builder writes Phase 20 migrations to mysql payload');
-phase20RcAssert(strpos($checklist, 'Production E2E') !== false || strpos($checklist, 'Pre-production E2E') !== false, 'checklist contains E2E gate');
-phase20RcAssert(strpos($checklist, 'Rollback') !== false, 'checklist contains rollback gate');
+$hasExternalAcceptance = strpos($checklist, 'External pre-production acceptance') !== false ||
+    strpos($checklist, 'Pre-production E2E') !== false ||
+    strpos($checklist, 'Production E2E') !== false;
+phase20RcAssert($hasExternalAcceptance, 'checklist contains external environment acceptance gate');
+phase20RcAssert(strpos($checklist, 'External rollback / usability gate') !== false || strpos($checklist, 'Rollback') !== false, 'checklist contains rollback gate');
 phase20RcAssert(strpos($checklist, 'Do not change `VERSION`') !== false, 'checklist protects formal version metadata before RC selection');
+phase20RcAssert(strpos($checklist, 'must not be marked complete from CI mocks alone') !== false, 'checklist separates CI evidence from external acceptance');
 
 echo "OK phase20_rc_release_contract_test\n";
