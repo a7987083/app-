@@ -34,23 +34,27 @@ define(['jquery'], function ($) {
 
     var loadFailures = function () {
         Fast.api.ajax({url: 'ipa_center/governance_failures', type: 'GET', loading: false, data: {limit: 100}}, function (data) {
-            var rows = data.rows || [];
-            $('#ipa-gov-failed-count').text(data.stats ? (data.stats.failed || 0) : 0);
+            var rows = data.rows || [], stats = data.stats || {};
+            $('#ipa-gov-failed-count').text(stats.failed || 0);
+            $('#ipa-gov-interrupted-count').text(stats.interrupted || 0);
             var body = $('#ipa-governance-failure-table tbody');
             body.empty();
             if (!rows.length) {
-                body.append('<tr><td colspan="7" class="text-center text-muted">当前没有治理失败记录</td></tr>');
+                body.append('<tr><td colspan="9" class="text-center text-muted">当前没有 failed / interrupted 治理操作</td></tr>');
                 return false;
             }
             $.each(rows, function (_, r) {
+                var label = r.state === 'interrupted' ? 'warning' : 'danger';
                 body.append('<tr>' +
-                    '<td><code>' + html(r.operation_id || '') + '</code></td>' +
+                    '<td><code>' + html(r.operation_id || '') + '</code>' + (r.retry_of ? '<br><small>retry_of: ' + html(r.retry_of) + '</small>' : '') + '</td>' +
                     '<td>#' + html(r.issue_id || 0) + '</td>' +
+                    '<td><span class="label label-' + label + '">' + html(r.state || '') + '</span></td>' +
                     '<td>' + html(r.operation_type || '') + '<br><small>' + html(r.mode || '') + '</small></td>' +
                     '<td>#' + html(r.category_id || 0) + ' / #' + html(r.metadata_id || 0) + '</td>' +
-                    '<td style="max-width:360px;word-break:break-all" class="text-danger">' + html(r.error_message || '') + '</td>' +
+                    '<td style="max-width:320px;word-break:break-all" class="text-danger">' + html(r.error_message || '') + '</td>' +
                     '<td>' + html(r.started_at_text || '') + '</td>' +
                     '<td>' + html(r.finished_at_text || '') + '</td>' +
+                    '<td><button type="button" class="btn btn-xs btn-warning btn-ipa-governance-retry" data-operation="' + html(r.operation_id || '') + '">重新预览并重试</button></td>' +
                     '</tr>');
             });
             return false;
@@ -96,6 +100,26 @@ define(['jquery'], function ($) {
                     });
                 });
                 return false;
+            });
+        });
+
+        $('.btn-ipa-governance-scan-interrupted').on('click', function () {
+            Fast.api.ajax({url: 'ipa_recovery/scan_interrupted', data: {stale_seconds: 300}}, function (data) {
+                Toastr.success('已标记中断操作：' + (data.interrupted || 0));
+                loadFailures();
+                return false;
+            });
+        });
+
+        $('#ipa-governance-failure-table').on('click', '.btn-ipa-governance-retry', function () {
+            var operationId = $(this).data('operation');
+            Layer.confirm('重试不会复用旧 plan；系统会根据当前数据重新 preview、执行并 verify。确认继续？', {title: '治理恢复'}, function (index) {
+                Layer.close(index);
+                Fast.api.ajax({url: 'ipa_recovery/retry', data: {operation_id: operationId}}, function () {
+                    $('.btn-ipa-governance-refresh').trigger('click');
+                    loadFailures();
+                    return false;
+                });
             });
         });
 
