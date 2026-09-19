@@ -8,6 +8,8 @@ use RuntimeException;
 
 class IpaSourceConfig
 {
+    const API_BASE = '/api';
+
     public static function first($withToken=false)
     {
         $row=Db::name('ipa_source')->order('id','asc')->find();
@@ -19,17 +21,13 @@ class IpaSourceConfig
 
     public static function save(array $input,$adminId=0)
     {
-        $baseUrl=rtrim(trim(isset($input['base_url'])?$input['base_url']:''),'/');
-        if ($baseUrl==='' || !preg_match('#^https?://#i',$baseUrl)) throw new RuntimeException('OpenList Base URL 必须是 http/https 地址');
-        $scanPath=IpaRemoteFile::normalizePath(isset($input['scan_path'])?$input['scan_path']:'/');
-        $sourceKey=trim(isset($input['source_key'])?$input['source_key']:'openlist');
-        if ($sourceKey==='') $sourceKey='openlist';
-        $existing=Db::name('ipa_source')->where('source_key',$sourceKey)->find();
+        $existing=Db::name('ipa_source')->where('source_key','openlist')->find();
+        $candidate=self::candidate($input,$existing,false);
         $now=time();
         $data=[
-            'source_key'=>$sourceKey,'source_type'=>'openlist','name'=>trim(isset($input['name'])?$input['name']:'OpenList'),
-            'base_url'=>$baseUrl,'api_base'=>'/'.trim(isset($input['api_base'])?$input['api_base']:'/api','/'),
-            'scan_path'=>$scanPath,'public_url_template'=>trim(isset($input['public_url_template'])?$input['public_url_template']:''),
+            'source_key'=>'openlist','source_type'=>'openlist','name'=>'OpenList',
+            'base_url'=>$candidate['base_url'],'api_base'=>self::API_BASE,
+            'scan_path'=>$candidate['scan_path'],'public_url_template'=>$candidate['public_url_template'],
             'enabled'=>!empty($input['enabled'])?1:0,'schedule_enabled'=>!empty($input['schedule_enabled'])?1:0,
             'interval_minutes'=>max(5,min(1440,(int)(isset($input['interval_minutes'])?$input['interval_minutes']:10))),
             'batch_size'=>max(1,min(100,(int)(isset($input['batch_size'])?$input['batch_size']:20))),
@@ -38,18 +36,58 @@ class IpaSourceConfig
             'request_retries'=>max(0,min(5,(int)(isset($input['request_retries'])?$input['request_retries']:2))),
             'admin_id'=>(int)$adminId,'updatetime'=>$now,
         ];
-        $token=isset($input['token'])?trim((string)$input['token']):'';
-        if ($token!=='') { $data['token_ciphertext']=self::sealToken($token); $data['token_hint']=self::tokenHint($token); }
-        if ($existing) { Db::name('ipa_source')->where('id',(int)$existing['id'])->update($data); return (int)$existing['id']; }
+        $token=trim((string)(isset($input['token'])?$input['token']:''));
+        if ($token!=='') {
+            $data['token_ciphertext']=self::sealToken($token);
+            $data['token_hint']=self::tokenHint($token);
+        }
+        if ($existing) {
+            Db::name('ipa_source')->where('id',(int)$existing['id'])->update($data);
+            return (int)$existing['id'];
+        }
         $data['createtime']=$now;
-        if (!isset($data['token_ciphertext'])) { $data['token_ciphertext']=''; $data['token_hint']=''; }
+        if (!isset($data['token_ciphertext'])) {
+            $data['token_ciphertext']='';
+            $data['token_hint']='';
+        }
         return (int)Db::name('ipa_source')->insertGetId($data);
+    }
+
+    public static function testInput(array $input)
+    {
+        $existing=Db::name('ipa_source')->where('source_key','openlist')->find();
+        $candidate=self::candidate($input,$existing,true);
+        if (empty($candidate['token'])) throw new RuntimeException('请填写 OpenList 令牌（OpenList 设置 → 其他 → 令牌）');
+        $client=self::clientFromRow($candidate);
+        return $client->health($candidate['scan_path']);
+    }
+
+    protected static function candidate(array $input,$existing=null,$withStoredToken=false)
+    {
+        $baseUrl=rtrim(trim(isset($input['base_url'])?$input['base_url']:(isset($existing['base_url'])?$existing['base_url']:'')),'/');
+        if ($baseUrl==='' || !preg_match('#^https?://#i',$baseUrl)) throw new RuntimeException('OpenList 地址必须是 http/https 地址');
+        $scanPath=IpaRemoteFile::normalizePath(isset($input['scan_path'])?$input['scan_path']:(isset($existing['scan_path'])?$existing['scan_path']:'/'));
+        $publicUrlTemplate=trim(isset($input['public_url_template'])?$input['public_url_template']:(isset($existing['public_url_template'])?$existing['public_url_template']:''));
+        if ($publicUrlTemplate!=='' && !preg_match('#^https?://#i',$publicUrlTemplate)) throw new RuntimeException('公开下载地址前缀必须是 http/https 地址');
+        $token=trim((string)(isset($input['token'])?$input['token']:''));
+        if ($token==='' && $withStoredToken && $existing && !empty($existing['token_ciphertext'])) {
+            $token=self::openToken($existing['token_ciphertext']);
+        }
+        return [
+            'base_url'=>$baseUrl,
+            'api_base'=>self::API_BASE,
+            'scan_path'=>$scanPath,
+            'public_url_template'=>$publicUrlTemplate,
+            'token'=>$token,
+            'request_timeout'=>max(3,min(120,(int)(isset($input['request_timeout'])?$input['request_timeout']:(isset($existing['request_timeout'])?$existing['request_timeout']:15)))),
+            'request_retries'=>max(0,min(5,(int)(isset($input['request_retries'])?$input['request_retries']:(isset($existing['request_retries'])?$existing['request_retries']:2)))),
+        ];
     }
 
     public static function clientFromRow(array $row)
     {
         $token=isset($row['token'])?$row['token']:self::openToken(isset($row['token_ciphertext'])?$row['token_ciphertext']:'');
-        return new IpaOpenListClient($row['base_url'],isset($row['api_base'])?$row['api_base']:'/api',$token,isset($row['request_timeout'])?$row['request_timeout']:15,isset($row['request_retries'])?$row['request_retries']:2);
+        return new IpaOpenListClient($row['base_url'],self::API_BASE,$token,isset($row['request_timeout'])?$row['request_timeout']:15,isset($row['request_retries'])?$row['request_retries']:2);
     }
 
     public static function tokenHint($token)
