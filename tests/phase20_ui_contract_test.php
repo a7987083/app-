@@ -35,11 +35,10 @@ $sourceConfig = file_get_contents($root . '/application/common/library/IpaSource
 $payloadStore = file_get_contents($root . '/application/common/library/IpaMetadataPayloadStore.php');
 $backendJs = file_get_contents($root . '/public/assets/js/backend/ipa_center.js');
 $fastJs = file_get_contents($root . '/public/assets/js/fast.js');
+$commonBehavior = file_get_contents($root . '/application/common/behavior/Common.php');
 $scanService = file_get_contents($root . '/application/common/library/IpaScanService.php');
 $parserService = file_get_contents($root . '/application/common/library/IpaParserService.php');
-$version = trim(file_get_contents($root . '/VERSION'));
 
-phase20UiAssert($version === '2026091904', 'storage slimming contract targets the 2026091904 candidate');
 phase20UiAssert(strpos($setting, 'OpenList 令牌') !== false, 'settings use provider token terminology');
 phase20UiAssert(strpos($setting, 'OpenList 设置 → 其他 → 令牌') !== false, 'settings show provider token location');
 phase20UiAssert(strpos($setting, 'name="api_base"') === false, 'API prefix is not user-configurable');
@@ -58,9 +57,14 @@ phase20UiAssert(strpos($sourceConfig, "'token_ciphertext'=>self::sealToken") !==
 phase20UiAssert(strpos($sourceConfig, "runtimeDir().'openlist.json'") !== false, 'OpenList config is stored under runtime/ipa');
 phase20UiAssert(strpos($sourceConfig, "Db::name('ipa_source')->where") !== false, 'legacy DB config is import-only for upgrade compatibility');
 phase20UiAssert(substr_count($sourceConfig, "Db::name('ipa_source')") === 1, 'new OpenList configuration no longer writes to source table');
-phase20UiAssert(strpos($controller, "protected \$noNeedRight=['sourcesave','sourcetest']") !== false, 'save/test do not require newly assigned hidden rights');
+phase20UiAssert(strpos($controller, "protected \$noNeedRight=['source_save','source_test']") !== false, 'save/test bypass names exactly match underscore actions');
+phase20UiAssert(strpos($controller, "['sourcesave','sourcetest']") === false, 'camelized noNeedRight regression is forbidden');
 phase20UiAssert(strpos($controller, "check('ipa_center/setting')") !== false, 'save/test inherit visible setting permission');
+phase20UiAssert(substr_count($controller, 'catch(\\Throwable $e)') >= 2, 'save/test catch PHP 7 Throwable failures');
 phase20UiAssert(strpos($fastJs, 'xhr.responseJSON') !== false && strpos($fastJs, 'xhr.responseText') !== false, 'HTTP failures surface backend error details instead of generic error');
+foreach (['fast.js','require-backend.js','backend.js','backend-init.js'] as $coreJs) {
+    phase20UiAssert(strpos($commonBehavior, "'{$coreJs}'") !== false, "asset cache version tracks {$coreJs}");
+}
 phase20UiAssert(strpos($payloadStore, "metadata-detail") !== false, 'large IPA parser payloads live outside MySQL');
 phase20UiAssert(strpos($parserService, "'confidence_json'=>'','raw_metadata_json'=>'','normalized_metadata_json'=>''") !== false, 'new parser results keep legacy blob columns empty');
 phase20UiAssert(strpos($scanService, 'TASK_ITEM_RETENTION_DAYS = 90') !== false, 'task item history is bounded to metrics window');
