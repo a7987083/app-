@@ -61,6 +61,7 @@ application/admin/controller/IpaCenter.php
 application/admin/controller/IpaRecovery.php
 application/admin/controller/IpaProduction.php
 application/admin/controller/IpaLifecycle.php
+application/admin/controller/IpaMysqlSource.php
 application/admin/command/IpaScan.php
 application/admin/command/IpaParse.php
 application/command.php
@@ -71,12 +72,16 @@ application/admin/view/ipa_center/binding.html
 application/admin/view/ipa_center/writeback.html
 application/admin/view/ipa_center/governance.html
 application/admin/view/ipa_center/setting.html
+application/admin/view/ipa_mysql_source/index.html
 application/common/library/IpaFoundation.php
 application/common/library/IpaRemoteFile.php
 application/common/library/IpaScanPlanner.php
 application/common/library/IpaOpenListClient.php
 application/common/library/IpaInventoryCache.php
+application/common/library/IpaDirectoryCache.php
 application/common/library/IpaSourceConfig.php
+application/common/library/IpaMysqlSourceService.php
+application/common/library/IpaReferenceDiscoveryService.php
 application/common/library/IpaMetadataPayloadStore.php
 application/common/library/IpaScanService.php
 application/common/library/IpaParserRunner.php
@@ -93,6 +98,7 @@ application/common/library/IpaRetentionService.php
 scripts/ipa-range-info.py
 public/assets/js/fast.js
 public/assets/js/backend/ipa_center.js
+public/assets/js/backend/ipa_mysql_source.js
 public/assets/js/backend/ipa_governance_production.js
 application/admin/command/Install/phase20_ipa_foundation.sql
 application/admin/command/Install/phase20_ipa_center.sql
@@ -103,3 +109,4 @@ application/admin/command/Install/phase20_ipa_writeback.sql
 application/admin/command/Install/phase20_ipa_governance.sql
 application/admin/command/Install/phase20_ipa_production.sql
 application/admin/command/Install/phase20_ipa_lifecycle.sql
+application/admin/command/Install/phase20_ipa_sources_v2.sql
