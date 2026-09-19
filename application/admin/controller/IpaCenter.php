@@ -91,8 +91,10 @@ class IpaCenter extends Backend
         try{
             $taskId=IpaScanService::createTask((int)$source['id'],'manual',(int)$this->auth->id,(bool)$this->request->post('refresh/d',0));
             $spawned=IpaScanService::spawn($taskId);
-            $this->success('扫描任务已创建',null,['task_id'=>$taskId,'spawned'=>$spawned,'fallback'=>$spawned?'':'后台启动不可用时可执行 php think ipa:scan --pending']);
-        }catch(\Exception $e){$this->error($e->getMessage());}
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('扫描任务已创建',null,['task_id'=>$taskId,'spawned'=>$spawned,'fallback'=>$spawned?'':'后台启动不可用时可执行 php think ipa:scan --pending']);
     }
 
     public function metadataList()
@@ -145,24 +147,225 @@ class IpaCenter extends Backend
         $this->success('',null,$data);
     }
 
-    public function bindingCandidates(){try{$metadataId=(int)$this->request->get('metadata_id/d',0);$this->success('',null,['rows'=>IpaBindingService::candidates($metadataId,20)]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function bindingApply(){if(!$this->request->isPost())$this->error('Method not allowed');try{$metadataId=(int)$this->request->post('metadata_id/d',0);$mode=trim((string)$this->request->post('mode','manual'));if($mode==='auto_exact')$row=IpaBindingService::autoBindExactUrl($metadataId,(int)$this->auth->id);else{$categoryId=(int)$this->request->post('category_id/d',0);$row=IpaBindingService::bind($metadataId,$categoryId,'manual',(int)$this->auth->id,false);}$this->success('绑定成功',null,['binding'=>$row]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function bindingRemove(){if(!$this->request->isPost())$this->error('Method not allowed');try{IpaBindingService::unbind((int)$this->request->post('binding_id/d',0),(int)$this->auth->id);$this->success('已解除绑定');}catch(\Exception $e){$this->error($e->getMessage());}}
+    public function bindingCandidates()
+    {
+        try{
+            $metadataId=(int)$this->request->get('metadata_id/d',0);
+            $rows=IpaBindingService::candidates($metadataId,20);
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('',null,['rows'=>$rows]);
+    }
 
-    public function governanceRefresh(){if(!$this->request->isPost())$this->error('Method not allowed');try{$this->success('治理异常已重新检测',null,['stats'=>IpaGovernanceService::refreshIssues()]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function governanceList(){try{$kind=trim((string)$this->request->get('kind',''));$rows=IpaGovernanceService::listIssues($kind,(int)$this->request->get('limit/d',200));$this->success('',null,['stats'=>IpaGovernanceService::stats(),'rows'=>$rows,'total'=>count($rows)]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function governancePreview(){if(!$this->request->isPost())$this->error('Method not allowed');try{$plan=IpaGovernanceService::preview((int)$this->request->post('issue_id/d',0),trim((string)$this->request->post('mode','')));$this->success('修复预览已生成',null,['plan'=>$plan]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function governanceApply(){if(!$this->request->isPost())$this->error('Method not allowed');try{$result=IpaGovernanceService::apply((int)$this->request->post('issue_id/d',0),trim((string)$this->request->post('mode','')),trim((string)$this->request->post('plan_hash','')),(int)$this->auth->id);$this->success('修复完成并通过验证',null,$result);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function governanceIgnore(){if(!$this->request->isPost())$this->error('Method not allowed');try{$days=max(1,min(365,(int)$this->request->post('days/d',30)));IpaGovernanceService::ignore((int)$this->request->post('issue_id/d',0),time()+$days*86400,(int)$this->auth->id);$this->success('已忽略该异常');}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function governanceVerify(){if(!$this->request->isPost())$this->error('Method not allowed');try{$ok=IpaGovernanceService::verifyIssue((int)$this->request->post('issue_id/d',0));$this->success($ok?'重新检测：已恢复':'重新检测：异常仍存在',null,['resolved'=>$ok]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function governanceBatchPreview(){if(!$this->request->isPost())$this->error('Method not allowed');try{$ids=json_decode((string)$this->request->post('issue_ids_json','[]'),true);if(!is_array($ids))throw new RuntimeException('issue_ids_json 无效');$this->success('批量治理预览已生成',null,IpaGovernanceBatchService::preview($ids));}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function governanceBatchApply(){if(!$this->request->isPost())$this->error('Method not allowed');try{$ids=json_decode((string)$this->request->post('issue_ids_json','[]'),true);if(!is_array($ids))throw new RuntimeException('issue_ids_json 无效');$result=IpaGovernanceBatchService::apply($ids,trim((string)$this->request->post('batch_hash','')),(int)$this->auth->id);$this->success('批量治理执行完成',null,$result);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function governanceFailures(){try{$rows=IpaGovernanceBatchService::failedOperations((int)$this->request->get('limit/d',100));$this->success('',null,['stats'=>IpaGovernanceBatchService::failureStats(),'rows'=>$rows,'total'=>count($rows)]);}catch(\Exception $e){$this->error($e->getMessage());}}
+    public function bindingApply()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $metadataId=(int)$this->request->post('metadata_id/d',0);
+            $mode=trim((string)$this->request->post('mode','manual'));
+            if($mode==='auto_exact'){
+                $row=IpaBindingService::autoBindExactUrl($metadataId,(int)$this->auth->id);
+            }else{
+                $categoryId=(int)$this->request->post('category_id/d',0);
+                $row=IpaBindingService::bind($metadataId,$categoryId,'manual',(int)$this->auth->id,false);
+            }
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('绑定成功',null,['binding'=>$row]);
+    }
 
-    public function writebackRules(){try{$rules=IpaWritebackTemplate::loadActiveRules();$this->success('',null,['version'=>IpaWritebackTemplate::activeVersion(),'rules'=>$rules,'rows'=>$rules,'total'=>count($rules),'strategies'=>IpaWritebackTemplate::allowedStrategies(),'targets'=>IpaWritebackTemplate::allowedTargets()]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function writebackSeed(){if(!$this->request->isPost())$this->error('Method not allowed');try{$created=IpaWritebackTemplate::seedDefaults((int)$this->auth->id);$this->success($created?'默认模板已初始化':'模板已经存在',null,['created'=>$created,'version'=>IpaWritebackTemplate::activeVersion()]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function writebackSave(){if(!$this->request->isPost())$this->error('Method not allowed');try{$raw=(string)$this->request->post('rules_json','');$rules=json_decode($raw,true);if(!is_array($rules))throw new RuntimeException('rules_json 无效');$version=IpaWritebackTemplate::saveNewVersion($rules,(int)$this->auth->id);$this->success('全局模板已保存为新版本',null,['version'=>$version]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function writebackRandomPreview(){try{$bindings=Db::name('ipa_binding')->order('id','desc')->limit(200)->select();if(!$bindings)$this->error('当前没有已绑定 IPA');shuffle($bindings);$binding=null;$metadata=null;foreach($bindings as $candidate){$m=Db::name('ipa_metadata')->where('id',(int)$candidate['metadata_id'])->where('parse_state','success')->find();if($m){$binding=$candidate;$metadata=$m;break;}}if(!$binding||!$metadata)$this->error('没有“已解析 + 已绑定”的 IPA 可用于测试');$category=Db::name('category')->where('id',(int)$binding['category_id'])->find();if(!$category)$this->error('绑定对应的 category 已不存在');$rules=IpaWritebackTemplate::loadActiveRules();$preview=IpaWritebackTemplate::preview($category,$metadata,$rules);$this->success('',null,['version'=>IpaWritebackTemplate::activeVersion(),'sample'=>['binding_id'=>(int)$binding['id'],'metadata_id'=>(int)$metadata['id'],'category_id'=>(int)$category['id'],'category_name'=>isset($category['name'])?$category['name']:'','remote_path'=>isset($metadata['remote_path'])?$metadata['remote_path']:'','bundle_id'=>isset($metadata['bundle_id'])?$metadata['bundle_id']:'','package_version'=>isset($metadata['package_version'])?$metadata['package_version']:''],'preview'=>$preview]);}catch(\Exception $e){$this->error($e->getMessage());}}
+    public function bindingRemove()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            IpaBindingService::unbind((int)$this->request->post('binding_id/d',0),(int)$this->auth->id);
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('已解除绑定');
+    }
+
+    public function governanceRefresh()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $stats=IpaGovernanceService::refreshIssues();
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('治理异常已重新检测',null,['stats'=>$stats]);
+    }
+
+    public function governanceList()
+    {
+        try{
+            $kind=trim((string)$this->request->get('kind',''));
+            $rows=IpaGovernanceService::listIssues($kind,(int)$this->request->get('limit/d',200));
+            $stats=IpaGovernanceService::stats();
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('',null,['stats'=>$stats,'rows'=>$rows,'total'=>count($rows)]);
+    }
+
+    public function governancePreview()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $plan=IpaGovernanceService::preview((int)$this->request->post('issue_id/d',0),trim((string)$this->request->post('mode','')));
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('修复预览已生成',null,['plan'=>$plan]);
+    }
+
+    public function governanceApply()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $result=IpaGovernanceService::apply((int)$this->request->post('issue_id/d',0),trim((string)$this->request->post('mode','')),trim((string)$this->request->post('plan_hash','')),(int)$this->auth->id);
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('修复完成并通过验证',null,$result);
+    }
+
+    public function governanceIgnore()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $days=max(1,min(365,(int)$this->request->post('days/d',30)));
+            IpaGovernanceService::ignore((int)$this->request->post('issue_id/d',0),time()+$days*86400,(int)$this->auth->id);
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('已忽略该异常');
+    }
+
+    public function governanceVerify()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $ok=IpaGovernanceService::verifyIssue((int)$this->request->post('issue_id/d',0));
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success($ok?'重新检测：已恢复':'重新检测：异常仍存在',null,['resolved'=>$ok]);
+    }
+
+    public function governanceBatchPreview()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $ids=json_decode((string)$this->request->post('issue_ids_json','[]'),true);
+            if(!is_array($ids))throw new RuntimeException('issue_ids_json 无效');
+            $result=IpaGovernanceBatchService::preview($ids);
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('批量治理预览已生成',null,$result);
+    }
+
+    public function governanceBatchApply()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $ids=json_decode((string)$this->request->post('issue_ids_json','[]'),true);
+            if(!is_array($ids))throw new RuntimeException('issue_ids_json 无效');
+            $result=IpaGovernanceBatchService::apply($ids,trim((string)$this->request->post('batch_hash','')),(int)$this->auth->id);
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('批量治理执行完成',null,$result);
+    }
+
+    public function governanceFailures()
+    {
+        try{
+            $rows=IpaGovernanceBatchService::failedOperations((int)$this->request->get('limit/d',100));
+            $stats=IpaGovernanceBatchService::failureStats();
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('',null,['stats'=>$stats,'rows'=>$rows,'total'=>count($rows)]);
+    }
+
+    public function writebackRules()
+    {
+        try{
+            $rules=IpaWritebackTemplate::loadActiveRules();
+            $version=IpaWritebackTemplate::activeVersion();
+            $strategies=IpaWritebackTemplate::allowedStrategies();
+            $targets=IpaWritebackTemplate::allowedTargets();
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('',null,['version'=>$version,'rules'=>$rules,'rows'=>$rules,'total'=>count($rules),'strategies'=>$strategies,'targets'=>$targets]);
+    }
+
+    public function writebackSeed()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $created=IpaWritebackTemplate::seedDefaults((int)$this->auth->id);
+            $version=IpaWritebackTemplate::activeVersion();
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success($created?'默认模板已初始化':'模板已经存在',null,['created'=>$created,'version'=>$version]);
+    }
+
+    public function writebackSave()
+    {
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $raw=(string)$this->request->post('rules_json','');
+            $rules=json_decode($raw,true);
+            if(!is_array($rules))throw new RuntimeException('rules_json 无效');
+            $version=IpaWritebackTemplate::saveNewVersion($rules,(int)$this->auth->id);
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('全局模板已保存为新版本',null,['version'=>$version]);
+    }
+
+    public function writebackRandomPreview()
+    {
+        try{
+            $bindings=Db::name('ipa_binding')->order('id','desc')->limit(200)->select();
+            if(!$bindings)throw new RuntimeException('当前没有已绑定 IPA');
+            shuffle($bindings);
+            $binding=null;
+            $metadata=null;
+            foreach($bindings as $candidate){
+                $m=Db::name('ipa_metadata')->where('id',(int)$candidate['metadata_id'])->where('parse_state','success')->find();
+                if($m){$binding=$candidate;$metadata=$m;break;}
+            }
+            if(!$binding||!$metadata)throw new RuntimeException('没有“已解析 + 已绑定”的 IPA 可用于测试');
+            $category=Db::name('category')->where('id',(int)$binding['category_id'])->find();
+            if(!$category)throw new RuntimeException('绑定对应的 category 已不存在');
+            $rules=IpaWritebackTemplate::loadActiveRules();
+            $preview=IpaWritebackTemplate::preview($category,$metadata,$rules);
+            $data=[
+                'version'=>IpaWritebackTemplate::activeVersion(),
+                'sample'=>[
+                    'binding_id'=>(int)$binding['id'],
+                    'metadata_id'=>(int)$metadata['id'],
+                    'category_id'=>(int)$category['id'],
+                    'category_name'=>isset($category['name'])?$category['name']:'',
+                    'remote_path'=>isset($metadata['remote_path'])?$metadata['remote_path']:'',
+                    'bundle_id'=>isset($metadata['bundle_id'])?$metadata['bundle_id']:'',
+                    'package_version'=>isset($metadata['package_version'])?$metadata['package_version']:'',
+                ],
+                'preview'=>$preview,
+            ];
+        }catch(\Exception $e){
+            $this->error($e->getMessage());
+        }
+        $this->success('',null,$data);
+    }
 
     // FastAdmin action names are snake_case in URLs/auth rules. Keep the
     // original camelCase implementations as internal compatibility targets,
@@ -199,10 +402,10 @@ class IpaCenter extends Backend
         if(!$this->request->isPost())$this->error('Method not allowed');
         try{
             $id=IpaSourceConfig::save($this->request->post(),(int)$this->auth->id);
-            $this->success('IPA 网络源已保存',null,['id'=>$id,'token_configured'=>true]);
-        } catch(\Throwable $e){
+        }catch(\Throwable $e){
             $this->error($e->getMessage());
         }
+        $this->success('IPA 网络源已保存',null,['id'=>$id,'token_configured'=>true]);
     }
 
     public function sourceTest()
@@ -212,10 +415,10 @@ class IpaCenter extends Backend
         try{
             $health=IpaSourceConfig::testInput($this->request->post());
             IpaSourceConfig::updateState(['last_health'=>'ok','last_checked_at'=>time()]);
-            $this->success('OpenList 连接正常',null,$health);
         }catch(\Throwable $e){
             IpaSourceConfig::updateState(['last_health'=>'failed','last_checked_at'=>time()]);
             $this->error($e->getMessage());
         }
+        $this->success('OpenList 连接正常',null,$health);
     }
 }

@@ -8,6 +8,12 @@ function phase20UiAssert($condition, $message)
     }
 }
 
+function phase20AssertNoSuccessInsideTry($source, $label)
+{
+    $pattern = '/try\s*\{(?:(?!catch\s*\().)*\$this->success\s*\(/s';
+    phase20UiAssert(!preg_match($pattern, $source), "{$label} keeps FastAdmin success responses outside business try/catch");
+}
+
 $root = dirname(__DIR__);
 $controller = file_get_contents($root . '/application/admin/controller/IpaCenter.php');
 $recoveryController = file_get_contents($root . '/application/admin/controller/IpaRecovery.php');
@@ -47,7 +53,7 @@ $scanService = file_get_contents($root . '/application/common/library/IpaScanSer
 $parserService = file_get_contents($root . '/application/common/library/IpaParserService.php');
 $version = trim(file_get_contents($root . '/VERSION'));
 
-phase20UiAssert($version === '2026091910', 'phase20 FastAdmin action/route recovery targets the 2026091910 candidate');
+phase20UiAssert($version === '2026091911', 'phase20 FastAdmin response lifecycle recovery targets the 2026091911 candidate');
 phase20UiAssert(strpos($setting, 'OpenList 令牌') !== false, 'settings use provider token terminology');
 phase20UiAssert(strpos($setting, 'OpenList 设置 → 其他 → 令牌') !== false, 'settings show provider token location');
 phase20UiAssert(strpos($setting, 'name="api_base"') === false, 'API prefix is not user-configurable');
@@ -88,6 +94,12 @@ foreach (['ignored_list','ignore_batch','unignore_batch','sweep_expired'] as $ac
 foreach (['metrics','retention_preview','retention_apply'] as $action) {
     phase20UiAssert(strpos($productionController, 'function ' . $action . '(') !== false, "IpaProduction exposes native FastAdmin action {$action}");
 }
+foreach (['IpaCenter'=>$controller,'IpaRecovery'=>$recoveryController,'IpaLifecycle'=>$lifecycleController,'IpaProduction'=>$productionController] as $label=>$source) {
+    phase20AssertNoSuccessInsideTry($source, $label);
+}
+phase20UiAssert(strpos($controller, "\$this->success('IPA 网络源已保存'") !== false, 'source save preserves FastAdmin success response');
+phase20UiAssert(strpos($controller, "\$this->success('OpenList 连接正常'") !== false, 'source test preserves FastAdmin success response');
+phase20UiAssert(strpos($controller, "throw new RuntimeException('当前没有已绑定 IPA')") !== false, 'writeback validation uses domain exception inside business try block');
 
 phase20UiAssert(strpos($sourceConfig, 'public static function testSaved()') !== false, 'OpenList test has explicit saved-config entry point');
 phase20UiAssert(strpos($sourceConfig, 'return self::testSaved();') !== false, 'legacy testInput delegates to saved configuration contract');

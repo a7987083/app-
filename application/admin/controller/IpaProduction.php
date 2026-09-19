@@ -13,10 +13,11 @@ class IpaProduction extends Backend
     {
         try {
             $days=(int)$this->request->get('days/d',7);
-            $this->success('',null,IpaRangeMetricsService::summary($days));
+            $result=IpaRangeMetricsService::summary($days);
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
+        $this->success('',null,$result);
     }
 
     public function retentionPreview()
@@ -24,10 +25,11 @@ class IpaProduction extends Backend
         if (!$this->request->isPost()) $this->error('Method not allowed');
         try {
             $days=(int)$this->request->post('days/d',IpaRetentionService::DEFAULT_DAYS);
-            $this->success('Retention 预览已生成',null,IpaRetentionService::previewWithHash($days));
+            $result=IpaRetentionService::previewWithHash($days);
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
+        $this->success('Retention 预览已生成',null,$result);
     }
 
     public function retention_preview()
@@ -41,10 +43,11 @@ class IpaProduction extends Backend
         try {
             $days=(int)$this->request->post('days/d',IpaRetentionService::DEFAULT_DAYS);
             $hash=trim((string)$this->request->post('plan_hash',''));
-            $this->success('Retention 清理完成',null,IpaRetentionService::apply($days,$hash));
+            $result=IpaRetentionService::apply($days,$hash);
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
+        $this->success('Retention 清理完成',null,$result);
     }
 
     public function retention_apply()
