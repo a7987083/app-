@@ -1,22 +1,21 @@
-ZONOE 软件源 Release 2026091902
-版本：2026091902
-基线：2026091901
-阶段：Phase 20 — OpenList Settings Hotfix
-发布分支：release/2026091902-phase20-openlist-settings-hotfix
-发布状态：触发正式 Release Workflow
+ZONOE 软件源 Release 2026091903
+版本：2026091903
+基线：2026091902
+阶段：Phase 20 — OpenList Setting Buttons Hotfix
+发布分支：release/2026091903-phase20-setting-buttons-hotfix
 
 更新内容：
-1. OpenList 设置页统一使用官方“令牌”术语，并明确令牌来源为「设置 → 其他 → 令牌」。
-2. OpenList API 前缀固定为 /api，不再将 API Base 暴露为管理员可编辑配置。
-3. OpenList 地址、IPA 根目录、公开下载地址前缀重新按真实语义拆分，保留旧数据库字段兼容。
-4. 新增“保存并测试”，确保测试的是当前页面配置而不是旧数据库配置。
-5. OpenList 令牌输入框避免通用 password 字段名和密码管理器误填，已保存令牌仍不回显明文。
-6. 保存/测试遇到 HTTP 或运行时错误时显示真实 JSON msg / responseText / HTTP 状态，不再只显示通用 error。
+1. 修复 OpenList 设置页“保存 / 保存并测试”按钮显示正常但点击无响应的问题。
+2. 根因是 2026091902 模板按钮类与现有 FastAdmin `IpaCenter` Controller.setting() 绑定类不一致，并依赖局部页面内联脚本执行。
+3. 设置页恢复使用现有 `.btn-ipa-source-save` / `.btn-ipa-source-test` Controller 绑定，删除内联脚本依赖。
+4. 按钮恢复为“保存 / 测试连接”；修改地址、IPA 根目录或令牌后先保存，再测试连接。
+5. OpenList API 继续固定使用 /api/fs/*；认证继续使用 Authorization: <令牌>，不添加 Bearer。
+6. 令牌输入继续使用 new-password / data-lpignore，降低后台登录密码被浏览器误填为 OpenList 令牌的风险。
 7. 不改扫描、Range Parser、绑定、治理、Retention 和历史在线更新架构。
-8. Phase 20 contract、OpenList HTTP E2E、MySQL 5.7、rollback、package gate 已通过。
+8. Phase 20 Run #98、Regression Checks #227、Phase14 #81 已通过。
 
 在线更新：
-- GitHub Release 标签：source-v2026091902。
+- 目标 GitHub Release 标签：source-v2026091903。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity 监控的 4 个关键文件。
-- 发布前门禁：Phase 20 专项 CI、正式 PHP 7.0 全回归、MySQL 5.7、Phase 19 HTTP load、Phase 20 HTTP/rollback integration、更新包完整性、1901 -> 1902 在线更新 E2E。
+- file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity 监控的关键文件。
+- 发布前门禁：Phase 20 专项 CI、正式 PHP 7.0 全回归、MySQL 5.7、Phase 19 HTTP load、Phase 20 HTTP/rollback integration、更新包完整性、1902 -> 1903 在线更新 E2E。

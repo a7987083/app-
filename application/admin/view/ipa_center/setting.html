@@ -31,7 +31,7 @@
             <div class="form-group">
                 <label class="control-label col-xs-12 col-sm-2">OpenList 令牌</label>
                 <div class="col-xs-12 col-sm-8">
-                    <input class="form-control" type="password" name="openlist_token_input" value="" autocomplete="off" data-lpignore="true" data-1p-ignore="true" placeholder="留空表示不修改已保存令牌">
+                    <input class="form-control" type="password" name="token" value="" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" placeholder="留空表示不修改已保存令牌">
                     <span class="help-block">令牌位置：OpenList 设置 → 其他 → 令牌。当前：{if condition="!empty($source.token_hint)"}<code>{$source.token_hint}</code>{else /}<span class="text-warning">未配置</span>{/if}。这是固定 API 令牌，不是后台登录密码，也不要添加 <code>Bearer</code> 前缀。</span>
                 </div>
             </div>
@@ -47,58 +47,11 @@
             </div>
             <div class="form-group">
                 <div class="col-xs-12 col-sm-offset-2 col-sm-8">
-                    <button type="button" class="btn btn-success btn-ipa-source-save-v2">保存</button>
-                    <button type="button" class="btn btn-primary btn-ipa-source-save-test-v2">保存并测试</button>
+                    <button type="button" class="btn btn-success btn-ipa-source-save">保存</button>
+                    <button type="button" class="btn btn-default btn-ipa-source-test">测试连接</button>
+                    <span class="help-block" style="display:inline-block;margin-left:10px">修改地址、目录或令牌后，请先保存，再测试连接。</span>
                 </div>
             </div>
-            <div id="ipa-source-result" class="alert" style="display:none;white-space:pre-wrap;word-break:break-all"></div>
         </form>
     </div>
 </div>
-
-<script>
-require(['jquery'], function ($) {
-    var $form=$('#ipa-source-form'), $result=$('#ipa-source-result');
-    function payload(){
-        var data={};
-        $.each($form.serializeArray(),function(_,x){data[x.name]=x.value;});
-        data.token=$form.find('[name="openlist_token_input"]').val()||'';
-        delete data.openlist_token_input;
-        return data;
-    }
-    function show(ok,msg){
-        $result.removeClass('alert-success alert-danger').addClass(ok?'alert-success':'alert-danger').text(msg||'').show();
-        if(ok) Toastr.success(msg); else Toastr.error(msg);
-    }
-    function extractError(xhr){
-        if(xhr && xhr.responseJSON && xhr.responseJSON.msg) return String(xhr.responseJSON.msg);
-        var text=xhr&&xhr.responseText?String(xhr.responseText).trim():'';
-        if(text){
-            try{var j=JSON.parse(text);if(j&&j.msg)return String(j.msg);}catch(e){}
-            text=text.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-            if(text) return text.substring(0,1000);
-        }
-        return 'HTTP '+(xhr&&xhr.status?xhr.status:'?')+' '+(xhr&&xhr.statusText?xhr.statusText:'请求失败');
-    }
-    function post(url,data,done){
-        $result.hide();
-        $.ajax({url:Fast.api.fixurl(url),type:'POST',dataType:'json',data:data})
-            .done(function(ret){
-                if(ret&&Number(ret.code)===1){if(done)done(ret);return;}
-                show(false,ret&&ret.msg?ret.msg:'请求失败：服务器没有返回有效错误信息');
-            })
-            .fail(function(xhr){show(false,extractError(xhr));});
-    }
-    $('.btn-ipa-source-save-v2').on('click',function(){
-        post('ipa_center/source_save',payload(),function(ret){show(true,ret.msg||'IPA 网络源已保存');});
-    });
-    $('.btn-ipa-source-save-test-v2').on('click',function(){
-        post('ipa_center/source_save',payload(),function(){
-            post('ipa_center/source_test',{},function(ret){
-                var d=ret.data||{};
-                show(true,(ret.msg||'OpenList 连接正常')+'\n可见条目：'+(d.visible_total==null?'—':d.visible_total)+'\n耗时：'+(d.latency_ms==null?'—':d.latency_ms+' ms'));
-            });
-        });
-    });
-});
-</script>
