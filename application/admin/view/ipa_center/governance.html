@@ -25,13 +25,19 @@
 
         <hr>
         <div class="clearfix" style="margin-bottom:10px">
-            <h4 class="pull-left" style="margin:6px 0">治理失败队列 <span class="badge" id="ipa-gov-failed-count">0</span></h4>
-            <button type="button" class="btn btn-default btn-sm pull-right btn-ipa-governance-failures-refresh"><i class="fa fa-refresh"></i> 刷新失败队列</button>
+            <h4 class="pull-left" style="margin:6px 0">治理恢复队列 <span class="label label-danger">failed <span id="ipa-gov-failed-count">0</span></span> <span class="label label-warning">interrupted <span id="ipa-gov-interrupted-count">0</span></span></h4>
+            <div class="pull-right">
+                <button type="button" class="btn btn-warning btn-sm btn-ipa-governance-scan-interrupted"><i class="fa fa-exclamation-triangle"></i> 扫描 5 分钟无更新的 running</button>
+                <button type="button" class="btn btn-default btn-sm btn-ipa-governance-failures-refresh"><i class="fa fa-refresh"></i> 刷新恢复队列</button>
+            </div>
+        </div>
+        <div class="alert alert-warning">
+            `running` 超过 5 分钟且无更新时间的治理操作可标记为 `interrupted`。重试时不会复用旧 plan，而是根据当前状态重新 preview；成功后原失败/中断日志标记为 `superseded`，审计链不会删除。
         </div>
         <div class="table-responsive">
             <table class="table table-striped table-bordered" id="ipa-governance-failure-table">
-                <thead><tr><th>Operation</th><th>Issue</th><th>操作类型</th><th>Category / Metadata</th><th>错误</th><th>开始</th><th>结束</th></tr></thead>
-                <tbody><tr><td colspan="7" class="text-center text-muted">正在加载失败队列</td></tr></tbody>
+                <thead><tr><th>Operation</th><th>Issue</th><th>状态</th><th>操作类型</th><th>Category / Metadata</th><th>错误</th><th>开始</th><th>结束</th><th>恢复</th></tr></thead>
+                <tbody><tr><td colspan="9" class="text-center text-muted">正在加载恢复队列</td></tr></tbody>
             </table>
         </div>
     </div>
