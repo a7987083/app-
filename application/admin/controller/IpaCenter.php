@@ -164,6 +164,33 @@ class IpaCenter extends Backend
     public function writebackSave(){if(!$this->request->isPost())$this->error('Method not allowed');try{$raw=(string)$this->request->post('rules_json','');$rules=json_decode($raw,true);if(!is_array($rules))throw new RuntimeException('rules_json 无效');$version=IpaWritebackTemplate::saveNewVersion($rules,(int)$this->auth->id);$this->success('全局模板已保存为新版本',null,['version'=>$version]);}catch(\Exception $e){$this->error($e->getMessage());}}
     public function writebackRandomPreview(){try{$bindings=Db::name('ipa_binding')->order('id','desc')->limit(200)->select();if(!$bindings)$this->error('当前没有已绑定 IPA');shuffle($bindings);$binding=null;$metadata=null;foreach($bindings as $candidate){$m=Db::name('ipa_metadata')->where('id',(int)$candidate['metadata_id'])->where('parse_state','success')->find();if($m){$binding=$candidate;$metadata=$m;break;}}if(!$binding||!$metadata)$this->error('没有“已解析 + 已绑定”的 IPA 可用于测试');$category=Db::name('category')->where('id',(int)$binding['category_id'])->find();if(!$category)$this->error('绑定对应的 category 已不存在');$rules=IpaWritebackTemplate::loadActiveRules();$preview=IpaWritebackTemplate::preview($category,$metadata,$rules);$this->success('',null,['version'=>IpaWritebackTemplate::activeVersion(),'sample'=>['binding_id'=>(int)$binding['id'],'metadata_id'=>(int)$metadata['id'],'category_id'=>(int)$category['id'],'category_name'=>isset($category['name'])?$category['name']:'','remote_path'=>isset($metadata['remote_path'])?$metadata['remote_path']:'','bundle_id'=>isset($metadata['bundle_id'])?$metadata['bundle_id']:'','package_version'=>isset($metadata['package_version'])?$metadata['package_version']:''],'preview'=>$preview]);}catch(\Exception $e){$this->error($e->getMessage());}}
 
+    // FastAdmin action names are snake_case in URLs/auth rules. Keep the
+    // original camelCase implementations as internal compatibility targets,
+    // and expose first-class snake_case actions for every AJAX endpoint.
+    public function task_list(){return $this->taskList();}
+    public function scan_start(){return $this->scanStart();}
+    public function metadata_list(){return $this->metadataList();}
+    public function parse_start(){return $this->parseStart();}
+    public function binding_list(){return $this->bindingList();}
+    public function binding_candidates(){return $this->bindingCandidates();}
+    public function binding_apply(){return $this->bindingApply();}
+    public function binding_remove(){return $this->bindingRemove();}
+    public function governance_refresh(){return $this->governanceRefresh();}
+    public function governance_list(){return $this->governanceList();}
+    public function governance_preview(){return $this->governancePreview();}
+    public function governance_apply(){return $this->governanceApply();}
+    public function governance_ignore(){return $this->governanceIgnore();}
+    public function governance_verify(){return $this->governanceVerify();}
+    public function governance_batch_preview(){return $this->governanceBatchPreview();}
+    public function governance_batch_apply(){return $this->governanceBatchApply();}
+    public function governance_failures(){return $this->governanceFailures();}
+    public function writeback_rules(){return $this->writebackRules();}
+    public function writeback_seed(){return $this->writebackSeed();}
+    public function writeback_save(){return $this->writebackSave();}
+    public function writeback_random_preview(){return $this->writebackRandomPreview();}
+    public function source_save(){return $this->sourceSave();}
+    public function source_test(){return $this->sourceTest();}
+
     protected function assertSettingRight(){if(!$this->auth->check('ipa_center/setting'))$this->error(__('You have no permission'),'');}
 
     public function sourceSave()

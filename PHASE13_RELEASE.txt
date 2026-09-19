@@ -1,21 +1,23 @@
-ZONOE 软件源 Release 2026091909
-版本：2026091909
-基线：2026091908
-阶段：IPA FastAdmin Native Route Recovery
+ZONOE 软件源 Release 2026091910
+版本：2026091910
+基线：2026091909
+阶段：IPA FastAdmin Action / Route Recovery
 发布分支：release/2026091905-phase20-setting-hotfix
 发布状态：准备触发正式 Release Workflow
 
 更新内容：
-1. IPA 管理中心 AJAX 全面回归原项目 FastAdmin / ThinkPHP 前端控制器模式，不再要求 Nginx 支持 PHP PATH_INFO。
-2. ipa_center、ipa_lifecycle、ipa_recovery、ipa_production 请求统一经 Config.moduleurl 转成 ?s=/controller/action。
-3. 保留 Form.api.bindevent、BootstrapTable、Controller action 以及现有 OpenList/Range Parser/治理业务服务。
-4. 不修改 Nginx、PHP-FPM、BaoTa 全局配置，也不影响授权中心等既有后台功能。
-5. OpenList 保存、Token 加密、testSaved、/api/fs/list 与 /api/fs/get 协议保持不变。
-6. PHP 7.0、MySQL 5.7、Phase 20 E2E、/appstore load 与在线更新 E2E 继续作为正式门禁。
+1. IPA 管理中心彻底撤销 2026091909 的 ?s=/controller/action 路由适配器，恢复与授权中心一致的 FastAdmin PATH_INFO 请求模型。
+2. ipa_center、ipa_lifecycle、ipa_recovery、ipa_production 全部补齐与前端 URL、权限规则一致的 snake_case Controller action。
+3. 保留原 camelCase 实现作为兼容目标，snake_case action 只负责进入原业务实现，不复制业务逻辑。
+4. Setting 保存继续使用 {:url('ipa_center/source_save')} + Form.api.bindevent；其他 AJAX 继续使用 Fast.api.ajax 原生 controller/action URL。
+5. OpenList 保存、Token 加密、testSaved、/api/fs/list、/api/fs/get、Range Parser、绑定、治理、恢复和 Retention 业务逻辑保持不变。
+6. 新增 UI contract 硬门禁：禁止 IPA 模块自行注册 $.ajaxPrefilter / ?s= workaround，并校验所有 snake_case action 在对应 Controller 中真实存在。
+7. 不修改 Nginx、PHP-FPM、BaoTa 全局配置，也不影响授权中心等既有后台功能。
+8. PHP 7.0、MySQL 5.7、Phase 20 E2E、/appstore load 与在线更新 E2E 继续作为正式门禁。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091909。
+- 目标 GitHub Release 标签：source-v2026091910。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091909。
+- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091910。
 - file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee。
-- 发布完成后需从 2026091908 -> 2026091909 执行真实在线更新 E2E。
+- 发布完成后需从 2026091909 -> 2026091910 执行真实在线更新验证。

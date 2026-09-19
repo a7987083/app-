@@ -19,6 +19,11 @@ class IpaRecovery extends Backend
         }
     }
 
+    public function scan_interrupted()
+    {
+        return $this->scanInterrupted();
+    }
+
     public function retry()
     {
         if (!$this->request->isPost()) $this->error('Method not allowed');

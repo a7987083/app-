@@ -10,6 +10,9 @@ function phase20UiAssert($condition, $message)
 
 $root = dirname(__DIR__);
 $controller = file_get_contents($root . '/application/admin/controller/IpaCenter.php');
+$recoveryController = file_get_contents($root . '/application/admin/controller/IpaRecovery.php');
+$lifecycleController = file_get_contents($root . '/application/admin/controller/IpaLifecycle.php');
+$productionController = file_get_contents($root . '/application/admin/controller/IpaProduction.php');
 foreach (['index','metadata','binding','governance','task','writeback','setting'] as $action) {
     phase20UiAssert(strpos($controller, 'function ' . $action . '(') !== false, "controller action {$action}");
     phase20UiAssert(is_file($root . '/application/admin/view/ipa_center/' . $action . '.html'), "view {$action}");
@@ -44,7 +47,7 @@ $scanService = file_get_contents($root . '/application/common/library/IpaScanSer
 $parserService = file_get_contents($root . '/application/common/library/IpaParserService.php');
 $version = trim(file_get_contents($root . '/VERSION'));
 
-phase20UiAssert($version === '2026091909', 'phase20 FastAdmin native-route recovery targets the 2026091909 candidate');
+phase20UiAssert($version === '2026091910', 'phase20 FastAdmin action/route recovery targets the 2026091910 candidate');
 phase20UiAssert(strpos($setting, 'OpenList 令牌') !== false, 'settings use provider token terminology');
 phase20UiAssert(strpos($setting, 'OpenList 设置 → 其他 → 令牌') !== false, 'settings show provider token location');
 phase20UiAssert(strpos($setting, 'name="api_base"') === false, 'API prefix is not user-configurable');
@@ -63,10 +66,28 @@ phase20UiAssert(strpos($setting, '请先点击“确定”保存') !== false, 's
 phase20UiAssert(strpos($setting, '直接使用当前表单内容') === false, 'settings no longer advertise unsaved-input connection testing');
 phase20UiAssert(strpos($setting, '已保存令牌读取失败') !== false, 'settings surface persisted token decode failures');
 phase20UiAssert(strpos($backendJs, 'Form.api.bindevent') !== false, 'FastAdmin Form lifecycle is bound');
-phase20UiAssert(strpos($backendJs, '$.ajaxPrefilter') !== false, 'IPA module normalizes AJAX routes before FastAdmin dispatch');
-phase20UiAssert(strpos($backendJs, "['ipa_center/','ipa_lifecycle/','ipa_recovery/','ipa_production/']") !== false, 'all IPA controller families share one native route adapter');
-phase20UiAssert(strpos($backendJs, "'s=/'") !== false, 'IPA AJAX uses ThinkPHP native query route instead of requiring Nginx PATH_INFO');
-phase20UiAssert(strpos($backendJs, 'Config.moduleurl') !== false, 'IPA route adapter stays bound to the active FastAdmin admin entry');
+phase20UiAssert(strpos($backendJs, '$.ajaxPrefilter') === false, 'IPA module does not override FastAdmin AJAX routing');
+phase20UiAssert(strpos($backendJs, "'s=/'") === false, 'IPA module does not force ThinkPHP query-route workarounds');
+phase20UiAssert(strpos($backendJs, "url:'ipa_center/source_test'") !== false, 'IPA source test keeps native FastAdmin controller/action URL');
+
+$centerActions = [
+    'task_list','scan_start','metadata_list','parse_start','binding_list','binding_candidates','binding_apply','binding_remove',
+    'governance_refresh','governance_list','governance_preview','governance_apply','governance_ignore','governance_verify',
+    'governance_batch_preview','governance_batch_apply','governance_failures','writeback_rules','writeback_seed','writeback_save',
+    'writeback_random_preview','source_save','source_test'
+];
+foreach ($centerActions as $action) {
+    phase20UiAssert(strpos($controller, 'function ' . $action . '(') !== false, "IpaCenter exposes native FastAdmin action {$action}");
+}
+foreach (['scan_interrupted','retry'] as $action) {
+    phase20UiAssert(strpos($recoveryController, 'function ' . $action . '(') !== false, "IpaRecovery exposes native FastAdmin action {$action}");
+}
+foreach (['ignored_list','ignore_batch','unignore_batch','sweep_expired'] as $action) {
+    phase20UiAssert(strpos($lifecycleController, 'function ' . $action . '(') !== false, "IpaLifecycle exposes native FastAdmin action {$action}");
+}
+foreach (['metrics','retention_preview','retention_apply'] as $action) {
+    phase20UiAssert(strpos($productionController, 'function ' . $action . '(') !== false, "IpaProduction exposes native FastAdmin action {$action}");
+}
 
 phase20UiAssert(strpos($sourceConfig, 'public static function testSaved()') !== false, 'OpenList test has explicit saved-config entry point');
 phase20UiAssert(strpos($sourceConfig, 'return self::testSaved();') !== false, 'legacy testInput delegates to saved configuration contract');

@@ -30,6 +30,11 @@ class IpaProduction extends Backend
         }
     }
 
+    public function retention_preview()
+    {
+        return $this->retentionPreview();
+    }
+
     public function retentionApply()
     {
         if (!$this->request->isPost()) $this->error('Method not allowed');
@@ -40,5 +45,10 @@ class IpaProduction extends Backend
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
+    }
+
+    public function retention_apply()
+    {
+        return $this->retentionApply();
     }
 }

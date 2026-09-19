@@ -15,11 +15,21 @@ class IpaLifecycle extends Backend
         catch(\Exception $e){$this->error($e->getMessage());}
     }
 
+    public function ignored_list()
+    {
+        return $this->ignoredList();
+    }
+
     public function ignoreBatch()
     {
         if(!$this->request->isPost())$this->error('Method not allowed');
         try{$ids=json_decode((string)$this->request->post('issue_ids_json','[]'),true);if(!is_array($ids))throw new RuntimeException('issue_ids_json 无效');$days=(int)$this->request->post('days/d',30);$this->success('批量忽略完成',null,IpaGovernanceLifecycleService::ignoreBatch($ids,$days,(int)$this->auth->id));}
         catch(\Exception $e){$this->error($e->getMessage());}
+    }
+
+    public function ignore_batch()
+    {
+        return $this->ignoreBatch();
     }
 
     public function unignoreBatch()
@@ -29,10 +39,20 @@ class IpaLifecycle extends Backend
         catch(\Exception $e){$this->error($e->getMessage());}
     }
 
+    public function unignore_batch()
+    {
+        return $this->unignoreBatch();
+    }
+
     public function sweepExpired()
     {
         if(!$this->request->isPost())$this->error('Method not allowed');
         try{$this->success('忽略到期扫描完成',null,IpaGovernanceLifecycleService::sweepExpired((int)$this->auth->id));}
         catch(\Exception $e){$this->error($e->getMessage());}
+    }
+
+    public function sweep_expired()
+    {
+        return $this->sweepExpired();
     }
 }
