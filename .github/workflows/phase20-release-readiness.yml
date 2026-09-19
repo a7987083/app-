@@ -1,0 +1,216 @@
+name: Phase 20 Release Readiness
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'VERSION'
+      - 'public/update/ver.txt'
+      - 'ver.json'
+      - 'release/**'
+      - 'application/admin/controller/Ipa*.php'
+      - 'application/admin/command/Ipa*.php'
+      - 'application/admin/command/Install/phase20_ipa_*.sql'
+      - 'application/admin/view/ipa_center/**'
+      - 'application/common/library/Ipa*.php'
+      - 'public/assets/js/backend/ipa*.js'
+      - 'scripts/ipa-range-info.py'
+      - 'tools/build_online_update.php'
+      - 'tests/phase20_*'
+      - 'tests/phase207_*'
+      - 'tests/fixtures/phase20_*'
+      - '.github/workflows/phase20-release-readiness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase20-release-readiness-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  phase20-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, zip
+      - name: Lint Phase 20 release surface
+        run: |
+          set -euo pipefail
+          php -l tools/build_online_update.php
+          php -l tests/phase20_foundation_contract_test.php
+          php -l tests/phase20_ui_contract_test.php
+          php -l tests/phase20_scan_planner_test.php
+          php -l tests/phase20_scan_contract_test.php
+          php -l tests/phase20_metadata_normalizer_test.php
+          php -l tests/phase20_parser_contract_test.php
+          php -l tests/phase20_binding_contract_test.php
+          php -l tests/phase20_binding_ui_contract_test.php
+          php -l tests/phase20_writeback_contract_test.php
+          php -l tests/phase20_governance_contract_test.php
+          php -l tests/phase207_production_contract_test.php
+          php -l tests/phase207_metrics_retention_contract_test.php
+          php -l tests/phase207_lifecycle_contract_test.php
+          php -l tests/phase20_rc_release_contract_test.php
+          php -l tests/phase20_openlist_http_e2e.php
+          php -l tests/phase20_update_rollback_e2e.php
+          php -l tests/fixtures/phase20_openlist_mock_router.php
+      - name: Run Phase 20 contracts
+        run: |
+          set -euo pipefail
+          php tests/phase20_foundation_contract_test.php
+          php tests/phase20_ui_contract_test.php
+          php tests/phase20_scan_planner_test.php
+          php tests/phase20_scan_contract_test.php
+          python3 scripts/ipa-range-info.py --self-test
+          php tests/phase20_metadata_normalizer_test.php
+          php tests/phase20_parser_contract_test.php
+          php tests/phase20_binding_contract_test.php
+          php tests/phase20_binding_ui_contract_test.php
+          php tests/phase20_writeback_contract_test.php
+          php tests/phase20_governance_contract_test.php
+          php tests/phase207_production_contract_test.php
+          php tests/phase207_metrics_retention_contract_test.php
+          php tests/phase207_lifecycle_contract_test.php
+          php tests/phase20_rc_release_contract_test.php
+
+  phase20-mysql57:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: phase20_release_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap FastAdmin auth schema
+        run: |
+          mysql -h127.0.0.1 -P3306 -uroot -proot phase20_release_test <<'SQL'
+          CREATE TABLE IF NOT EXISTS `fa_auth_rule` (
+            `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+            `type` varchar(20) NOT NULL DEFAULT '',
+            `pid` int(10) unsigned NOT NULL DEFAULT '0',
+            `name` varchar(100) NOT NULL DEFAULT '',
+            `title` varchar(100) NOT NULL DEFAULT '',
+            `icon` varchar(50) NOT NULL DEFAULT '',
+            `condition` varchar(255) NOT NULL DEFAULT '',
+            `remark` varchar(255) NOT NULL DEFAULT '',
+            `ismenu` tinyint(1) unsigned NOT NULL DEFAULT '0',
+            `createtime` int(10) unsigned NOT NULL DEFAULT '0',
+            `updatetime` int(10) unsigned NOT NULL DEFAULT '0',
+            `weigh` int(10) NOT NULL DEFAULT '0',
+            `status` varchar(30) NOT NULL DEFAULT 'normal',
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_name` (`name`)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+          SQL
+      - name: Run all Phase 20 migrations twice
+        run: |
+          set -euo pipefail
+          files=(phase20_ipa_foundation.sql phase20_ipa_center.sql phase20_ipa_scan.sql phase20_ipa_parser.sql phase20_ipa_binding.sql phase20_ipa_writeback.sql phase20_ipa_governance.sql phase20_ipa_production.sql phase20_ipa_lifecycle.sql)
+          for pass in 1 2; do
+            for name in "${files[@]}"; do
+              mysql -h127.0.0.1 -P3306 -uroot -proot phase20_release_test < "application/admin/command/Install/${name}"
+            done
+          done
+      - name: Verify migrated release schema
+        run: |
+          set -euo pipefail
+          mysql_base=(mysql -N -B -h127.0.0.1 -P3306 -uroot -proot phase20_release_test)
+          for table in fa_ipa_metadata fa_ipa_binding fa_ipa_scan_task fa_ipa_scan_task_item fa_ipa_governance_issue fa_ipa_operation_log fa_ipa_writeback_rule fa_ipa_source; do
+            test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='phase20_release_test' AND table_name='${table}'")" = "1"
+          done
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM (SELECT name FROM fa_auth_rule GROUP BY name HAVING COUNT(*) > 1) d")" = "0"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_center/governance_batch_apply'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_recovery/retry'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_production/retention_apply'")" = "1"
+
+  phase20-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: curl, zip
+      - name: OpenList HTTP integration
+        run: |
+          set -euo pipefail
+          state="${RUNNER_TEMP}/phase20-openlist-state.json"
+          cat > "$state" <<'JSON'
+          {"files":{"/games/AppOne.ipa":{"size":111,"modified":1700000001,"etag":"one","md5":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"/games/nested/AppTwo.IPA":{"size":222,"modified":1700000002,"etag":"two","md5":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},"/games/readme.txt":{"size":3,"modified":1700000003}},"requests":[]}
+          JSON
+          export PHASE20_OPENLIST_STATE="$state"
+          php -S 127.0.0.1:18080 tests/fixtures/phase20_openlist_mock_router.php >"${RUNNER_TEMP}/phase20-openlist.log" 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -sS -o /dev/null -X POST -H 'Authorization: phase20-test-token' -H 'Content-Type: application/json' --data '{"path":"/"}' http://127.0.0.1:18080/api/fs/list; then break; fi
+            sleep 0.2
+          done
+          PHASE20_OPENLIST_BASE='http://127.0.0.1:18080' PHASE20_OPENLIST_STATE="$state" php tests/phase20_openlist_http_e2e.php
+      - name: Updater automatic rollback integration
+        run: php tests/phase20_update_rollback_e2e.php
+      - name: Legacy rollback regression
+        run: php tests/phase13_update_runtime_test.php
+
+  phase20-package:
+    needs: [phase20-contract, phase20-mysql57, phase20-integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: zip
+      - name: Build release-candidate package
+        run: |
+          set -euo pipefail
+          php tools/build_online_update.php "$PWD/phase20-rc.zip"
+          test -s phase20-rc.zip
+          test -s phase20-rc.zip.sha256
+          sha256sum -c phase20-rc.zip.sha256
+          unzip -t phase20-rc.zip >/dev/null
+      - name: Verify Phase 20 payload
+        run: |
+          set -euo pipefail
+          unzip -Z1 phase20-rc.zip > /tmp/phase20-release.list
+          for path in \
+            program/application/admin/controller/IpaCenter.php \
+            program/application/admin/controller/IpaRecovery.php \
+            program/application/admin/controller/IpaProduction.php \
+            program/application/admin/controller/IpaLifecycle.php \
+            program/application/common/library/IpaGovernanceBatchService.php \
+            program/application/common/library/IpaGovernanceRecoveryService.php \
+            program/application/common/library/IpaRangeMetricsService.php \
+            program/application/common/library/IpaRetentionService.php; do
+            grep -Fx "$path" /tmp/phase20-release.list
+          done
+          for n in 01 02 03 04 05 06 07 08 09; do
+            grep -E "^mysql/20260919${n}_phase20_ipa_.*\.sql$" /tmp/phase20-release.list
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase20-release-readiness-${{ github.run_id }}
+          path: |
+            phase20-rc.zip
+            phase20-rc.zip.sha256
+            release/PHASE20_RC_CHECKLIST.md
+          if-no-files-found: error
+          retention-days: 30
