@@ -24,8 +24,9 @@ foreach(['scanInterrupted','retry','stale_seconds','operation_id'] as $needle)ph
 $sql=file_get_contents(dirname(__DIR__).'/application/admin/command/Install/phase20_ipa_governance.sql');
 foreach(['governance_batch_preview','governance_batch_apply','governance_failures','ipa_recovery/scan_interrupted','ipa_recovery/retry'] as $rule)phase207Assert(strpos($sql,$rule)!==false,'phase20.7 auth '.$rule);
 $view=file_get_contents(dirname(__DIR__).'/application/admin/view/ipa_center/governance.html');
-foreach(['批量预览并修复','治理恢复队列','ipa-gov-select-all','ipa_governance_production.js','扫描 5 分钟无更新的 running'] as $needle)phase207Assert(strpos($view,$needle)!==false,'phase20.7 governance UI '.$needle);
-$js=file_get_contents(dirname(__DIR__).'/public/assets/js/backend/ipa_governance_production.js');
-foreach(['governance_batch_preview','governance_batch_apply','governance_failures','MutationObserver','ipa_recovery/scan_interrupted','ipa_recovery/retry'] as $needle)phase207Assert(strpos($js,$needle)!==false,'phase20.7 governance JS '.$needle);
+foreach(['批量预览并修复','治理恢复队列','ipa-governance-table','扫描 5 分钟无更新的 running'] as $needle)phase207Assert(strpos($view,$needle)!==false,'phase20.7 governance UI '.$needle);
+phase207Assert(strpos($view,'ipa_governance_production.js')===false,'phase20.7 legacy governance lifecycle removed from view');
+$js=file_get_contents(dirname(__DIR__).'/public/assets/js/backend/ipa_center.js');
+foreach(['governance_batch_preview','governance_batch_apply','governance_failures','getSelections','ipa_recovery/scan_interrupted','ipa_recovery/retry'] as $needle)phase207Assert(strpos($js,$needle)!==false,'phase20.7 FastAdmin governance JS '.$needle);
 
 echo "OK phase207_production_contract_test\n";
