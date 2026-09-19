@@ -11,6 +11,7 @@ namespace app\common\library;
 class SourceResponse
 {
     const GZIP_MIN_BYTES = 1024;
+    const GZIP_MAX_BYTES = 8388608;
 
     public static function plainBody(array $payload, $jsonFlags = 320, $replaceMarkers = true)
     {
@@ -60,7 +61,10 @@ class SourceResponse
     {
         $key = $appType === 'appstore_v2' ? 'appstore_v2' : 'appstore';
         $json = json_encode([$key => $encryptedPayload]);
-        return $replaceMarkers ? str_replace('@@@', '\\n', $json) : $json;
+        if (!$replaceMarkers || strpos($json, '@@@') === false) {
+            return $json;
+        }
+        return str_replace('@@@', '\\n', $json);
     }
 
     /**
@@ -70,7 +74,17 @@ class SourceResponse
     public static function transportBody($body, $acceptEncoding = null)
     {
         $body = (string)$body;
-        if (!self::gzipEnabled() || !function_exists('gzencode') || strlen($body) < self::gzipMinBytes()) {
+        $bodyBytes = strlen($body);
+        if (!self::gzipEnabled() || !function_exists('gzencode') || $bodyBytes < self::gzipMinBytes()) {
+            return ['body' => $body, 'gzip' => false];
+        }
+
+        // gzencode() is a one-shot operation: PHP must retain the original body,
+        // the compressed result and zlib workspace at the same time. Large source
+        // responses therefore bypass PHP-level compression by default. This only
+        // changes HTTP Content-Encoding; application bytes remain identical.
+        $gzipMaxBytes = self::gzipMaxBytes();
+        if ($gzipMaxBytes > 0 && $bodyBytes > $gzipMaxBytes) {
             return ['body' => $body, 'gzip' => false];
         }
 
@@ -88,7 +102,7 @@ class SourceResponse
         }
 
         $compressed = gzencode($body, 1);
-        if (!is_string($compressed) || strlen($compressed) >= strlen($body)) {
+        if (!is_string($compressed) || strlen($compressed) >= $bodyBytes) {
             return ['body' => $body, 'gzip' => false];
         }
         return ['body' => $compressed, 'gzip' => true];
@@ -150,5 +164,15 @@ class SourceResponse
         }
         $bytes = (int)$value;
         return $bytes > 0 ? $bytes : self::GZIP_MIN_BYTES;
+    }
+
+    protected static function gzipMaxBytes()
+    {
+        $value = getenv('SOURCE_HTTP_GZIP_MAX_BYTES');
+        if ($value === false || trim((string)$value) === '') {
+            return self::GZIP_MAX_BYTES;
+        }
+        $bytes = (int)$value;
+        return $bytes >= 0 ? $bytes : self::GZIP_MAX_BYTES;
     }
 }
