@@ -3,6 +3,7 @@ ZONOE 软件源 Release 2026091903
 基线：2026091902
 阶段：Phase 20 — OpenList Setting Buttons Hotfix
 发布分支：release/2026091903-phase20-setting-buttons-hotfix
+发布状态：触发正式 Release Workflow
 
 更新内容：
 1. 修复 OpenList 设置页“保存 / 保存并测试”按钮显示正常但点击无响应的问题。
@@ -12,7 +13,7 @@ ZONOE 软件源 Release 2026091903
 5. OpenList API 继续固定使用 /api/fs/*；认证继续使用 Authorization: <令牌>，不添加 Bearer。
 6. 令牌输入继续使用 new-password / data-lpignore，降低后台登录密码被浏览器误填为 OpenList 令牌的风险。
 7. 不改扫描、Range Parser、绑定、治理、Retention 和历史在线更新架构。
-8. Phase 20 Run #98、Regression Checks #227、Phase14 #81 已通过。
+8. Phase 20 Run #103、Regression Checks #232、Phase14 #86 已通过。
 
 在线更新：
 - 目标 GitHub Release 标签：source-v2026091903。
