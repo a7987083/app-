@@ -1,22 +1,104 @@
 <div class="panel panel-default panel-intro">
-    <div class="panel-heading"><div class="panel-lead"><em>IPA 网络源设置</em>Phase 20.2 使用 OpenList API 只做目录发现。Token 加密存储，页面只显示尾号提示。</div></div>
+    <div class="panel-heading">
+        <div class="panel-lead">
+            <em>IPA 网络源设置</em>
+            使用 OpenList 官方 API 发现 IPA。API 固定使用 <code>/api/fs/*</code>；令牌请填写 OpenList「设置 → 其他 → 令牌」。
+        </div>
+    </div>
     <div class="panel-body">
-        <form id="ipa-source-form" class="form-horizontal" method="post">
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">来源名称</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="name" value="{$source.name|default='OpenList'}"></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Base URL</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="base_url" placeholder="http://yun.zonoeios.xyz" value="{$source.base_url|default=''}"></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">API Base</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="api_base" value="{$source.api_base|default='/api'}"></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">扫描目录</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="scan_path" placeholder="/a/app" value="{$source.scan_path|default='/a/app'}"></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">公开下载模板</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="public_url_template" placeholder="http://yun.zonoeios.xyz/d/{path}" value="{$source.public_url_template|default=''}"><span class="help-block"><code>{path}</code> 会替换成 OpenList 内部路径（去掉开头 /）。</span></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">OpenList Token</label><div class="col-xs-12 col-sm-8"><input class="form-control" type="password" name="token" autocomplete="new-password" placeholder="留空表示不修改 {$source.token_hint|default=''}"></div></div>
+        <form id="ipa-source-form" class="form-horizontal" method="post" autocomplete="off">
+            <div class="form-group">
+                <label class="control-label col-xs-12 col-sm-2">OpenList 地址</label>
+                <div class="col-xs-12 col-sm-8">
+                    <input class="form-control" name="base_url" placeholder="https://yun.zonoeios.xyz" value="{$source.base_url|default=''}" autocomplete="off">
+                    <span class="help-block">只填写站点根地址，不需要填写 <code>/api</code>。</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="control-label col-xs-12 col-sm-2">IPA 根目录</label>
+                <div class="col-xs-12 col-sm-8">
+                    <input class="form-control" name="scan_path" placeholder="/a/app" value="{$source.scan_path|default='/a/app'}" autocomplete="off">
+                    <span class="help-block">OpenList 内部路径，例如 <code>/a/app</code>。</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="control-label col-xs-12 col-sm-2">公开下载地址前缀</label>
+                <div class="col-xs-12 col-sm-8">
+                    <input class="form-control" name="public_url_template" placeholder="https://yun.zonoeios.xyz/d" value="{$source.public_url_template|default=''}" autocomplete="off">
+                    <span class="help-block">例如填写 <code>https://yun.zonoeios.xyz/d</code>，内部路径 <code>/a/app/Test.ipa</code> 会生成 <code>https://yun.zonoeios.xyz/d/a/app/Test.ipa</code>；也兼容包含 <code>{path}</code> 的旧模板。</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="control-label col-xs-12 col-sm-2">OpenList 令牌</label>
+                <div class="col-xs-12 col-sm-8">
+                    <input class="form-control" type="password" name="openlist_token_input" value="" autocomplete="off" data-lpignore="true" data-1p-ignore="true" placeholder="{if condition=\"!empty($source.token_hint)\"}已配置 {$source.token_hint}，留空表示不修改{else /}填写 OpenList 设置 → 其他 → 令牌{/if}">
+                    <span class="help-block">这是 OpenList 的固定 API 令牌，不是后台登录密码，也不要添加 <code>Bearer</code> 前缀。</span>
+                </div>
+            </div>
             <div class="form-group"><label class="control-label col-xs-12 col-sm-2">启用来源</label><div class="col-xs-12 col-sm-8"><label><input type="checkbox" name="enabled" value="1" {if condition="!empty($source.enabled)"}checked{/if}> 启用</label></div></div>
             <div class="form-group"><label class="control-label col-xs-12 col-sm-2">自动扫描</label><div class="col-xs-12 col-sm-8"><label><input type="checkbox" name="schedule_enabled" value="1" {if condition="!empty($source.schedule_enabled)"}checked{/if}> 启用</label></div></div>
             <div class="form-group"><label class="control-label col-xs-12 col-sm-2">扫描间隔</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="5" max="1440" name="interval_minutes" value="{$source.interval_minutes|default='10'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">分钟（5–1440）</p></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">每批解析上限</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="1" max="100" name="batch_size" value="{$source.batch_size|default='20'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">Phase 20.3 Parser 消费此上限</p></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">每批解析上限</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="1" max="100" name="batch_size" value="{$source.batch_size|default='20'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">Range Parser 每轮消费上限</p></div></div>
             <div class="form-group"><label class="control-label col-xs-12 col-sm-2">目录缓存</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="60" max="86400" name="cache_ttl" value="{$source.cache_ttl|default='1800'}"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">秒</p></div></div>
             <div class="form-group"><label class="control-label col-xs-12 col-sm-2">超时 / 重试</label><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="3" max="120" name="request_timeout" value="{$source.request_timeout|default='15'}"></div><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="0" max="5" name="request_retries" value="{$source.request_retries|default='2'}"></div></div>
-            <input type="hidden" name="source_key" value="openlist">
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">健康状态</label><div class="col-xs-12 col-sm-8"><p class="form-control-static">{$source.last_health|default='unknown'} {if condition="!empty($source.last_checked_at)"} / {$source.last_checked_at|date='Y-m-d H:i:s',###}{/if}</p></div></div>
-            <div class="form-group"><div class="col-xs-12 col-sm-offset-2 col-sm-8"><button type="button" class="btn btn-success btn-ipa-source-save">保存</button> <button type="button" class="btn btn-default btn-ipa-source-test">测试连接</button></div></div>
+            <div class="form-group">
+                <label class="control-label col-xs-12 col-sm-2">健康状态</label>
+                <div class="col-xs-12 col-sm-8"><p class="form-control-static">{$source.last_health|default='unknown'} {if condition="!empty($source.last_checked_at)"} / {$source.last_checked_at|date='Y-m-d H:i:s',###}{/if}</p></div>
+            </div>
+            <div class="form-group">
+                <div class="col-xs-12 col-sm-offset-2 col-sm-8">
+                    <button type="button" class="btn btn-success btn-ipa-source-save-v2">保存</button>
+                    <button type="button" class="btn btn-primary btn-ipa-source-save-test-v2">保存并测试</button>
+                </div>
+            </div>
+            <div id="ipa-source-result" class="alert" style="display:none;white-space:pre-wrap;word-break:break-all"></div>
         </form>
     </div>
 </div>
+
+<script>
+require(['jquery'], function ($) {
+    var $form=$('#ipa-source-form'), $result=$('#ipa-source-result');
+    function payload(){
+        var data={};
+        $.each($form.serializeArray(),function(_,x){data[x.name]=x.value;});
+        data.token=$form.find('[name="openlist_token_input"]').val()||'';
+        delete data.openlist_token_input;
+        return data;
+    }
+    function show(ok,msg){
+        $result.removeClass('alert-success alert-danger').addClass(ok?'alert-success':'alert-danger').text(msg||'').show();
+        if(ok) Toastr.success(msg); else Toastr.error(msg);
+    }
+    function extractError(xhr){
+        if(xhr && xhr.responseJSON && xhr.responseJSON.msg) return String(xhr.responseJSON.msg);
+        var text=xhr&&xhr.responseText?String(xhr.responseText).trim():'';
+        if(text){
+            try{var j=JSON.parse(text);if(j&&j.msg)return String(j.msg);}catch(e){}
+            text=text.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+            if(text) return text.substring(0,1000);
+        }
+        return 'HTTP '+(xhr&&xhr.status?xhr.status:'?')+' '+(xhr&&xhr.statusText?xhr.statusText:'请求失败');
+    }
+    function post(url,data,done){
+        $result.hide();
+        $.ajax({url:Fast.api.fixurl(url),type:'POST',dataType:'json',data:data})
+            .done(function(ret){
+                if(ret&&Number(ret.code)===1){if(done)done(ret);return;}
+                show(false,ret&&ret.msg?ret.msg:'请求失败：服务器没有返回有效错误信息');
+            })
+            .fail(function(xhr){show(false,extractError(xhr));});
+    }
+    $('.btn-ipa-source-save-v2').on('click',function(){
+        post('ipa_center/source_save',payload(),function(ret){show(true,ret.msg||'IPA 网络源已保存');});
+    });
+    $('.btn-ipa-source-save-test-v2').on('click',function(){
+        post('ipa_center/source_save',payload(),function(){
+            post('ipa_center/source_test',{},function(ret){
+                var d=ret.data||{};
+                show(true,(ret.msg||'OpenList 连接正常')+'\n可见条目：'+(d.visible_total==null?'—':d.visible_total)+'\n耗时：'+(d.latency_ms==null?'—':d.latency_ms+' ms'));
+            });
+        });
+    });
+});
+</script>
