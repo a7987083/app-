@@ -76,16 +76,32 @@ class IpaRemoteFile
                 if (!empty($entry['hash_info'][$key]) && preg_match('/^[a-f0-9]{32}$/i', (string)$entry['hash_info'][$key])) return strtolower((string)$entry['hash_info'][$key]);
             }
         }
-        if (isset($entry['hash_info']) && is_string($entry['hash_info']) && preg_match('/(?:md5[:=]\s*)?([a-f0-9]{32})/i', $entry['hash_info'], $m)) return strtolower($m[1]);
+        if (isset($entry['hash_info']) && is_string($entry['hash_info'])) {
+            $decoded=json_decode($entry['hash_info'],true);
+            if(is_array($decoded)) {
+                foreach(['md5','MD5'] as $key) {
+                    if(!empty($decoded[$key])&&preg_match('/^[a-f0-9]{32}$/i',(string)$decoded[$key])) return strtolower((string)$decoded[$key]);
+                }
+            }
+            if (preg_match('/(?:md5[:=]\s*)?([a-f0-9]{32})/i', $entry['hash_info'], $m)) return strtolower($m[1]);
+        }
+        if (isset($entry['hashinfo']) && is_string($entry['hashinfo'])) {
+            $decoded=json_decode($entry['hashinfo'],true);
+            if(is_array($decoded)&&!empty($decoded['md5'])&&preg_match('/^[a-f0-9]{32}$/i',(string)$decoded['md5'])) return strtolower((string)$decoded['md5']);
+        }
         return '';
     }
 
+    /**
+     * Match the mature OpenList synchronizer: MD5 is authoritative when both
+     * sides have it; otherwise fall back to size + modified time.  ETag/sign
+     * is intentionally not a change key because providers may rotate it while
+     * file content is unchanged.
+     */
     public static function fingerprint(array $row)
     {
         $md5 = isset($row['md5']) ? strtolower(trim((string)$row['md5'])) : '';
         if ($md5 !== '') return 'md5:' . $md5;
-        $etag = isset($row['etag']) ? trim((string)$row['etag']) : '';
-        if ($etag !== '') return 'etag:' . $etag;
         return 'stat:' . (isset($row['file_size']) ? (int)$row['file_size'] : 0) . ':' . (isset($row['remote_mtime']) ? (int)$row['remote_mtime'] : 0);
     }
 }
