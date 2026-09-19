@@ -104,3 +104,115 @@ jobs:
         run: php tests/phase207_lifecycle_contract_test.php
       - name: Phase 20 RC release contract
         run: php tests/phase20_rc_release_contract_test.php
+
+  phase20-mysql57:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: phase20_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap minimal FastAdmin auth schema
+        run: |
+          mysql -h127.0.0.1 -P3306 -uroot -proot phase20_test <<'SQL'
+          CREATE TABLE IF NOT EXISTS `fa_auth_rule` (
+            `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+            `type` varchar(20) NOT NULL DEFAULT '',
+            `pid` int(10) unsigned NOT NULL DEFAULT '0',
+            `name` varchar(100) NOT NULL DEFAULT '',
+            `title` varchar(100) NOT NULL DEFAULT '',
+            `icon` varchar(50) NOT NULL DEFAULT '',
+            `condition` varchar(255) NOT NULL DEFAULT '',
+            `remark` varchar(255) NOT NULL DEFAULT '',
+            `ismenu` tinyint(1) unsigned NOT NULL DEFAULT '0',
+            `createtime` int(10) unsigned NOT NULL DEFAULT '0',
+            `updatetime` int(10) unsigned NOT NULL DEFAULT '0',
+            `weigh` int(10) NOT NULL DEFAULT '0',
+            `status` varchar(30) NOT NULL DEFAULT 'normal',
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_name` (`name`)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+          SQL
+      - name: Run Phase 20 migrations twice on MySQL 5.7
+        run: |
+          set -euo pipefail
+          files=(
+            phase20_ipa_foundation.sql
+            phase20_ipa_center.sql
+            phase20_ipa_scan.sql
+            phase20_ipa_parser.sql
+            phase20_ipa_binding.sql
+            phase20_ipa_writeback.sql
+            phase20_ipa_governance.sql
+            phase20_ipa_production.sql
+            phase20_ipa_lifecycle.sql
+          )
+          for pass in 1 2; do
+            echo "migration pass=${pass}"
+            for name in "${files[@]}"; do
+              mysql -h127.0.0.1 -P3306 -uroot -proot phase20_test < "application/admin/command/Install/${name}"
+            done
+          done
+      - name: Verify Phase 20 schema and auth rules
+        run: |
+          set -euo pipefail
+          mysql_base=(mysql -N -B -h127.0.0.1 -P3306 -uroot -proot phase20_test)
+          for table in fa_ipa_metadata fa_ipa_binding fa_ipa_scan_task fa_ipa_scan_task_item fa_ipa_governance_issue fa_ipa_operation_log fa_ipa_writeback_rule fa_ipa_source; do
+            count="$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='phase20_test' AND table_name='${table}'")"
+            test "$count" = "1"
+          done
+          root_count="$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_center'")"
+          test "$root_count" = "1"
+          duplicate_count="$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM (SELECT name FROM fa_auth_rule GROUP BY name HAVING COUNT(*) > 1) d")"
+          test "$duplicate_count" = "0"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_center/governance_batch_apply'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_recovery/retry'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_production/retention_apply'")" = "1"
+
+  phase20-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: zip
+      - name: Build Phase 20 RC online-update package
+        run: |
+          set -euo pipefail
+          php tools/build_online_update.php /tmp/phase20-rc.zip
+          test -s /tmp/phase20-rc.zip
+          test -s /tmp/phase20-rc.zip.sha256
+          sha256sum -c /tmp/phase20-rc.zip.sha256
+      - name: Verify package program and ordered migrations
+        run: |
+          set -euo pipefail
+          unzip -Z1 /tmp/phase20-rc.zip > /tmp/phase20-rc.list
+          grep -Fx 'program/application/admin/controller/IpaCenter.php' /tmp/phase20-rc.list
+          grep -Fx 'program/application/admin/controller/IpaRecovery.php' /tmp/phase20-rc.list
+          grep -Fx 'program/application/admin/controller/IpaProduction.php' /tmp/phase20-rc.list
+          grep -Fx 'program/application/admin/controller/IpaLifecycle.php' /tmp/phase20-rc.list
+          grep -Fx 'program/application/common/library/IpaGovernanceBatchService.php' /tmp/phase20-rc.list
+          grep -Fx 'program/application/common/library/IpaGovernanceRecoveryService.php' /tmp/phase20-rc.list
+          grep -Fx 'program/application/common/library/IpaRangeMetricsService.php' /tmp/phase20-rc.list
+          grep -Fx 'program/application/common/library/IpaRetentionService.php' /tmp/phase20-rc.list
+          grep -Fx 'mysql/2026091901_phase20_ipa_foundation.sql' /tmp/phase20-rc.list
+          grep -Fx 'mysql/2026091902_phase20_ipa_center.sql' /tmp/phase20-rc.list
+          grep -Fx 'mysql/2026091903_phase20_ipa_scan.sql' /tmp/phase20-rc.list
+          grep -Fx 'mysql/2026091904_phase20_ipa_parser.sql' /tmp/phase20-rc.list
+          grep -Fx 'mysql/2026091905_phase20_ipa_binding.sql' /tmp/phase20-rc.list
+          grep -Fx 'mysql/2026091906_phase20_ipa_writeback.sql' /tmp/phase20-rc.list
+          grep -Fx 'mysql/2026091907_phase20_ipa_governance.sql' /tmp/phase20-rc.list
+          grep -Fx 'mysql/2026091908_phase20_ipa_production.sql' /tmp/phase20-rc.list
+          grep -Fx 'mysql/2026091909_phase20_ipa_lifecycle.sql' /tmp/phase20-rc.list
