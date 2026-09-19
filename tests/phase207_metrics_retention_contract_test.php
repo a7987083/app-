@@ -23,7 +23,7 @@ $sql=file_get_contents(dirname(__DIR__).'/application/admin/command/Install/phas
 foreach(['ipa_production/metrics','ipa_production/retention_preview','ipa_production/retention_apply'] as $needle)phase207mrAssert(strpos($sql,$needle)!==false,'production auth '.$needle);
 $view=file_get_contents(dirname(__DIR__).'/application/admin/view/ipa_center/governance.html');
 foreach(['Phase 20.7.3 生产指标与 Retention','ipa-range-window','ipa-retention-days','预览清理'] as $needle)phase207mrAssert(strpos($view,$needle)!==false,'production UI '.$needle);
-$js=file_get_contents(dirname(__DIR__).'/public/assets/js/backend/ipa_governance_production.js');
-foreach(['ipa_production/metrics','ipa_production/retention_preview','ipa_production/retention_apply','loadRangeMetrics'] as $needle)phase207mrAssert(strpos($js,$needle)!==false,'production JS '.$needle);
+$js=file_get_contents(dirname(__DIR__).'/public/assets/js/backend/ipa_center.js');
+foreach(['ipa_production/metrics','ipa_production/retention_preview','ipa_production/retention_apply','loadMetrics'] as $needle)phase207mrAssert(strpos($js,$needle)!==false,'production FastAdmin JS '.$needle);
 
 echo "OK phase207_metrics_retention_contract_test\n";
