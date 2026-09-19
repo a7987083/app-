@@ -3,7 +3,7 @@ ZONOE 软件源 Release 2026091905
 基线：2026091904
 阶段：Phase 20 — OpenList Settings Permission + Ajax Cache Hotfix
 发布分支：release/2026091905-phase20-setting-hotfix
-发布状态：触发正式 Release Workflow
+发布状态：重新触发正式 Release Workflow（完整性签名已校正）
 
 更新内容：
 1. 修复 source_save/source_test 权限继承实际未生效的问题：noNeedRight 改为真实 action 名 source_save/source_test。
@@ -17,5 +17,6 @@ ZONOE 软件源 Release 2026091905
 在线更新：
 - 目标 GitHub Release 标签：source-v2026091905。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity::files() 监控的关键文件。
+- application/common/behavior/Common.php 属于 UpdateIntegrity::files() 监控文件；正式门禁计算出的 file_sign 为 8be29c04c34ba1d1cc7ec77d392b2bee，ver.json 已同步更新。
 - 最终候选验证：Phase 20 IPA Management #116、Regression Checks #245、Phase14 Production Hardening #99 已通过。
+- 正式 Run #98 首次尝试因旧 file_sign 被完整性门禁正确拦截；本提交校正签名并重新触发正式发布。
