@@ -1,23 +1,24 @@
-ZONOE 软件源 Release 2026091809
-版本：2026091809
-基线：2026091808
-阶段：Phase 19.4.y — Category Performance Hotfix
-发布分支：release/2026091809-category-performance
-发布状态：重新触发正式 Release Workflow（已升级旧 category listing 回归契约）
+ZONOE 软件源 Release 2026091901
+版本：2026091901
+基线：2026091809
+阶段：Phase 20 — IPA Management Center
+发布分支：release/2026091901-phase20-ipa-management
 
 更新内容：
-1. 项目管理新增/编辑不再加载全量 parentList / Tree，避免 2 万级数据下无意义的全表扫描和海量 option 渲染。
-2. 新增项目服务端强制 pid=0；编辑项目保持原 pid，不再触发 Category::select() 全表子节点校验。
-3. 移除隐藏 pid selectpicker，改为轻量 hidden input。
-4. 项目列表按用户要求保持默认 1000 条/页，pageList 保持 200/500/1000。
-5. 新增、编辑成功后只关闭弹窗，不自动刷新当前 1000 行列表；管理员按需手动刷新。
-6. 删除成功后只从 BootstrapTable 本地移除对应行，阻止 FastAdmin 自动整表 refresh；工具栏删除同样应用该策略。
-7. 新增 Phase 19.4.y 性能回归门禁，禁止 add/edit 路径重新出现全量 Category Tree / Category::select()。
-8. 在线更新包明确包含 Category.php、add.html、edit.html、category.js。
-9. 升级历史 category_listing_contract_test，使其与 1809 的 no-tree / no-refresh 性能契约一致。
+1. 发布 Phase 20 IPA 管理中心，覆盖 UI、任务、元数据、绑定、写回、数据治理和设置。
+2. 新增 OpenList 增量扫描、目录缓存、远程文件身份识别和 checkpointable scan task。
+3. 新增 HTTP Range IPA Parser，解析 Info.plist、图标、Mach-O 架构、Framework/dylib/appex、Swift 与 embedded.mobileprovision。
+4. 新增 IPA 与分类一对一持久绑定，自动绑定只使用确定性条件。
+5. 新增全局写回模板和受控 keywords metadata block。
+6. 新增治理 preview/apply/verify、plan_hash stale check、OpenList 安全 rename/move、写回与审计。
+7. 新增批量治理、失败队列、failed/interrupted recovery、ignore/ignore_until、Range metrics 和 Retention。
+8. 新增独立高风险 FastAdmin 权限节点和操作审计。
+9. 新增 9 组 Phase 20 MySQL migration，已在 MySQL 5.7 中重复执行两遍通过。
+10. Phase 20 程序文件与 migration 已接入历史在线更新 manifest / builder / ZONOE Source Release 流程。
+11. OpenList HTTP 集成、updater 自动 rollback、旧 rollback 回归、ZIP/SHA256/有序 migration 门禁已通过。
 
 在线更新：
-- GitHub Release 标签：source-v2026091809。
+- GitHub Release 标签：source-v2026091901。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
 - file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity 监控的 4 个关键文件。
-- 发布前门禁：专项 PHP 7.0/JS/性能契约、正式 PHP 7.0 全回归、MySQL 5.7、HTTP load、更新包完整性、1808 -> 1809 在线更新 E2E。
+- 发布前门禁：Phase 20 专项 CI、正式 PHP 7.0 全回归、MySQL 5.7、Phase 19 HTTP load、Phase 20 HTTP/rollback integration、更新包完整性、1809 -> 1901 在线更新 E2E。
