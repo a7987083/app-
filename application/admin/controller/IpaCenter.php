@@ -14,7 +14,9 @@ use RuntimeException;
 
 class IpaCenter extends Backend
 {
-    protected $noNeedRight=[];
+    // source_save/source_test inherit the visible setting permission instead of
+    // requiring separately assigned hidden rules on upgraded installations.
+    protected $noNeedRight=['sourcesave','sourcetest'];
     protected $layout='default';
 
     public function index(){return $this->view->fetch();}
@@ -50,6 +52,23 @@ class IpaCenter extends Backend
     public function writebackSave(){if(!$this->request->isPost())$this->error('Method not allowed');try{$raw=(string)$this->request->post('rules_json','');$rules=json_decode($raw,true);if(!is_array($rules))throw new RuntimeException('rules_json 无效');$version=IpaWritebackTemplate::saveNewVersion($rules,(int)$this->auth->id);$this->success('全局模板已保存为新版本',null,['version'=>$version]);}catch(\Exception $e){$this->error($e->getMessage());}}
     public function writebackRandomPreview(){try{$bindings=Db::name('ipa_binding')->order('id','desc')->limit(200)->select();if(!$bindings)$this->error('当前没有已绑定 IPA');shuffle($bindings);$binding=null;$metadata=null;foreach($bindings as $candidate){$m=Db::name('ipa_metadata')->where('id',(int)$candidate['metadata_id'])->where('parse_state','success')->find();if($m){$binding=$candidate;$metadata=$m;break;}}if(!$binding||!$metadata)$this->error('没有“已解析 + 已绑定”的 IPA 可用于测试');$category=Db::name('category')->where('id',(int)$binding['category_id'])->find();if(!$category)$this->error('绑定对应的 category 已不存在');$rules=IpaWritebackTemplate::loadActiveRules();$preview=IpaWritebackTemplate::preview($category,$metadata,$rules);$this->success('',null,['version'=>IpaWritebackTemplate::activeVersion(),'sample'=>['binding_id'=>(int)$binding['id'],'metadata_id'=>(int)$metadata['id'],'category_id'=>(int)$category['id'],'category_name'=>isset($category['name'])?$category['name']:'','remote_path'=>isset($metadata['remote_path'])?$metadata['remote_path']:'','bundle_id'=>isset($metadata['bundle_id'])?$metadata['bundle_id']:'','package_version'=>isset($metadata['package_version'])?$metadata['package_version']:''],'preview'=>$preview]);}catch(\Exception $e){$this->error($e->getMessage());}}
 
-    public function sourceSave(){if(!$this->request->isPost())$this->error('Method not allowed');try{$id=IpaSourceConfig::save($this->request->post(),(int)$this->auth->id);$this->success('IPA 网络源已保存',null,['id'=>$id]);}catch(\Exception $e){$this->error($e->getMessage());}}
-    public function sourceTest(){if(!$this->request->isPost())$this->error('Method not allowed');try{$source=IpaSourceConfig::first(true);if(!$source)throw new RuntimeException('请先保存 IPA 网络源');$client=IpaSourceConfig::clientFromRow($source);$health=$client->health($source['scan_path']);Db::name('ipa_source')->where('id',(int)$source['id'])->update(['last_health'=>'ok','last_checked_at'=>time(),'updatetime'=>time()]);$this->success('OpenList 连接正常',null,$health);}catch(\Exception $e){$source=IpaSourceConfig::first(false);if($source)Db::name('ipa_source')->where('id',(int)$source['id'])->update(['last_health'=>'failed','last_checked_at'=>time(),'updatetime'=>time()]);$this->error($e->getMessage());}}
+    protected function assertSettingRight(){if(!$this->auth->check('ipa_center/setting'))$this->error(__('You have no permission'),'');}
+
+    public function sourceSave(){
+        $this->assertSettingRight();
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{$id=IpaSourceConfig::save($this->request->post(),(int)$this->auth->id);$this->success('IPA 网络源已保存',null,['id'=>$id,'token_configured'=>true]);}
+        catch(\Exception $e){$this->error($e->getMessage());}
+    }
+
+    public function sourceTest(){
+        $this->assertSettingRight();
+        if(!$this->request->isPost())$this->error('Method not allowed');
+        try{
+            $source=IpaSourceConfig::first(true);if(!$source)throw new RuntimeException('请先保存 IPA 网络源');
+            $health=IpaSourceConfig::clientFromRow($source)->health($source['scan_path']);
+            IpaSourceConfig::updateState(['last_health'=>'ok','last_checked_at'=>time()]);
+            $this->success('OpenList 连接正常',null,$health);
+        }catch(\Exception $e){IpaSourceConfig::updateState(['last_health'=>'failed','last_checked_at'=>time()]);$this->error($e->getMessage());}
+    }
 }
