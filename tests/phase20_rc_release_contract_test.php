@@ -71,12 +71,18 @@ phase20RcAssert(strpos($builder, "GITHUB_WORKFLOW') !== 'ZONOE Source Release'")
 phase20RcAssert(strpos($builder, 'PHASE20_EXTERNAL_ACCEPTANCE.json') !== false, 'formal release requires external acceptance record');
 phase20RcAssert(strpos($builder, "\$status !== 'passed'") !== false, 'formal release requires passed external acceptance');
 phase20RcAssert(strpos($builder, 'readiness_run') !== false && strpos($builder, 'acceptance_commit') !== false, 'formal release acceptance carries readiness evidence');
+phase20RcAssert(strpos($builder, "intval(\$readinessRun) <= 0") !== false, 'formal release rejects placeholder readiness run');
+phase20RcAssert(strpos($builder, "preg_match('/^0{40}$/', \$acceptanceCommit)") !== false, 'formal release rejects zero commit placeholder');
+phase20RcAssert(strpos($builder, 'requiredEvidence') !== false && strpos($builder, 'replace-with-') !== false, 'formal release rejects placeholder evidence');
 
 $example = json_decode($acceptanceExample, true);
 phase20RcAssert(is_array($example), 'external acceptance example valid JSON');
 foreach (['status','environment','verified_at','acceptance_commit','readiness_run','operator','evidence'] as $field) {
     phase20RcAssert(array_key_exists($field, $example), 'external acceptance example field ' . $field);
 }
+phase20RcAssert(isset($example['status']) && $example['status'] === 'pending', 'external acceptance example fails closed');
+phase20RcAssert(isset($example['readiness_run']) && (string)$example['readiness_run'] === '0', 'external acceptance example cannot satisfy readiness gate');
+phase20RcAssert(isset($example['acceptance_commit']) && preg_match('/^0{40}$/', $example['acceptance_commit']) === 1, 'external acceptance example cannot satisfy commit gate');
 
 $hasExternalAcceptance = strpos($checklist, 'External pre-production acceptance') !== false ||
     strpos($checklist, 'Pre-production E2E') !== false ||
