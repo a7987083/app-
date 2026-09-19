@@ -14,21 +14,9 @@
 ## 当前开发线
 
 - Development branch: `feature/phase20-ipa-management-v1`
-- Current development phase: `Phase 20.7.1`
-- Verified development HEAD: `21acdf56d9a9a3a6eb32026b54fcdf8312748797`
-- Phase 20 CI Run `35409392686`: SUCCESS
-
-## Phase 19.4.2 — 已发布
-
-- [x] 公告只暴露一套授权时间。
-- [x] 后台移除全源/部分/验证独立时间按钮。
-- [x] `[授权状态]` / `[到期时间]` / `[剩余时间]` 共用同一有效授权选择逻辑。
-- [x] 优先级：全软件源 → 指定 App → 仅验证。
-- [x] 无有效授权统一显示“已过期或未解锁本源”。
-- [x] `[授权摘要]` 收敛为单一时间模型。
-- [x] 历史公告变量自动迁移。
-- [x] 旧变量运行时兼容并映射到同一时钟。
-- [x] 1806 → 1807 在线更新 E2E 通过。
+- Current development phase: `Phase 20.7.3`
+- Verified development HEAD: `a573d6f2945edcd0ca7c44a2002f1212b4a19bb2`
+- Phase 20 CI Run `35409913235`: SUCCESS
 
 ## Phase 20 — IPA Management
 
@@ -44,30 +32,38 @@
 
 ### 20.7.1 批量治理与失败队列 — 已完成开发/CI
 
-- [x] 批量异常选择与去重，单批最多 100 条。
-- [x] 批量 preview 使用独立 `batch_hash`，每项继续保留 `plan_hash`。
-- [x] apply 前重新生成批量计划，计划漂移则拒绝整个批次。
-- [x] 每项继续复用 20.6 单条 apply：幂等、二次验证、审计不降级。
-- [x] 批量模式只允许低风险方向：IPA/OpenList 当前数据 → 数据库。
-- [x] 批量模式禁止自动移动 OpenList 文件。
+- [x] 单批最多 100 条；批量计划使用 `batch_hash`，单项继续保留 `plan_hash`。
+- [x] 批量仅允许低风险方向；禁止批量移动 OpenList 文件。
 - [x] 重复 Bundle ID / 真正 IPA 缺失不自动修复。
-- [x] 基于 `ipa_operation_log(state=failed)` 暴露治理失败队列，不新增冗余表。
-- [x] 后台治理页增加批量选择、批量预览/执行和失败队列展示。
-- [x] Phase 20.7 contract 纳入 GitHub Actions；Run `35409392686` SUCCESS。
+- [x] 基于 `ipa_operation_log` 暴露治理失败队列，不新增冗余表。
+- [x] 后台治理页增加批量选择、预览/执行和失败队列。
 
-### 20.7.2 Retry / Interrupted — 下一阶段
+### 20.7.2 Retry / Interrupted — 已完成开发/CI
 
-- [ ] 定义失败操作的可重试边界和 retry token。
-- [ ] 区分 `failed`、`interrupted`、`unknown`，避免把进程中断误判成业务失败。
-- [ ] 启动时/人工触发时识别长期 `running` 操作并转为 interrupted。
-- [ ] retry 前重新 preview，并禁止复用过期 plan。
-- [ ] retry 继续沿用幂等键和 verify，禁止重复副作用。
-- [ ] 后台失败队列增加单条/受控批量重试入口。
+- [x] 长期 `running` 可按 heartbeat/updatetime 标记为 `interrupted`。
+- [x] 仅 `failed / interrupted` 允许进入恢复流程。
+- [x] retry 前重新 preview，禁止复用旧 plan。
+- [x] retry 使用独立幂等键，避免撞原 `uniq_idempotency`。
+- [x] 恢复成功后新 operation=`success`，旧 operation=`superseded` 并记录 `recovered_by`。
+- [x] 后台恢复队列提供扫描中断与重新预览后重试。
+- [x] CI Run `35409559363`: SUCCESS。
 
-### 后续生产增强
+### 20.7.3 Retention + Range metrics — 已完成开发/CI
 
-- [ ] retention：operation/task/history 保留策略与清理任务。
-- [ ] Range metrics：请求数、字节数、命中率、失败率聚合与展示。
-- [ ] ignore / ignore_until 的批量与到期恢复管理。
-- [ ] 危险操作权限进一步细分。
-- [ ] 生产环境 OpenList + 数据库端到端验证。
+- [x] Range metrics 直接聚合 parser task item 的实际 `range_bytes / range_requests / reused`。
+- [x] 支持 7 / 30 / 90 天窗口；单次聚合最多读取最近 5000 条并显式标记 truncated。
+- [x] 后台展示解析/复用、Range 字节、请求数和平均每请求字节数。
+- [x] Retention 默认 90 天，最小 7 天，最大 3650 天。
+- [x] Retention 固定 preview → plan_hash → apply，计划漂移拒绝执行。
+- [x] 只清理老的 success/cancelled scan task/items 与 success/superseded operation log。
+- [x] `running / failed / interrupted / queued / retrying` 明确保护，不进入清理集合。
+- [x] 单表单次最多清理 1000 条，避免一次性大事务。
+- [x] CI Run `35409913235`: SUCCESS。
+
+### 20.7.4 权限与治理生产收尾 — 下一阶段
+
+- [ ] ignore / ignore_until 批量管理与到期恢复视图。
+- [ ] 高风险操作权限进一步细分并做 UI 能力隐藏/禁用。
+- [ ] Retention / recovery / batch 操作补充生产审计摘要。
+- [ ] 生产 OpenList + MySQL 端到端验证。
+- [ ] 形成 Phase 20 release candidate / 发布清单。
