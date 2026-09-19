@@ -3,66 +3,72 @@
 ## Stable baseline
 
 - Repository: `a7987083/app-`
-- Stable branch: `release/2026091807-unified-announcement-expiry`
-- Stable phase/version: `Phase 19.4.2 / 2026091807`
-- Release commit: `1ef93306dec0a7b09bb99df55b785511d5b8b4c6`
-- Release: `source-v2026091807`
+- Stable branch: `release/2026091901-phase20-ipa-management`
+- Stable phase/version: `Phase 20 / 2026091901`
+- Release commit: `65d464b4d86f7bca9eb0ad89e96edcbf0ab5a9ef`
+- Release: `source-v2026091901`
+- Formal release workflow: `ZONOE Source Release` Run `35415710535` / Run #94 — SUCCESS
+- GitHub Release online-update E2E: SUCCESS
 
-## Active development
+## Development lineage
 
-- Branch: `feature/phase20-ipa-management-v1`
-- Phase: `20.7 code/CI complete; RC repository + integration + release-readiness gates complete`
-- Verified readiness code HEAD: `747582446f1f11ac058b7382e2a497260baf8fca`
-- Phase 20 CI Run: `35412521746` / Run #81 — SUCCESS
-- Phase 20 Release Readiness Run: `35412521749` / Run #8 — SUCCESS
-- Release-readiness artifact: `phase20-release-readiness-35412521749`
-- Release-readiness artifact digest: `sha256:ccacde350daf990540c977208acdd3710787bb0d2d593e48ae6d6bb2749c35f1`
-- External pre-production / production acceptance: NOT VERIFIED
+- Development branch: `feature/phase20-ipa-management-v1`
+- Phase 20 development CI baseline: `a246e0708fdb3c3a9650ba1f331fa39f6c938416`
+- Phase 20 IPA Management Run: `35415567660` / Run #88 — SUCCESS
+- Release branch was created from the green Phase 20 development baseline, then formal release metadata was prepared as version `2026091901`.
 
-## Phase 20.7 completed capabilities
+## Phase 20 completed capabilities
 
-- Batch governance with `batch_hash`, per-item `plan_hash`, low-risk-only batch semantics.
-- Failure queue using existing `ipa_operation_log`.
-- Failed/interrupted recovery with re-preview, separate retry idempotency and superseded audit linkage.
-- Range parser metrics from actual task item `result_json`.
-- Preview-first bounded Retention cleanup.
-- Batch ignore/unignore and `ignore_until` expiry sweep with audit records.
-- FastAdmin permission-aware UI gating for high-risk Phase 20.7 controls.
+- 20.0: IPA management UI/menu/auth foundation.
+- 20.1: persistence, task, idempotency and operation-audit foundation.
+- 20.2: OpenList incremental discovery and scan planning.
+- 20.3: HTTP Range IPA parser and metadata extraction.
+- 20.4: persistent one-to-one IPA ↔ category binding.
+- 20.5: global metadata write-back templates.
+- 20.6: governance preview → confirm → execute → verify with `plan_hash` stale protection.
+- 20.7: batch governance, failure queue, failed/interrupted recovery, Range metrics, bounded Retention, ignore/unignore/`ignore_until`, and high-risk permission gating.
 
-## RC repository / CI gates verified
+## Verified release gates
 
-- Full Phase 20 / Phase 20.7 contract suite: PASS.
-- Release-readiness contract suite on PHP 7.0: PASS.
-- PHP 7.0 online-update package build: PASS.
-- Package SHA256 verification and ZIP integrity check: PASS.
-- Package contents include required Phase 20 program payload and ordered `2026091901` ~ `2026091909` migration payload: PASS.
-- Real MySQL 5.7 service migration gate: PASS.
-- All nine Phase 20 migrations execute twice successfully on MySQL 5.7: PASS.
-- Key Phase 20 tables and high-risk permission rules are present after migration, with no duplicate auth-rule names: PASS.
-- OpenList client real HTTP loopback integration for health/list/get/rename/move and Authorization propagation: PASS.
-- Recursive IPA discovery over HTTP and non-IPA filtering: PASS.
-- Client-side unsafe rename target rejection: PASS.
-- Updater automatic rollback after a forced post-copy failure: PASS.
-- Rollback restores overwritten files, removes update-created files, preserves old version metadata, retains backup/database dump, and reports rollback success: PASS.
-- Legacy update rollback regression: PASS.
-- Release-readiness ZIP + SHA256 are retained as GitHub Actions artifact `phase20-release-readiness-35412521749` for 30 days.
+The project continues to use the historical release model. No standalone Phase 20 release workflow or external-acceptance file is required.
 
-## Formal release fail-closed guard
+Formal `ZONOE Source Release` Run #94 passed:
 
-`tools/build_online_update.php` now blocks a Phase 20 package when it is executed by the write-enabled `ZONOE Source Release` workflow unless `release/PHASE20_EXTERNAL_ACCEPTANCE.json` exists and contains real passed acceptance evidence.
+- PHP 7.0 lint and full historical regression: PASS.
+- Source integrity / `file_sign` verification: PASS.
+- Real MySQL 5.7 migration gate: PASS.
+- Nine Phase 20 migrations executed twice with key-table and permission-rule verification: PASS.
+- Existing Phase 19.3.1 HTTP load gate: PASS.
+- Phase 20 OpenList HTTP integration: PASS.
+- Phase 20 updater forced-failure rollback integration: PASS.
+- Legacy updater rollback regression: PASS.
+- Release metadata validation: PASS.
+- Manifest-driven online-update ZIP build and payload verification: PASS.
+- GitHub Release creation for `source-v2026091901`: PASS.
+- Historical GitHub Release online-update E2E from the previous stable release to `2026091901`: PASS.
 
-The formal acceptance record must include:
+## Formal release assets
 
-- `status = passed`.
-- Real `environment` and `operator` values.
-- ISO-8601 `verified_at` with timezone.
-- A non-zero 40-character `acceptance_commit`.
-- A positive `readiness_run` workflow ID.
-- Non-placeholder evidence for OpenList scan, Range metrics, governance, retry/ignore/retention, permissions, backup/restore, and failed-install rollback.
+- Tag: `source-v2026091901`
+- Target commit: `65d464b4d86f7bca9eb0ad89e96edcbf0ab5a9ef`
+- `zonoe-online-update.zip`
+  - size: `217993` bytes
+  - GitHub asset digest: `sha256:264964f96c538d227edc65f3e2efdc0d0189596eeface832e52e5ebe02d57bd5`
+- `zonoe-online-update.zip.sha256`
+- `file_sign`: `f3f6e072f814d06403ce5e393967c9e2`
 
-`release/PHASE20_EXTERNAL_ACCEPTANCE.example.json` intentionally fails closed with `status = pending`, zero commit/run values, and placeholders. It must never be renamed and used unchanged as production acceptance.
+## Release / CI rule going forward
 
-## Safety invariants
+Keep the established project flow:
+
+1. Each development phase uses its own CI/contracts.
+2. Release metadata is prepared on a `release/**` branch.
+3. Formal release always uses the existing `ZONOE Source Release` workflow.
+4. `package-and-release` remains gated by the historical regression/MySQL/load jobs plus phase-specific tests required by the current release.
+5. The workflow creates or refreshes `source-v${VERSION}` and then runs the existing GitHub Release online-update E2E.
+6. Do not introduce a parallel formal-release workflow, manual acceptance JSON gate, or replacement release mechanism unless the project owner explicitly requests a redesign.
+
+## Safety invariants retained
 
 - Batch governance never moves OpenList files automatically.
 - Recovery never reuses an old governance plan.
@@ -70,27 +76,7 @@ The formal acceptance record must include:
 - Retention never selects `running`, `failed`, `interrupted`, `queued`, or `retrying` records.
 - Retention is bounded to 1000 candidate rows per table per execution.
 - Ignore lifecycle batches are bounded to 100 issues.
-- CI/mock integration evidence must never be presented as external production acceptance.
-- Formal Phase 20 release packaging fails closed until external acceptance evidence is recorded.
-
-## Remaining external-environment acceptance
-
-These checks require a real controlled deployment, real OpenList contents, real application data, or real FastAdmin admin groups. Repository CI cannot truthfully complete them.
-
-1. Run full scan and representative IPA Range parsing against the intended OpenList endpoint.
-2. Bind representative real IPA metadata to real categories and inspect governance anomalies.
-3. Run controlled low-risk batch governance on persisted application data and inspect audit linkage.
-4. Execute one explicitly approved real OpenList path mutation and verify metadata/binding path synchronization.
-5. Force one failed/interrupted governance operation on persisted data, retry it, and verify superseded linkage.
-6. Exercise real ignore/unignore/expiry lifecycle.
-7. Validate Range metrics against observed HTTP Range traffic.
-8. Run Retention preview on a backed-up dataset; restore backup; only then run bounded Retention apply.
-9. Validate real FastAdmin permission groups so hidden controls and API denial agree.
-10. Perform one controlled install/restore drill on the target deployment and confirm application usability after rollback.
-
-## RC promotion rule
-
-Do not create `release/PHASE20_EXTERNAL_ACCEPTANCE.json`, change formal release metadata, or create a Phase 20 tag/release until the external-environment acceptance above has actually passed and evidence has been recorded. After that, select the RC version, update version metadata/release notes, run Release Readiness and the formal release workflow, and create the RC only from green runs.
+- OpenList rename/move must reject unsafe target conflicts and preserve audit/verify semantics.
 
 ## Existing production caveat
 
