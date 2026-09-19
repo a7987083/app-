@@ -32,11 +32,16 @@ foreach (['category.name','category.nickname','category.image','category.bt1a','
 
 $setting = file_get_contents($root . '/application/admin/view/ipa_center/setting.html');
 $sourceConfig = file_get_contents($root . '/application/common/library/IpaSourceConfig.php');
+$payloadStore = file_get_contents($root . '/application/common/library/IpaMetadataPayloadStore.php');
 $backendJs = file_get_contents($root . '/public/assets/js/backend/ipa_center.js');
+$fastJs = file_get_contents($root . '/public/assets/js/fast.js');
+$scanService = file_get_contents($root . '/application/common/library/IpaScanService.php');
+$parserService = file_get_contents($root . '/application/common/library/IpaParserService.php');
+
 phase20UiAssert(strpos($setting, 'OpenList 令牌') !== false, 'settings use provider token terminology');
 phase20UiAssert(strpos($setting, 'OpenList 设置 → 其他 → 令牌') !== false, 'settings show provider token location');
 phase20UiAssert(strpos($setting, 'name="api_base"') === false, 'API prefix is not user-configurable');
-phase20UiAssert(strpos($setting, 'name="token"') !== false, 'token is submitted to existing sourceSave contract');
+phase20UiAssert(strpos($setting, 'name="token"') !== false, 'token is submitted to sourceSave contract');
 phase20UiAssert(strpos($setting, 'autocomplete="new-password"') !== false, 'token input discourages browser credential autofill');
 phase20UiAssert(strpos($setting, 'data-lpignore="true"') !== false, 'token input discourages password-manager autofill');
 phase20UiAssert(strpos($setting, 'btn-ipa-source-save') !== false, 'save button uses FastAdmin controller binding');
@@ -45,7 +50,17 @@ phase20UiAssert(strpos($setting, '<script>') === false, 'settings do not depend 
 phase20UiAssert(strpos($backendJs, "$('.btn-ipa-source-save').on('click'") !== false, 'FastAdmin controller binds save button');
 phase20UiAssert(strpos($backendJs, "$('.btn-ipa-source-test').on('click'") !== false, 'FastAdmin controller binds test button');
 phase20UiAssert(strpos($sourceConfig, "const API_BASE = '/api';") !== false, 'OpenList API prefix fixed in application code');
-phase20UiAssert(strpos($sourceConfig, "'api_base'=>self::API_BASE") !== false, 'saved source always uses provider API prefix');
+phase20UiAssert(strpos($sourceConfig, "'api_base'=>self::API_BASE") !== false, 'runtime source always uses provider API prefix');
 phase20UiAssert(strpos($sourceConfig, 'isset($input[\'api_base\'])') === false, 'user input cannot override provider API prefix');
+phase20UiAssert(strpos($sourceConfig, "'token_ciphertext'=>self::sealToken") !== false, 'token is encrypted in runtime config');
+phase20UiAssert(strpos($sourceConfig, "runtimeDir().'openlist.json'") !== false, 'OpenList config is stored under runtime/ipa');
+phase20UiAssert(strpos($sourceConfig, "Db::name('ipa_source')->where") !== false, 'legacy DB config is import-only for upgrade compatibility');
+phase20UiAssert(substr_count($sourceConfig, "Db::name('ipa_source')") === 1, 'new OpenList configuration no longer writes to source table');
+phase20UiAssert(strpos($controller, "protected \$noNeedRight=['sourcesave','sourcetest']") !== false, 'save/test do not require newly assigned hidden rights');
+phase20UiAssert(strpos($controller, "check('ipa_center/setting')") !== false, 'save/test inherit visible setting permission');
+phase20UiAssert(strpos($fastJs, 'xhr.responseJSON') !== false && strpos($fastJs, 'xhr.responseText') !== false, 'HTTP failures surface backend error details instead of generic error');
+phase20UiAssert(strpos($payloadStore, "metadata-detail") !== false, 'large IPA parser payloads live outside MySQL');
+phase20UiAssert(strpos($parserService, "'confidence_json'=>'','raw_metadata_json'=>'','normalized_metadata_json'=>''") !== false, 'new parser results keep legacy blob columns empty');
+phase20UiAssert(strpos($scanService, 'TASK_ITEM_RETENTION_DAYS = 90') !== false, 'task item history is bounded to metrics window');
 
 echo "OK phase20_ui_contract_test\n";
