@@ -7,16 +7,14 @@
 - Stable phase/version: `Phase 19.4.2 / 2026091807`
 - Release commit: `1ef93306dec0a7b09bb99df55b785511d5b8b4c6`
 - Release: `source-v2026091807`
-- Unified-announcement CI Run `35306216020`: SUCCESS
-- Formal Release Run `35306308086`: SUCCESS
-- Online-update E2E `2026091806 -> 2026091807`: SUCCESS
 
 ## 当前开发线
 
 - Development branch: `feature/phase20-ipa-management-v1`
-- Current development phase: `Phase 20.7.3`
-- Verified development HEAD: `a573d6f2945edcd0ca7c44a2002f1212b4a19bb2`
-- Phase 20 CI Run `35409913235`: SUCCESS
+- Current development phase: `Phase 20.7 complete in code/CI`
+- Verified development HEAD: `438db0823a2d03e220401509ce736da57bc99ab9`
+- Phase 20 CI Run `35410113307`: SUCCESS
+- Production E2E: NOT VERIFIED
 
 ## Phase 20 — IPA Management
 
@@ -30,40 +28,42 @@
 
 ## Phase 20.7 — 生产增强
 
-### 20.7.1 批量治理与失败队列 — 已完成开发/CI
+### 20.7.1 批量治理与失败队列 — 完成
 
 - [x] 单批最多 100 条；批量计划使用 `batch_hash`，单项继续保留 `plan_hash`。
 - [x] 批量仅允许低风险方向；禁止批量移动 OpenList 文件。
 - [x] 重复 Bundle ID / 真正 IPA 缺失不自动修复。
-- [x] 基于 `ipa_operation_log` 暴露治理失败队列，不新增冗余表。
-- [x] 后台治理页增加批量选择、预览/执行和失败队列。
+- [x] 基于 `ipa_operation_log` 暴露治理失败队列。
 
-### 20.7.2 Retry / Interrupted — 已完成开发/CI
+### 20.7.2 Retry / Interrupted — 完成
 
-- [x] 长期 `running` 可按 heartbeat/updatetime 标记为 `interrupted`。
-- [x] 仅 `failed / interrupted` 允许进入恢复流程。
-- [x] retry 前重新 preview，禁止复用旧 plan。
-- [x] retry 使用独立幂等键，避免撞原 `uniq_idempotency`。
-- [x] 恢复成功后新 operation=`success`，旧 operation=`superseded` 并记录 `recovered_by`。
-- [x] 后台恢复队列提供扫描中断与重新预览后重试。
-- [x] CI Run `35409559363`: SUCCESS。
+- [x] stale `running` → `interrupted`。
+- [x] 仅 `failed / interrupted` 可恢复。
+- [x] retry 强制重新 preview，禁止复用旧 plan。
+- [x] 独立 recovery idempotency；成功后原 operation → `superseded`。
 
-### 20.7.3 Retention + Range metrics — 已完成开发/CI
+### 20.7.3 Retention + Range metrics — 完成
 
-- [x] Range metrics 直接聚合 parser task item 的实际 `range_bytes / range_requests / reused`。
-- [x] 支持 7 / 30 / 90 天窗口；单次聚合最多读取最近 5000 条并显式标记 truncated。
-- [x] 后台展示解析/复用、Range 字节、请求数和平均每请求字节数。
-- [x] Retention 默认 90 天，最小 7 天，最大 3650 天。
-- [x] Retention 固定 preview → plan_hash → apply，计划漂移拒绝执行。
-- [x] 只清理老的 success/cancelled scan task/items 与 success/superseded operation log。
-- [x] `running / failed / interrupted / queued / retrying` 明确保护，不进入清理集合。
-- [x] 单表单次最多清理 1000 条，避免一次性大事务。
-- [x] CI Run `35409913235`: SUCCESS。
+- [x] Range metrics 聚合实际 parser task `range_bytes / range_requests / reused`。
+- [x] 7 / 30 / 90 天窗口；最多聚合最近 5000 条并报告 truncated。
+- [x] Retention preview → plan_hash → apply。
+- [x] 只清理老的 `success/cancelled` scan history 与 `success/superseded` operation history。
+- [x] `running / failed / interrupted / queued / retrying` 不进入 Retention 清理集合。
+- [x] 单表单批最多 1000 条。
 
-### 20.7.4 权限与治理生产收尾 — 下一阶段
+### 20.7.4 权限与 ignore 生命周期 — 完成
 
-- [ ] ignore / ignore_until 批量管理与到期恢复视图。
-- [ ] 高风险操作权限进一步细分并做 UI 能力隐藏/禁用。
-- [ ] Retention / recovery / batch 操作补充生产审计摘要。
-- [ ] 生产 OpenList + MySQL 端到端验证。
-- [ ] 形成 Phase 20 release candidate / 发布清单。
+- [x] 批量 ignore / unignore，单批最多 100 条。
+- [x] `ignore_until` 到期 sweep 并恢复为 open。
+- [x] ignore / unignore / expiry sweep 写入 operation audit。
+- [x] 后台展示 ignored / expired 队列。
+- [x] 高风险按钮按 FastAdmin `$auth->check()` 隐藏：batch apply、retry、retention apply、ignore lifecycle。
+- [x] CI Run `35410113307`: SUCCESS。
+
+## Phase 20 RC 收口 — 下一阶段
+
+- [ ] 在受控生产/预生产环境执行 OpenList + MySQL E2E。
+- [ ] 验证 batch governance、OpenList 单条移动、retry/interrupted、ignore expiry、Range metrics、Retention preview/apply。
+- [ ] 核对权限组在真实管理员账号上的 UI/API 行为。
+- [ ] 确认 Retention 备份/恢复策略后才允许生产 apply。
+- [ ] 整理 Phase 20 release candidate、迁移 SQL、在线更新和回滚清单。
