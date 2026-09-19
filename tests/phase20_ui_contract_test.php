@@ -103,8 +103,8 @@ phase20UiAssert(strpos($controller, "throw new RuntimeException('当前没有已
 
 phase20UiAssert(strpos($sourceConfig, 'public static function testSaved()') !== false, 'OpenList test has explicit saved-config entry point');
 phase20UiAssert(strpos($sourceConfig, 'return self::testSaved();') !== false, 'legacy testInput delegates to saved configuration contract');
-phase20UiAssert(strpos($sourceConfig, "self::publicRow(\$row,true)") !== false, 'saved test decrypts persisted token before connection test');
-phase20UiAssert(strpos($sourceConfig, "\$saved=self::readConfig()") !== false, 'save verifies persisted configuration can be read back');
+phase20UiAssert(strpos($sourceConfig, "\$source=self::first(true)") !== false, 'saved test resolves and decrypts persisted configuration before connection test');
+phase20UiAssert(strpos($sourceConfig, "\$saved=self::readDatabaseConfig()") !== false, 'save verifies persisted MySQL configuration can be read back');
 phase20UiAssert(strpos($sourceConfig, 'hash_equals($token,$roundTrip)') !== false, 'save verifies persisted token encryption round trip');
 phase20UiAssert(strpos($sourceConfig, "\$out['token_error']=\$tokenError") !== false, 'public config exposes safe token decode status without exposing token');
 
@@ -119,10 +119,11 @@ phase20UiAssert(substr_count($backendJs, 'bootstrapTable') >= 10, 'IPA pages use
 phase20UiAssert(strpos($sourceConfig, "const API_BASE = '/api';") !== false, 'OpenList API prefix fixed in application code');
 phase20UiAssert(strpos($sourceConfig, "'api_base'=>self::API_BASE") !== false, 'runtime source always uses provider API prefix');
 phase20UiAssert(strpos($sourceConfig, 'isset($input[\'api_base\'])') === false, 'user input cannot override provider API prefix');
-phase20UiAssert(strpos($sourceConfig, "'token_ciphertext'=>self::sealToken") !== false, 'token is encrypted in runtime config');
-phase20UiAssert(strpos($sourceConfig, "runtimeDir().'openlist.json'") !== false, 'OpenList config is stored under runtime/ipa');
-phase20UiAssert(strpos($sourceConfig, "Db::name('ipa_source')->where") !== false, 'legacy DB config is import-only for upgrade compatibility');
-phase20UiAssert(substr_count($sourceConfig, "Db::name('ipa_source')") === 1, 'new OpenList configuration no longer writes to source table');
+phase20UiAssert(strpos($sourceConfig, "'token_ciphertext'=>self::sealToken") !== false, 'token is encrypted before durable persistence');
+phase20UiAssert(strpos($sourceConfig, "runtimeDir().'openlist.json'") !== false, 'legacy runtime OpenList config remains available for one-time migration');
+phase20UiAssert(strpos($sourceConfig, 'protected static function readDatabaseConfig()') !== false, 'OpenList configuration reads from durable MySQL storage');
+phase20UiAssert(strpos($sourceConfig, 'protected static function writeDatabaseConfig(') !== false, 'OpenList configuration writes to durable MySQL storage');
+phase20UiAssert(strpos($sourceConfig, 'self::migrateRuntimeConfig()') !== false, 'legacy runtime configuration is migration-only');
 phase20UiAssert((bool)preg_match('/protected\s+\$noNeedRight\s*=\s*\[[^\]]*source_save[^\]]*source_test[^\]]*\]/', $controller), 'save/test bypass names match underscore actions');
 phase20UiAssert(strpos($controller, "check('ipa_center/setting')") !== false, 'save/test inherit visible setting permission');
 phase20UiAssert(substr_count($controller, 'catch(\\Throwable $e)') >= 2, 'save/test catch PHP 7 Throwable failures');
