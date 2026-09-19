@@ -65,6 +65,31 @@ $payloadLength = unpack('Vlength', substr($raw, 8 + $header['rsaLength'], 4));
 assertSameValue(strlen($json), $payloadLength['length'], 'V2 payload length mismatch');
 assertSameValue(12 + $header['rsaLength'] + strlen($json), strlen($raw), 'V2 container length mismatch');
 
+$reflection = new ReflectionClass(SourceEncryptionProvider::class);
+$rc4 = $reflection->getMethod('rc4Reference');
+$rc4->setAccessible(true);
+$parts = $reflection->getMethod('encodeV2Parts');
+$parts->setAccessible(true);
+$fused = $reflection->getMethod('encodeV2EncryptedJson');
+$fused->setAccessible(true);
+$fusedKey = 'AbCdEf012345678';
+foreach ([0,1,2,5,6,7,31,32,63,64,65,127,128,129,255,256,1024,65536,1048576] as $size) {
+    $source = '';
+    $seed = '{"name":"zonoe-v2-fused","value":12345}';
+    while (strlen($source) < $size) {
+        $source .= $seed;
+    }
+    $source = substr($source, 0, $size);
+    $fixedHeader = pack('V', SourceEncryptionProvider::V2_MAGIC)
+        . pack('V', 7)
+        . 'RSADEMO'
+        . pack('V', strlen($source));
+    $referencePayload = $rc4->invoke(null, $source, $fusedKey);
+    $reference = $parts->invoke(null, [$fixedHeader, $referencePayload]);
+    $optimized = $fused->invoke(null, $fixedHeader, $source, $fusedKey);
+    assertSameValue($reference, $optimized, 'V2 fused encoder mismatch at size ' . $size);
+}
+
 $invalidBase64Rejected = false;
 try {
     SourceEncryptionProvider::encryptEncodedContent('%%%not-base64%%%', 'appstore');
