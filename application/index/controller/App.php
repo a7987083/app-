@@ -59,8 +59,9 @@ class App
         $black = $this->activeBlacklist($udid);
         if ($black) {
             $this->markBlacklistUsed($black);
+            $blacklistedPayload = AppStorePayload::blacklisted($udid, $nowtime);
             $this->emitPayload(
-                AppStorePayload::blacklisted($udid, $nowtime),
+                $blacklistedPayload,
                 $opencry,
                 $appType,
                 JSON_UNESCAPED_UNICODE,
@@ -187,8 +188,10 @@ class App
         return AppStorePayload::source($info, $udid, $nowtime, $apps);
     }
 
-    protected function emitPayload(array $payload, $opencry, $appType, $jsonFlags, $replaceMarkers)
+    protected function emitPayload(array &$payload, $opencry, $appType, $jsonFlags, $replaceMarkers)
     {
+        $appCount = isset($payload['apps']) && is_array($payload['apps']) ? count($payload['apps']) : 0;
+
         if ($opencry == '1') {
             $jsonStartedAt = microtime(true);
             $json = SourceLegacyCache::encryptedJson($payload, $jsonFlags);
@@ -196,24 +199,31 @@ class App
                 $json = json_encode($payload, $jsonFlags);
             }
             $jsonMs = (microtime(true) - $jsonStartedAt) * 1000;
+            $jsonBytes = strlen((string)$json);
+
+            // The encoded JSON is self-contained. Release the large apps array
+            // before encryption so PHP does not retain payload + JSON + cipher
+            // buffers at the same time. The caller does not reuse this payload.
+            $payload = [];
 
             $encryptStartedAt = microtime(true);
             $encryptedResult = $this->encryptedSourcePayload($json, $appType);
             $encryptMs = (microtime(true) - $encryptStartedAt) * 1000;
             $encrypted = isset($encryptedResult['payload']) ? $encryptedResult['payload'] : false;
-            $inputBytes = isset($encryptedResult['input_bytes']) ? (int)$encryptedResult['input_bytes'] : strlen((string)$json);
+            $inputBytes = isset($encryptedResult['input_bytes']) ? (int)$encryptedResult['input_bytes'] : $jsonBytes;
             $body = SourceResponse::encryptedBody($appType, $encrypted, $replaceMarkers);
 
-            $this->logSourcePerformance($payload, $appType, true, $jsonMs, $encryptMs, strlen((string)$json), $inputBytes, strlen((string)$body));
+            $this->logSourcePerformance($appCount, $appType, true, $jsonMs, $encryptMs, $jsonBytes, $inputBytes, strlen((string)$body));
             SourceResponse::send($body);
         }
 
         $body = SourceResponse::plainBody($payload, $jsonFlags, $replaceMarkers);
-        $this->logSourcePerformance($payload, $appType, false, 0, 0, 0, 0, strlen((string)$body));
+        $payload = [];
+        $this->logSourcePerformance($appCount, $appType, false, 0, 0, 0, 0, strlen((string)$body));
         SourceResponse::send($body);
     }
 
-    protected function logSourcePerformance(array $payload, $appType, $encrypted, $jsonMs, $encryptMs, $jsonBytes, $inputBytes, $responseBytes)
+    protected function logSourcePerformance($appCount, $appType, $encrypted, $jsonMs, $encryptMs, $jsonBytes, $inputBytes, $responseBytes)
     {
         $totalMs = $this->requestStartedAt > 0 ? (microtime(true) - $this->requestStartedAt) * 1000 : 0;
         SourcePerformance::log([
@@ -223,7 +233,7 @@ class App
             'legacy_key_source' => $appType === 'appstore' && $encrypted ? SourceEncryptionProvider::lastLegacyKeySource() : 'n/a',
             'app_rows_source' => SourceAppRepository::lastSource(),
             'legacy_cache' => SourceLegacyCache::status(),
-            'app_count' => isset($payload['apps']) && is_array($payload['apps']) ? count($payload['apps']) : 0,
+            'app_count' => (int)$appCount,
             'source_build_ms' => round($this->sourceBuildMs, 2),
             'json_ms' => round((float)$jsonMs, 2),
             'encryption_ms' => round((float)$encryptMs, 2),
