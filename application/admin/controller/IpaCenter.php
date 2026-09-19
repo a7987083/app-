@@ -15,7 +15,7 @@ use RuntimeException;
 
 class IpaCenter extends Backend
 {
-    protected $noNeedRight=['sourcesave','sourcetest'];
+    protected $noNeedRight=['source_save','source_test'];
     protected $layout='default';
 
     public function index(){return $this->view->fetch();}
@@ -57,7 +57,7 @@ class IpaCenter extends Backend
         $this->assertSettingRight();
         if(!$this->request->isPost())$this->error('Method not allowed');
         try{$id=IpaSourceConfig::save($this->request->post(),(int)$this->auth->id);$this->success('IPA 网络源已保存',null,['id'=>$id,'token_configured'=>true]);}
-        catch(\Exception $e){$this->error($e->getMessage());}
+        catch(\Throwable $e){$this->error($e->getMessage());}
     }
 
     public function sourceTest(){
@@ -68,6 +68,6 @@ class IpaCenter extends Backend
             $health=IpaSourceConfig::clientFromRow($source)->health($source['scan_path']);
             IpaSourceConfig::updateState(['last_health'=>'ok','last_checked_at'=>time()]);
             $this->success('OpenList 连接正常',null,$health);
-        }catch(\Exception $e){IpaSourceConfig::updateState(['last_health'=>'failed','last_checked_at'=>time()]);$this->error($e->getMessage());}
+        }catch(\Throwable $e){IpaSourceConfig::updateState(['last_health'=>'failed','last_checked_at'=>time()]);$this->error($e->getMessage());}
     }
 }
