@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - 'application/admin/controller/IpaCenter.php'
+      - 'application/admin/controller/IpaRecovery.php'
       - 'application/admin/command/IpaScan.php'
       - 'application/admin/command/IpaParse.php'
       - 'application/command.php'
@@ -15,6 +16,7 @@ on:
       - 'application/common/library/Ipa*.php'
       - 'scripts/ipa-range-info.py'
       - 'public/assets/js/backend/ipa_center.js'
+      - 'public/assets/js/backend/ipa_governance_production.js'
       - 'tests/phase20_*'
       - 'tests/phase207_*'
       - '.github/workflows/phase20-ipa-management.yml'
@@ -29,6 +31,7 @@ jobs:
       - name: PHP syntax
         run: |
           php -l application/admin/controller/IpaCenter.php
+          php -l application/admin/controller/IpaRecovery.php
           php -l application/admin/command/IpaScan.php
           php -l application/admin/command/IpaParse.php
           php -l application/common/library/IpaFoundation.php
@@ -45,6 +48,7 @@ jobs:
           php -l application/common/library/IpaWritebackTemplate.php
           php -l application/common/library/IpaGovernanceService.php
           php -l application/common/library/IpaGovernanceBatchService.php
+          php -l application/common/library/IpaGovernanceRecoveryService.php
           php -l tests/phase20_foundation_contract_test.php
           php -l tests/phase20_ui_contract_test.php
           php -l tests/phase20_scan_planner_test.php
