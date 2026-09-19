@@ -36,13 +36,12 @@
 - 不修改原 `ZONOE Source Release` workflow 语义。
 - 在线更新包继续由 `release/online-update-files.txt` + `tools/build_online_update.php` 生成。
 - 本次修改文件均已在现有在线更新 manifest 范围内。
-- `UpdateIntegrity::files()` 监控文件未变化，`file_sign` 继续为 `f3f6e072f814d06403ce5e393967c9e2`。
+- `application/common/behavior/Common.php` 属于 `UpdateIntegrity::files()` 监控文件，因此本版本完整性签名已重新计算为 `8be29c04c34ba1d1cc7ec77d392b2bee`。
 
 ### 已验证候选
 
-在版本元数据更新前，审计修复 HEAD 已通过：
-
-- Regression Checks Run #240：通过。
-- Phase14 Production Hardening Run #94：通过。
-- Phase 20 IPA Management Run #111：contract / integration / package / MySQL 5.7 全部通过；MySQL 首次 job 因容器启动竞态 `ERROR 2013` 失败，单独重跑后完整 migration ×2 与 auth-rule 验证通过。
-- 正式发布前将以 2026091905 最终 HEAD 再跑候选 CI，并在 `ZONOE Source Release` 中验证 `source-v2026091904 -> source-v2026091905` 在线升级。
+- Regression Checks Run #245：通过。
+- Phase14 Production Hardening Run #99：通过。
+- Phase 20 IPA Management Run #116：contract / integration / package / MySQL 5.7 全部通过。
+- 正式 Release 首次尝试由完整性门禁正确拦截旧 `file_sign`；已按 `UpdateIntegrity::signFromRoot()` 实际结果更新为 `8be29c04c34ba1d1cc7ec77d392b2bee`，重新进入正式发布链。
+- 正式发布完成后仍需验证 `source-v2026091904 -> source-v2026091905` 在线更新 E2E。
