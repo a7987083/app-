@@ -57,14 +57,14 @@ $lastPosition = -1;
 foreach ($orderedSql as $target => $source) {
     phase20RcAssert(is_file($root . '/' . $source), 'canonical SQL exists ' . $source);
     phase20RcAssert(strpos($manifest, $source) !== false, 'manifest contains SQL source ' . $source);
-    $needle = "'" . $target . "' => $root . '/" . $source . "'";
+    $needle = "'" . $target . "' => \$root . '/" . $source . "'";
     $position = strpos($builder, $needle);
     phase20RcAssert($position !== false, 'builder packages ordered SQL ' . $target);
     phase20RcAssert($position > $lastPosition, 'builder SQL order preserved at ' . $target);
     $lastPosition = $position;
 }
 
-phase20RcAssert(strpos($builder, "'mysql/' . $targetName") !== false, 'builder writes Phase 20 migrations to mysql payload');
+phase20RcAssert(strpos($builder, "'mysql/' . \$targetName") !== false, 'builder writes Phase 20 migrations to mysql payload');
 phase20RcAssert(strpos($checklist, 'Production E2E') !== false || strpos($checklist, 'Pre-production E2E') !== false, 'checklist contains E2E gate');
 phase20RcAssert(strpos($checklist, 'Rollback') !== false, 'checklist contains rollback gate');
 phase20RcAssert(strpos($checklist, 'Do not change `VERSION`') !== false, 'checklist protects formal version metadata before RC selection');
