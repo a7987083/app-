@@ -6,6 +6,40 @@ define(['jquery','bootstrap','backend','table','form'],function($,undefined,Back
     var refresh=function(table){table.bootstrapTable('refresh',{silent:true});};
     var fmtBytes=function(bytes,unit){bytes=parseInt(bytes||0,10);unit=unit||'MB';var div=unit==='KB'?1024:1024*1024;return (bytes/div).toFixed(2)+' '+unit;};
     var cap=function(name){return parseInt($('#ipa-phase207-capabilities').data(name),10)===1;};
+
+    // Keep all Phase 20 AJAX on ThinkPHP's native query route instead of
+    // depending on Nginx PATH_INFO support. This matches the original
+    // FastAdmin/ThinkPHP front-controller contract and leaves business
+    // controllers/services unchanged.
+    var ipaRoutePrefixes=['ipa_center/','ipa_lifecycle/','ipa_recovery/','ipa_production/'];
+    var extractIpaRoute=function(url){
+        var value=String(url||'');
+        try{
+            if(/^https?:\/\//i.test(value)){
+                var a=document.createElement('a');
+                a.href=value;
+                value=a.pathname+(a.search||'');
+            }
+        }catch(e){}
+        var clean=value.split('?')[0].replace(/^\/+/,'');
+        var module=String(Config.moduleurl||'').split('?')[0].replace(/^\/+/,'');
+        if(module&&clean.indexOf(module+'/')===0)clean=clean.substr(module.length+1);
+        for(var i=0;i<ipaRoutePrefixes.length;i++){
+            var pos=clean.indexOf(ipaRoutePrefixes[i]);
+            if(pos>=0)return clean.substr(pos);
+        }
+        return '';
+    };
+    var thinkRoute=function(route){
+        var base=String(Config.moduleurl||'');
+        var sep=base.indexOf('?')>=0?'&':'?';
+        return base+sep+'s=/'+String(route||'').replace(/^\/+/,'');
+    };
+    $.ajaxPrefilter(function(options){
+        var route=extractIpaRoute(options.url);
+        if(route)options.url=thinkRoute(route);
+    });
+
     var initTable=function(table,options){Table.api.init({extend:{table:options.tableName||'ipa'}});table.bootstrapTable($.extend({pagination:true,sidePagination:'server',search:false,showRefresh:false,showToggle:false,showColumns:true,pk:'id',sortName:'id',sortOrder:'desc'},options));Table.api.bindevent(table);return table;};
     var Controller={
         index:function(){

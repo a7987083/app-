@@ -1,22 +1,21 @@
-ZONOE 软件源 Release 2026091908
-版本：2026091908
-基线：2026091907
-阶段：IPA OpenList Saved-Config Hotfix
+ZONOE 软件源 Release 2026091909
+版本：2026091909
+基线：2026091908
+阶段：IPA FastAdmin Native Route Recovery
 发布分支：release/2026091905-phase20-setting-hotfix
 发布状态：准备触发正式 Release Workflow
 
 更新内容：
-1. IPA 设置页恢复成熟 OpenList 行为：先保存配置，再测试已经持久化并成功解密的配置。
-2. IpaSourceConfig 增加 testSaved()，兼容 testInput() 统一转入已保存配置测试。
-3. 保存后执行 runtime 配置读回与 Token 加密/解密 round-trip 校验；Token 留空保留旧值，首次配置仍必须填写 Token。
-4. 页面安全展示 Token 解密失败原因，不回显 Token 明文。
-5. 测试连接不再提交当前未保存表单，避免浏览器自动填充状态与服务器持久化状态混淆。
-6. OpenList /api/fs/list、Authorization 原始 Token、/a/app 内部路径等协议保持不变。
-7. 不修改 appstore/appstore_v2 协议、授权、缓存隔离、Phase 20 schema 与原 ZONOE Source Release workflow 语义。
+1. IPA 管理中心 AJAX 全面回归原项目 FastAdmin / ThinkPHP 前端控制器模式，不再要求 Nginx 支持 PHP PATH_INFO。
+2. ipa_center、ipa_lifecycle、ipa_recovery、ipa_production 请求统一经 Config.moduleurl 转成 ?s=/controller/action。
+3. 保留 Form.api.bindevent、BootstrapTable、Controller action 以及现有 OpenList/Range Parser/治理业务服务。
+4. 不修改 Nginx、PHP-FPM、BaoTa 全局配置，也不影响授权中心等既有后台功能。
+5. OpenList 保存、Token 加密、testSaved、/api/fs/list 与 /api/fs/get 协议保持不变。
+6. PHP 7.0、MySQL 5.7、Phase 20 E2E、/appstore load 与在线更新 E2E 继续作为正式门禁。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091908。
+- 目标 GitHub Release 标签：source-v2026091909。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091908。
-- file_sign 暂保持 8be29c04c34ba1d1cc7ec77d392b2bee；正式 Release workflow 会重新计算并严格校验。
-- 发布完成后需从 2026091907 -> 2026091908 执行真实在线更新 E2E。
+- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091909。
+- file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee。
+- 发布完成后需从 2026091908 -> 2026091909 执行真实在线更新 E2E。

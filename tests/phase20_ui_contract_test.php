@@ -44,7 +44,7 @@ $scanService = file_get_contents($root . '/application/common/library/IpaScanSer
 $parserService = file_get_contents($root . '/application/common/library/IpaParserService.php');
 $version = trim(file_get_contents($root . '/VERSION'));
 
-phase20UiAssert($version === '2026091908', 'phase20 OpenList saved-config hotfix targets the 2026091908 candidate');
+phase20UiAssert($version === '2026091909', 'phase20 FastAdmin native-route recovery targets the 2026091909 candidate');
 phase20UiAssert(strpos($setting, 'OpenList 令牌') !== false, 'settings use provider token terminology');
 phase20UiAssert(strpos($setting, 'OpenList 设置 → 其他 → 令牌') !== false, 'settings show provider token location');
 phase20UiAssert(strpos($setting, 'name="api_base"') === false, 'API prefix is not user-configurable');
@@ -53,7 +53,7 @@ phase20UiAssert(strpos($setting, 'autocomplete="new-password"') !== false, 'toke
 phase20UiAssert(strpos($setting, 'data-lpignore="true"') !== false, 'token input discourages password-manager autofill');
 phase20UiAssert(strpos($setting, 'role="form"') !== false, 'settings use FastAdmin form role');
 phase20UiAssert(strpos($setting, 'data-toggle="validator"') !== false, 'settings use FastAdmin validator');
-phase20UiAssert(strpos($setting, "action=\"{:url('ipa_center/source_save')}\"") !== false, 'settings submit to source_save through FastAdmin form');
+phase20UiAssert(strpos($setting, "action=\"{:url('ipa_center/source_save')}\"") !== false, 'settings keep framework-generated source_save form action');
 phase20UiAssert(strpos($setting, '{:token()}') !== false, 'settings include CSRF token');
 phase20UiAssert(strpos($setting, 'type="submit"') !== false, 'settings use native submit button');
 phase20UiAssert(strpos($setting, 'btn-ipa-source-save') === false, 'legacy custom save button removed');
@@ -63,6 +63,10 @@ phase20UiAssert(strpos($setting, '请先点击“确定”保存') !== false, 's
 phase20UiAssert(strpos($setting, '直接使用当前表单内容') === false, 'settings no longer advertise unsaved-input connection testing');
 phase20UiAssert(strpos($setting, '已保存令牌读取失败') !== false, 'settings surface persisted token decode failures');
 phase20UiAssert(strpos($backendJs, 'Form.api.bindevent') !== false, 'FastAdmin Form lifecycle is bound');
+phase20UiAssert(strpos($backendJs, '$.ajaxPrefilter') !== false, 'IPA module normalizes AJAX routes before FastAdmin dispatch');
+phase20UiAssert(strpos($backendJs, "['ipa_center/','ipa_lifecycle/','ipa_recovery/','ipa_production/']") !== false, 'all IPA controller families share one native route adapter');
+phase20UiAssert(strpos($backendJs, "'s=/'") !== false, 'IPA AJAX uses ThinkPHP native query route instead of requiring Nginx PATH_INFO');
+phase20UiAssert(strpos($backendJs, 'Config.moduleurl') !== false, 'IPA route adapter stays bound to the active FastAdmin admin entry');
 
 phase20UiAssert(strpos($sourceConfig, 'public static function testSaved()') !== false, 'OpenList test has explicit saved-config entry point');
 phase20UiAssert(strpos($sourceConfig, 'return self::testSaved();') !== false, 'legacy testInput delegates to saved configuration contract');
