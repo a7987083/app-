@@ -12,10 +12,12 @@ $root = dirname(__DIR__);
 $manifest = file_get_contents($root . '/release/online-update-files.txt');
 $builder = file_get_contents($root . '/tools/build_online_update.php');
 $checklist = file_get_contents($root . '/release/PHASE20_RC_CHECKLIST.md');
+$releaseWorkflow = file_get_contents($root . '/.github/workflows/phase13_github_release.yml');
 
 phase20RcAssert($manifest !== false, 'online update manifest readable');
 phase20RcAssert($builder !== false, 'online update builder readable');
 phase20RcAssert($checklist !== false, 'RC checklist readable');
+phase20RcAssert($releaseWorkflow !== false, 'historical source release workflow readable');
 
 $requiredProgramFiles = [
     'application/admin/controller/IpaCenter.php',
@@ -62,10 +64,20 @@ foreach ($orderedSql as $target => $source) {
     phase20RcAssert($position !== false, 'builder packages ordered SQL ' . $target);
     phase20RcAssert($position > $lastPosition, 'builder SQL order preserved at ' . $target);
     $lastPosition = $position;
+    phase20RcAssert(strpos($releaseWorkflow, "mysql/" . $target) !== false, 'formal release verifies packaged SQL ' . $target);
 }
 
 phase20RcAssert(strpos($builder, "'mysql/' . \$targetName") !== false, 'builder writes Phase 20 migrations to mysql payload');
 phase20RcAssert(strpos($builder, 'PHASE20_EXTERNAL_ACCEPTANCE') === false, 'builder keeps historical manifest-driven release flow');
+phase20RcAssert(strpos($releaseWorkflow, 'name: ZONOE Source Release') !== false, 'Phase 20 stays on historical ZONOE Source Release workflow');
+phase20RcAssert(strpos($releaseWorkflow, 'contents: write') !== false, 'historical release permission remains unchanged');
+phase20RcAssert(strpos($releaseWorkflow, 'phase20-integration:') !== false, 'formal release includes Phase 20 integration gate');
+phase20RcAssert(strpos($releaseWorkflow, 'needs: [php70-regression, mysql57-migration, phase19-3-1-http-load, phase20-integration]') !== false, 'package waits for existing gates plus Phase 20 integration');
+phase20RcAssert(strpos($releaseWorkflow, 'php tests/phase20_governance_contract_test.php') !== false, 'formal PHP 7.0 regression runs Phase 20 governance contract');
+phase20RcAssert(strpos($releaseWorkflow, 'python3 scripts/ipa-range-info.py --self-test') !== false, 'formal regression runs IPA parser self-test');
+phase20RcAssert(strpos($releaseWorkflow, 'phase20_ipa_lifecycle.sql') !== false, 'formal MySQL 5.7 gate runs Phase 20 lifecycle migration');
+phase20RcAssert(strpos($releaseWorkflow, 'program/application/admin/controller/IpaCenter.php') !== false, 'formal package gate verifies Phase 20 program payload');
+phase20RcAssert(strpos($releaseWorkflow, 'PHASE20_EXTERNAL_ACCEPTANCE') === false, 'formal release has no extra acceptance-file gate');
 phase20RcAssert(strpos($checklist, 'Rollback') !== false || strpos($checklist, 'rollback') !== false, 'checklist contains rollback validation');
 
 echo "OK phase20_rc_release_contract_test\n";
