@@ -9,11 +9,7 @@
             <button type="button" class="btn btn-default btn-ipa-task-refresh"><i class="fa fa-repeat"></i> 刷新状态</button>
         </div>
         <div class="alert alert-info" style="margin-top:15px">阶段：queued → list_remote → compare_metadata → discovery_complete。新增/变化 IPA 只进入 parser_pending 队列，完整解析由 Parser worker 执行。</div>
-        <table id="table" class="table table-striped table-bordered table-hover"
-               data-operate-edit="0"
-               data-operate-del="0"
-               width="100%">
-        </table>
+        <table id="ipa-task-table" class="table table-striped table-bordered table-hover" data-operate-edit="0" data-operate-del="0" width="100%"></table>
         <p class="text-muted" style="margin-top:15px">服务器建议每分钟执行一次：<code>php think ipa:scan --schedule</code>。手动按钮会优先尝试后台启动 CLI；禁用 exec 时任务保持 queued，由 CLI worker 接手。</p>
     </div>
 </div>
