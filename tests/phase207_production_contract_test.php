@@ -16,12 +16,16 @@ phase207Assert(IpaGovernanceBatchService::defaultModeForIssue(['issue_type'=>'du
 $controller=file_get_contents(dirname(__DIR__).'/application/admin/controller/IpaCenter.php');
 foreach(['governanceBatchPreview','governanceBatchApply','governanceFailures'] as $action)phase207Assert(strpos($controller,'function '.$action.'(')!==false,'controller action '.$action);
 $service=file_get_contents(dirname(__DIR__).'/application/common/library/IpaGovernanceBatchService.php');
-foreach(['批量治理计划已变化，请重新预览','MAX_BATCH','failedOperations','governance_%','IpaGovernanceService::apply'] as $needle)phase207Assert(strpos($service,$needle)!==false,'production governance '.$needle);
+foreach(['批量治理计划已变化，请重新预览','MAX_BATCH','failedOperations','interrupted','IpaGovernanceService::apply'] as $needle)phase207Assert(strpos($service,$needle)!==false,'production governance '.$needle);
+$recovery=file_get_contents(dirname(__DIR__).'/application/common/library/IpaGovernanceRecoveryService.php');
+foreach(['markInterrupted','DEFAULT_STALE_SECONDS','governance_retry','superseded','Never replay the stale plan','只有 failed / interrupted 操作允许重试'] as $needle)phase207Assert(strpos($recovery,$needle)!==false,'recovery safety '.$needle);
+$recoveryController=file_get_contents(dirname(__DIR__).'/application/admin/controller/IpaRecovery.php');
+foreach(['scanInterrupted','retry','stale_seconds','operation_id'] as $needle)phase207Assert(strpos($recoveryController,$needle)!==false,'recovery controller '.$needle);
 $sql=file_get_contents(dirname(__DIR__).'/application/admin/command/Install/phase20_ipa_governance.sql');
-foreach(['governance_batch_preview','governance_batch_apply','governance_failures'] as $rule)phase207Assert(strpos($sql,$rule)!==false,'phase20.7 auth '.$rule);
+foreach(['governance_batch_preview','governance_batch_apply','governance_failures','ipa_recovery/scan_interrupted','ipa_recovery/retry'] as $rule)phase207Assert(strpos($sql,$rule)!==false,'phase20.7 auth '.$rule);
 $view=file_get_contents(dirname(__DIR__).'/application/admin/view/ipa_center/governance.html');
-foreach(['批量预览并修复','治理失败队列','ipa-gov-select-all','ipa_governance_production.js'] as $needle)phase207Assert(strpos($view,$needle)!==false,'phase20.7 governance UI '.$needle);
+foreach(['批量预览并修复','治理恢复队列','ipa-gov-select-all','ipa_governance_production.js','扫描 5 分钟无更新的 running'] as $needle)phase207Assert(strpos($view,$needle)!==false,'phase20.7 governance UI '.$needle);
 $js=file_get_contents(dirname(__DIR__).'/public/assets/js/backend/ipa_governance_production.js');
-foreach(['governance_batch_preview','governance_batch_apply','governance_failures','MutationObserver'] as $needle)phase207Assert(strpos($js,$needle)!==false,'phase20.7 governance JS '.$needle);
+foreach(['governance_batch_preview','governance_batch_apply','governance_failures','MutationObserver','ipa_recovery/scan_interrupted','ipa_recovery/retry'] as $needle)phase207Assert(strpos($js,$needle)!==false,'phase20.7 governance JS '.$needle);
 
 echo "OK phase207_production_contract_test\n";
