@@ -1,24 +1,21 @@
-ZONOE 软件源 Release 2026091901
-版本：2026091901
-基线：2026091809
-阶段：Phase 20 — IPA Management Center
-发布分支：release/2026091901-phase20-ipa-management
+ZONOE 软件源 Release 2026091902
+版本：2026091902
+基线：2026091901
+阶段：Phase 20 — OpenList Settings Hotfix
+发布分支：release/2026091902-phase20-openlist-settings-hotfix
 
 更新内容：
-1. 发布 Phase 20 IPA 管理中心，覆盖 UI、任务、元数据、绑定、写回、数据治理和设置。
-2. 新增 OpenList 增量扫描、目录缓存、远程文件身份识别和 checkpointable scan task。
-3. 新增 HTTP Range IPA Parser，解析 Info.plist、图标、Mach-O 架构、Framework/dylib/appex、Swift 与 embedded.mobileprovision。
-4. 新增 IPA 与分类一对一持久绑定，自动绑定只使用确定性条件。
-5. 新增全局写回模板和受控 keywords metadata block。
-6. 新增治理 preview/apply/verify、plan_hash stale check、OpenList 安全 rename/move、写回与审计。
-7. 新增批量治理、失败队列、failed/interrupted recovery、ignore/ignore_until、Range metrics 和 Retention。
-8. 新增独立高风险 FastAdmin 权限节点和操作审计。
-9. 新增 9 组 Phase 20 MySQL migration，已在 MySQL 5.7 中重复执行两遍通过。
-10. Phase 20 程序文件与 migration 已接入历史在线更新 manifest / builder / ZONOE Source Release 流程。
-11. OpenList HTTP 集成、updater 自动 rollback、旧 rollback 回归、ZIP/SHA256/有序 migration 门禁已通过。
+1. OpenList 设置页统一使用官方“令牌”术语，并明确令牌来源为「设置 → 其他 → 令牌」。
+2. OpenList API 前缀固定为 /api，不再将 API Base 暴露为管理员可编辑配置。
+3. OpenList 地址、IPA 根目录、公开下载地址前缀重新按真实语义拆分，保留旧数据库字段兼容。
+4. 新增“保存并测试”，确保测试的是当前页面配置而不是旧数据库配置。
+5. OpenList 令牌输入框避免通用 password 字段名和密码管理器误填，已保存令牌仍不回显明文。
+6. 保存/测试遇到 HTTP 或运行时错误时显示真实 JSON msg / responseText / HTTP 状态，不再只显示通用 error。
+7. 不改扫描、Range Parser、绑定、治理、Retention 和历史在线更新架构。
+8. Phase 20 contract、OpenList HTTP E2E、MySQL 5.7、rollback、package gate 已通过。
 
 在线更新：
-- GitHub Release 标签：source-v2026091901。
+- GitHub Release 标签：source-v2026091902。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
 - file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity 监控的 4 个关键文件。
-- 发布前门禁：Phase 20 专项 CI、正式 PHP 7.0 全回归、MySQL 5.7、Phase 19 HTTP load、Phase 20 HTTP/rollback integration、更新包完整性、1809 -> 1901 在线更新 E2E。
+- 发布前门禁：Phase 20 专项 CI、正式 PHP 7.0 全回归、MySQL 5.7、Phase 19 HTTP load、Phase 20 HTTP/rollback integration、更新包完整性、1901 -> 1902 在线更新 E2E。
