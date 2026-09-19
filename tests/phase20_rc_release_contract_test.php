@@ -12,10 +12,12 @@ $root = dirname(__DIR__);
 $manifest = file_get_contents($root . '/release/online-update-files.txt');
 $builder = file_get_contents($root . '/tools/build_online_update.php');
 $checklist = file_get_contents($root . '/release/PHASE20_RC_CHECKLIST.md');
+$acceptanceExample = file_get_contents($root . '/release/PHASE20_EXTERNAL_ACCEPTANCE.example.json');
 
 phase20RcAssert($manifest !== false, 'online update manifest readable');
 phase20RcAssert($builder !== false, 'online update builder readable');
 phase20RcAssert($checklist !== false, 'RC checklist readable');
+phase20RcAssert($acceptanceExample !== false, 'external acceptance example readable');
 
 $requiredProgramFiles = [
     'application/admin/controller/IpaCenter.php',
@@ -65,6 +67,17 @@ foreach ($orderedSql as $target => $source) {
 }
 
 phase20RcAssert(strpos($builder, "'mysql/' . \$targetName") !== false, 'builder writes Phase 20 migrations to mysql payload');
+phase20RcAssert(strpos($builder, "GITHUB_WORKFLOW') !== 'ZONOE Source Release'") !== false, 'formal release guard scoped to release workflow');
+phase20RcAssert(strpos($builder, 'PHASE20_EXTERNAL_ACCEPTANCE.json') !== false, 'formal release requires external acceptance record');
+phase20RcAssert(strpos($builder, "\$status !== 'passed'") !== false, 'formal release requires passed external acceptance');
+phase20RcAssert(strpos($builder, 'readiness_run') !== false && strpos($builder, 'acceptance_commit') !== false, 'formal release acceptance carries readiness evidence');
+
+$example = json_decode($acceptanceExample, true);
+phase20RcAssert(is_array($example), 'external acceptance example valid JSON');
+foreach (['status','environment','verified_at','acceptance_commit','readiness_run','operator','evidence'] as $field) {
+    phase20RcAssert(array_key_exists($field, $example), 'external acceptance example field ' . $field);
+}
+
 $hasExternalAcceptance = strpos($checklist, 'External pre-production acceptance') !== false ||
     strpos($checklist, 'Pre-production E2E') !== false ||
     strpos($checklist, 'Production E2E') !== false;
