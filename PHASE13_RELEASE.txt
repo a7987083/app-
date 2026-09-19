@@ -1,24 +1,21 @@
-ZONOE 软件源 Release 2026091904
-版本：2026091904
-基线：2026091903
-阶段：Phase 20 — Storage Slimming + OpenList Settings Save Hotfix
-发布分支：release/2026091904-phase20-storage-slim-hotfix
+ZONOE 软件源 Release 2026091905
+版本：2026091905
+基线：2026091904
+阶段：Phase 20 — OpenList Settings Permission + Ajax Cache Hotfix
+发布分支：release/2026091905-phase20-setting-hotfix
 发布状态：触发正式 Release Workflow
 
 更新内容：
-1. 修复 IPA 网络源设置页保存/测试请求在升级环境中可能被新增隐藏权限节点拦截的问题；保存/测试现在继承可见的 ipa_center/setting 权限。
-2. 修复 FastAdmin HTTP 4xx/5xx 仅显示 `error` 的问题；优先展示后端 JSON msg / responseText，便于直接定位真实故障。
-3. OpenList 配置和令牌停止写入 fa_ipa_source；改为原子写入 runtime/ipa/openlist.json，Token 使用安装本地独立密钥保护。
-4. 升级兼容：首次读取新配置时可从旧 fa_ipa_source 一次性导入；旧表暂不破坏性删除，避免在线升级丢配置。
-5. 扫描、解析和定时任务改为直接读取 runtime OpenList 配置，不再依赖 fa_ipa_source 作为运行时来源。
-6. fa_ipa_metadata 保留轻量、可索引字段；raw_metadata_json / normalized_metadata_json / confidence_json 新解析不再持续写入 MySQL，大块解析详情迁到 runtime/ipa/metadata-detail/。
-7. 旧 metadata JSON 采用每次扫描最多 50 条的渐进式压缩迁移，避免一次升级长事务/大 I/O。
-8. fa_ipa_scan_task_item 保留为解析/恢复所需的短生命周期队列；success 行按 90 天窗口清理，与 Range metrics 最大窗口一致，避免长期无限增长。
-9. 保留 fa_ipa_binding / fa_ipa_scan_task / fa_ipa_governance_issue / fa_ipa_operation_log 等长期查询、业务关系、治理状态与审计数据；本版本不做破坏性 DROP TABLE。
-10. 不修改既有 ZONOE Source Release 发布语义；正式发布仍由现有 workflow 生成更新包并执行上一稳定版 -> 2026091904 在线更新 E2E。
+1. 修复 source_save/source_test 权限继承实际未生效的问题：noNeedRight 改为真实 action 名 source_save/source_test。
+2. 保存/测试仍显式要求 ipa_center/setting 权限，不扩大高风险治理或写回权限。
+3. 修复 FastAdmin 核心 JS 缓存版本只跟踪 backend/*.js 的缺陷；fast.js、require-backend.js、backend.js、backend-init.js 现在参与动态 asset version。
+4. 解决 2026091904 已更新 fast.js 但浏览器仍可能执行 2026091903 缓存脚本、继续只显示 error 的问题。
+5. sourceSave/sourceTest 改为捕获 PHP 7 Throwable，覆盖 Exception、Error、TypeError 等运行时失败。
+6. 保留 2026091904 的 OpenList runtime 配置与数据库瘦身架构，不回退到 fa_ipa_source 写入。
+7. 不修改既有 ZONOE Source Release 发布语义；正式发布仍由原 workflow 生成更新包并执行上一稳定版 -> 2026091905 在线更新 E2E。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091904。
+- 目标 GitHub Release 标签：source-v2026091905。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
 - file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity::files() 监控的关键文件。
-- 最终候选验证：Phase 20 IPA Management #110、Regression Checks #239、Phase14 Production Hardening #93、Phase 17.2 Authorization Integrity #24 已通过。
+- 最终候选验证：Phase 20 IPA Management #116、Regression Checks #245、Phase14 Production Hardening #99 已通过。
