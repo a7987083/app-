@@ -2,8 +2,6 @@
 
 namespace app\common\library;
 
-use RuntimeException;
-
 class IpaReferenceDiscoveryService
 {
     public static function collect(array $openListSource)
@@ -30,14 +28,10 @@ class IpaReferenceDiscoveryService
         $base=parse_url((string)$config['base_url']);$url=parse_url($rawUrl);
         if(!$base||!$url||empty($base['host'])||empty($url['host'])||strcasecmp($base['host'],$url['host'])!==0)return null;
         $path=isset($url['path'])?rawurldecode($url['path']):'';if($path==='')return null;
-        $template=isset($config['public_url_template'])?trim((string)$config['public_url_template']):'';
-        $prefixPath='';
-        if($template!==''){
-            $template=str_replace('{path}','',$template);$parsed=parse_url($template);$prefixPath=$parsed&&isset($parsed['path'])?rawurldecode($parsed['path']):$template;$prefixPath=rtrim(IpaRemoteFile::normalizePath($prefixPath),'/');
-        }
+        $template=isset($config['public_url_template'])?trim((string)$config['public_url_template']):'';$prefixPath='';
+        if($template!==''){$template=str_replace('{path}','',$template);$parsed=parse_url($template);$prefixPath=$parsed&&isset($parsed['path'])?rawurldecode($parsed['path']):$template;$prefixPath=rtrim(IpaRemoteFile::normalizePath($prefixPath),'/');}
         if($prefixPath!==''&&$prefixPath!=='/'&&strpos($path,$prefixPath.'/')===0)$path=substr($path,strlen($prefixPath));
-        $path=IpaRemoteFile::normalizePath($path);
-        $root=isset($config['scan_path'])?IpaRemoteFile::normalizePath($config['scan_path']):'/';
+        $path=IpaRemoteFile::normalizePath($path);$root=isset($config['scan_path'])?IpaRemoteFile::normalizePath($config['scan_path']):'/';
         if($root!=='/'&&$path!==$root&&strpos($path,$root.'/')!==0)return null;
         return IpaRemoteFile::isIpaName(basename($path))?$path:null;
     }
@@ -52,9 +46,15 @@ class IpaReferenceDiscoveryService
             $cached=$forceRefresh?null:IpaDirectoryCache::load($scope,$dir,$ttl);
             if($cached){$rows=$cached['files'];$hits++;}
             else{
-                $listed=$client->listDirectory($dir,1,1000,false);$rows=[];
-                foreach((array)$listed['content'] as $entry){if(!is_array($entry)||!empty($entry['is_dir'])||empty($entry['name'])||!IpaRemoteFile::isIpaName($entry['name']))continue;$rows[]=IpaRemoteFile::fromOpenListEntry('openlist',$dir,$entry,$source['public_url_template']);}
-                IpaDirectoryCache::save($scope,$dir,$rows,isset($listed['total'])?$listed['total']:count($rows));$refreshes++;
+                $rows=[];$page=1;$perPage=1000;$total=0;
+                do{
+                    // force refresh only bypasses our cache; OpenList refresh
+                    // stays false exactly like the mature implementation.
+                    $listed=$client->listDirectory($dir,$page,$perPage,false);$entries=(array)$listed['content'];$total=(int)$listed['total'];
+                    foreach($entries as $entry){if(!is_array($entry)||!empty($entry['is_dir'])||empty($entry['name'])||!IpaRemoteFile::isIpaName($entry['name']))continue;$rows[]=IpaRemoteFile::fromOpenListEntry('openlist',$dir,$entry,$source['public_url_template']);}
+                    $page++;$more=$total>0?(($page-1)*$perPage<$total):(count($entries)>=$perPage);
+                }while($more);
+                IpaDirectoryCache::save($scope,$dir,$rows,$total);$refreshes++;
             }
             foreach((array)$rows as $row){if(isset($wanted[$row['remote_path']]))$files[$row['remote_path']]=$row;}
         }
