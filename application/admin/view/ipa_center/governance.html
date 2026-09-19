@@ -40,6 +40,40 @@
                 <tbody><tr><td colspan="9" class="text-center text-muted">正在加载恢复队列</td></tr></tbody>
             </table>
         </div>
+
+        <hr>
+        <div class="clearfix" style="margin-bottom:10px">
+            <h4 class="pull-left" style="margin:6px 0">Phase 20.7.3 生产指标与 Retention</h4>
+            <div class="pull-right">
+                <select id="ipa-range-window" class="form-control input-sm" style="display:inline-block;width:auto">
+                    <option value="7">最近 7 天</option>
+                    <option value="30">最近 30 天</option>
+                    <option value="90">最近 90 天</option>
+                </select>
+                <button type="button" class="btn btn-default btn-sm btn-ipa-range-refresh"><i class="fa fa-refresh"></i> 刷新 Range 指标</button>
+            </div>
+        </div>
+        <div class="row ipa-stat-row">
+            <div class="col-sm-3"><div class="well"><strong>解析 / 复用</strong><div class="ipa-stat-value"><span id="ipa-range-parsed">0</span> / <span id="ipa-range-reused">0</span></div></div></div>
+            <div class="col-sm-3"><div class="well"><strong>Range 流量</strong><div class="ipa-stat-value" id="ipa-range-bytes">0 MB</div></div></div>
+            <div class="col-sm-3"><div class="well"><strong>Range 请求数</strong><div class="ipa-stat-value" id="ipa-range-requests">0</div></div></div>
+            <div class="col-sm-3"><div class="well"><strong>平均 / request</strong><div class="ipa-stat-value" id="ipa-range-avg-request">0 KB</div></div></div>
+        </div>
+        <div class="alert alert-info" id="ipa-range-note">Range 指标来自 parser task item 的实际 result_json；复用缓存的解析不会计入 Range 网络流量。</div>
+
+        <div class="well">
+            <div class="form-inline">
+                <strong>历史数据 Retention：</strong>
+                <select id="ipa-retention-days" class="form-control input-sm">
+                    <option value="30">保留 30 天</option>
+                    <option value="90" selected>保留 90 天</option>
+                    <option value="180">保留 180 天</option>
+                    <option value="365">保留 365 天</option>
+                </select>
+                <button type="button" class="btn btn-warning btn-sm btn-ipa-retention-preview"><i class="fa fa-search"></i> 预览清理</button>
+                <span class="text-muted">仅清理已完成 scan task/items 与 success/superseded 审计；running/failed/interrupted/queued/retrying 永久不在本次清理集合。</span>
+            </div>
+        </div>
     </div>
 </div>
 <script>
