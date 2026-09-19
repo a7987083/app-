@@ -59,9 +59,17 @@ phase20UiAssert(strpos($setting, 'type="submit"') !== false, 'settings use nativ
 phase20UiAssert(strpos($setting, 'btn-ipa-source-save') === false, 'legacy custom save button removed');
 phase20UiAssert(strpos($setting, 'btn-ipa-source-test') !== false, 'test connection remains an explicit action');
 phase20UiAssert(strpos($setting, '<script>') === false, 'settings do not depend on inline script execution');
+phase20UiAssert(strpos($setting, '请先点击“确定”保存') !== false, 'settings explain saved-config connection test flow');
+phase20UiAssert(strpos($setting, '直接使用当前表单内容') === false, 'settings no longer advertise unsaved-input connection testing');
+phase20UiAssert(strpos($setting, '已保存令牌读取失败') !== false, 'settings surface persisted token decode failures');
 phase20UiAssert(strpos($backendJs, 'Form.api.bindevent') !== false, 'FastAdmin Form lifecycle is bound');
-phase20UiAssert(strpos($backendJs, "url:'ipa_center/source_test',data:form.serialize()") !== false, 'test connection uses current form values');
-phase20UiAssert(strpos($controller, 'IpaSourceConfig::testInput($this->request->post())') !== false, 'source test validates unsaved current form input');
+
+phase20UiAssert(strpos($sourceConfig, 'public static function testSaved()') !== false, 'OpenList test has explicit saved-config entry point');
+phase20UiAssert(strpos($sourceConfig, 'return self::testSaved();') !== false, 'legacy testInput delegates to saved configuration contract');
+phase20UiAssert(strpos($sourceConfig, "self::publicRow(\$row,true)") !== false, 'saved test decrypts persisted token before connection test');
+phase20UiAssert(strpos($sourceConfig, "\$saved=self::readConfig()") !== false, 'save verifies persisted configuration can be read back');
+phase20UiAssert(strpos($sourceConfig, 'hash_equals($token,$roundTrip)') !== false, 'save verifies persisted token encryption round trip');
+phase20UiAssert(strpos($sourceConfig, "'token_error'=>\$tokenError") !== false, 'public config exposes safe token decode status without exposing token');
 
 foreach (['metadata'=>'ipa-meta-table','binding'=>'ipa-binding-table','task'=>'ipa-task-table','writeback'=>'ipa-writeback-rule-table','governance'=>'ipa-governance-table'] as $page=>$tableId) {
     phase20UiAssert(strpos($views[$page], 'id="' . $tableId . '"') !== false, "{$page} has FastAdmin table");
