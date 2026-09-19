@@ -60,6 +60,14 @@ p192_assert(strpos($response, 'SourceLegacyCache::getPlainBody') !== false, 'pla
 p192_assert(strpos($response, 'SourceLegacyCache::storePlainBody') !== false, 'plain response cache write missing');
 p192_assert(strpos($response, 'AppStorePayload::withoutRuntimeFields') !== false, 'legacy runtime-field stripping must remain intact');
 
+$app = $read('application/index/controller/App.php');
+p192_assert(strpos($app, 'protected function emitPayload(array &$payload') !== false, 'App response path must release caller payload by reference');
+p192_assert(strpos($app, '$blacklistedPayload = AppStorePayload::blacklisted') !== false, 'blacklist response must pass a variable to by-reference emitPayload');
+p192_assert(strpos($app, '$appCount = isset($payload[\'apps\'])') !== false, 'App count must be captured before payload release');
+p192_assert(substr_count($app, '$payload = [];') >= 2, 'encrypted and plain response paths must release payload before send');
+p192_assert(strpos($app, 'protected function logSourcePerformance($appCount') !== false, 'performance logging must not retain the full payload array');
+p192_assert(strpos($app, "'app_count' => (int)\$appCount") !== false, 'performance logging must preserve app_count after payload release');
+
 $repo = $read('application/common/library/SourceAppRepository.php');
 p192_assert(strpos($repo, 'GENERATION_KEY') !== false, 'cross-worker source generation missing');
 p192_assert(strpos($repo, 'public static function generation()') !== false, 'source generation accessor missing');
@@ -84,4 +92,4 @@ p192_assert($appsA === $appsB, 'App entitlement signature must be order/duplicat
 p192_assert($appsA !== $appsC, 'different App entitlement sets must not share cache');
 p192_assert($guest !== $all && $all !== $appsA, 'guest/all/App caches must remain isolated');
 
-echo "OK phase19_2_legacy_response_cache_test legacy_route=passed entitlement_cache=isolated revision=retained v3=retired manifest=passed\n";
+echo "OK phase19_2_legacy_response_cache_test legacy_route=passed entitlement_cache=isolated revision=retained v3=retired manifest=passed payload_release=passed\n";
