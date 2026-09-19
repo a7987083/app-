@@ -11,34 +11,41 @@
 ## Active development
 
 - Branch: `feature/phase20-ipa-management-v1`
-- Phase: `20.7.3`
-- Last verified development HEAD: `a573d6f2945edcd0ca7c44a2002f1212b4a19bb2`
-- CI Run: `35409913235` — SUCCESS
+- Phase: `20.7 code/CI complete`
+- Verified code HEAD: `438db0823a2d03e220401509ce736da57bc99ab9`
+- CI Run: `35410113307` — SUCCESS
+- Production E2E: NOT VERIFIED
 
-### Completed production enhancements
+## Phase 20.7 completed capabilities
 
-- Phase 20.7.1: batch governance, batch plan hash, failure queue.
-- Phase 20.7.2: failed/interrupted recovery, stale-running scan, safe re-preview retry, superseded audit linkage.
-- Phase 20.7.3: Range metrics and preview-first retention cleanup.
+- Batch governance with `batch_hash`, per-item `plan_hash`, low-risk-only batch semantics.
+- Failure queue using existing `ipa_operation_log`.
+- Failed/interrupted recovery with re-preview, separate retry idempotency and superseded audit linkage.
+- Range parser metrics from actual task item `result_json`.
+- Preview-first bounded Retention cleanup.
+- Batch ignore/unignore and `ignore_until` expiry sweep with audit records.
+- FastAdmin permission-aware UI gating for high-risk Phase 20.7 controls.
 
-### Safety invariants
+## Safety invariants
 
 - Batch governance never moves OpenList files automatically.
 - Recovery never reuses an old governance plan.
-- Retention requires preview + plan hash and only removes old completed history.
-- Retention must not delete `running`, `failed`, `interrupted`, `queued`, or `retrying` records.
+- Retention requires preview + plan hash.
+- Retention never selects `running`, `failed`, `interrupted`, `queued`, or `retrying` records.
 - Retention is bounded to 1000 candidate rows per table per execution.
+- Ignore lifecycle batches are bounded to 100 issues.
 
-## Next phase
+## Next task: Phase 20 RC closeout
 
-Phase 20.7.4:
-
-- batch ignore / ignore_until lifecycle and expiry recovery view;
-- finer high-risk permission separation and UI capability gating;
-- production audit summaries;
-- real OpenList + MySQL production E2E;
-- Phase 20 release-candidate closeout.
+1. Run controlled OpenList + MySQL E2E with backups available.
+2. Verify batch governance and one explicit OpenList path mutation.
+3. Exercise failed/interrupted retry and confirm audit linkage.
+4. Exercise ignore expiry sweep.
+5. Validate Range metrics against actual parser traffic.
+6. Run Retention preview, inspect candidate IDs, then apply only after backup/restore validation.
+7. Validate real admin permission groups and hidden controls.
+8. Prepare RC packaging, migration SQL, online-update and rollback checklist.
 
 ## Existing production caveat
 
-`/authorization` remains the online-update-safe authorization lookup URL. `/license` remains routed in ThinkPHP but can still be intercepted by the production Nginx LICENSE rule before PHP.
+`/authorization` remains the online-update-safe authorization lookup URL. `/license` can still be intercepted by the production Nginx LICENSE rule before PHP.
