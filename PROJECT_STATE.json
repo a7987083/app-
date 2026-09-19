@@ -5,41 +5,30 @@
     "phase": "19.4.2",
     "version": "2026091807",
     "commit": "1ef93306dec0a7b09bb99df55b785511d5b8b4c6",
-    "release": "source-v2026091807",
-    "feature_ci_run": 35306216020,
-    "feature_ci_result": "success",
-    "release_run": 35306308086,
-    "release_result": "success",
-    "online_update_from": "2026091806",
-    "online_update_e2e": "passed"
+    "release": "source-v2026091807"
   },
-  "online_update": {
-    "tag": "source-v2026091807",
-    "zip": "zonoe-online-update.zip",
-    "sha256_asset": "zonoe-online-update.zip.sha256",
-    "release_asset_sha256": "f5d7d82249440c862d3a19a4711e3df3d89387b0e92de48705d4b99fdc570c06",
-    "self_update": "passed",
-    "progress": "passed",
-    "history": "passed",
-    "db_migration": "yes"
+  "development": {
+    "branch": "feature/phase20-ipa-management-v1",
+    "phase": "20.7.3",
+    "verified_head": "a573d6f2945edcd0ca7c44a2002f1212b4a19bb2",
+    "ci_run": 35409913235,
+    "ci_result": "success"
   },
-  "announcement": {
-    "public_time_model": "single_clock",
-    "public_variables": [
-      "授权状态",
-      "到期时间",
-      "剩余时间"
-    ],
-    "priority": "full_source > partial_apps > verify_only",
-    "inactive_text": "已过期或未解锁本源",
-    "legacy_scope_time_tokens": "hidden_from_editor_and_mapped_to_generic_clock",
-    "migration": "release/sql/2026091807_unified_announcement_expiry.sql"
+  "phase20_7": {
+    "batch_governance": "completed_ci_passed",
+    "failure_queue": "completed_ci_passed",
+    "retry_interrupted": "completed_ci_passed",
+    "range_metrics": "completed_ci_passed",
+    "retention": "completed_ci_passed",
+    "production_e2e": "not_verified"
   },
-  "authorization_page": {
-    "safe_route": "/authorization",
-    "legacy_route": "/license",
-    "exact_license_nginx_issue": "production Nginx may still intercept /license before PHP"
+  "safety_contracts": {
+    "batch_openlist_move": "forbidden",
+    "retry_old_plan_reuse": "forbidden",
+    "retention_protected_states": ["running", "failed", "interrupted", "queued", "retrying"],
+    "retention_preview_required": true,
+    "retention_plan_hash_required": true
   },
-  "next_task": "Verify 2026091807 on production UI/source refresh; use /authorization for authorization lookup unless active Nginx /license rule is fixed.",
+  "next_task": "Phase 20.7.4: batch ignore/ignore_until lifecycle, finer high-risk permissions, production audit summaries, then OpenList + MySQL production E2E and release-candidate closeout.",
   "roadmap": "ROADMAP.md"
 }
