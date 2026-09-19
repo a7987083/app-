@@ -211,7 +211,15 @@ class App
             $encryptMs = (microtime(true) - $encryptStartedAt) * 1000;
             $encrypted = isset($encryptedResult['payload']) ? $encryptedResult['payload'] : false;
             $inputBytes = isset($encryptedResult['input_bytes']) ? (int)$encryptedResult['input_bytes'] : $jsonBytes;
+
+            // Input JSON and result wrapper are no longer needed once encryption
+            // metadata has been captured. Drop those references before building
+            // the response envelope so the large strings do not overlap longer
+            // than required.
+            unset($encryptedResult, $json);
+
             $body = SourceResponse::encryptedBody($appType, $encrypted, $replaceMarkers);
+            unset($encrypted);
 
             $this->logSourcePerformance($appCount, $appType, true, $jsonMs, $encryptMs, $jsonBytes, $inputBytes, strlen((string)$body));
             SourceResponse::send($body);
