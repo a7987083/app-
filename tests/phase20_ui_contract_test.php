@@ -44,7 +44,7 @@ $scanService = file_get_contents($root . '/application/common/library/IpaScanSer
 $parserService = file_get_contents($root . '/application/common/library/IpaParserService.php');
 $version = trim(file_get_contents($root . '/VERSION'));
 
-phase20UiAssert($version === '2026091906', 'appstore memory hotfix targets the 2026091906 candidate');
+phase20UiAssert($version === '2026091907', 'phase20 FastAdmin and V2 CPU release targets the 2026091907 candidate');
 phase20UiAssert(strpos($setting, 'OpenList 令牌') !== false, 'settings use provider token terminology');
 phase20UiAssert(strpos($setting, 'OpenList 设置 → 其他 → 令牌') !== false, 'settings show provider token location');
 phase20UiAssert(strpos($setting, 'name="api_base"') === false, 'API prefix is not user-configurable');
