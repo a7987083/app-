@@ -16,6 +16,7 @@ on:
       - 'scripts/ipa-range-info.py'
       - 'public/assets/js/backend/ipa_center.js'
       - 'tests/phase20_*'
+      - 'tests/phase207_*'
       - '.github/workflows/phase20-ipa-management.yml'
   workflow_dispatch:
 permissions:
@@ -43,6 +44,7 @@ jobs:
           php -l application/common/library/IpaBindingService.php
           php -l application/common/library/IpaWritebackTemplate.php
           php -l application/common/library/IpaGovernanceService.php
+          php -l application/common/library/IpaGovernanceBatchService.php
           php -l tests/phase20_foundation_contract_test.php
           php -l tests/phase20_ui_contract_test.php
           php -l tests/phase20_scan_planner_test.php
@@ -53,6 +55,7 @@ jobs:
           php -l tests/phase20_binding_ui_contract_test.php
           php -l tests/phase20_writeback_contract_test.php
           php -l tests/phase20_governance_contract_test.php
+          php -l tests/phase207_production_contract_test.php
       - name: Phase 20 foundation contract
         run: php tests/phase20_foundation_contract_test.php
       - name: Phase 20 UI contract
@@ -75,3 +78,5 @@ jobs:
         run: php tests/phase20_writeback_contract_test.php
       - name: Phase 20 governance contract
         run: php tests/phase20_governance_contract_test.php
+      - name: Phase 20.7 production governance contract
+        run: php tests/phase207_production_contract_test.php
