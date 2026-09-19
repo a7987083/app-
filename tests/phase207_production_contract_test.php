@@ -19,5 +19,9 @@ $service=file_get_contents(dirname(__DIR__).'/application/common/library/IpaGove
 foreach(['批量治理计划已变化，请重新预览','MAX_BATCH','failedOperations','governance_%','IpaGovernanceService::apply'] as $needle)phase207Assert(strpos($service,$needle)!==false,'production governance '.$needle);
 $sql=file_get_contents(dirname(__DIR__).'/application/admin/command/Install/phase20_ipa_governance.sql');
 foreach(['governance_batch_preview','governance_batch_apply','governance_failures'] as $rule)phase207Assert(strpos($sql,$rule)!==false,'phase20.7 auth '.$rule);
+$view=file_get_contents(dirname(__DIR__).'/application/admin/view/ipa_center/governance.html');
+foreach(['批量预览并修复','治理失败队列','ipa-gov-select-all','ipa_governance_production.js'] as $needle)phase207Assert(strpos($view,$needle)!==false,'phase20.7 governance UI '.$needle);
+$js=file_get_contents(dirname(__DIR__).'/public/assets/js/backend/ipa_governance_production.js');
+foreach(['governance_batch_preview','governance_batch_apply','governance_failures','MutationObserver'] as $needle)phase207Assert(strpos($js,$needle)!==false,'phase20.7 governance JS '.$needle);
 
 echo "OK phase207_production_contract_test\n";
