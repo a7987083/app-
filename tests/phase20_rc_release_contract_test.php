@@ -67,7 +67,8 @@ foreach ($orderedSql as $target => $source) {
     phase20RcAssert(strpos($releaseWorkflow, "mysql/" . $target) !== false, 'formal release verifies packaged SQL ' . $target);
 }
 
-phase20RcAssert((bool)preg_match("/'mysql\\/'\\s*\\.\\s*\\$targetName/", $builder), 'builder writes Phase 20 migrations to mysql payload');
+$builderCompact = preg_replace('/\s+/', '', $builder);
+phase20RcAssert(strpos($builderCompact, "'mysql/'." . '$targetName') !== false, 'builder writes Phase 20 migrations to mysql payload');
 phase20RcAssert(strpos($builder, 'PHASE20_EXTERNAL_ACCEPTANCE') === false, 'builder keeps historical manifest-driven release flow');
 phase20RcAssert(strpos($releaseWorkflow, 'name: ZONOE Source Release') !== false, 'Phase 20 stays on historical ZONOE Source Release workflow');
 phase20RcAssert(strpos($releaseWorkflow, 'contents: write') !== false, 'historical release permission remains unchanged');
