@@ -194,7 +194,7 @@ jobs:
           php tools/build_online_update.php /tmp/phase20-rc.zip
           test -s /tmp/phase20-rc.zip
           test -s /tmp/phase20-rc.zip.sha256
-          sha256sum -c /tmp/phase20-rc.zip.sha256
+          (cd /tmp && sha256sum -c phase20-rc.zip.sha256)
       - name: Verify package program and ordered migrations
         run: |
           set -euo pipefail
