@@ -69,7 +69,7 @@ phase20UiAssert(strpos($sourceConfig, 'return self::testSaved();') !== false, 'l
 phase20UiAssert(strpos($sourceConfig, "self::publicRow(\$row,true)") !== false, 'saved test decrypts persisted token before connection test');
 phase20UiAssert(strpos($sourceConfig, "\$saved=self::readConfig()") !== false, 'save verifies persisted configuration can be read back');
 phase20UiAssert(strpos($sourceConfig, 'hash_equals($token,$roundTrip)') !== false, 'save verifies persisted token encryption round trip');
-phase20UiAssert(strpos($sourceConfig, "'token_error'=>\$tokenError") !== false, 'public config exposes safe token decode status without exposing token');
+phase20UiAssert(strpos($sourceConfig, "\$out['token_error']=\$tokenError") !== false, 'public config exposes safe token decode status without exposing token');
 
 foreach (['metadata'=>'ipa-meta-table','binding'=>'ipa-binding-table','task'=>'ipa-task-table','writeback'=>'ipa-writeback-rule-table','governance'=>'ipa-governance-table'] as $page=>$tableId) {
     phase20UiAssert(strpos($views[$page], 'id="' . $tableId . '"') !== false, "{$page} has FastAdmin table");
