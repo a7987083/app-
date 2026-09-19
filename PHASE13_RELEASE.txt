@@ -1,22 +1,22 @@
-ZONOE 软件源 Release 2026091907
-版本：2026091907
-基线：2026091906
-阶段：V2 CPU P0 + IPA FastAdmin Refactor
+ZONOE 软件源 Release 2026091908
+版本：2026091908
+基线：2026091907
+阶段：IPA OpenList Saved-Config Hotfix
 发布分支：release/2026091905-phase20-setting-hotfix
 发布状态：准备触发正式 Release Workflow
 
 更新内容：
-1. SourceEncryptionProvider.php 的 appstore_v2 改为 RC4 输出直接馈入 V2 codec state，去掉完整中间 payload；RC4/RSA/V2 wire protocol 不变。
-2. IPA 管理中心 Dashboard、Metadata、Binding、Task、Setting、Writeback、Governance 统一迁移到 FastAdmin Table/Form 生命周期。
-3. Setting 保存改为 FastAdmin 标准 Form/validator/CSRF submit；测试连接直接使用当前表单参数，不再只测旧保存配置。
-4. Metadata / Binding / Task / Governance 列表与操作事件统一由 FastAdmin BootstrapTable/event 管理，减少手写 tbody 与重复 AJAX 生命周期。
-5. Governance 移除页面 inline require 独立生命周期，保留原治理、恢复、lifecycle、metrics、retention 服务和权限边界。
-6. 不修改授权、downloadURL 裁剪、entitlement cache、OpenList 安全存储、Phase 20 schema 与原 ZONOE Source Release workflow 语义。
-7. 继续使用 PHP 7.0 regression、MySQL 5.7 migration、Phase 20 integration、/appstore HTTP load、package/release 与 online-update E2E 作为正式门禁。
+1. IPA 设置页恢复成熟 OpenList 行为：先保存配置，再测试已经持久化并成功解密的配置。
+2. IpaSourceConfig 增加 testSaved()，兼容 testInput() 统一转入已保存配置测试。
+3. 保存后执行 runtime 配置读回与 Token 加密/解密 round-trip 校验；Token 留空保留旧值，首次配置仍必须填写 Token。
+4. 页面安全展示 Token 解密失败原因，不回显 Token 明文。
+5. 测试连接不再提交当前未保存表单，避免浏览器自动填充状态与服务器持久化状态混淆。
+6. OpenList /api/fs/list、Authorization 原始 Token、/a/app 内部路径等协议保持不变。
+7. 不修改 appstore/appstore_v2 协议、授权、缓存隔离、Phase 20 schema 与原 ZONOE Source Release workflow 语义。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091907。
+- 目标 GitHub Release 标签：source-v2026091908。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091907。
-- 本轮未修改 UpdateIntegrity::files() 中的签名文件，ver.json 暂保持 file_sign=8be29c04c34ba1d1cc7ec77d392b2bee；正式 Release workflow 会重新计算并严格校验。
-- 发布完成后需从 2026091906 -> 2026091907 执行真实在线更新 E2E，并在生产 1 vCPU 环境复核 appstore_v2 的 encryption_ms、total_ms 与 CPU 满载持续时间。
+- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091908。
+- file_sign 暂保持 8be29c04c34ba1d1cc7ec77d392b2bee；正式 Release workflow 会重新计算并严格校验。
+- 发布完成后需从 2026091907 -> 2026091908 执行真实在线更新 E2E。
