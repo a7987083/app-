@@ -20,7 +20,13 @@ $client=file_get_contents(dirname(__DIR__).'/application/common/library/IpaOpenL
 phase206Assert(strpos($client,"'/fs/rename'")!==false,'OpenList rename endpoint');
 phase206Assert(strpos($client,"'/fs/move'")!==false,'OpenList move endpoint');
 $view=file_get_contents(dirname(__DIR__).'/application/admin/view/ipa_center/governance.html');
-foreach(['重新检测全部','以数据库为准','以 OpenList 为准','修复预览'] as $needle)phase206Assert(strpos($view,$needle)!==false,'governance UI '.$needle);
+$backendJs=file_get_contents(dirname(__DIR__).'/public/assets/js/backend/ipa_center.js');
+phase206Assert(strpos($view,'重新检测全部')!==false,'governance UI refresh');
+phase206Assert(strpos($view,'ipa-governance-table')!==false,'governance FastAdmin table');
+phase206Assert(strpos($view,'<tbody>')===false,'governance does not hand-render tbody');
+phase206Assert(strpos($backendJs,"data-mode=\"db_to_openlist\"")!==false,'governance UI database to OpenList action');
+phase206Assert(strpos($backendJs,"data-mode=\"openlist_to_db\"")!==false,'governance UI OpenList to database action');
+phase206Assert(strpos($backendJs,'修复预览')!==false,'governance UI repair preview');
 $sql=file_get_contents(dirname(__DIR__).'/application/admin/command/Install/phase20_ipa_governance.sql');
 foreach(['governance_refresh','governance_preview','governance_apply','governance_verify'] as $rule)phase206Assert(strpos($sql,$rule)!==false,'governance auth '.$rule);
 
