@@ -125,16 +125,17 @@ class SourceEncryptionProvider
             throw new \RuntimeException('V2 RSA key encryption failed');
         }
 
-        $payload = self::rc4Reference($json, $keyText);
         $header = pack('V', self::V2_MAGIC)
             . pack('V', strlen($rsaBlob))
             . $rsaBlob
-            . pack('V', strlen($payload));
+            . pack('V', strlen($json));
 
-        // Preserve the exact container byte stream while avoiding an additional
-        // full-size $container allocation. The codec carries its bit state from
-        // the small header directly into the already-built RC4 payload.
-        return self::encodeV2Parts([$header, $payload]);
+        // V2 used to build a full RC4 payload and then scan that payload again
+        // in encodeV2Parts().  On PHP 7 that means two byte-wise interpreter
+        // passes plus a second large string.  Fuse the RC4 PRGA and codec so the
+        // encrypted byte is consumed immediately and the wire format stays
+        // byte-for-byte identical.
+        return self::encodeV2EncryptedJson($header, $json, $keyText);
     }
 
     public static function encodeV2Codec($raw)
@@ -179,6 +180,101 @@ class SourceEncryptionProvider
                     $buffer >>= 6;
                     $bitCount -= 6;
                 }
+            }
+        }
+
+        if ($bitCount > 0) {
+            $value5 = $buffer & 31;
+            if ($bitCount >= 5 && ($value5 === 30 || $value5 === 31)) {
+                $output .= $alphabet[$value5];
+            } else {
+                $output .= $alphabet[$buffer & 63];
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * Stateful V2 fast path: encode the small unencrypted header first, then
+     * feed each RC4-produced payload byte directly into the existing variable
+     * width codec state.  This removes the full-size intermediate $payload and
+     * the second payload traversal without changing any protocol primitive.
+     */
+    protected static function encodeV2EncryptedJson($header, $json, $keyText)
+    {
+        if (!is_string($header) || !is_string($json) || !is_string($keyText)) {
+            throw new \InvalidArgumentException('V2 fused encoder expects strings');
+        }
+
+        $key = self::legacyKeyBytes($keyText);
+        $keyLength = count($key);
+        if ($keyLength === 0) {
+            throw new \RuntimeException('RC4 key is empty');
+        }
+
+        $state = range(0, 255);
+        $j = 0;
+        for ($i = 0; $i < 256; $i++) {
+            $j = ($j + $state[$i] + $key[$i % $keyLength]) & 0xff;
+            $tmp = $state[$i];
+            $state[$i] = $state[$j];
+            $state[$j] = $tmp;
+        }
+
+        $alphabet = self::V2_ALPHABET;
+        $buffer = 0;
+        $bitCount = 0;
+        $output = '';
+
+        $headerLength = strlen($header);
+        for ($n = 0; $n < $headerLength; $n++) {
+            $buffer |= ord($header[$n]) << $bitCount;
+            $bitCount += 8;
+            while ($bitCount >= 5) {
+                $value5 = $buffer & 31;
+                if ($value5 === 30 || $value5 === 31) {
+                    $output .= $alphabet[$value5];
+                    $buffer >>= 5;
+                    $bitCount -= 5;
+                    continue;
+                }
+                if ($bitCount < 6) {
+                    break;
+                }
+                $output .= $alphabet[$buffer & 63];
+                $buffer >>= 6;
+                $bitCount -= 6;
+            }
+        }
+
+        $i = 0;
+        $j = 0;
+        $length = strlen($json);
+        for ($n = 0; $n < $length; $n++) {
+            $i = ($i + 1) & 0xff;
+            $j = ($j + $state[$i]) & 0xff;
+            $tmp = $state[$i];
+            $state[$i] = $state[$j];
+            $state[$j] = $tmp;
+            $k = $state[($state[$i] + $state[$j]) & 0xff];
+
+            $buffer |= (ord($json[$n]) ^ $k) << $bitCount;
+            $bitCount += 8;
+            while ($bitCount >= 5) {
+                $value5 = $buffer & 31;
+                if ($value5 === 30 || $value5 === 31) {
+                    $output .= $alphabet[$value5];
+                    $buffer >>= 5;
+                    $bitCount -= 5;
+                    continue;
+                }
+                if ($bitCount < 6) {
+                    break;
+                }
+                $output .= $alphabet[$buffer & 63];
+                $buffer >>= 6;
+                $bitCount -= 6;
             }
         }
 
@@ -469,8 +565,8 @@ class SourceEncryptionProvider
     }
 
     /**
-     * Reference RC4 implementation kept for V2's per-request random key and as
-     * a fail-open fallback for the legacy disk keystream optimization.
+     * Reference RC4 implementation kept for protocol regression tests, V2
+     * equivalence checks, and as a fail-open fallback for legacy keystreams.
      */
     protected static function rc4Reference($data, $keyText)
     {
