@@ -29,3 +29,9 @@ WHERE @gov IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`
 INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
 SELECT 'file',@gov,'ipa_center/governance_failures','查看治理失败队列','fa fa-circle-o','','Phase20.7 governance failure queue',0,@now,@now,0,'normal'
 WHERE @gov IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_center/governance_failures');
+INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
+SELECT 'file',@gov,'ipa_recovery/scan_interrupted','扫描中断治理操作','fa fa-circle-o','','Phase20.7 recovery interrupted scan',0,@now,@now,0,'normal'
+WHERE @gov IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_recovery/scan_interrupted');
+INSERT INTO `fa_auth_rule` (`type`,`pid`,`name`,`title`,`icon`,`condition`,`remark`,`ismenu`,`createtime`,`updatetime`,`weigh`,`status`)
+SELECT 'file',@gov,'ipa_recovery/retry','重试治理失败操作','fa fa-circle-o','','Phase20.7 high-risk governance retry',0,@now,@now,0,'normal'
+WHERE @gov IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `fa_auth_rule` WHERE `name`='ipa_recovery/retry');
