@@ -1,22 +1,24 @@
-ZONOE 软件源 Release 2026091903
-版本：2026091903
-基线：2026091902
-阶段：Phase 20 — OpenList Setting Buttons Hotfix
-发布分支：release/2026091903-phase20-setting-buttons-hotfix
-发布状态：触发正式 Release Workflow
+ZONOE 软件源 Release 2026091904
+版本：2026091904
+基线：2026091903
+阶段：Phase 20 — Storage Slimming + OpenList Settings Save Hotfix
+发布分支：release/2026091904-phase20-storage-slim-hotfix
+发布状态：候选版本，等待正式 Release Workflow
 
 更新内容：
-1. 修复 OpenList 设置页“保存 / 保存并测试”按钮显示正常但点击无响应的问题。
-2. 根因是 2026091902 模板按钮类与现有 FastAdmin `IpaCenter` Controller.setting() 绑定类不一致，并依赖局部页面内联脚本执行。
-3. 设置页恢复使用现有 `.btn-ipa-source-save` / `.btn-ipa-source-test` Controller 绑定，删除内联脚本依赖。
-4. 按钮恢复为“保存 / 测试连接”；修改地址、IPA 根目录或令牌后先保存，再测试连接。
-5. OpenList API 继续固定使用 /api/fs/*；认证继续使用 Authorization: <令牌>，不添加 Bearer。
-6. 令牌输入继续使用 new-password / data-lpignore，降低后台登录密码被浏览器误填为 OpenList 令牌的风险。
-7. 不改扫描、Range Parser、绑定、治理、Retention 和历史在线更新架构。
-8. Phase 20 Run #103、Regression Checks #232、Phase14 #86 已通过。
+1. 修复 IPA 网络源设置页保存/测试请求在升级环境中可能被新增隐藏权限节点拦截的问题；保存/测试现在继承可见的 ipa_center/setting 权限。
+2. 修复 FastAdmin HTTP 4xx/5xx 仅显示 `error` 的问题；优先展示后端 JSON msg / responseText，便于直接定位真实故障。
+3. OpenList 配置和令牌停止写入 fa_ipa_source；改为原子写入 runtime/ipa/openlist.json，Token 使用安装本地独立密钥保护。
+4. 升级兼容：首次读取新配置时可从旧 fa_ipa_source 一次性导入；旧表暂不破坏性删除，避免在线升级丢配置。
+5. 扫描、解析和定时任务改为直接读取 runtime OpenList 配置，不再依赖 fa_ipa_source 作为运行时来源。
+6. fa_ipa_metadata 保留轻量、可索引字段；raw_metadata_json / normalized_metadata_json / confidence_json 新解析不再持续写入 MySQL，大块解析详情迁到 runtime/ipa/metadata-detail/。
+7. 旧 metadata JSON 采用每次扫描最多 50 条的渐进式压缩迁移，避免一次升级长事务/大 I/O。
+8. fa_ipa_scan_task_item 保留为解析/恢复所需的短生命周期队列；success 行按 90 天窗口清理，与 Range metrics 最大窗口一致，避免长期无限增长。
+9. 保留 fa_ipa_binding / fa_ipa_scan_task / fa_ipa_governance_issue / fa_ipa_operation_log 等长期查询、业务关系、治理状态与审计数据；本版本不做破坏性 DROP TABLE。
+10. 不修改既有 ZONOE Source Release 发布语义；正式发布仍由现有 workflow 生成更新包并执行上一稳定版 -> 2026091904 在线更新 E2E。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091903。
+- 目标 GitHub Release 标签：source-v2026091904。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity 监控的关键文件。
-- 发布前门禁：Phase 20 专项 CI、正式 PHP 7.0 全回归、MySQL 5.7、Phase 19 HTTP load、Phase 20 HTTP/rollback integration、更新包完整性、1902 -> 1903 在线更新 E2E。
+- file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity::files() 监控的关键文件。
+- 候选验证：Phase 20 IPA Management #104、Regression Checks #233、Phase14 Production Hardening #87、Phase 17.2 Authorization Integrity #18 已通过；版本元数据更新后需再次以最终 HEAD 验证。

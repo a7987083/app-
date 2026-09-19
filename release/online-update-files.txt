@@ -77,6 +77,7 @@ application/common/library/IpaScanPlanner.php
 application/common/library/IpaOpenListClient.php
 application/common/library/IpaInventoryCache.php
 application/common/library/IpaSourceConfig.php
+application/common/library/IpaMetadataPayloadStore.php
 application/common/library/IpaScanService.php
 application/common/library/IpaParserRunner.php
 application/common/library/IpaMetadataNormalizer.php
@@ -90,6 +91,7 @@ application/common/library/IpaGovernanceLifecycleService.php
 application/common/library/IpaRangeMetricsService.php
 application/common/library/IpaRetentionService.php
 scripts/ipa-range-info.py
+public/assets/js/fast.js
 public/assets/js/backend/ipa_center.js
 public/assets/js/backend/ipa_governance_production.js
 application/admin/command/Install/phase20_ipa_foundation.sql

@@ -9,17 +9,18 @@ use Throwable;
 class IpaScanService
 {
     const STALE_SECONDS = 600;
+    const TASK_ITEM_RETENTION_DAYS = 90;
 
     public static function createTask($sourceId,$triggerType='manual',$adminId=0,$forceRefresh=false)
     {
-        $source=Db::name('ipa_source')->where('id',(int)$sourceId)->find();
-        if (!$source) throw new RuntimeException('IPA source not found');
+        $source=IpaSourceConfig::first(false);
+        if (!$source) throw new RuntimeException('IPA source not configured');
         if (empty($source['enabled'])) throw new RuntimeException('IPA source is disabled');
         $now=time();
-        $taskKey=hash('sha256',implode('|',[$source['source_key'],$triggerType,$now,microtime(true),mt_rand()]));
+        $taskKey=hash('sha256',implode('|',['openlist',$triggerType,$now,microtime(true),mt_rand()]));
         return (int)Db::name('ipa_scan_task')->insertGetId([
-            'task_key'=>$taskKey,'trigger_type'=>(string)$triggerType,'source_key'=>(string)$source['source_key'],
-            'state'=>'queued','stage'=>'queued','cursor_json'=>json_encode(['source_id'=>(int)$sourceId,'force_refresh'=>(bool)$forceRefresh],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
+            'task_key'=>$taskKey,'trigger_type'=>(string)$triggerType,'source_key'=>'openlist',
+            'state'=>'queued','stage'=>'queued','cursor_json'=>json_encode(['source_id'=>1,'force_refresh'=>(bool)$forceRefresh],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
             'progress_current'=>0,'progress_total'=>0,'retry_count'=>0,'created_by'=>(int)$adminId,'createtime'=>$now,'updatetime'=>$now,
         ]);
     }
@@ -31,30 +32,33 @@ class IpaScanService
         if (!$task) throw new RuntimeException('Scan task not found');
         if (in_array($task['state'],['success','cancelled'],true)) return $task;
         $cursor=json_decode(isset($task['cursor_json'])?$task['cursor_json']:'',true); $cursor=is_array($cursor)?$cursor:[];
-        $sourceId=isset($cursor['source_id'])?(int)$cursor['source_id']:0; $forceRefresh=!empty($cursor['force_refresh']);
-        $source=Db::name('ipa_source')->where('id',$sourceId)->find();
-        if (!$source) { self::failTask($taskId,'source_not_found','IPA source not found'); throw new RuntimeException('IPA source not found'); }
+        $forceRefresh=!empty($cursor['force_refresh']);
+        $source=IpaSourceConfig::first(true);
+        if (!$source) { self::failTask($taskId,'source_not_found','IPA source not configured'); throw new RuntimeException('IPA source not configured'); }
+        if (empty($source['enabled'])) { self::failTask($taskId,'source_disabled','IPA source is disabled'); throw new RuntimeException('IPA source is disabled'); }
         $now=time();
         Db::name('ipa_scan_task')->where('id',$taskId)->update(['state'=>'running','stage'=>'list_remote','started_at'=>$task['started_at']?$task['started_at']:$now,'heartbeat_at'=>$now,'updatetime'=>$now,'error_code'=>'','error_message'=>'']);
         try {
             $listed=null;
-            if (!$forceRefresh) $listed=IpaInventoryCache::load($source['source_key'],$source['scan_path'],isset($source['cache_ttl'])?(int)$source['cache_ttl']:1800);
+            if (!$forceRefresh) $listed=IpaInventoryCache::load('openlist',$source['scan_path'],isset($source['cache_ttl'])?(int)$source['cache_ttl']:1800);
             if (!$listed) {
                 $client=IpaSourceConfig::clientFromRow($source);
                 $listed=$client->listIpaFiles($source['scan_path'],$source['public_url_template'],$forceRefresh,true);
                 $listed['cache_hit']=false;
-                IpaInventoryCache::save($source['source_key'],$source['scan_path'],$listed);
+                IpaInventoryCache::save('openlist',$source['scan_path'],$listed);
             }
             $remoteRows=[];
-            foreach ($listed['files'] as $row) { $row['source_key']=$source['source_key']; $remoteRows[]=$row; }
+            foreach ($listed['files'] as $row) { $row['source_key']='openlist'; $remoteRows[]=$row; }
             Db::name('ipa_scan_task')->where('id',$taskId)->update(['stage'=>'compare_metadata','progress_current'=>0,'progress_total'=>count($remoteRows),'heartbeat_at'=>time(),'updatetime'=>time()]);
-            $localRows=Db::name('ipa_metadata')->where('source_key',$source['source_key'])->select();
+            $localRows=Db::name('ipa_metadata')->where('source_key','openlist')->select();
             $plan=IpaScanPlanner::plan($remoteRows,is_array($localRows)?$localRows:[]);
             self::applyPlan($taskId,$source,$plan);
             $summary=$plan['summary'];
             $summary['directories']=$listed['directories']; $summary['scan_path']=$source['scan_path']; $summary['force_refresh']=$forceRefresh; $summary['cache_hit']=!empty($listed['cache_hit']); $summary['discovery_completed_at']=time();
             Db::name('ipa_scan_task')->where('id',$taskId)->update(['state'=>'success','stage'=>'discovery_complete','progress_current'=>count($remoteRows),'progress_total'=>count($remoteRows),'cursor_json'=>json_encode($summary,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'heartbeat_at'=>time(),'finished_at'=>time(),'updatetime'=>time()]);
-            Db::name('ipa_source')->where('id',(int)$source['id'])->update(['last_scan_at'=>time(),'last_health'=>'ok','last_checked_at'=>time(),'updatetime'=>time()]);
+            IpaSourceConfig::updateState(['last_scan_at'=>time(),'last_health'=>'ok','last_checked_at'=>time()]);
+            self::pruneTaskItems(self::TASK_ITEM_RETENTION_DAYS);
+            IpaMetadataPayloadStore::compactLegacy(50);
             return Db::name('ipa_scan_task')->where('id',$taskId)->find();
         } catch (\Exception $e) { self::failTask($taskId,'scan_failed',$e->getMessage()); throw $e; }
         catch (Throwable $e) { self::failTask($taskId,'scan_failed',$e->getMessage()); throw $e; }
@@ -66,7 +70,7 @@ class IpaScanService
         try {
             foreach ($plan['new'] as $item) {
                 $remote=$item['remote'];
-                $metadataId=Db::name('ipa_metadata')->insertGetId(['source_key'=>$source['source_key'],'remote_path'=>$remote['remote_path'],'remote_path_hash'=>$remote['remote_path_hash'],'file_name'=>$remote['file_name'],'public_url'=>$remote['public_url'],'file_size'=>$remote['file_size'],'remote_mtime'=>$remote['remote_mtime'],'etag'=>$remote['etag'],'md5'=>$remote['md5'],'parse_state'=>'pending','parser_version'=>IpaFoundation::PARSER_VERSION,'last_seen_at'=>$now,'createtime'=>$now,'updatetime'=>$now]);
+                $metadataId=Db::name('ipa_metadata')->insertGetId(['source_key'=>'openlist','remote_path'=>$remote['remote_path'],'remote_path_hash'=>$remote['remote_path_hash'],'file_name'=>$remote['file_name'],'public_url'=>$remote['public_url'],'file_size'=>$remote['file_size'],'remote_mtime'=>$remote['remote_mtime'],'etag'=>$remote['etag'],'md5'=>$remote['md5'],'parse_state'=>'pending','parser_version'=>IpaFoundation::PARSER_VERSION,'last_seen_at'=>$now,'createtime'=>$now,'updatetime'=>$now]);
                 self::insertTaskItem($taskId,$metadataId,$remote,'new');
             }
             foreach ($plan['changed'] as $item) {
@@ -94,6 +98,13 @@ class IpaScanService
         Db::name('ipa_scan_task_item')->insert(['task_id'=>(int)$taskId,'metadata_id'=>(int)$metadataId,'item_key'=>$itemKey,'state'=>$state,'stage'=>$stage,'retry_after'=>0,'retry_count'=>0,'result_json'=>json_encode($result,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'createtime'=>time(),'updatetime'=>time()]);
     }
 
+    /** Short-lived queue only; 90 days matches the maximum Range metrics window. */
+    public static function pruneTaskItems($retentionDays=self::TASK_ITEM_RETENTION_DAYS)
+    {
+        $cutoff=time()-max(1,(int)$retentionDays)*86400;
+        return Db::name('ipa_scan_task_item')->where('state','success')->where('updatetime','<',$cutoff)->delete();
+    }
+
     public static function markStaleInterrupted($staleSeconds=self::STALE_SECONDS)
     {
         $cutoff=time()-max(60,(int)$staleSeconds);
@@ -107,12 +118,11 @@ class IpaScanService
 
     public static function createDueScheduledTasks()
     {
-        $sources=Db::name('ipa_source')->where('enabled',1)->where('schedule_enabled',1)->select(); $created=[];
-        foreach ((array)$sources as $source) {
-            $interval=max(5,(int)$source['interval_minutes'])*60;
-            if (!empty($source['last_scan_at']) && (time()-(int)$source['last_scan_at'])<$interval) continue;
-            $created[]=self::createTask((int)$source['id'],'schedule',0,false);
-        }
+        $source=IpaSourceConfig::first(false);$created=[];
+        if(!$source||empty($source['enabled'])||empty($source['schedule_enabled']))return $created;
+        $interval=max(5,(int)$source['interval_minutes'])*60;
+        if (!empty($source['last_scan_at']) && (time()-(int)$source['last_scan_at'])<$interval) return $created;
+        $created[]=self::createTask(1,'schedule',0,false);
         return $created;
     }
 
