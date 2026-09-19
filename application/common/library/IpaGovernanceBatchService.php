@@ -143,7 +143,7 @@ class IpaGovernanceBatchService
     {
         $limit = max(1, min(500, (int)$limit));
         $rows = Db::name('ipa_operation_log')
-            ->where('state', 'failed')
+            ->where('state', 'in', ['failed','interrupted'])
             ->where('operation_type', 'like', 'governance_%')
             ->order('id', 'desc')
             ->limit($limit)
@@ -154,6 +154,7 @@ class IpaGovernanceBatchService
             $before = is_array($before) ? $before : [];
             $row['issue_id'] = isset($before['issue_id']) ? (int)$before['issue_id'] : 0;
             $row['mode'] = isset($before['mode']) ? (string)$before['mode'] : '';
+            $row['retry_of'] = isset($before['retry_of']) ? (string)$before['retry_of'] : '';
             $row['started_at_text'] = !empty($row['started_at']) ? date('Y-m-d H:i:s', (int)$row['started_at']) : '';
             $row['finished_at_text'] = !empty($row['finished_at']) ? date('Y-m-d H:i:s', (int)$row['finished_at']) : '';
             unset($row['before_json'], $row['after_json'], $row['result_json']);
@@ -167,6 +168,10 @@ class IpaGovernanceBatchService
         return [
             'failed'=>(int)Db::name('ipa_operation_log')
                 ->where('state', 'failed')
+                ->where('operation_type', 'like', 'governance_%')
+                ->count(),
+            'interrupted'=>(int)Db::name('ipa_operation_log')
+                ->where('state', 'interrupted')
                 ->where('operation_type', 'like', 'governance_%')
                 ->count(),
         ];
