@@ -1,30 +1,44 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "branch": "release/2026091807-unified-announcement-expiry",
-    "phase": "19.4.2",
-    "version": "2026091807",
-    "commit": "1ef93306dec0a7b09bb99df55b785511d5b8b4c6",
-    "release": "source-v2026091807"
+    "branch": "release/2026091901-phase20-ipa-management",
+    "phase": "20",
+    "version": "2026091901",
+    "commit": "65d464b4d86f7bca9eb0ad89e96edcbf0ab5a9ef",
+    "release": "source-v2026091901",
+    "formal_release_run": 35415710535,
+    "formal_release_result": "success",
+    "online_update_e2e": "success"
   },
   "development": {
     "branch": "feature/phase20-ipa-management-v1",
     "phase": "20.7",
-    "status": "code_ci_complete",
-    "verified_head": "438db0823a2d03e220401509ce736da57bc99ab9",
-    "ci_run": 35410113307,
-    "ci_result": "success",
-    "production_e2e": "not_verified"
+    "status": "released",
+    "verified_head": "a246e0708fdb3c3a9650ba1f331fa39f6c938416",
+    "ci_run": 35415567660,
+    "ci_result": "success"
   },
-  "phase20_7": {
-    "batch_governance": "completed_ci_passed",
-    "failure_queue": "completed_ci_passed",
-    "retry_interrupted": "completed_ci_passed",
-    "range_metrics": "completed_ci_passed",
-    "retention": "completed_ci_passed",
-    "ignore_lifecycle": "completed_ci_passed",
-    "permission_ui_gating": "completed_ci_passed",
-    "production_e2e": "not_verified"
+  "phase20": {
+    "ui_foundation": "released",
+    "persistence_and_tasks": "released",
+    "openlist_scan": "released",
+    "http_range_parser": "released",
+    "binding": "released",
+    "writeback": "released",
+    "governance": "released",
+    "batch_governance": "released",
+    "failure_queue": "released",
+    "retry_interrupted": "released",
+    "range_metrics": "released",
+    "retention": "released",
+    "ignore_lifecycle": "released",
+    "permission_ui_gating": "released"
+  },
+  "release_flow": {
+    "formal_workflow": "ZONOE Source Release",
+    "parallel_formal_workflow": false,
+    "external_acceptance_json_gate": false,
+    "model": "historical_project_release_flow"
   },
   "safety_contracts": {
     "batch_openlist_move": "forbidden",
@@ -35,6 +49,6 @@
     "lifecycle_batch_limit": 100,
     "retention_delete_limit_per_table": 1000
   },
-  "next_task": "Phase 20 RC closeout: controlled OpenList + MySQL production E2E, real admin permission verification, backup/rollback validation, release-candidate packaging and online-update checklist.",
+  "next_task": "Begin the next planned development phase from stable source-v2026091901 while preserving the existing per-phase CI -> release/** -> ZONOE Source Release -> online-update E2E workflow.",
   "roadmap": "ROADMAP.md"
 }
