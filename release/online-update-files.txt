@@ -83,6 +83,8 @@ application/common/library/IpaSourceConfig.php
 application/common/library/IpaMysqlSourceService.php
 application/common/library/IpaReferenceDiscoveryService.php
 application/common/library/IpaMetadataPayloadStore.php
+application/common/library/IpaMetadataQueryService.php
+application/common/library/IpaMetadataWorksetService.php
 application/common/library/IpaScanService.php
 application/common/library/IpaParserRunner.php
 application/common/library/IpaMetadataNormalizer.php
