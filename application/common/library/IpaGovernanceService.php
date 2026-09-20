@@ -11,9 +11,11 @@ class IpaGovernanceService
     public static function refreshIssues()
     {
         $bindings=Db::name('ipa_binding')->order('id asc')->select();$seen=[];$bundleMap=[];$now=time();
+        $snapshot=IpaScanService::latestSnapshot();$currentPaths=[];$hasSnapshot=!empty($snapshot['snapshot_version'])&&isset($snapshot['current_paths'])&&is_array($snapshot['current_paths']);
+        if($hasSnapshot){foreach($snapshot['current_paths'] as $path){$normalized=IpaRemoteFile::normalizePath((string)$path);if($normalized!=='')$currentPaths[$normalized]=1;}}
         foreach((array)$bindings as $b){$m=Db::name('ipa_metadata')->where('id',(int)$b['metadata_id'])->find();$c=Db::name('category')->where('id',(int)$b['category_id'])->find();if(!$m||!$c)continue;$bundle=trim((string)$m['bundle_id']);if($bundle!=='')$bundleMap[$bundle][]=[$b,$m,$c];
-            $missing=Db::name('ipa_scan_task_item')->where('metadata_id',(int)$m['id'])->where('stage','missing')->order('id desc')->find();
-            if($missing && (int)$missing['updatetime']>(int)$m['last_seen_at'])self::upsertIssue($seen,'ipa_missing',$c,$m,'remote_path',(string)$c['bt1a'],'','OpenList 最近一次扫描未发现已绑定 IPA','exact',$now);
+            $remotePath=IpaRemoteFile::normalizePath((string)$m['remote_path']);
+            if($hasSnapshot&&$remotePath!==''&&!isset($currentPaths[$remotePath]))self::upsertIssue($seen,'ipa_missing',$c,$m,'remote_path',(string)$c['bt1a'],'','OpenList 最近一次扫描未发现已绑定 IPA','exact',$now);
             elseif(trim((string)$c['bt1a'])!==''&&trim((string)$m['public_url'])!==''&&trim((string)$c['bt1a'])!==trim((string)$m['public_url']))self::upsertIssue($seen,'path_mismatch',$c,$m,'bt1a',(string)$c['bt1a'],(string)$m['public_url'],'数据库安装地址与当前 OpenList 公开地址不一致','exact',$now);
             if(trim((string)$m['package_name'])!==''&&trim((string)$c['name'])!==trim((string)$m['package_name']))self::upsertIssue($seen,'metadata_mismatch',$c,$m,'name',(string)$c['name'],(string)$m['package_name'],'数据库应用名称与 IPA 元数据不一致','exact',$now);
             if(trim((string)$m['package_version'])!==''&&trim((string)$c['nickname'])!==trim((string)$m['package_version']))self::upsertIssue($seen,'version_mismatch',$c,$m,'nickname',(string)$c['nickname'],(string)$m['package_version'],'数据库版本与 IPA CFBundleShortVersionString 不一致','exact',$now);
