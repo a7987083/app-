@@ -1,40 +1,32 @@
 # Development Changelog
 
-## 2026-09-20 — 2026091912 release correction and Phase 20 persistence line
+## 2026-09-20 — 2026091913 release follow-up
 
-### 基线
+### 基线与原因
 
-- Branch: `release/2026091905-phase20-setting-hotfix`.
-- Installed historical release `2026091911` original HEAD: `edcd4d0c7cf50726ce7d09e3075fe23506ea7fe5`.
-- Pre-1912 candidate HEAD: `5e72bc30b9bb714f69e79597ca3c0d3704cfd346`.
-- Diff from original 1911 to candidate: 19 commits / 16 changed files.
+- `2026091912` 已由 ZONOE Source Release #159 发布。
+- #159 的 PHP 7、MySQL 5.7、Phase 20 integration、HTTP load、package-and-release 均通过。
+- 最终 `e2e-online-upgrade` 失败，原因是测试要求 Release Notes 精确包含 `更新内容`，而 1912 使用了 `主要更新`。
+- 因 1912 已发布，按不可变版本规则不再覆盖，后续修复进入 `2026091913`。
 
-### 实际开发内容
+### 实际修改
 
-- OpenList configuration moved to MySQL durable persistence.
-- Added `IpaMysqlSourceService`, `IpaMysqlSource` controller/view/JS and source migration.
-- Added `IpaMetadata` controller, `IpaReferenceDiscoveryService`, `IpaDirectoryCache`.
-- Updated remote file and scan services, including referenced-directory pagination.
-- Updated online-update manifest/builder so Phase 20 source/registry/migration payload is packaged correctly.
-- Updated Phase 20 UI/RC/scan contract tests to match current MySQL persistence and packaging semantics.
+- `VERSION` / `public/update/ver.txt` / `ver.json` 升级到 `2026091913`。
+- `PHASE13_RELEASE.txt` 与 `release/RELEASE_NOTES.md` 更新为 1913。
+- `tests/phase20_ui_contract_test.php` 去除固定版本号断言，改为验证统一版本格式。
+- Release Notes 固定使用 `## 更新内容` 标题以满足现有 GitHub online-update E2E 契约。
+- `ROADMAP.md` / `CHANGELOG_DEV.md` / `HANDOFF.md` / `PROJECT_STATE.json` / `KNOWN_ISSUES.md` 同步维护。
 
-### CI 修复记录
+### 验证状态
 
-- `aaa91d1bd879034f304d04874c17f9ca7c0d9b94` — align Phase 20 OpenList contract with MySQL persistence.
-- `2451a095d00e395851139f7e1bcb242d3d38eb3f` — make MySQL payload contract whitespace agnostic.
-- `5e72bc30b9bb714f69e79597ca3c0d3704cfd346` — fix PHP 7 contract matcher escaping.
-- ZONOE Source Release Run #157 / `35477383649`: SUCCESS on the pre-1912 candidate HEAD.
+- 1912 Source Release #159：部分通过，最终 E2E 失败。
+- 1913 修改：已完成于工作分支。
+- 1913 正式 CI：待正式 release 分支触发。
+- 1913 真实服务器更新：未验证。
 
-### 发布纠正
+## 2026-09-20 — 2026091912 release correction
 
-- `2026091911` had already been installed on a real server before later candidate changes were built.
-- Reusing/clobbering the existing `source-v2026091911` asset was incorrect release-version handling.
-- Corrected release target is `2026091912`.
-- From 1912 onward, every changed release payload must use the next monotonically increasing version.
-
-### 当前验证状态
-
-- 已修改：是。
-- 2026091912 版本提交：进行中。
-- 2026091912 CI：待运行。
-- 2026091912 真实服务器更新：未验证。
+- 原始已安装 `2026091911` HEAD：`edcd4d0c7cf50726ce7d09e3075fe23506ea7fe5`。
+- 从原始 1911 到 1912 候选包含 19 commits / 16 changed files。
+- 完成 OpenList MySQL 持久化、IPA MySQL source/metadata、引用目录发现/缓存、扫描分页与 Phase 20 在线更新 payload 收口。
+- 修正此前错误复用 `2026091911` Release Asset 的版本管理问题，并建立单调递增发布规则。
