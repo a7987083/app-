@@ -1,31 +1,30 @@
-# ZONOE 软件源 2026091913
+# ZONOE 软件源 2026091914
 
 ## 基线
 
-本版本以已发布的 `2026091912` 为直接基线。`2026091912` 已完成 package-and-release，但最终 `e2e-online-upgrade` 因发布说明契约过窄而失败；因此 1912 冻结，不再覆盖，后续修复进入新版本 `2026091913`。
+本版本以已发布并冻结的 `2026091913` 为直接基线。`2026091911`、`2026091912`、`2026091913` 均不得复用或覆盖 Release Asset；本次所有变化进入新版本 `2026091914`。
 
 ## 更新内容
 
-- 修正 Phase 20 UI 契约测试对具体版本号的硬编码，使后续 `1914 / 1915 / ...` 不再因升版本身失败。
-- 保持 1912 已完成的 OpenList MySQL 持久化、IPA MySQL source/metadata、引用目录发现、目录缓存、扫描分页和 Phase 20 migration payload。
-- 保持 FastAdmin PATH_INFO/action、Range Parser、绑定、治理、恢复、Retention 与 appstore 协议语义不变。
-- 发布版本继续严格单调递增；已发布版本不复用、不覆盖 Release Asset。
+- IPA 扫描范围改为严格由启用 MySQL 软件源中的 `bt1a` 决定，移除无引用源时扫描整个 OpenList 目录的 fallback。
+- 保留旧项目成熟的 OpenList 目录缓存 / MD5 优先判定思路：普通后台 MD5 扫描优先使用缓存，强制刷新目录独立执行。
+- Parser 固定每次后台解析 `1` 个 IPA，并加入原子领取、`needs_reparse` 并发保护、30 分钟失败退避。
+- 新增独立 `fa_ipa_parse_cache`，按 `MD5 + 文件大小 + Parser Version` 复用解析结果；复用时同时恢复完整 metadata payload，而不是只恢复基础列。
+- `fa_ipa_metadata` 收敛为当前 active workset，引入 `referenced / needs_reparse`；无引用且未绑定的历史数据在解析结果入 cache 后可安全回收。
+- 修复 IPA 元数据筛选查询：count 与 rows 分别构建 Query，避免 ThinkPHP/PDO 绑定参数复用导致的查询失败。
+- 元数据刷新失败会明确提示当前显示旧数据，不再让 BootstrapTable 静默保留旧 rows。
+- OpenList 停用后扫描、强制刷新、Range Parser、连接测试均拒绝执行；历史健康结果只作为“上次检查”展示。
+- 修复从未启动、`heartbeat_at=0` 的 queued 僵尸任务恢复；后台 spawn 改为优先 CLI PHP 并对启动结果做额外校验。
+- 新增 `Phase 20 Workset MySQL57` CI Gate，在真实 MySQL 5.7 上连续执行最新 Phase20 migration 两遍并验证 workset/cache schema。
 
-## 1912 已验证结果
+## 预发布验证
 
-`2026091912` 的 ZONOE Source Release #159 已通过：
-
-- PHP 7.0 full regression。
-- MySQL 5.7 migrations。
-- Phase 19.3.1 HTTP load gate。
-- Phase 20 OpenList HTTP E2E。
-- Phase 20 updater rollback E2E。
-- package-and-release。
-
-最终 `e2e-online-upgrade` 失败原因仅为 Release Notes 契约要求精确包含“更新内容”字符串，而 1912 使用了“主要更新”标题。
+- PR #14 `Phase 20 IPA Management` Run #118：`phase20-contract`、`phase20-integration`、`phase20-mysql57`、`phase20-package` 全部成功。
+- 同一 PR HEAD 的 `Regression Checks`、`Phase14 Production Hardening`、`Phase 17.2 Authorization Integrity` 全部成功。
+- `Phase 20 Workset MySQL57` Run #1 成功；最新 Phase20 migration 在 MySQL 5.7 连续执行两遍通过。
 
 ## 发布后验证
 
-- GitHub Release 应创建 `source-v2026091913`，不得覆盖 `source-v2026091912`。
-- 在线升级 E2E 应解析上一版本为 `2026091912`，目标版本为 `2026091913`。
-- 真实服务器当前若仍为 `2026091911`，应检测到最新 `2026091913`，并在受控验证后执行升级。
+- GitHub Release 应创建全新的 `source-v2026091914`，不得覆盖 `source-v2026091913` 或更早版本。
+- 在线升级 E2E 必须验证 `2026091913 -> 2026091914` 的发布链路。
+- 真实生产服务器目前只确认到 `2026091911`；正式 CI 全绿并发布 1914 后，生产升级与 Phase 20 功能仍需单独受控验证。
