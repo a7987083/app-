@@ -1,13 +1,30 @@
 <?php
 function p20ParserContractAssert($condition,$message){if(!$condition){fwrite(STDERR,"FAIL phase20_parser_contract_test: {$message}\n");exit(1);}}
-$root=dirname(__DIR__);$script=file_get_contents($root.'/scripts/ipa-range-info.py');$service=file_get_contents($root.'/application/common/library/IpaParserService.php');$runner=file_get_contents($root.'/application/common/library/IpaParserRunner.php');$client=file_get_contents($root.'/application/common/library/IpaOpenListClient.php');
+$root=dirname(__DIR__);
+$script=file_get_contents($root.'/scripts/ipa-range-info.py');
+$service=file_get_contents($root.'/application/common/library/IpaParserService.php');
+$cache=file_get_contents($root.'/application/common/library/IpaParseCache.php');
+$workset=file_get_contents($root.'/application/common/library/IpaMetadataWorksetService.php');
+$runner=file_get_contents($root.'/application/common/library/IpaParserRunner.php');
+$client=file_get_contents($root.'/application/common/library/IpaOpenListClient.php');
 p20ParserContractAssert(strpos($script,"'Range':")!==false,'python parser sends Range header');
 p20ParserContractAssert(strpos($script,'DEFAULT_MAX_FETCH')!==false,'range safety cap exists');
 p20ParserContractAssert(strpos($script,"Payload/[^/]+\\.app/Info\\.plist")!==false,'main Info.plist discovery');
 p20ParserContractAssert(strpos($script,'declared_icon_names')!==false && strpos($script,'primary_icon')!==false,'icon candidate logic');
 p20ParserContractAssert(strpos($script,'mach_arches')!==false,'Mach-O architecture probe');
 p20ParserContractAssert(strpos($script,'embedded.mobileprovision')!==false,'provisioning extraction');
-p20ParserContractAssert(strpos($service,'findReusableMetadata')!==false,'MD5 metadata reuse');
+p20ParserContractAssert(strpos($service,'One worker run consumes at most one IPA')!==false,'worker contract is one IPA per run');
+p20ParserContractAssert(strpos($service,'claimOne')!==false,'parser atomically claims one task item');
+p20ParserContractAssert(strpos($service,"where('referenced',1)")!==false,'parser only consumes active workset rows');
+p20ParserContractAssert(strpos($service,"--limit=1")!==false,'spawned parser worker is fixed to one IPA');
+p20ParserContractAssert(strpos($service,'needs_reparse')!==false,'scan/parser race preserves reparse intent');
+p20ParserContractAssert(strpos($service,'IpaParseCache::find')!==false,'durable MD5 parse cache lookup');
+p20ParserContractAssert(strpos($service,'IpaParseCache::payload')!==false,'MD5 cache restores parser detail payload');
+p20ParserContractAssert(strpos($cache,"where('md5',\$md5)")!==false,'parse cache is keyed by MD5');
+p20ParserContractAssert(strpos($cache,"where('file_size',\$size)")!==false,'parse cache also keys file size');
+p20ParserContractAssert(strpos($cache,"where('parser_version',\$parserVersion)")!==false,'parse cache includes parser version');
+p20ParserContractAssert(strpos($cache,'payload_json')!==false,'parse cache preserves architectures/icons/range payload');
+p20ParserContractAssert(strpos($workset,"parse_state IN ('pending','success','failed')")!==false,'workset cleanup excludes in-flight parsing rows');
 p20ParserContractAssert(strpos($service,'RETRY_DELAY = 1800')!==false,'30 minute failure cooldown');
 p20ParserContractAssert(strpos($service,"Db::name('category')")===false,'parser must not write category');
 p20ParserContractAssert(strpos($runner,'proc_open')!==false,'parser worker is isolated process');
