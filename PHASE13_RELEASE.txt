@@ -1,31 +1,29 @@
-ZONOE 软件源 Release 2026091915
-版本：2026091915
-基线：2026091914
-阶段：Phase 20.9 persistent IPA worker
-发布分支：release/2026091905-phase20-setting-hotfix
+ZONOE 软件源 Release 2026091916
+版本：2026091916
+基线：2026091915
+阶段：Phase 20.9 persistent IPA worker release packaging fix
+发布分支：release/2026091916-worker-release-fix
 发布状态：准备触发正式 Release Workflow
 
 更新内容：
-1. 2026091914 已发布并冻结；本次所有后台任务执行模型修复进入 2026091915，不覆盖任何历史 Release Asset。
-2. IPA 扫描按旧项目成熟职责模型改造：Web 只创建持久任务，不再通过 exec/nohup php think 临时 fork CLI worker。
-3. 新增 fa_ipa_worker_job 持久任务队列和 fa_ipa_worker_state heartbeat 状态表，scan / parse 采用数据库原子 claim。
-4. 新增 ipa:worker 常驻 Worker，支持持续消费以及 --once 单任务诊断模式。
-5. 未部署常驻 Worker 时，使用 PHP-FPM after-response fallback：HTTP 响应完成后在同一 Web 进程消费 1 个持久 job，对应旧项目 setImmediate(runQueuedTask) 的任务模型，不依赖 CLI PHP 路径。
-6. IpaScanService::spawn() / IpaParserService::spawn() 仅保留兼容入口，内部只入队；正常 Web 路径已移除 exec/nohup 临时 Worker。
-7. 后台解析继续严格一次 1 个 IPA；MD5 parse cache、30 分钟失败退避、needs_reparse 并发保护保持不变。
-8. 后台扫描继续严格以启用 MySQL 软件源 bt1a 为权威范围，沿用 30 分钟 OpenList 目录缓存和 MD5 优先差异判定。
-9. 在线更新包加入 Worker Service、Worker Command 和 phase20_ipa_worker.sql，升级时先执行数据库迁移再覆盖新程序文件。
-10. 新增 Phase 20 Persistent IPA Worker CI Gate，验证 PHP 7.0 契约及 MySQL 5.7 migration 双跑，并禁止重新引入 exec/nohup 临时 Worker。
+1. 2026091915 已发布并冻结；本次不覆盖 1915 历史 Release Asset，所有修复进入 2026091916。
+2. 修复 2026091915 在线更新包遗漏 phase20_ipa_worker.sql 的发布集成问题。
+3. tools/build_online_update.php 恢复历史 Phase20 migration 登记习惯，将 phase20_ipa_worker.sql 以 mysql/2026091915_phase20_ipa_worker.sql 打入在线更新包。
+4. phase20_rc_release_contract_test.php 新增 Worker Service、Worker Command 和 worker migration 的发布契约检查，防止源码存在但 builder 漏打包。
+5. 保持 2026091915 Worker 运行模型不变：Web 只入持久队列，ipa:worker / PHP-FPM after-response fallback 负责消费。
+6. phase20_ipa_worker.sql 保持 MySQL 5.7 兼容、可重复执行，创建 fa_ipa_worker_job 和 fa_ipa_worker_state。
+7. 本版本不改 UpdateIntegrity 四个哨兵文件，file_sign 保持不变。
 
-预发布验证：
-- PR #15 Phase 20.9 persistent IPA worker：Regression Checks、Phase14 Production Hardening、Phase 17.2 Authorization Integrity 全部成功。
-- Phase 20 IPA Management：contract / integration / package / MySQL 5.7 全部成功。
-- Phase 20 Workset MySQL57 成功。
-- Phase 20 Persistent IPA Worker：worker-contract / worker-mysql57 全部成功；Worker migration 在真实 MySQL 5.7 连续执行两遍通过。
+验证要求：
+- PHP 7.0 regression 全绿。
+- Phase 20 Persistent IPA Worker worker-contract / worker-mysql57 全绿。
+- ZONOE Source Release package-and-release 成功生成 source-v2026091916。
+- 最终 zonoe-online-update.zip 必须包含 mysql/2026091915_phase20_ipa_worker.sql。
+- 在线升级 E2E 至少验证上一正式版本 2026091915 -> 2026091916。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091915。
+- 目标 GitHub Release 标签：source-v2026091916。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- VERSION、public/update/ver.txt、ver.json、PHASE13_RELEASE.txt 同步为 2026091915。
+- VERSION、public/update/ver.txt、ver.json、PHASE13_RELEASE.txt 同步为 2026091916。
 - file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee；本次未修改 UpdateIntegrity 四个哨兵文件。
-- source-v2026091914 及更早正式版本均为冻结历史版本，不得修改或覆盖。
+- source-v2026091915 及更早正式版本均为冻结历史版本，不得修改或覆盖。
