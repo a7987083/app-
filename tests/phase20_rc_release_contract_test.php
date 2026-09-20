@@ -26,10 +26,12 @@ $requiredProgramFiles = [
     'application/admin/controller/IpaLifecycle.php',
     'application/admin/command/IpaScan.php',
     'application/admin/command/IpaParse.php',
+    'application/admin/command/IpaWorker.php',
     'application/admin/view/ipa_center/governance.html',
     'application/common/library/IpaMetadataQueryService.php',
     'application/common/library/IpaMetadataWorksetService.php',
     'application/common/library/IpaParseCache.php',
+    'application/common/library/IpaWorkerService.php',
     'application/common/library/IpaGovernanceService.php',
     'application/common/library/IpaGovernanceBatchService.php',
     'application/common/library/IpaGovernanceRecoveryService.php',
@@ -58,6 +60,7 @@ $orderedSql = [
     '2026091909_phase20_ipa_lifecycle.sql' => 'application/admin/command/Install/phase20_ipa_lifecycle.sql',
     '2026091910_phase20_ipa_sources_v2.sql' => 'application/admin/command/Install/phase20_ipa_sources_v2.sql',
     '2026091911_phase20_ipa_workset.sql' => 'application/admin/command/Install/phase20_ipa_workset.sql',
+    '2026091915_phase20_ipa_worker.sql' => 'application/admin/command/Install/phase20_ipa_worker.sql',
 ];
 
 $lastPosition = -1;
@@ -76,6 +79,7 @@ foreach (array_slice(array_keys($orderedSql),0,9) as $target) {
 }
 phase20RcAssert(strpos($builder, "2026091910_phase20_ipa_sources_v2.sql") !== false, 'builder packages software-source registry migration');
 phase20RcAssert(strpos($builder, "2026091911_phase20_ipa_workset.sql") !== false, 'builder packages active-workset/parse-cache migration');
+phase20RcAssert(strpos($builder, "2026091915_phase20_ipa_worker.sql") !== false, 'builder packages persistent-worker migration');
 
 $builderCompact = preg_replace('/\s+/', '', $builder);
 phase20RcAssert(strpos($builderCompact, "'mysql/'." . '$targetName') !== false, 'builder writes Phase 20 migrations to mysql payload');
