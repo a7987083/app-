@@ -16,6 +16,7 @@ $phase20Sql = [
     '2026091909_phase20_ipa_lifecycle.sql' => $root . '/application/admin/command/Install/phase20_ipa_lifecycle.sql',
     '2026091910_phase20_ipa_sources_v2.sql' => $root . '/application/admin/command/Install/phase20_ipa_sources_v2.sql',
     '2026091911_phase20_ipa_workset.sql' => $root . '/application/admin/command/Install/phase20_ipa_workset.sql',
+    '2026091915_phase20_ipa_worker.sql' => $root . '/application/admin/command/Install/phase20_ipa_worker.sql',
 ];
 
 function release_fail($message){fwrite(STDERR,"FAIL build_online_update: {$message}\n");exit(1);}
