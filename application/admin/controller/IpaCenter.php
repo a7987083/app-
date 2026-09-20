@@ -23,7 +23,7 @@ class IpaCenter extends Backend
         if ($this->request->isAjax()) {
             $counts=IpaMetadataQueryService::counts(true);
             $metadataTotal=$counts['total'];$parsed=$counts['success'];$pending=$counts['pending'];$failed=$counts['failed'];
-            $bound = (int)Db::name('ipa_binding')->alias('b')->join('__IPA_METADATA__ m','m.id=b.metadata_id','INNER')->where('m.referenced',1)->count();
+            $bound = (int)Db::name('ipa_binding')->count();
             $governance = IpaGovernanceService::stats();
             $source = IpaSourceConfig::first(false);
             $tasks = Db::name('ipa_scan_task')->order('id', 'desc')->limit(5)->select();
