@@ -1,20 +1,30 @@
-ZONOE 软件源 Release 2026091913
-版本：2026091913
-基线：2026091912
-阶段：Phase 20 release correction follow-up
+ZONOE 软件源 Release 2026091914
+版本：2026091914
+基线：2026091913
+阶段：Phase 20 IPA workset / parser queue correction
 发布分支：release/2026091905-phase20-setting-hotfix
 发布状态：准备触发正式 Release Workflow
 
 更新内容：
-1. 2026091912 已发布并冻结，不再覆盖；本次所有后续修复进入 2026091913。
-2. 修正 Phase 20 UI 契约测试对固定版本号的依赖，使后续版本可持续递增。
-3. 保留 1912 的 OpenList MySQL 持久化、IPA MySQL source/metadata、引用目录发现、目录缓存和扫描分页能力。
-4. 1912 的 PHP 7、MySQL 5.7、Phase 20 integration、HTTP load、package-and-release 已通过；最终 online-upgrade E2E 因 Release Notes 标题契约失败。
-5. 2026091913 必须重新执行完整 CI，并验证 GitHub Release online-update E2E。
+1. 2026091913 已发布并冻结；本次所有功能与修复进入 2026091914，不覆盖任何历史 Release Asset。
+2. IPA 扫描改为严格 MySQL bt1a 引用工作集；删除无 MySQL 软件源时扫描整个 OpenList 根目录的 fallback。
+3. OpenList 继续只负责文件访问、MD5、目录缓存和 HTTP Range；普通 MD5 扫描优先使用目录缓存，强制刷新目录独立执行。
+4. Parser 固定每次后台解析 1 个 IPA，采用原子领取、needs_reparse 并发保护和 30 分钟失败退避。
+5. 新增独立 fa_ipa_parse_cache，以 MD5 + 文件大小 + Parser Version 复用解析结果，并保留完整 metadata payload。
+6. fa_ipa_metadata 收敛为当前 active workset，新增 referenced / needs_reparse；无引用且未绑定的历史记录可安全回收。
+7. 修复 IPA 元数据“全部/已解析/待解析/失败”查询路径，count/rows 分离构造 Query，避免 ThinkPHP/PDO placeholder 复用问题。
+8. 元数据刷新失败时明确显示旧数据状态；OpenList 停用后扫描、强刷、解析和连接测试均禁止，历史健康结果仅作为上次检查展示。
+9. queued 且 heartbeat=0 的僵尸扫描任务可被恢复；后台 spawn 使用 CLI PHP 并校验子进程状态，降低 queued/0/0 假启动。
+10. 新增 Phase 20 Workset MySQL57 Gate，真实 MySQL 5.7 连续执行最新迁移两遍并验证 workset/cache schema。
+
+预发布验证：
+- PR #14 Phase 20 IPA Management Run #118：contract / integration / mysql57 / package 全部通过。
+- Regression Checks / Phase14 Production Hardening / Phase 17.2 Authorization Integrity 同一 PR HEAD 全部通过。
+- Phase 20 Workset MySQL57 Run #1：成功，最新 Phase20 migrations 连续执行两遍通过。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091913。
+- 目标 GitHub Release 标签：source-v2026091914。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091913。
-- file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee。
-- 发布后不得修改或覆盖 source-v2026091912。
+- VERSION、public/update/ver.txt、ver.json 同步为 2026091914。
+- file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee；本次未修改 UpdateIntegrity 四个哨兵文件。
+- source-v2026091911 / 1912 / 1913 均为冻结历史版本，不得修改或覆盖。
