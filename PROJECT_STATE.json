@@ -1,32 +1,44 @@
 {
   "repository": "a7987083/app-",
-  "version": "2026091912",
+  "version": "2026091913",
   "branch": "release/2026091905-phase20-setting-hotfix",
-  "commit": "pending_2026091912_release_commit",
+  "work_branch": "work/2026091913-release-fix",
+  "commit": "pending_release_branch_fast_forward",
   "baseline": {
-    "version": "2026091911",
-    "commit": "edcd4d0c7cf50726ce7d09e3075fe23506ea7fe5",
-    "candidate_head_before_version_bump": "5e72bc30b9bb714f69e79597ca3c0d3704cfd346"
+    "published_version": "2026091912",
+    "published_release": "source-v2026091912",
+    "published_head": "c29c04c7f57865599fc6bac3ee2799d3b0fb4b85",
+    "real_server_verified_version": "2026091911"
   },
-  "build": "pending",
+  "build": "pending_ci",
   "ci": {
-    "status": "pending",
-    "last_verified_run": 35477383649,
-    "last_verified_result": "success",
-    "last_verified_head": "5e72bc30b9bb714f69e79597ca3c0d3704cfd346"
+    "last_run": 35481909582,
+    "last_run_number": 159,
+    "last_result": "failure",
+    "passed_jobs": [
+      "php70-regression",
+      "mysql57-migration",
+      "phase19-3-1-http-load",
+      "phase20-integration",
+      "package-and-release"
+    ],
+    "failed_job": "e2e-online-upgrade",
+    "failure_reason": "release notes contract expected exact 更新内容 heading"
   },
   "runtime": {
     "real_server_current_version": "2026091911",
-    "real_server_1911_update": "verified_success",
-    "real_server_1912_update": "not_verified"
+    "real_server_1912_update": "not_verified",
+    "real_server_1913_update": "not_verified"
   },
-  "phase": "Phase 20 / OpenList MySQL persistence and release correction",
+  "phase": "Phase 20 / release version monotonicity and CI closeout",
   "release_policy": {
     "immutable_published_versions": true,
     "monotonic_versions": true,
-    "next_version_after_2026091912": "2026091913"
+    "frozen_versions": ["2026091911", "2026091912"],
+    "current_target": "2026091913",
+    "next_version": "2026091914"
   },
-  "next_task": "Run full CI for 2026091912; fix first real failure if any; then verify source-v2026091912 and perform real server 2026091911 -> 2026091912 update.",
+  "next_task": "Fast-forward release branch to the 2026091913 work head, run full ZONOE Source Release CI, fix the first real failure until green, then verify source-v2026091913 and real-server update.",
   "roadmap": "ROADMAP.md",
   "known_issues": "KNOWN_ISSUES.md",
   "handoff": "HANDOFF.md",
