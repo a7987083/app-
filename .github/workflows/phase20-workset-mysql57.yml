@@ -1,0 +1,92 @@
+name: Phase 20 Workset MySQL57
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'application/admin/command/Install/phase20_ipa_*.sql'
+      - 'application/common/library/Ipa*.php'
+      - '.github/workflows/phase20-workset-mysql57.yml'
+  pull_request:
+    paths:
+      - 'application/admin/command/Install/phase20_ipa_*.sql'
+      - 'application/common/library/Ipa*.php'
+      - '.github/workflows/phase20-workset-mysql57.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  workset-mysql57:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: phase20_workset
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap minimal FastAdmin auth schema
+        run: |
+          mysql -h127.0.0.1 -P3306 -uroot -proot phase20_workset <<'SQL'
+          CREATE TABLE IF NOT EXISTS `fa_auth_rule` (
+            `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+            `type` varchar(20) NOT NULL DEFAULT '',
+            `pid` int(10) unsigned NOT NULL DEFAULT '0',
+            `name` varchar(100) NOT NULL DEFAULT '',
+            `title` varchar(100) NOT NULL DEFAULT '',
+            `icon` varchar(50) NOT NULL DEFAULT '',
+            `condition` varchar(255) NOT NULL DEFAULT '',
+            `remark` varchar(255) NOT NULL DEFAULT '',
+            `ismenu` tinyint(1) unsigned NOT NULL DEFAULT '0',
+            `createtime` int(10) unsigned NOT NULL DEFAULT '0',
+            `updatetime` int(10) unsigned NOT NULL DEFAULT '0',
+            `weigh` int(10) NOT NULL DEFAULT '0',
+            `status` varchar(30) NOT NULL DEFAULT 'normal',
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_name` (`name`)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+          SQL
+      - name: Run Phase 20 migrations twice including workset
+        run: |
+          set -euo pipefail
+          files=(
+            phase20_ipa_foundation.sql
+            phase20_ipa_center.sql
+            phase20_ipa_scan.sql
+            phase20_ipa_parser.sql
+            phase20_ipa_binding.sql
+            phase20_ipa_writeback.sql
+            phase20_ipa_governance.sql
+            phase20_ipa_production.sql
+            phase20_ipa_lifecycle.sql
+            phase20_ipa_sources_v2.sql
+            phase20_ipa_workset.sql
+          )
+          for pass in 1 2; do
+            echo "migration pass=${pass}"
+            for name in "${files[@]}"; do
+              mysql -h127.0.0.1 -P3306 -uroot -proot phase20_workset < "application/admin/command/Install/${name}"
+            done
+          done
+      - name: Verify workset schema
+        run: |
+          set -euo pipefail
+          mysql_base=(mysql -N -B -h127.0.0.1 -P3306 -uroot -proot phase20_workset)
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='phase20_workset' AND table_name='fa_ipa_mysql_source'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='phase20_workset' AND table_name='fa_ipa_parse_cache'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='phase20_workset' AND table_name='fa_ipa_metadata' AND column_name='referenced'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='phase20_workset' AND table_name='fa_ipa_metadata' AND column_name='needs_reparse'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='phase20_workset' AND table_name='fa_ipa_parse_cache' AND column_name='payload_json'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='phase20_workset' AND table_name='fa_ipa_metadata' AND index_name='idx_reference_parse'")" -ge "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='phase20_workset' AND table_name='fa_ipa_parse_cache' AND index_name='uniq_parse_fingerprint'")" -ge "1"
