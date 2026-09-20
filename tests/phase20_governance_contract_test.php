@@ -16,6 +16,9 @@ $controller=file_get_contents(dirname(__DIR__).'/application/admin/controller/Ip
 foreach(['governanceRefresh','governanceList','governancePreview','governanceApply','governanceIgnore','governanceVerify'] as $action)phase206Assert(strpos($controller,'function '.$action.'(')!==false,'controller action '.$action);
 $service=file_get_contents(dirname(__DIR__).'/application/common/library/IpaGovernanceService.php');
 foreach(['plan_hash','治理计划已变化，请重新预览','OpenList 目标文件已存在，禁止自动覆盖','idempotencyKey','verifyPlan'] as $needle)phase206Assert(strpos($service,$needle)!==false,'governance safety '.$needle);
+phase206Assert(strpos($service,'IpaScanService::latestSnapshot')!==false,'missing IPA governance consumes latest scan JSON snapshot');
+phase206Assert(strpos($service,"Db::name('ipa_scan_task_item')")===false,'governance no longer depends on per-file scan task rows');
+phase206Assert(strpos($service,"['current_paths']")!==false,'governance checks current snapshot path membership');
 $client=file_get_contents(dirname(__DIR__).'/application/common/library/IpaOpenListClient.php');
 phase206Assert(strpos($client,"'/fs/rename'")!==false,'OpenList rename endpoint');
 phase206Assert(strpos($client,"'/fs/move'")!==false,'OpenList move endpoint');
