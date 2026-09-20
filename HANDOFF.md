@@ -4,42 +4,42 @@
 
 - Repository: `a7987083/app-`
 - Release branch: `release/2026091905-phase20-setting-hotfix`
-- Work branch: `work/2026091913-release-fix`
-- Last published release: `2026091912`
-- Current release target: `2026091913`
+- Work branch: `dev/2026091914-ipa-workset`
+- Last published release: `2026091913`
+- Current release target: `2026091914`
 - Real server last verified version: `2026091911`
 
-## 当前实现
+## 1914 当前实现
 
-- OpenList 配置已使用 MySQL durable persistence。
-- IPA MySQL source/metadata、引用目录发现、目录缓存、扫描分页均已进入发布线。
-- Phase 20 online-update payload 含 program 文件与有序 MySQL migration。
-- FastAdmin PATH_INFO/action、Range Parser、绑定、治理、恢复、Retention、appstore 协议语义保持。
+- MySQL 软件源 `bt1a` 为 IPA 扫描范围权威来源；无启用软件源时不再扫描整个 OpenList。
+- OpenList 只负责文件访问、MD5、目录缓存、HTTP Range。
+- 后台解析固定一次 1 个，原子领取，支持 `needs_reparse` 与失败退避。
+- 独立 `fa_ipa_parse_cache` 按 MD5 + size + parser version 保存可复用解析结果。
+- `fa_ipa_metadata` 是 active workset；`referenced=0` 且未绑定的记录可安全回收。
+- metadata 筛选查询 count/rows 独立构造，避免 ThinkPHP/PDO 参数复用问题。
+- 刷新失败会标记旧数据；OpenList 停用后扫描/强刷/解析/测试连接 fail closed。
+- queued heartbeat=0 僵尸任务可恢复；后台 spawn 优先 CLI PHP 并加强启动判定。
 
-## 1912 状态
+## 验证状态
 
-- GitHub Release `source-v2026091912` 已创建并冻结。
-- Source Release #159：PHP 7、MySQL 5.7、HTTP load、Phase 20 integration、package-and-release 均成功。
-- 最终 GitHub online-update E2E 因 Release Notes 标题契约失败；不是业务代码、MySQL 或更新包构建失败。
+- PR #14 Phase 20 IPA Management Run #118：四个 job 全绿。
+- Regression Checks / Phase14 Production Hardening / Phase 17.2 Authorization Integrity：全绿。
+- Phase 20 Workset MySQL57 Run #1：真实 MySQL 5.7 最新迁移连续执行两遍成功。
+- 正式 ZONOE Source Release 1914：尚未触发。
+- 真实服务器 1914：尚未验证。
 
-## 1913 修改
+## 发布纪律
 
-- 版本元数据升级到 1913。
-- Release Notes 改用 `更新内容` 标题。
-- Phase 20 UI contract 不再绑定具体版本号，只验证合法版本格式。
-- 长期状态文件同步维护。
+- `2026091911 / 1912 / 1913` 均冻结。
+- 当前正式目标只能是 `2026091914`；发布后若再改内容必须升 1915。
+- 已提交 / CI 通过 / Release 发布 / 生产验证必须分开记录。
+- workflow 仍含旧 `--clobber` 路径，因此绝不能复用已存在 VERSION/Tag。
 
-## 发布规则
+## 接手顺序
 
-- 1911、1912 均视为冻结历史版本，不再覆盖。
-- 后续严格：1913 -> 1914 -> 1915 -> ...。
-- 已提交 / CI 通过 / Release 发布 / 真实服务器验证必须分开记录。
-- 当前 workflow 仍含旧的 `--clobber` 路径，因此操作纪律上绝不能重复使用已发布 VERSION；后续应单独做流程硬化。
-
-## 接手注意
-
-1. 先核对 release 分支 HEAD 是否已快进到工作分支最终 HEAD。
-2. 查看最新 ZONOE Source Release Run。
-3. 若失败，只修第一处真实错误，不绕过 Gate。
-4. CI 全绿后记录 Release Tag、Asset SHA256、E2E 结果。
-5. 最后再做真实服务器升级和 Phase 20 功能回归。
+1. 核对 dev HEAD 和 release branch 是否只差 fast-forward。
+2. fast-forward 正式 release 分支到最终 1914 HEAD。
+3. 观察 ZONOE Source Release 全部 jobs。
+4. Release 创建前失败：继续修 1914；Release 创建后失败：冻结 1914，修复进入 1915。
+5. 全绿后记录 Release Tag / Asset SHA256 / E2E。
+6. 最后执行真实服务器在线升级和 Phase 20 回归。
