@@ -1,15 +1,15 @@
 <div class="panel panel-default panel-intro">
     <div class="panel-heading">
-        <div class="panel-lead"><em>扫描任务</em>OpenList 目录发现只读取文件元数据，不下载 IPA 内容，也不会写入 fa_category。</div>
+        <div class="panel-lead"><em>扫描任务</em>MySQL 软件源的 bt1a 是扫描范围的唯一权威来源；OpenList 只提供目录元数据、MD5 和 Range 文件内容，不会扫描未被引用的整个根目录。</div>
     </div>
     <div class="panel-body">
         <div id="toolbar" class="toolbar">
-            <button type="button" class="btn btn-success btn-ipa-scan"><i class="fa fa-search"></i> 立即扫描</button>
+            <button type="button" class="btn btn-success btn-ipa-scan"><i class="fa fa-search"></i> 后台扫描 MD5（使用缓存）</button>
             <button type="button" class="btn btn-default btn-ipa-scan-refresh"><i class="fa fa-refresh"></i> 强制刷新目录</button>
             <button type="button" class="btn btn-default btn-ipa-task-refresh"><i class="fa fa-repeat"></i> 刷新状态</button>
         </div>
-        <div class="alert alert-info" style="margin-top:15px">阶段：queued → list_remote → compare_metadata → discovery_complete。新增/变化 IPA 只进入 parser_pending 队列，完整解析由 Parser worker 执行。</div>
+        <div class="alert alert-info" style="margin-top:15px">阶段：queued → read_references → compare_metadata → discovery_complete。没有启用的 MySQL 软件源时不会扫描 OpenList；新增/变化 IPA 只进入 parser_pending，完整解析由 Parser worker 执行。</div>
         <table id="ipa-task-table" class="table table-striped table-bordered table-hover" data-operate-edit="0" data-operate-del="0" width="100%"></table>
-        <p class="text-muted" style="margin-top:15px">服务器建议每分钟执行一次：<code>php think ipa:scan --schedule</code>。手动按钮会优先尝试后台启动 CLI；禁用 exec 时任务保持 queued，由 CLI worker 接手。</p>
+        <p class="text-muted" style="margin-top:15px">服务器建议每分钟执行一次：<code>php think ipa:scan --schedule</code>。手动按钮会优先尝试后台启动 CLI；禁用 exec 时任务保持 queued，由 CLI worker 接手并可被 stale-recovery 检测。</p>
     </div>
 </div>
