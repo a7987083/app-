@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS `fa_ipa_parse_cache` (
   `package_build` varchar(100) NOT NULL DEFAULT '',
   `minimum_ios` varchar(100) NOT NULL DEFAULT '',
   `executable` varchar(255) NOT NULL DEFAULT '',
+  `payload_json` mediumtext,
   `parsed_at` int(10) unsigned NOT NULL DEFAULT '0',
   `last_used_at` int(10) unsigned NOT NULL DEFAULT '0',
   `createtime` int(10) unsigned NOT NULL DEFAULT '0',
@@ -42,3 +43,10 @@ CREATE TABLE IF NOT EXISTS `fa_ipa_parse_cache` (
   UNIQUE KEY `uniq_parse_fingerprint` (`md5`,`file_size`,`parser_version`),
   KEY `idx_last_used` (`last_used_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Phase20 durable MD5 parse-result cache';
+
+SET @sql := IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=@db AND table_name='fa_ipa_parse_cache' AND column_name='payload_json'),
+  'SELECT 1',
+  'ALTER TABLE `fa_ipa_parse_cache` ADD COLUMN `payload_json` mediumtext AFTER `executable`'
+);
+PREPARE phase20_stmt FROM @sql; EXECUTE phase20_stmt; DEALLOCATE PREPARE phase20_stmt;
