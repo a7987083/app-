@@ -1,29 +1,31 @@
-ZONOE 软件源 Release 2026091917
-版本：2026091917
-基线：2026091916
-阶段：Phase 20.9 persistent IPA worker release packaging fix
-发布分支：release/2026091917-worker-release-fix
-发布状态：准备触发正式 Release Workflow
+ZONOE 软件源 Release 2026091918
+版本：2026091918
+基线：2026091917
+阶段：Phase 20 IPA scan JSON snapshot convergence
+发布分支：release/2026091918-openlist-json-scan
+发布状态：预发布验证中
 
 更新内容：
-1. source-v2026091916 已生成但在线升级 E2E 未完成；不移动、不覆盖 1916 Tag/Asset，修复继续进入 2026091917。
-2. 保留 1916 对 phase20_ipa_worker.sql 的在线更新打包修复，最终 ZIP 继续包含 mysql/2026091915_phase20_ipa_worker.sql。
-3. 保留 phase20_rc_release_contract_test.php 对 Worker Service、Worker Command 和 worker migration 的发布契约检查。
-4. 修复真实 GitHub Release 在线升级 E2E 的历史 changelog 契约：Release Notes 使用“更新内容”标题。
-5. 保持 2026091915 Worker 运行模型不变：Web 只入持久队列，ipa:worker / PHP-FPM after-response fallback 负责消费。
-6. phase20_ipa_worker.sql 保持 MySQL 5.7 兼容、可重复执行，创建 fa_ipa_worker_job 和 fa_ipa_worker_state。
-7. 本版本不改 UpdateIntegrity 四个哨兵文件，file_sign 保持不变。
+1. source-v2026091917 已发布并冻结；本次扫描模型收敛进入 2026091918，不覆盖任何历史 Release Tag/Asset。
+2. 以旧项目 OpenList 成熟模型为基线：一次扫描作为一次当前状态快照，权威工作集写入 fa_ipa_scan_task.cursor_json，不再依赖 fa_ipa_metadata.referenced / needs_reparse 维护本轮引用关系。
+3. 新扫描不再逐文件写 fa_ipa_scan_task_item；JSON snapshot 保存 current_paths、parse_ids、new_ids、changed_ids、summary、snapshot_version 和 workset_hash。
+4. fa_ipa_metadata 暂时继续作为当前解析/绑定索引，避免一次性重写解析、绑定和治理业务；扫描层只更新真正 new/changed/unchanged 的当前元数据。
+5. Parser 按 snapshot 的 parse_ids 领取任务，不再依赖 referenced / needs_reparse；解析期间使用源 fingerprint 校验，源文件变化时丢弃过期解析结果并重新置 pending。
+6. Metadata 列表、统计和 IPA Center 仪表盘移除 referenced 硬依赖，使生产库即使没有历史 workset 字段也可执行扫描和展示。
+7. IpaMetadataWorksetService 保留兼容入口但不再执行 relational workset prune；历史表/字段本版本不做破坏性 DROP，便于安全在线升级和回滚。
+8. Persistent Worker 调度模型保持不变；本版本只收敛扫描/解析状态模型，不重新引入 exec/nohup 临时 Worker。
+9. 1917 暴露的在线更新历史 migration 未实际落库问题作为独立升级器缺陷继续跟踪；1918 的扫描核心不再以 workset 字段存在为运行前提。
 
 验证要求：
-- PHP 7.0 regression 全绿。
-- MySQL 5.7 migration、Phase 20 integration、HTTP load gate 全绿。
-- ZONOE Source Release package-and-release 成功生成 source-v2026091917。
-- 最终 zonoe-online-update.zip 必须包含 mysql/2026091915_phase20_ipa_worker.sql。
-- e2e-online-upgrade 必须通过真实 GitHub Release 在线升级测试。
+- PHP 7.0 syntax / regression 必须通过。
+- Phase 20 scan/parser/worker contracts 必须通过并验证无 referenced / needs_reparse / ipa_scan_task_item 新依赖。
+- MySQL 5.7 验证应覆盖没有 workset 扩展字段的 metadata schema。
+- ZONOE Source Release package-and-release 必须成功生成 source-v2026091918。
+- 最终 e2e-online-upgrade 必须通过真实 GitHub Release 在线升级测试。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091917。
+- 目标 GitHub Release 标签：source-v2026091918。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- VERSION、public/update/ver.txt、ver.json、PHASE13_RELEASE.txt 同步为 2026091917。
-- file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee；本次未修改 UpdateIntegrity 四个哨兵文件。
-- source-v2026091916 及更早 Release Tag/Asset 均保持不变。
+- VERSION、public/update/ver.txt、PHASE13_RELEASE.txt 同步为 2026091918。
+- file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee；本次不修改 UpdateIntegrity 四个哨兵文件。
+- source-v2026091917 及更早 Release Tag/Asset 均保持不变。
