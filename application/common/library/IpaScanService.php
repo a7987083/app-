@@ -17,6 +17,9 @@ use Throwable;
 class IpaScanService
 {
     const STALE_SECONDS = 600;
+    // Compatibility marker for historical retention/UI contracts. Since 1918
+    // new scans do not persist per-file task items, so there is nothing to prune.
+    const TASK_ITEM_RETENTION_DAYS = 90;
 
     public static function createTask($sourceId,$triggerType='manual',$adminId=0,$forceRefresh=false)
     {
