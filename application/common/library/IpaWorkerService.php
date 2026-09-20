@@ -11,19 +11,24 @@ class IpaWorkerService
     const WORKER_NAME = 'ipa-main';
     const HEARTBEAT_TTL = 30;
     const JOB_STALE_SECONDS = 1800;
+    protected static $inlineDispatchRegistered = false;
 
     public static function enqueueScan($taskId, $adminId = 0)
     {
         $taskId=(int)$taskId;
         if($taskId<=0)throw new RuntimeException('无效扫描任务');
-        return self::enqueue('scan',$taskId,['task_id'=>$taskId],$adminId,'scan:'.$taskId);
+        $row=self::enqueue('scan',$taskId,['task_id'=>$taskId],$adminId,'scan:'.$taskId);
+        self::dispatchAfterResponseIfNeeded();
+        return $row;
     }
 
     public static function enqueueParse($taskId = 0, $adminId = 0)
     {
         $taskId=(int)$taskId;
         $key='parse:'.time().':'.sprintf('%06d',mt_rand(0,999999)).':'.($adminId?:0);
-        return self::enqueue('parse',$taskId,['task_id'=>$taskId,'limit'=>1],$adminId,$key);
+        $row=self::enqueue('parse',$taskId,['task_id'=>$taskId,'limit'=>1],$adminId,$key);
+        self::dispatchAfterResponseIfNeeded();
+        return $row;
     }
 
     protected static function enqueue($type,$refId,array $payload,$adminId,$jobKey)
@@ -47,6 +52,29 @@ class IpaWorkerService
         return Db::name('ipa_worker_job')->where('id',(int)$id)->find();
     }
 
+    /**
+     * PHP equivalent of the old Node service's setImmediate(runQueuedTask):
+     * return the HTTP response first, then consume one durable job inside the
+     * same PHP-FPM process. If a persistent worker is healthy, it owns the job
+     * instead and this fallback is not registered.
+     */
+    public static function dispatchAfterResponseIfNeeded()
+    {
+        if(self::$inlineDispatchRegistered)return 'inline';
+        $status=self::workerStatus(self::WORKER_NAME);
+        if(!empty($status['online']))return 'persistent';
+        self::$inlineDispatchRegistered=true;
+        register_shutdown_function(function(){
+            ignore_user_abort(true);
+            if(function_exists('set_time_limit'))@set_time_limit(0);
+            if(function_exists('fastcgi_finish_request'))@fastcgi_finish_request();
+            try{IpaWorkerService::runLoop(true,1,'ipa-web-inline',false);}
+            catch(\Exception $e){}
+            catch(Throwable $e){}
+        });
+        return 'inline';
+    }
+
     public static function workerStatus($name=self::WORKER_NAME)
     {
         $row=Db::name('ipa_worker_state')->where('worker_name',(string)$name)->find();
@@ -64,7 +92,7 @@ class IpaWorkerService
         ];
     }
 
-    public static function runLoop($once=false,$sleepSeconds=2,$name=self::WORKER_NAME)
+    public static function runLoop($once=false,$sleepSeconds=2,$name=self::WORKER_NAME,$includeSchedule=true)
     {
         $sleepSeconds=max(1,min(30,(int)$sleepSeconds));
         $token=self::newToken();
@@ -74,7 +102,7 @@ class IpaWorkerService
             while(true){
                 self::heartbeat($name,$token,0,'','idle');
                 self::recoverStaleJobs();
-                self::enqueueDueScheduledScans();
+                if($includeSchedule)self::enqueueDueScheduledScans();
                 $job=self::claimOne($token);
                 if($job){
                     self::heartbeat($name,$token,(int)$job['id'],(string)$job['job_type'],'running');
