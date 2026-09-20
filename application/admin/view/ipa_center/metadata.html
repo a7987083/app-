@@ -1,6 +1,6 @@
 <div class="panel panel-default panel-intro">
     <div class="panel-heading">
-        <div class="panel-lead"><em>IPA 元数据</em>FastAdmin BootstrapTable 管理；HTTP Range 只读取 ZIP Central Directory、Info.plist 和必要的小文件，不完整下载 IPA。</div>
+        <div class="panel-lead"><em>IPA 元数据</em>当前工作集只展示被启用 MySQL 软件源引用的 IPA；HTTP Range 只读取 ZIP Central Directory、Info.plist 和必要的小文件，不完整下载 IPA。</div>
     </div>
     <div class="panel-body">
         <div id="toolbar" class="toolbar">
@@ -10,11 +10,12 @@
                 <button type="button" class="btn btn-default" data-state="pending">待解析</button>
                 <button type="button" class="btn btn-default" data-state="failed">失败</button>
             </div>
-            <button type="button" class="btn btn-success btn-ipa-parse"><i class="fa fa-play"></i> 解析下一批</button>
+            <button type="button" class="btn btn-success btn-ipa-parse"><i class="fa fa-play"></i> 后台解析 1 个</button>
             <button type="button" class="btn btn-default btn-ipa-meta-refresh"><i class="fa fa-refresh"></i> 刷新</button>
             <input type="text" id="ipa-meta-search" class="form-control" style="display:inline-block;width:260px" placeholder="IPA / Bundle ID / 应用名">
+            <span id="ipa-meta-refresh-state" class="text-muted" style="margin-left:10px"></span>
         </div>
-        <div class="alert alert-info" style="margin-top:15px">Parser 优先复用相同 MD5 + 文件大小 + Parser Version 的已解析结果；只有新内容才发起 Range 请求。失败默认 30 分钟后重试，最多 3 次。</div>
+        <div class="alert alert-info" style="margin-top:15px">Parser 优先复用相同 MD5 + 文件大小 + Parser Version 的已解析结果；只有缓存未命中才发起 Range 请求。失败默认 30 分钟后重试，最多 3 次。刷新失败时会明确标记当前表格为旧数据。</div>
         <table id="ipa-meta-table" class="table table-striped table-bordered table-hover" width="100%"></table>
     </div>
 </div>
