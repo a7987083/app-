@@ -2,7 +2,7 @@
     <div class="panel-heading">
         <div class="panel-lead">
             <em>IPA 网络源设置</em>
-            使用 OpenList 官方 API 发现 IPA。API 固定使用 <code>/api/fs/*</code>；令牌请填写 OpenList「设置 → 其他 → 令牌」。
+            OpenList 只负责文件访问、MD5 和 HTTP Range；真正参与扫描的 IPA 范围由“启用的 MySQL 软件源”中的 bt1a 决定。
         </div>
     </div>
     <div class="panel-body">
@@ -19,7 +19,7 @@
                 <label class="control-label col-xs-12 col-sm-2">IPA 根目录</label>
                 <div class="col-xs-12 col-sm-8">
                     <input class="form-control" name="scan_path" data-rule="required" placeholder="/a/app" value="{$source.scan_path|default='/a/app'}" autocomplete="off">
-                    <span class="help-block">OpenList 内部路径，例如 <code>/a/app</code>；它不是 API 路径 <code>/api</code>。</span>
+                    <span class="help-block">仅用于把 bt1a 映射到 OpenList 内部路径和校验范围；没有 MySQL 软件源时不会回退扫描整个目录。</span>
                 </div>
             </div>
             <div class="form-group">
@@ -35,33 +35,35 @@
                     <input class="form-control" type="password" name="token" value="" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" placeholder="已保存后可留空；留空表示保留原令牌">
                     <span class="help-block">
                         令牌位置：OpenList 设置 → 其他 → 令牌。当前：
-                        {if condition="!empty($source.token_hint)"}
-                            <code>{$source.token_hint}</code>
-                        {else /}
-                            <span class="text-warning">未配置</span>
-                        {/if}
-                        。这是固定 API 令牌，不是后台登录密码，也不要添加 <code>Bearer</code> 前缀。
-                        {if condition="!empty($source.token_error)"}
-                            <br><span class="text-danger">已保存令牌读取失败：{$source.token_error|htmlentities}</span>
-                        {/if}
+                        {if condition="!empty($source.token_hint)"}<code>{$source.token_hint}</code>{else /}<span class="text-warning">未配置</span>{/if}。
+                        这是固定 API 令牌，不是后台登录密码，也不要添加 <code>Bearer</code> 前缀。
+                        {if condition="!empty($source.token_error)"}<br><span class="text-danger">已保存令牌读取失败：{$source.token_error|htmlentities}</span>{/if}
                     </span>
                 </div>
             </div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">启用来源</label><div class="col-xs-12 col-sm-8"><label><input type="checkbox" name="enabled" value="1" {if condition="!empty($source.enabled)"}checked{/if}> 启用</label></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">启用 OpenList</label><div class="col-xs-12 col-sm-8"><label><input type="checkbox" name="enabled" value="1" {if condition="!empty($source.enabled)"}checked{/if}> 启用文件访问 / MD5 / Range 能力</label></div></div>
             <div class="form-group"><label class="control-label col-xs-12 col-sm-2">自动扫描</label><div class="col-xs-12 col-sm-8"><label><input type="checkbox" name="schedule_enabled" value="1" {if condition="!empty($source.schedule_enabled)"}checked{/if}> 启用</label></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">扫描间隔</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="5" max="1440" name="interval_minutes" value="{$source.interval_minutes|default='10'}" data-rule="required;integer;range(5~1440)"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">分钟（5–1440）</p></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">每批解析上限</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="1" max="100" name="batch_size" value="{$source.batch_size|default='20'}" data-rule="required;integer;range(1~100)"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">Range Parser 每轮消费上限</p></div></div>
-            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">目录缓存</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="60" max="86400" name="cache_ttl" value="{$source.cache_ttl|default='1800'}" data-rule="required;integer;range(60~86400)"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">秒</p></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">扫描间隔</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="5" max="1440" name="interval_minutes" value="{$source.interval_minutes|default='15'}" data-rule="required;integer;range(5~1440)"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">分钟（5–1440）</p></div></div>
+            <input type="hidden" name="batch_size" value="1">
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">后台解析</label><div class="col-xs-12 col-sm-8"><p class="form-control-static">固定每次解析 <strong>1 个</strong> IPA；相同 MD5 + 文件大小 + Parser Version 优先复用解析缓存。</p></div></div>
+            <div class="form-group"><label class="control-label col-xs-12 col-sm-2">目录缓存</label><div class="col-xs-12 col-sm-3"><input class="form-control" type="number" min="60" max="86400" name="cache_ttl" value="{$source.cache_ttl|default='1800'}" data-rule="required;integer;range(60~86400)"></div><div class="col-xs-12 col-sm-5"><p class="form-control-static">秒；默认 30 分钟，普通 MD5 扫描优先使用缓存</p></div></div>
             <div class="form-group"><label class="control-label col-xs-12 col-sm-2">超时 / 重试</label><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="3" max="120" name="request_timeout" value="{$source.request_timeout|default='15'}" data-rule="required;integer;range(3~120)"></div><div class="col-xs-12 col-sm-2"><input class="form-control" type="number" min="0" max="5" name="request_retries" value="{$source.request_retries|default='2'}" data-rule="required;integer;range(0~5)"></div></div>
             <div class="form-group">
                 <label class="control-label col-xs-12 col-sm-2">健康状态</label>
-                <div class="col-xs-12 col-sm-8"><p class="form-control-static"><span id="ipa-source-health">{$source.last_health|default='unknown'} {if condition="!empty($source.last_checked_at)"} / {$source.last_checked_at|date='Y-m-d H:i:s',###}{/if}</span></p></div>
+                <div class="col-xs-12 col-sm-8"><p class="form-control-static" id="ipa-source-health">
+                    {if condition="isset($source.enabled) && empty($source.enabled)"}
+                        <strong class="text-muted">已停用</strong>
+                        {if condition="!empty($source.last_checked_at)"}<span class="text-muted"> / 上次检查：{$source.last_health|default='unknown'} / {$source.last_checked_at|date='Y-m-d H:i:s',###}</span>{/if}
+                    {else /}
+                        {$source.last_health|default='unknown'} {if condition="!empty($source.last_checked_at)"} / {$source.last_checked_at|date='Y-m-d H:i:s',###}{/if}
+                    {/if}
+                </p></div>
             </div>
             <div class="form-group">
                 <div class="col-xs-12 col-sm-offset-2 col-sm-8">
                     <button type="submit" class="btn btn-success btn-embossed"><i class="fa fa-check"></i> 确定</button>
-                    <button type="button" class="btn btn-info btn-embossed btn-ipa-source-test"><i class="fa fa-plug"></i> 测试连接</button>
-                    <span class="help-block" style="display:inline-block;margin-left:10px">请先点击“确定”保存。测试连接只读取已经保存并成功解密的 OpenList 配置。</span>
+                    <button type="button" class="btn btn-info btn-embossed btn-ipa-source-test" {if condition="isset($source.enabled) && empty($source.enabled)"}disabled{/if}><i class="fa fa-plug"></i> 测试连接</button>
+                    <span class="help-block" style="display:inline-block;margin-left:10px">OpenList 停用时不允许扫描、强刷、Range 解析或连接测试；历史健康结果仅作为“上次检查”保留。</span>
                 </div>
             </div>
         </form>
