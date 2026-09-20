@@ -1,69 +1,42 @@
 # ZONOE 软件源开发路线图
 
-## 当前稳定基线
+## 当前阶段
 
 - Repository: `a7987083/app-`
-- Stable release branch: `release/2026091807-unified-announcement-expiry`
-- Stable phase/version: `Phase 19.4.2 / 2026091807`
-- Release commit: `1ef93306dec0a7b09bb99df55b785511d5b8b4c6`
-- Release: `source-v2026091807`
+- Branch: `release/2026091905-phase20-setting-hotfix`
+- 当前发布目标: `2026091912`
+- 历史稳定版本: `2026091911`
+- 1911 原始发布 HEAD: `edcd4d0c7cf50726ce7d09e3075fe23506ea7fe5`
+- 1912 升版前候选 HEAD: `5e72bc30b9bb714f69e79597ca3c0d3704cfd346`
 
-## 当前开发线
+## Phase 20 当前范围
 
-- Development branch: `feature/phase20-ipa-management-v1`
-- Current development phase: `Phase 20.7 complete in code/CI`
-- Verified development HEAD: `438db0823a2d03e220401509ce736da57bc99ab9`
-- Phase 20 CI Run `35410113307`: SUCCESS
-- Production E2E: NOT VERIFIED
+- [x] OpenList 配置 MySQL 持久化。
+- [x] IPA MySQL source/metadata 管理。
+- [x] 引用目录发现与目录缓存。
+- [x] OpenList 引用目录扫描分页。
+- [x] Phase 20 MySQL migration 打包。
+- [x] PHP 7 / MySQL 5.7 / OpenList HTTP / rollback CI 修通（候选 HEAD）。
+- [ ] 2026091912 升版后的完整 CI 重新验证。
+- [ ] 2026091911 -> 2026091912 真实服务器在线更新验证。
+- [ ] 真实 OpenList/MySQL 数据上的 Phase 20 功能回归。
 
-## Phase 20 — IPA Management
+## 发布规则
 
-- [x] 20.0 UI 基础。
-- [x] 20.1 数据模型与基础设施。
-- [x] 20.2 OpenList 扫描与增量发现。
-- [x] 20.3 IPA Range Parser。
-- [x] 20.4 IPA 绑定。
-- [x] 20.5 写库模板。
-- [x] 20.6 数据治理：detect → preview → apply → verify → audit。
+- 已发布并可能被安装的版本号不可复用、不可覆盖。
+- 当前从 `2026091912` 开始严格单调递增：1912 → 1913 → 1914 → ...。
+- 任意发布内容变化都必须升版本。
+- CI 通过不等于真实生产回归通过。
 
-## Phase 20.7 — 生产增强
+## 阻塞项
 
-### 20.7.1 批量治理与失败队列 — 完成
+- 2026091912 尚未完成本次升版后的完整 Release CI。
+- 真实服务器尚未执行 1911 -> 1912。
 
-- [x] 单批最多 100 条；批量计划使用 `batch_hash`，单项继续保留 `plan_hash`。
-- [x] 批量仅允许低风险方向；禁止批量移动 OpenList 文件。
-- [x] 重复 Bundle ID / 真正 IPA 缺失不自动修复。
-- [x] 基于 `ipa_operation_log` 暴露治理失败队列。
+## Next Task
 
-### 20.7.2 Retry / Interrupted — 完成
-
-- [x] stale `running` → `interrupted`。
-- [x] 仅 `failed / interrupted` 可恢复。
-- [x] retry 强制重新 preview，禁止复用旧 plan。
-- [x] 独立 recovery idempotency；成功后原 operation → `superseded`。
-
-### 20.7.3 Retention + Range metrics — 完成
-
-- [x] Range metrics 聚合实际 parser task `range_bytes / range_requests / reused`。
-- [x] 7 / 30 / 90 天窗口；最多聚合最近 5000 条并报告 truncated。
-- [x] Retention preview → plan_hash → apply。
-- [x] 只清理老的 `success/cancelled` scan history 与 `success/superseded` operation history。
-- [x] `running / failed / interrupted / queued / retrying` 不进入 Retention 清理集合。
-- [x] 单表单批最多 1000 条。
-
-### 20.7.4 权限与 ignore 生命周期 — 完成
-
-- [x] 批量 ignore / unignore，单批最多 100 条。
-- [x] `ignore_until` 到期 sweep 并恢复为 open。
-- [x] ignore / unignore / expiry sweep 写入 operation audit。
-- [x] 后台展示 ignored / expired 队列。
-- [x] 高风险按钮按 FastAdmin `$auth->check()` 隐藏：batch apply、retry、retention apply、ignore lifecycle。
-- [x] CI Run `35410113307`: SUCCESS。
-
-## Phase 20 RC 收口 — 下一阶段
-
-- [ ] 在受控生产/预生产环境执行 OpenList + MySQL E2E。
-- [ ] 验证 batch governance、OpenList 单条移动、retry/interrupted、ignore expiry、Range metrics、Retention preview/apply。
-- [ ] 核对权限组在真实管理员账号上的 UI/API 行为。
-- [ ] 确认 Retention 备份/恢复策略后才允许生产 apply。
-- [ ] 整理 Phase 20 release candidate、迁移 SQL、在线更新和回滚清单。
+1. 提交 2026091912 版本元数据与长期项目状态。
+2. 运行完整 ZONOE Source Release CI。
+3. 若失败，定位第一处真实错误并最小修复后继续 CI。
+4. CI 全绿后验证 source-v2026091912 / Release Asset / SHA256。
+5. 在真实服务器执行 2026091911 -> 2026091912 并回归 Phase 20 核心功能。

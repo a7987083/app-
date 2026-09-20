@@ -1,23 +1,25 @@
-ZONOE 软件源 Release 2026091911
-版本：2026091911
-基线：2026091910
-阶段：IPA FastAdmin Response Lifecycle Recovery
+ZONOE 软件源 Release 2026091912
+版本：2026091912
+基线：2026091911
+阶段：Phase 20 OpenList/MySQL persistence and release correction
 发布分支：release/2026091905-phase20-setting-hotfix
 发布状态：准备触发正式 Release Workflow
 
+真实基线：
+- 已安装历史版本 2026091911 的发布 HEAD：edcd4d0c7cf50726ce7d09e3075fe23506ea7fe5。
+- 2026091912 基于 2026091911 之后的 19 个提交继续演进。
+
 更新内容：
-1. IPA 管理中心四个 Controller 的业务 try/catch 全量回归 FastAdmin/ThinkPHP 正确响应生命周期：success() 统一放在 catch 之后。
-2. 修复 success() 抛出的 HttpResponseException 被本方法 catch(Exception/Throwable) 截获后转成 code=0、msg="" 的问题。
-3. 覆盖 ipa_center、ipa_recovery、ipa_lifecycle、ipa_production 全部同类接口，不只修 source_save/source_test。
-4. 保留 2026091910 已完成的 snake_case action 与 /FRKToHDckx.php/controller/action PATH_INFO 路由规范，不恢复 ?s=/ workaround。
-5. writebackRandomPreview 业务校验改为 RuntimeException 进入统一错误出口，避免 try 内 error() 被自身 catch 截获。
-6. 新增 contract gate：四个 IPA Controller 的业务 try 块内禁止调用 $this->success()。
-7. OpenList/Range Parser/绑定/治理/恢复/Retention/appstore 协议与业务逻辑保持不变。
-8. 不修改 Nginx、PHP-FPM、BaoTa 全局配置。
+1. OpenList 配置正式转为 MySQL 持久化，并保留兼容迁移语义。
+2. 增加 IPA MySQL source/metadata 管理、引用目录发现、目录缓存与扫描分页能力。
+3. 修正在线更新包中的 Phase 20 MySQL payload/manifest 契约与 PHP 7 回归测试。
+4. Phase 20 OpenList HTTP E2E、updater rollback、MySQL 5.7 migration、PHP 7 全回归均已在前序 HEAD 通过。
+5. 修正发布版本管理：2026091911 视为冻结历史版本；后续正式发布只允许 2026091912、2026091913... 单调递增，不再把新内容覆盖进旧版本号。
+6. 长期项目状态统一维护 ROADMAP.md / CHANGELOG_DEV.md / HANDOFF.md / PROJECT_STATE.json / KNOWN_ISSUES.md。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091911。
+- 目标 GitHub Release 标签：source-v2026091912。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091911。
+- VERSION、public/update/ver.txt、ver.json 同步升级到 2026091912。
 - file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee。
-- 发布完成后需从 2026091910 -> 2026091911 执行真实在线更新 E2E。
+- 发布后必须验证 2026091911 -> 2026091912 真实在线更新。

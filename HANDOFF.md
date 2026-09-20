@@ -1,97 +1,51 @@
 # Software Source Development Handoff
 
-## Stable baseline
+## 当前基线
 
 - Repository: `a7987083/app-`
-- Stable branch: `release/2026091807-unified-announcement-expiry`
-- Stable phase/version: `Phase 19.4.2 / 2026091807`
-- Release commit: `1ef93306dec0a7b09bb99df55b785511d5b8b4c6`
-- Release: `source-v2026091807`
+- Active branch: `release/2026091905-phase20-setting-hotfix`
+- Historical installed release: `2026091911`
+- Original 1911 release HEAD: `edcd4d0c7cf50726ce7d09e3075fe23506ea7fe5`
+- Pre-1912 candidate HEAD: `5e72bc30b9bb714f69e79597ca3c0d3704cfd346`
+- Current release target: `2026091912`
 
-## Active development
+## 为什么必须升到 1912
 
-- Branch: `feature/phase20-ipa-management-v1`
-- Phase: `20.7 code/CI complete; RC repository + integration + release-readiness gates complete`
-- Verified readiness code HEAD: `747582446f1f11ac058b7382e2a497260baf8fca`
-- Phase 20 CI Run: `35412521746` / Run #81 — SUCCESS
-- Phase 20 Release Readiness Run: `35412521749` / Run #8 — SUCCESS
-- Release-readiness artifact: `phase20-release-readiness-35412521749`
-- Release-readiness artifact digest: `sha256:ccacde350daf990540c977208acdd3710787bb0d2d593e48ae6d6bb2749c35f1`
-- External pre-production / production acceptance: NOT VERIFIED
+真实服务器已在 2026-09-20 06:17:48（UTC+8）执行 `2026091910 -> 2026091911`。之后开发线继续产生新提交并再次构建了同版本号的 Release Asset。相同版本号对应不同内容会导致服务器只比较 version 时无法发现更新，因此 `2026091911` 必须冻结，后续内容从 `2026091912` 开始。
 
-## Phase 20.7 completed capabilities
+## 当前关键实现
 
-- Batch governance with `batch_hash`, per-item `plan_hash`, low-risk-only batch semantics.
-- Failure queue using existing `ipa_operation_log`.
-- Failed/interrupted recovery with re-preview, separate retry idempotency and superseded audit linkage.
-- Range parser metrics from actual task item `result_json`.
-- Preview-first bounded Retention cleanup.
-- Batch ignore/unignore and `ignore_until` expiry sweep with audit records.
-- FastAdmin permission-aware UI gating for high-risk Phase 20.7 controls.
+- OpenList 配置以 MySQL 为 durable persistence。
+- `IpaMysqlSourceService` 负责 MySQL source 管理。
+- `IpaReferenceDiscoveryService` + `IpaDirectoryCache` 负责引用目录发现和缓存。
+- `IpaScanService` 负责扫描，已支持引用目录分页。
+- online update builder 负责 program payload + ordered MySQL migration payload。
+- Phase 20 保留既有 FastAdmin 路由、Range Parser、绑定、治理、恢复和 Retention 体系。
 
-## RC repository / CI gates verified
+## 已验证
 
-- Full Phase 20 / Phase 20.7 contract suite: PASS.
-- Release-readiness contract suite on PHP 7.0: PASS.
-- PHP 7.0 online-update package build: PASS.
-- Package SHA256 verification and ZIP integrity check: PASS.
-- Package contents include required Phase 20 program payload and ordered `2026091901` ~ `2026091909` migration payload: PASS.
-- Real MySQL 5.7 service migration gate: PASS.
-- All nine Phase 20 migrations execute twice successfully on MySQL 5.7: PASS.
-- Key Phase 20 tables and high-risk permission rules are present after migration, with no duplicate auth-rule names: PASS.
-- OpenList client real HTTP loopback integration for health/list/get/rename/move and Authorization propagation: PASS.
-- Recursive IPA discovery over HTTP and non-IPA filtering: PASS.
-- Client-side unsafe rename target rejection: PASS.
-- Updater automatic rollback after a forced post-copy failure: PASS.
-- Rollback restores overwritten files, removes update-created files, preserves old version metadata, retains backup/database dump, and reports rollback success: PASS.
-- Legacy update rollback regression: PASS.
-- Release-readiness ZIP + SHA256 are retained as GitHub Actions artifact `phase20-release-readiness-35412521749` for 30 days.
+候选 HEAD `5e72bc30...` 的 ZONOE Source Release #157 已通过：PHP 7 full regression、MySQL 5.7 migration、Phase 19.3.1 HTTP load、Phase 20 integration、package-and-release、real GitHub Release online-update E2E。
 
-## Formal release fail-closed guard
+注意：这是 1912 升版前候选 HEAD 的 CI 结果。1912 版本提交后必须重新跑完整 CI。
 
-`tools/build_online_update.php` now blocks a Phase 20 package when it is executed by the write-enabled `ZONOE Source Release` workflow unless `release/PHASE20_EXTERNAL_ACCEPTANCE.json` exists and contains real passed acceptance evidence.
+## 发布规则
 
-The formal acceptance record must include:
+- 历史 Commit/Tag 不改写。
+- 已发布版本不复用、不覆盖 Asset。
+- 后续版本严格顺序递增：2026091912、2026091913、2026091914...
+- 每次发布都重新执行完整 CI。
+- “已提交”“CI 通过”“已发布”“真实服务器验证”必须分开记录。
 
-- `status = passed`.
-- Real `environment` and `operator` values.
-- ISO-8601 `verified_at` with timezone.
-- A non-zero 40-character `acceptance_commit`.
-- A positive `readiness_run` workflow ID.
-- Non-placeholder evidence for OpenList scan, Range metrics, governance, retry/ignore/retention, permissions, backup/restore, and failed-install rollback.
+## 风险
 
-`release/PHASE20_EXTERNAL_ACCEPTANCE.example.json` intentionally fails closed with `status = pending`, zero commit/run values, and placeholders. It must never be renamed and used unchanged as production acceptance.
+- GitHub 上 `source-v2026091911` 曾发生过 Asset 被后续构建覆盖，不能再把当前 GitHub 1911 Asset 当作服务器 06:17 安装内容的唯一证据。
+- 真实服务器 Phase 20 核心业务仍需在 1912 安装后回归。
 
-## Safety invariants
+## 接手步骤
 
-- Batch governance never moves OpenList files automatically.
-- Recovery never reuses an old governance plan.
-- Retention requires preview + plan hash.
-- Retention never selects `running`, `failed`, `interrupted`, `queued`, or `retrying` records.
-- Retention is bounded to 1000 candidate rows per table per execution.
-- Ignore lifecycle batches are bounded to 100 issues.
-- CI/mock integration evidence must never be presented as external production acceptance.
-- Formal Phase 20 release packaging fails closed until external acceptance evidence is recorded.
-
-## Remaining external-environment acceptance
-
-These checks require a real controlled deployment, real OpenList contents, real application data, or real FastAdmin admin groups. Repository CI cannot truthfully complete them.
-
-1. Run full scan and representative IPA Range parsing against the intended OpenList endpoint.
-2. Bind representative real IPA metadata to real categories and inspect governance anomalies.
-3. Run controlled low-risk batch governance on persisted application data and inspect audit linkage.
-4. Execute one explicitly approved real OpenList path mutation and verify metadata/binding path synchronization.
-5. Force one failed/interrupted governance operation on persisted data, retry it, and verify superseded linkage.
-6. Exercise real ignore/unignore/expiry lifecycle.
-7. Validate Range metrics against observed HTTP Range traffic.
-8. Run Retention preview on a backed-up dataset; restore backup; only then run bounded Retention apply.
-9. Validate real FastAdmin permission groups so hidden controls and API denial agree.
-10. Perform one controlled install/restore drill on the target deployment and confirm application usability after rollback.
-
-## RC promotion rule
-
-Do not create `release/PHASE20_EXTERNAL_ACCEPTANCE.json`, change formal release metadata, or create a Phase 20 tag/release until the external-environment acceptance above has actually passed and evidence has been recorded. After that, select the RC version, update version metadata/release notes, run Release Readiness and the formal release workflow, and create the RC only from green runs.
-
-## Existing production caveat
-
-`/authorization` remains the online-update-safe authorization lookup URL. `/license` can still be intercepted by the production Nginx LICENSE rule before PHP.
+1. `git status`
+2. `git branch --show-current`
+3. `git rev-parse HEAD`
+4. 检查 `PROJECT_STATE.json` 和 `KNOWN_ISSUES.md`。
+5. 查看最新 ZONOE Source Release Run。
+6. 遇到 CI 错误只修第一处真实错误，不绕过 Gate。

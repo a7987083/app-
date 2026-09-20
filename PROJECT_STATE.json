@@ -1,40 +1,34 @@
 {
   "repository": "a7987083/app-",
-  "stable_release": {
-    "branch": "release/2026091807-unified-announcement-expiry",
-    "phase": "19.4.2",
-    "version": "2026091807",
-    "commit": "1ef93306dec0a7b09bb99df55b785511d5b8b4c6",
-    "release": "source-v2026091807"
+  "version": "2026091912",
+  "branch": "release/2026091905-phase20-setting-hotfix",
+  "commit": "pending_2026091912_release_commit",
+  "baseline": {
+    "version": "2026091911",
+    "commit": "edcd4d0c7cf50726ce7d09e3075fe23506ea7fe5",
+    "candidate_head_before_version_bump": "5e72bc30b9bb714f69e79597ca3c0d3704cfd346"
   },
-  "development": {
-    "branch": "feature/phase20-ipa-management-v1",
-    "phase": "20.7",
-    "status": "code_ci_complete",
-    "verified_head": "438db0823a2d03e220401509ce736da57bc99ab9",
-    "ci_run": 35410113307,
-    "ci_result": "success",
-    "production_e2e": "not_verified"
+  "build": "pending",
+  "ci": {
+    "status": "pending",
+    "last_verified_run": 35477383649,
+    "last_verified_result": "success",
+    "last_verified_head": "5e72bc30b9bb714f69e79597ca3c0d3704cfd346"
   },
-  "phase20_7": {
-    "batch_governance": "completed_ci_passed",
-    "failure_queue": "completed_ci_passed",
-    "retry_interrupted": "completed_ci_passed",
-    "range_metrics": "completed_ci_passed",
-    "retention": "completed_ci_passed",
-    "ignore_lifecycle": "completed_ci_passed",
-    "permission_ui_gating": "completed_ci_passed",
-    "production_e2e": "not_verified"
+  "runtime": {
+    "real_server_current_version": "2026091911",
+    "real_server_1911_update": "verified_success",
+    "real_server_1912_update": "not_verified"
   },
-  "safety_contracts": {
-    "batch_openlist_move": "forbidden",
-    "retry_old_plan_reuse": "forbidden",
-    "retention_protected_states": ["running", "failed", "interrupted", "queued", "retrying"],
-    "retention_preview_required": true,
-    "retention_plan_hash_required": true,
-    "lifecycle_batch_limit": 100,
-    "retention_delete_limit_per_table": 1000
+  "phase": "Phase 20 / OpenList MySQL persistence and release correction",
+  "release_policy": {
+    "immutable_published_versions": true,
+    "monotonic_versions": true,
+    "next_version_after_2026091912": "2026091913"
   },
-  "next_task": "Phase 20 RC closeout: controlled OpenList + MySQL production E2E, real admin permission verification, backup/rollback validation, release-candidate packaging and online-update checklist.",
-  "roadmap": "ROADMAP.md"
+  "next_task": "Run full CI for 2026091912; fix first real failure if any; then verify source-v2026091912 and perform real server 2026091911 -> 2026091912 update.",
+  "roadmap": "ROADMAP.md",
+  "known_issues": "KNOWN_ISSUES.md",
+  "handoff": "HANDOFF.md",
+  "changelog": "CHANGELOG_DEV.md"
 }

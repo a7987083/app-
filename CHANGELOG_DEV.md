@@ -1,28 +1,40 @@
 # Development Changelog
 
-## 2026-09-19 — Phase 20.7 production enhancement line
+## 2026-09-20 — 2026091912 release correction and Phase 20 persistence line
 
-- Restored Phase 20.6 CI by loading `think\Exception` in the isolated writeback contract test.
-- Added Phase 20.7.1 batch governance with batch plan hashing, per-item plan validation, safe-mode restrictions, and a governance failure queue.
-- Added Phase 20.7.2 failed/interrupted recovery. Retry always re-previews current state, uses a separate recovery idempotency key, and marks recovered source operations `superseded`.
-- Added Phase 20.7.3 Range metrics from parser task `result_json`: parsed/reused counts, transferred bytes, request count, averages, and bounded 7/30/90-day windows.
-- Added preview-first Retention cleanup with plan hashing, protected failure/in-flight states, and bounded batches of at most 1000 rows per table.
-- Added Phase 20.7.4 ignore lifecycle: batch ignore/unignore, `ignore_until` expiry sweep, ignored/expired queue, and audit operations.
-- Added FastAdmin `$auth->check()` UI gating for high-risk batch governance, retry, retention, and lifecycle controls.
-- Added production permissions for Range metrics, Retention, recovery, and lifecycle endpoints.
-- Final Phase 20.7 code/UI CI Run `35410113307` — SUCCESS at `438db0823a2d03e220401509ce736da57bc99ab9`.
-- Real production OpenList + MySQL E2E remains not verified; next step is RC closeout validation.
+### 基线
 
-## 2026-09-18 — Phase 19.4.2 / Release 2026091807
+- Branch: `release/2026091905-phase20-setting-hotfix`.
+- Installed historical release `2026091911` original HEAD: `edcd4d0c7cf50726ce7d09e3075fe23506ea7fe5`.
+- Pre-1912 candidate HEAD: `5e72bc30b9bb714f69e79597ca3c0d3704cfd346`.
+- Diff from original 1911 to candidate: 19 commits / 16 changed files.
 
-- Collapsed announcement expiry/remaining-time into one public authorization clock.
-- Removed scope-specific expiry/remaining buttons from the announcement editor.
-- Kept entitlement scopes internally separate with priority: full source > partial Apps > verify-only.
-- Unified no-entitlement/expired text to `已过期或未解锁本源`.
-- Simplified `[授权摘要]` to status + expiry + remaining (+ App count for partial authorization).
-- Added idempotent migration `2026091807_unified_announcement_expiry.sql`.
-- Retained runtime parsing of old scope-specific tokens but mapped every one to the generic clock.
-- Feature CI Run `35306216020` — SUCCESS.
-- Release Run `35306308086` — SUCCESS.
-- Release `source-v2026091807` published.
-- Online-update E2E `2026091806 -> 2026091807`: `self_update=passed progress=passed history=passed db_migration=yes`.
+### 实际开发内容
+
+- OpenList configuration moved to MySQL durable persistence.
+- Added `IpaMysqlSourceService`, `IpaMysqlSource` controller/view/JS and source migration.
+- Added `IpaMetadata` controller, `IpaReferenceDiscoveryService`, `IpaDirectoryCache`.
+- Updated remote file and scan services, including referenced-directory pagination.
+- Updated online-update manifest/builder so Phase 20 source/registry/migration payload is packaged correctly.
+- Updated Phase 20 UI/RC/scan contract tests to match current MySQL persistence and packaging semantics.
+
+### CI 修复记录
+
+- `aaa91d1bd879034f304d04874c17f9ca7c0d9b94` — align Phase 20 OpenList contract with MySQL persistence.
+- `2451a095d00e395851139f7e1bcb242d3d38eb3f` — make MySQL payload contract whitespace agnostic.
+- `5e72bc30b9bb714f69e79597ca3c0d3704cfd346` — fix PHP 7 contract matcher escaping.
+- ZONOE Source Release Run #157 / `35477383649`: SUCCESS on the pre-1912 candidate HEAD.
+
+### 发布纠正
+
+- `2026091911` had already been installed on a real server before later candidate changes were built.
+- Reusing/clobbering the existing `source-v2026091911` asset was incorrect release-version handling.
+- Corrected release target is `2026091912`.
+- From 1912 onward, every changed release payload must use the next monotonically increasing version.
+
+### 当前验证状态
+
+- 已修改：是。
+- 2026091912 版本提交：进行中。
+- 2026091912 CI：待运行。
+- 2026091912 真实服务器更新：未验证。
