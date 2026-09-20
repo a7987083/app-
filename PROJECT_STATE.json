@@ -1,44 +1,39 @@
 {
   "repository": "a7987083/app-",
-  "version": "2026091913",
+  "version": "2026091914",
   "branch": "release/2026091905-phase20-setting-hotfix",
-  "work_branch": "work/2026091913-release-fix",
+  "work_branch": "dev/2026091914-ipa-workset",
   "commit": "pending_release_branch_fast_forward",
   "baseline": {
-    "published_version": "2026091912",
-    "published_release": "source-v2026091912",
-    "published_head": "c29c04c7f57865599fc6bac3ee2799d3b0fb4b85",
+    "published_version": "2026091913",
+    "published_release": "source-v2026091913",
+    "published_head": "21ecc79c4d4d39cd3c5998c05d2a07327d850e7c",
     "real_server_verified_version": "2026091911"
   },
-  "build": "pending_ci",
+  "build": "preflight_green_formal_ci_pending",
   "ci": {
-    "last_run": 35481909582,
-    "last_run_number": 159,
-    "last_result": "failure",
-    "passed_jobs": [
-      "php70-regression",
-      "mysql57-migration",
-      "phase19-3-1-http-load",
-      "phase20-integration",
-      "package-and-release"
-    ],
-    "failed_job": "e2e-online-upgrade",
-    "failure_reason": "release notes contract expected exact 更新内容 heading"
+    "phase20_preflight_run": 35486567585,
+    "phase20_preflight_run_number": 118,
+    "phase20_preflight_result": "success",
+    "workset_mysql57_run": 35486652166,
+    "workset_mysql57_run_number": 1,
+    "workset_mysql57_result": "success",
+    "formal_source_release": "pending"
   },
   "runtime": {
     "real_server_current_version": "2026091911",
-    "real_server_1912_update": "not_verified",
-    "real_server_1913_update": "not_verified"
+    "real_server_1913_update": "not_verified",
+    "real_server_1914_update": "not_verified"
   },
-  "phase": "Phase 20 / release version monotonicity and CI closeout",
+  "phase": "Phase 20 / IPA active workset and parser queue closeout",
   "release_policy": {
     "immutable_published_versions": true,
     "monotonic_versions": true,
-    "frozen_versions": ["2026091911", "2026091912"],
-    "current_target": "2026091913",
-    "next_version": "2026091914"
+    "frozen_versions": ["2026091911", "2026091912", "2026091913"],
+    "current_target": "2026091914",
+    "next_version": "2026091915"
   },
-  "next_task": "Fast-forward release branch to the 2026091913 work head, run full ZONOE Source Release CI, fix the first real failure until green, then verify source-v2026091913 and real-server update.",
+  "next_task": "Fast-forward the release branch to the final 2026091914 dev head, run full ZONOE Source Release CI, fix any failures until green while preserving release immutability, then verify source-v2026091914 and perform a separate real-server upgrade validation.",
   "roadmap": "ROADMAP.md",
   "known_issues": "KNOWN_ISSUES.md",
   "handoff": "HANDOFF.md",
