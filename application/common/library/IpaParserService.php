@@ -99,10 +99,14 @@ class IpaParserService
 
     protected static function applyReusableMetadata(array $metadata,array $cached,array $item)
     {
-        if(!empty($cached['_legacy_metadata_id'])){
-            $payload=IpaMetadataPayloadStore::hydrateLegacyRow($cached);
-            if($payload)IpaMetadataPayloadStore::save((int)$metadata['id'],['confidence'=>$payload['confidence'],'raw'=>$payload['raw'],'normalized'=>$payload['normalized']]);
-        }
+        $payload=null;
+        if(!empty($cached['_legacy_metadata_id']))$payload=IpaMetadataPayloadStore::hydrateLegacyRow($cached);
+        elseif(!empty($cached['_cache_id']))$payload=IpaParseCache::payload($cached);
+        if($payload)IpaMetadataPayloadStore::save((int)$metadata['id'],[
+            'confidence'=>isset($payload['confidence'])&&is_array($payload['confidence'])?$payload['confidence']:[],
+            'raw'=>isset($payload['raw'])&&is_array($payload['raw'])?$payload['raw']:[],
+            'normalized'=>isset($payload['normalized'])&&is_array($payload['normalized'])?$payload['normalized']:[]
+        ]);
         Db::startTrans();
         try{
             $fresh=Db::name('ipa_metadata')->where('id',(int)$metadata['id'])->find();$needsReparse=$fresh&&!empty($fresh['needs_reparse']);$nextState=$needsReparse?'pending':'success';
