@@ -9,4 +9,5 @@ return [
     'app\admin\command\Api',
     'app\admin\command\IpaScan',
     'app\admin\command\IpaParse',
+    'app\admin\command\IpaWorker',
 ];
