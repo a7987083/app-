@@ -19,3 +19,15 @@
         <table id="ipa-meta-table" class="table table-striped table-bordered table-hover" width="100%"></table>
     </div>
 </div>
+<script>
+require(['jquery'],function($){
+    var text=function(message,failed){$('#ipa-meta-refresh-state').toggleClass('text-danger',!!failed).toggleClass('text-muted',!failed).text(message);};
+    $(function(){
+        var table=$('#ipa-meta-table');
+        table.on('load-success.bs.table.ipaMetaFresh',function(){var d=new Date();text('最后成功刷新：'+d.toLocaleTimeString(),false);});
+        table.on('load-error.bs.table.ipaMetaFresh',function(){text('刷新失败，当前显示的是上一次成功加载的旧数据',true);});
+        $('.btn-ipa-meta-refresh,.ipa-meta-filter button').on('click.ipaMetaFresh',function(){text('正在刷新…',false);});
+        $('#ipa-meta-search').on('change.ipaMetaFresh keyup.ipaMetaFresh',function(e){if(e.type==='change'||e.keyCode===13)text('正在刷新…',false);});
+    });
+});
+</script>
