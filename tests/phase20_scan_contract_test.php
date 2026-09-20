@@ -17,12 +17,15 @@ p20ScanContractAssert(strpos($discovery,'IpaDirectoryCache::load')!==false,'refe
 p20ScanContractAssert(strpos($discovery,'listDirectory')!==false,'reference discovery lists only referenced directories');
 p20ScanContractAssert(strpos($service,'没有启用的 MySQL 软件源')!==false,'scan refuses to invent a full-root workset without MySQL sources');
 p20ScanContractAssert(strpos($service,"'parse_state'=>'pending'")!==false || strpos($service,"'parse_state' => 'pending'")!==false,'new/changed files queue parser state');
-p20ScanContractAssert(strpos($service,"'referenced'=>1")!==false || strpos($service,"'referenced' => 1")!==false,'scan marks active workset as referenced');
+p20ScanContractAssert(strpos($service,"'current_paths'")!==false && strpos($service,"'parse_ids'")!==false,'scan stores authoritative workset and parse queue in JSON snapshot');
+p20ScanContractAssert(strpos($service,"'snapshot_version'")!==false && strpos($service,"'workset_hash'")!==false,'scan snapshot is versioned and fingerprinted');
+p20ScanContractAssert(strpos($service,"'referenced'=>")===false && strpos($service,"'needs_reparse'=>")===false,'scan no longer writes relational workset flags');
+p20ScanContractAssert(strpos($service,"Db::name('ipa_scan_task_item')")===false,'new scans no longer write per-file task item rows');
 p20ScanContractAssert(strpos($client,'/fs/list')!==false,'OpenList client uses fs/list');
 p20ScanContractAssert(strpos($client,'CURLOPT_POST')!==false,'OpenList client uses JSON POST');
 p20ScanContractAssert(strpos($dirCache,'token_ciphertext')===false && strpos($dirCache,'Authorization:')===false,'directory cache does not persist OpenList token');
 p20ScanContractAssert(strpos($sql,'fa_ipa_source')!==false,'source table migration');
 p20ScanContractAssert(strpos($sql,'ipa_center/scan_start')!==false,'scan start permission');
-p20ScanContractAssert(strpos($worksetSql,'fa_ipa_parse_cache')!==false,'workset migration creates durable MD5 parse cache');
+p20ScanContractAssert(strpos($worksetSql,'fa_ipa_parse_cache')!==false,'historical workset migration remains packaged for upgrade compatibility');
 p20ScanContractAssert(strpos($command,"setName('ipa:scan')")!==false,'CLI worker registered by class');
 echo "OK phase20_scan_contract_test\n";
