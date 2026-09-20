@@ -88,18 +88,15 @@ class IpaScanService
     public static function nextPendingTask(){return Db::name('ipa_scan_task')->where('state','in',['queued','interrupted','retrying'])->order('id','asc')->find();}
     public static function createDueScheduledTasks(){ $source=IpaSourceConfig::first(false);$created=[];if(!$source||empty($source['enabled'])||empty($source['schedule_enabled']))return $created;if(!IpaMysqlSourceService::all(true,true))return $created;$interval=max(5,(int)$source['interval_minutes'])*60;if(!empty($source['last_scan_at'])&&(time()-(int)$source['last_scan_at'])<$interval)return $created;$created[]=self::createTask((int)$source['id'],'schedule',0,false);return $created; }
 
+    /**
+     * Backward-compatible controller hook. Since 2026091915 this does not fork
+     * a PHP CLI process; it durably queues the scan for the persistent worker.
+     * The boolean means "queued", not "child process spawned".
+     */
     public static function spawn($taskId)
     {
-        if(!defined('ROOT_PATH')||!function_exists('exec'))return false;$think=ROOT_PATH.'think';if(!is_file($think))return false;$php=self::cliPhpBinary();if($php==='')return false;
-        $output=[];$code=0;@exec('nohup '.escapeshellarg($php).' '.escapeshellarg($think).' ipa:scan --task='.(int)$taskId.' >/dev/null 2>&1 & echo $!',$output,$code);$pid=isset($output[0])?(int)$output[0]:0;if($code!==0||$pid<=0)return false;
-        usleep(250000);$row=Db::name('ipa_scan_task')->where('id',(int)$taskId)->find();if($row&&$row['state']!=='queued')return true;
-        $probe=[];$probeCode=1;@exec('kill -0 '.(int)$pid.' >/dev/null 2>&1',$probe,$probeCode);return $probeCode===0;
-    }
-
-    protected static function cliPhpBinary()
-    {
-        $candidates=['/usr/bin/php','/usr/local/bin/php'];if(defined('PHP_BINARY')&&PHP_BINARY)$candidates[]=(string)PHP_BINARY;
-        foreach(array_unique($candidates) as $candidate){if(!is_file($candidate)||!is_executable($candidate))continue;$base=strtolower(basename($candidate));if(strpos($base,'fpm')!==false||strpos($base,'cgi')!==false)continue;return $candidate;}return '';
+        IpaWorkerService::enqueueScan((int)$taskId,0);
+        return true;
     }
 
     protected static function failTask($taskId,$code,$message){Db::name('ipa_scan_task')->where('id',(int)$taskId)->update(['state'=>'failed','stage'=>'failed','error_code'=>(string)$code,'error_message'=>mb_substr((string)$message,0,2000,'UTF-8'),'heartbeat_at'=>time(),'finished_at'=>time(),'updatetime'=>time()]);}
