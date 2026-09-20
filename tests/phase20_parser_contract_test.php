@@ -16,7 +16,8 @@ p20ParserContractAssert(strpos($script,'embedded.mobileprovision')!==false,'prov
 p20ParserContractAssert(strpos($service,'One worker run consumes at most one IPA')!==false,'worker contract is one IPA per run');
 p20ParserContractAssert(strpos($service,'claimOne')!==false,'parser atomically claims one task item');
 p20ParserContractAssert(strpos($service,"where('referenced',1)")!==false,'parser only consumes active workset rows');
-p20ParserContractAssert(strpos($service,"--limit=1")!==false,'spawned parser worker is fixed to one IPA');
+p20ParserContractAssert(strpos($service,'IpaWorkerService::enqueueParse')!==false,'parse requests use persistent worker queue');
+p20ParserContractAssert(strpos($service,'nohup ')===false && strpos($service,'function_exists(\'exec\')')===false,'parser web hook must not fork transient CLI workers');
 p20ParserContractAssert(strpos($service,'needs_reparse')!==false,'scan/parser race preserves reparse intent');
 p20ParserContractAssert(strpos($service,'IpaParseCache::find')!==false,'durable MD5 parse cache lookup');
 p20ParserContractAssert(strpos($service,'IpaParseCache::payload')!==false,'MD5 cache restores parser detail payload');
@@ -27,6 +28,6 @@ p20ParserContractAssert(strpos($cache,'payload_json')!==false,'parse cache prese
 p20ParserContractAssert(strpos($workset,"parse_state IN ('pending','success','failed')")!==false,'workset cleanup excludes in-flight parsing rows');
 p20ParserContractAssert(strpos($service,'RETRY_DELAY = 1800')!==false,'30 minute failure cooldown');
 p20ParserContractAssert(strpos($service,"Db::name('category')")===false,'parser must not write category');
-p20ParserContractAssert(strpos($runner,'proc_open')!==false,'parser worker is isolated process');
+p20ParserContractAssert(strpos($runner,'proc_open')!==false,'Range parser remains isolated from PHP worker');
 p20ParserContractAssert(strpos($client,"'/fs/get'")!==false,'raw_url obtained privately via fs/get');
 echo "OK phase20_parser_contract_test\n";
