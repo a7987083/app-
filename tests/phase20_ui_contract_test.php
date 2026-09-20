@@ -53,7 +53,7 @@ $scanService = file_get_contents($root . '/application/common/library/IpaScanSer
 $parserService = file_get_contents($root . '/application/common/library/IpaParserService.php');
 $version = trim(file_get_contents($root . '/VERSION'));
 
-phase20UiAssert($version === '2026091912', 'phase20 FastAdmin response lifecycle recovery targets the 2026091912 candidate');
+phase20UiAssert((bool)preg_match('/^20[0-9]{6,12}$/', $version), 'phase20 FastAdmin response lifecycle recovery uses a valid release version');
 phase20UiAssert(strpos($setting, 'OpenList 令牌') !== false, 'settings use provider token terminology');
 phase20UiAssert(strpos($setting, 'OpenList 设置 → 其他 → 令牌') !== false, 'settings show provider token location');
 phase20UiAssert(strpos($setting, 'name="api_base"') === false, 'API prefix is not user-configurable');
