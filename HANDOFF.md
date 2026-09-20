@@ -3,49 +3,43 @@
 ## 当前基线
 
 - Repository: `a7987083/app-`
-- Active branch: `release/2026091905-phase20-setting-hotfix`
-- Historical installed release: `2026091911`
-- Original 1911 release HEAD: `edcd4d0c7cf50726ce7d09e3075fe23506ea7fe5`
-- Pre-1912 candidate HEAD: `5e72bc30b9bb714f69e79597ca3c0d3704cfd346`
-- Current release target: `2026091912`
+- Release branch: `release/2026091905-phase20-setting-hotfix`
+- Work branch: `work/2026091913-release-fix`
+- Last published release: `2026091912`
+- Current release target: `2026091913`
+- Real server last verified version: `2026091911`
 
-## 为什么必须升到 1912
+## 当前实现
 
-真实服务器已在 2026-09-20 06:17:48（UTC+8）执行 `2026091910 -> 2026091911`。之后开发线继续产生新提交并再次构建了同版本号的 Release Asset。相同版本号对应不同内容会导致服务器只比较 version 时无法发现更新，因此 `2026091911` 必须冻结，后续内容从 `2026091912` 开始。
+- OpenList 配置已使用 MySQL durable persistence。
+- IPA MySQL source/metadata、引用目录发现、目录缓存、扫描分页均已进入发布线。
+- Phase 20 online-update payload 含 program 文件与有序 MySQL migration。
+- FastAdmin PATH_INFO/action、Range Parser、绑定、治理、恢复、Retention、appstore 协议语义保持。
 
-## 当前关键实现
+## 1912 状态
 
-- OpenList 配置以 MySQL 为 durable persistence。
-- `IpaMysqlSourceService` 负责 MySQL source 管理。
-- `IpaReferenceDiscoveryService` + `IpaDirectoryCache` 负责引用目录发现和缓存。
-- `IpaScanService` 负责扫描，已支持引用目录分页。
-- online update builder 负责 program payload + ordered MySQL migration payload。
-- Phase 20 保留既有 FastAdmin 路由、Range Parser、绑定、治理、恢复和 Retention 体系。
+- GitHub Release `source-v2026091912` 已创建并冻结。
+- Source Release #159：PHP 7、MySQL 5.7、HTTP load、Phase 20 integration、package-and-release 均成功。
+- 最终 GitHub online-update E2E 因 Release Notes 标题契约失败；不是业务代码、MySQL 或更新包构建失败。
 
-## 已验证
+## 1913 修改
 
-候选 HEAD `5e72bc30...` 的 ZONOE Source Release #157 已通过：PHP 7 full regression、MySQL 5.7 migration、Phase 19.3.1 HTTP load、Phase 20 integration、package-and-release、real GitHub Release online-update E2E。
-
-注意：这是 1912 升版前候选 HEAD 的 CI 结果。1912 版本提交后必须重新跑完整 CI。
+- 版本元数据升级到 1913。
+- Release Notes 改用 `更新内容` 标题。
+- Phase 20 UI contract 不再绑定具体版本号，只验证合法版本格式。
+- 长期状态文件同步维护。
 
 ## 发布规则
 
-- 历史 Commit/Tag 不改写。
-- 已发布版本不复用、不覆盖 Asset。
-- 后续版本严格顺序递增：2026091912、2026091913、2026091914...
-- 每次发布都重新执行完整 CI。
-- “已提交”“CI 通过”“已发布”“真实服务器验证”必须分开记录。
+- 1911、1912 均视为冻结历史版本，不再覆盖。
+- 后续严格：1913 -> 1914 -> 1915 -> ...。
+- 已提交 / CI 通过 / Release 发布 / 真实服务器验证必须分开记录。
+- 当前 workflow 仍含旧的 `--clobber` 路径，因此操作纪律上绝不能重复使用已发布 VERSION；后续应单独做流程硬化。
 
-## 风险
+## 接手注意
 
-- GitHub 上 `source-v2026091911` 曾发生过 Asset 被后续构建覆盖，不能再把当前 GitHub 1911 Asset 当作服务器 06:17 安装内容的唯一证据。
-- 真实服务器 Phase 20 核心业务仍需在 1912 安装后回归。
-
-## 接手步骤
-
-1. `git status`
-2. `git branch --show-current`
-3. `git rev-parse HEAD`
-4. 检查 `PROJECT_STATE.json` 和 `KNOWN_ISSUES.md`。
-5. 查看最新 ZONOE Source Release Run。
-6. 遇到 CI 错误只修第一处真实错误，不绕过 Gate。
+1. 先核对 release 分支 HEAD 是否已快进到工作分支最终 HEAD。
+2. 查看最新 ZONOE Source Release Run。
+3. 若失败，只修第一处真实错误，不绕过 Gate。
+4. CI 全绿后记录 Release Tag、Asset SHA256、E2E 结果。
+5. 最后再做真实服务器升级和 Phase 20 功能回归。
