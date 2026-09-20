@@ -86,6 +86,7 @@ application/common/library/IpaMetadataPayloadStore.php
 application/common/library/IpaScanService.php
 application/common/library/IpaParserRunner.php
 application/common/library/IpaMetadataNormalizer.php
+application/common/library/IpaParseCache.php
 application/common/library/IpaParserService.php
 application/common/library/IpaBindingService.php
 application/common/library/IpaWritebackTemplate.php
@@ -110,3 +111,4 @@ application/admin/command/Install/phase20_ipa_governance.sql
 application/admin/command/Install/phase20_ipa_production.sql
 application/admin/command/Install/phase20_ipa_lifecycle.sql
 application/admin/command/Install/phase20_ipa_sources_v2.sql
+application/admin/command/Install/phase20_ipa_workset.sql
