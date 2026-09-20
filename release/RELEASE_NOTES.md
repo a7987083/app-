@@ -1,30 +1,31 @@
-# ZONOE 软件源 2026091914
+# ZONOE 软件源 2026091915
 
 ## 基线
 
-本版本以已发布并冻结的 `2026091913` 为直接基线。`2026091911`、`2026091912`、`2026091913` 均不得复用或覆盖 Release Asset；本次所有变化进入新版本 `2026091914`。
+本版本以已发布并冻结的 `2026091914` 为直接基线。`2026091914` 及更早正式版本均不得复用或覆盖 Release Asset；本次后台任务执行模型修复进入新版本 `2026091915`。
 
 ## 更新内容
 
-- IPA 扫描范围改为严格由启用 MySQL 软件源中的 `bt1a` 决定，移除无引用源时扫描整个 OpenList 目录的 fallback。
-- 保留旧项目成熟的 OpenList 目录缓存 / MD5 优先判定思路：普通后台 MD5 扫描优先使用缓存，强制刷新目录独立执行。
-- Parser 固定每次后台解析 `1` 个 IPA，并加入原子领取、`needs_reparse` 并发保护、30 分钟失败退避。
-- 新增独立 `fa_ipa_parse_cache`，按 `MD5 + 文件大小 + Parser Version` 复用解析结果；复用时同时恢复完整 metadata payload，而不是只恢复基础列。
-- `fa_ipa_metadata` 收敛为当前 active workset，引入 `referenced / needs_reparse`；无引用且未绑定的历史数据在解析结果入 cache 后可安全回收。
-- 修复 IPA 元数据筛选查询：count 与 rows 分别构建 Query，避免 ThinkPHP/PDO 绑定参数复用导致的查询失败。
-- 元数据刷新失败会明确提示当前显示旧数据，不再让 BootstrapTable 静默保留旧 rows。
-- OpenList 停用后扫描、强制刷新、Range Parser、连接测试均拒绝执行；历史健康结果只作为“上次检查”展示。
-- 修复从未启动、`heartbeat_at=0` 的 queued 僵尸任务恢复；后台 spawn 改为优先 CLI PHP 并对启动结果做额外校验。
-- 新增 `Phase 20 Workset MySQL57` CI Gate，在真实 MySQL 5.7 上连续执行最新 Phase20 migration 两遍并验证 workset/cache schema。
+- 按旧项目成熟的后台任务职责模型重构 IPA 扫描：Web 只创建持久任务，不再通过 `exec/nohup php think ...` 临时 fork CLI worker。
+- 新增 `fa_ipa_worker_job` 持久任务队列和 `fa_ipa_worker_state` heartbeat 状态表，scan / parse 由数据库原子 claim，避免重复消费和任务丢失。
+- 新增 `ipa:worker` 常驻 Worker 命令，支持持续消费以及 `--once` 单任务诊断模式。
+- 为未部署常驻 Worker 的站点增加 PHP-FPM after-response fallback：HTTP 响应完成后在同一 Web 进程消费 1 个持久 job，对应旧 Node 项目的 `setImmediate(runQueuedTask)` 语义，不依赖 CLI PHP 路径。
+- `IpaScanService::spawn()` / `IpaParserService::spawn()` 保留为兼容入口，但内部仅入队，源码已移除 `exec/nohup` 临时 PHP worker。
+- “后台解析 1 个”继续严格只消费 1 个 pending IPA；MD5 parse cache、30 分钟失败退避、`needs_reparse` 并发保护保持不变。
+- 后台扫描继续严格使用启用 MySQL 软件源中的 `bt1a` 作为权威范围，沿用 30 分钟 OpenList 目录缓存和 MD5 优先差异判定。
+- 新增 `Phase 20 Persistent IPA Worker` CI Gate：PHP 7.0 语法/契约校验 + MySQL 5.7 worker migration 双跑及索引验证。
+- 在线更新包加入 Worker Service、Worker Command 和 `phase20_ipa_worker.sql`，升级时先建队列表再覆盖新程序文件。
 
 ## 预发布验证
 
-- PR #14 `Phase 20 IPA Management` Run #118：`phase20-contract`、`phase20-integration`、`phase20-mysql57`、`phase20-package` 全部成功。
-- 同一 PR HEAD 的 `Regression Checks`、`Phase14 Production Hardening`、`Phase 17.2 Authorization Integrity` 全部成功。
-- `Phase 20 Workset MySQL57` Run #1 成功；最新 Phase20 migration 在 MySQL 5.7 连续执行两遍通过。
+- PR #15 `Phase 20.9 persistent IPA worker`：Regression Checks、Phase14 Production Hardening、Phase 17.2 Authorization Integrity 全部成功。
+- `Phase 20 IPA Management`：contract、integration、package、MySQL 5.7 全部成功。
+- `Phase 20 Workset MySQL57` 成功。
+- 新 `Phase 20 Persistent IPA Worker`：worker-contract 与 worker-mysql57 全部成功；Worker migration 在真实 MySQL 5.7 连续执行两遍通过。
 
 ## 发布后验证
 
-- GitHub Release 应创建全新的 `source-v2026091914`，不得覆盖 `source-v2026091913` 或更早版本。
-- 在线升级 E2E 必须验证 `2026091913 -> 2026091914` 的发布链路。
-- 真实生产服务器目前只确认到 `2026091911`；正式 CI 全绿并发布 1914 后，生产升级与 Phase 20 功能仍需单独受控验证。
+- GitHub Release 必须创建全新的 `source-v2026091915`，不得覆盖 `source-v2026091914` 或更早版本。
+- 在线升级 E2E 必须验证 `2026091914 -> 2026091915`。
+- 升级后手工点击“后台扫描 MD5（使用缓存）”时，任务应由 `queued` 很快进入 `running/read_references`，不再依赖 `php think ipa:scan` 临时 CLI fork。
+- 真实生产服务器仍需升级后单独验证 MySQL 软件源 → OpenList 缓存/MD5 → metadata pending → 后台解析 1 个 → binding 的完整链路。
