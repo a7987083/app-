@@ -1,29 +1,29 @@
-ZONOE 软件源 Release 2026091916
-版本：2026091916
-基线：2026091915
+ZONOE 软件源 Release 2026091917
+版本：2026091917
+基线：2026091916
 阶段：Phase 20.9 persistent IPA worker release packaging fix
-发布分支：release/2026091916-worker-release-fix
+发布分支：release/2026091917-worker-release-fix
 发布状态：准备触发正式 Release Workflow
 
 更新内容：
-1. 2026091915 已发布并冻结；本次不覆盖 1915 历史 Release Asset，所有修复进入 2026091916。
-2. 修复 2026091915 在线更新包遗漏 phase20_ipa_worker.sql 的发布集成问题。
-3. tools/build_online_update.php 恢复历史 Phase20 migration 登记习惯，将 phase20_ipa_worker.sql 以 mysql/2026091915_phase20_ipa_worker.sql 打入在线更新包。
-4. phase20_rc_release_contract_test.php 新增 Worker Service、Worker Command 和 worker migration 的发布契约检查，防止源码存在但 builder 漏打包。
+1. source-v2026091916 已生成但在线升级 E2E 未完成；不移动、不覆盖 1916 Tag/Asset，修复继续进入 2026091917。
+2. 保留 1916 对 phase20_ipa_worker.sql 的在线更新打包修复，最终 ZIP 继续包含 mysql/2026091915_phase20_ipa_worker.sql。
+3. 保留 phase20_rc_release_contract_test.php 对 Worker Service、Worker Command 和 worker migration 的发布契约检查。
+4. 修复真实 GitHub Release 在线升级 E2E 的历史 changelog 契约：Release Notes 使用“更新内容”标题。
 5. 保持 2026091915 Worker 运行模型不变：Web 只入持久队列，ipa:worker / PHP-FPM after-response fallback 负责消费。
 6. phase20_ipa_worker.sql 保持 MySQL 5.7 兼容、可重复执行，创建 fa_ipa_worker_job 和 fa_ipa_worker_state。
 7. 本版本不改 UpdateIntegrity 四个哨兵文件，file_sign 保持不变。
 
 验证要求：
 - PHP 7.0 regression 全绿。
-- Phase 20 Persistent IPA Worker worker-contract / worker-mysql57 全绿。
-- ZONOE Source Release package-and-release 成功生成 source-v2026091916。
+- MySQL 5.7 migration、Phase 20 integration、HTTP load gate 全绿。
+- ZONOE Source Release package-and-release 成功生成 source-v2026091917。
 - 最终 zonoe-online-update.zip 必须包含 mysql/2026091915_phase20_ipa_worker.sql。
-- 在线升级 E2E 至少验证上一正式版本 2026091915 -> 2026091916。
+- e2e-online-upgrade 必须通过真实 GitHub Release 在线升级测试。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091916。
+- 目标 GitHub Release 标签：source-v2026091917。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- VERSION、public/update/ver.txt、ver.json、PHASE13_RELEASE.txt 同步为 2026091916。
+- VERSION、public/update/ver.txt、ver.json、PHASE13_RELEASE.txt 同步为 2026091917。
 - file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee；本次未修改 UpdateIntegrity 四个哨兵文件。
-- source-v2026091915 及更早正式版本均为冻结历史版本，不得修改或覆盖。
+- source-v2026091916 及更早 Release Tag/Asset 均保持不变。
