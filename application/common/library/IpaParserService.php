@@ -127,17 +127,14 @@ class IpaParserService
 
     protected static function discoveryType(array $item){$result=json_decode(isset($item['result_json'])?$item['result_json']:'',true);return is_array($result)&&!empty($result['discovery_type'])?$result['discovery_type']:'';}
 
+    /**
+     * Backward-compatible controller hook. Since 2026091915 this does not fork
+     * a PHP CLI process; it durably queues one parse request for the persistent
+     * IPA worker. The boolean means "queued", not "child process spawned".
+     */
     public static function spawn($taskId=0,$limit=1)
     {
-        if(!defined('ROOT_PATH')||!function_exists('exec'))return false;$think=ROOT_PATH.'think';if(!is_file($think))return false;
-        $php=self::cliPhpBinary();if($php==='')return false;
-        $command='nohup '.escapeshellarg($php).' '.escapeshellarg($think).' ipa:parse';if((int)$taskId>0)$command.=' --task='.(int)$taskId;$command.=' --limit=1 >/dev/null 2>&1 & echo $!';
-        $out=[];$code=0;@exec($command,$out,$code);return $code===0&&!empty($out)&&((int)$out[0])>0;
-    }
-
-    protected static function cliPhpBinary()
-    {
-        $candidates=['/usr/bin/php','/usr/local/bin/php'];if(defined('PHP_BINARY')&&PHP_BINARY)$candidates[]=(string)PHP_BINARY;
-        foreach(array_unique($candidates) as $candidate){if(!is_file($candidate)||!is_executable($candidate))continue;$base=strtolower(basename($candidate));if(strpos($base,'fpm')!==false||strpos($base,'cgi')!==false)continue;return $candidate;}return '';
+        IpaWorkerService::enqueueParse((int)$taskId,0);
+        return true;
     }
 }
