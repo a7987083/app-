@@ -64,6 +64,7 @@ application/admin/controller/IpaLifecycle.php
 application/admin/controller/IpaMysqlSource.php
 application/admin/command/IpaScan.php
 application/admin/command/IpaParse.php
+application/admin/command/IpaWorker.php
 application/command.php
 application/admin/view/ipa_center/index.html
 application/admin/view/ipa_center/task.html
@@ -90,6 +91,7 @@ application/common/library/IpaParserRunner.php
 application/common/library/IpaMetadataNormalizer.php
 application/common/library/IpaParseCache.php
 application/common/library/IpaParserService.php
+application/common/library/IpaWorkerService.php
 application/common/library/IpaBindingService.php
 application/common/library/IpaWritebackTemplate.php
 application/common/library/IpaGovernanceService.php
@@ -114,3 +116,4 @@ application/admin/command/Install/phase20_ipa_production.sql
 application/admin/command/Install/phase20_ipa_lifecycle.sql
 application/admin/command/Install/phase20_ipa_sources_v2.sql
 application/admin/command/Install/phase20_ipa_workset.sql
+application/admin/command/Install/phase20_ipa_worker.sql
