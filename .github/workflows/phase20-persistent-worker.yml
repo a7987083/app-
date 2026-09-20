@@ -1,0 +1,92 @@
+name: Phase 20 Persistent IPA Worker
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'application/admin/command/IpaWorker.php'
+      - 'application/admin/command/Install/phase20_ipa_worker.sql'
+      - 'application/common/library/IpaWorkerService.php'
+      - 'application/common/library/IpaScanService.php'
+      - 'application/common/library/IpaParserService.php'
+      - 'application/command.php'
+      - 'release/online-update-files.txt'
+      - 'tests/phase20_worker_contract_test.php'
+      - 'tests/phase20_parser_contract_test.php'
+      - '.github/workflows/phase20-persistent-worker.yml'
+  pull_request:
+    paths:
+      - 'application/admin/command/IpaWorker.php'
+      - 'application/admin/command/Install/phase20_ipa_worker.sql'
+      - 'application/common/library/IpaWorkerService.php'
+      - 'application/common/library/IpaScanService.php'
+      - 'application/common/library/IpaParserService.php'
+      - 'application/command.php'
+      - 'release/online-update-files.txt'
+      - 'tests/phase20_worker_contract_test.php'
+      - 'tests/phase20_parser_contract_test.php'
+      - '.github/workflows/phase20-persistent-worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  worker-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: PHP 7.0 syntax
+        run: |
+          set -euo pipefail
+          php -l application/common/library/IpaWorkerService.php
+          php -l application/common/library/IpaScanService.php
+          php -l application/common/library/IpaParserService.php
+          php -l application/admin/command/IpaWorker.php
+          php -l application/command.php
+          php -l tests/phase20_worker_contract_test.php
+          php -l tests/phase20_parser_contract_test.php
+      - name: Persistent worker contracts
+        run: |
+          set -euo pipefail
+          php tests/phase20_worker_contract_test.php
+          php tests/phase20_parser_contract_test.php
+          php tests/phase20_scan_contract_test.php
+
+  worker-mysql57:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: phase20_worker
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run worker migration twice
+        run: |
+          set -euo pipefail
+          for pass in 1 2; do
+            mysql -h127.0.0.1 -P3306 -uroot -proot phase20_worker < application/admin/command/Install/phase20_ipa_worker.sql
+          done
+      - name: Verify worker queue schema
+        run: |
+          set -euo pipefail
+          mysql_base=(mysql -N -B -h127.0.0.1 -P3306 -uroot -proot phase20_worker)
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='phase20_worker' AND table_name='fa_ipa_worker_job'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='phase20_worker' AND table_name='fa_ipa_worker_state'")" = "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='phase20_worker' AND table_name='fa_ipa_worker_job' AND index_name='uniq_job_key'")" -ge "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='phase20_worker' AND table_name='fa_ipa_worker_job' AND index_name='idx_state_id'")" -ge "1"
+          test "$("${mysql_base[@]}" -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='phase20_worker' AND table_name='fa_ipa_worker_state' AND index_name='uniq_worker_name'")" -ge "1"
