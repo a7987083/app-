@@ -27,6 +27,9 @@ $requiredProgramFiles = [
     'application/admin/command/IpaScan.php',
     'application/admin/command/IpaParse.php',
     'application/admin/view/ipa_center/governance.html',
+    'application/common/library/IpaMetadataQueryService.php',
+    'application/common/library/IpaMetadataWorksetService.php',
+    'application/common/library/IpaParseCache.php',
     'application/common/library/IpaGovernanceService.php',
     'application/common/library/IpaGovernanceBatchService.php',
     'application/common/library/IpaGovernanceRecoveryService.php',
@@ -53,6 +56,8 @@ $orderedSql = [
     '2026091907_phase20_ipa_governance.sql' => 'application/admin/command/Install/phase20_ipa_governance.sql',
     '2026091908_phase20_ipa_production.sql' => 'application/admin/command/Install/phase20_ipa_production.sql',
     '2026091909_phase20_ipa_lifecycle.sql' => 'application/admin/command/Install/phase20_ipa_lifecycle.sql',
+    '2026091910_phase20_ipa_sources_v2.sql' => 'application/admin/command/Install/phase20_ipa_sources_v2.sql',
+    '2026091911_phase20_ipa_workset.sql' => 'application/admin/command/Install/phase20_ipa_workset.sql',
 ];
 
 $lastPosition = -1;
@@ -64,8 +69,13 @@ foreach ($orderedSql as $target => $source) {
     phase20RcAssert($position !== false, 'builder packages ordered SQL ' . $target);
     phase20RcAssert($position > $lastPosition, 'builder SQL order preserved at ' . $target);
     $lastPosition = $position;
-    phase20RcAssert(strpos($releaseWorkflow, "mysql/" . $target) !== false, 'formal release verifies packaged SQL ' . $target);
 }
+
+foreach (array_slice(array_keys($orderedSql),0,9) as $target) {
+    phase20RcAssert(strpos($releaseWorkflow, "mysql/" . $target) !== false, 'formal release verifies legacy packaged SQL ' . $target);
+}
+phase20RcAssert(strpos($builder, "2026091910_phase20_ipa_sources_v2.sql") !== false, 'builder packages software-source registry migration');
+phase20RcAssert(strpos($builder, "2026091911_phase20_ipa_workset.sql") !== false, 'builder packages active-workset/parse-cache migration');
 
 $builderCompact = preg_replace('/\s+/', '', $builder);
 phase20RcAssert(strpos($builderCompact, "'mysql/'." . '$targetName') !== false, 'builder writes Phase 20 migrations to mysql payload');
