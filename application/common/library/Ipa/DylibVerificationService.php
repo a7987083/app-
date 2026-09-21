@@ -17,7 +17,7 @@ class DylibVerificationService
             throw new \RuntimeException('IPA verification server secret is not configured');
         }
 
-        $required = ['udid', 'bundle_id', 'dylib_key', 'dylib_version', 'timestamp', 'nonce'];
+        $required = ['udid', 'bundle_id', 'dylib_key', 'dylib_version', 'timestamp', 'nonce', 'signature'];
         foreach ($required as $field) {
             if (!isset($payload[$field]) || trim((string)$payload[$field]) === '') {
                 return self::result(false, 'bad_request', 'block', 0, '', 'Missing ' . $field);
@@ -32,6 +32,7 @@ class DylibVerificationService
         $sha256 = isset($payload['dylib_sha256']) ? strtolower(trim((string)$payload['dylib_sha256'])) : '';
         $timestamp = (int)$payload['timestamp'];
         $nonce = trim((string)$payload['nonce']);
+        $signature = strtolower(trim((string)$payload['signature']));
 
         $skew = max(30, min(1800, (int)Config::get('ipa_data_center.verify_timestamp_skew')));
         if (abs($now - $timestamp) > $skew) {
@@ -40,7 +41,30 @@ class DylibVerificationService
         if (strlen($nonce) < 16 || strlen($nonce) > 128) {
             return self::loggedResult(false, 'nonce_invalid', 'block', 0, '', 'Invalid nonce', $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret);
         }
+        if (!preg_match('/^[a-f0-9]{64}$/', $signature)) {
+            return self::loggedResult(false, 'signature_invalid', 'block', 0, '', 'Invalid request signature format', $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret);
+        }
 
+        $dylib = Db::name('dylib')->where('dylib_key', $dylibKey)->where('enabled', 1)->find();
+        if (!$dylib) {
+            return self::loggedResult(false, 'dylib_unknown', 'block', 0, '', 'Unknown dylib', $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret);
+        }
+        if (empty($dylib['verify_secret_ciphertext'])) {
+            return self::loggedResult(false, 'dylib_key_unconfigured', 'block', 0, '', 'Dylib verification key unavailable', $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret);
+        }
+
+        try {
+            $verifySecret = SecretBox::decrypt((string)$dylib['verify_secret_ciphertext']);
+        } catch (\Exception $e) {
+            return self::loggedResult(false, 'dylib_key_unavailable', 'block', 0, '', 'Dylib verification key unavailable', $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret);
+        }
+        $expectedSignature = hash_hmac('sha256', self::canonicalRequest($udid, $bundleId, $dylibKey, $version, $build, $sha256, $timestamp, $nonce), $verifySecret);
+        if (!hash_equals($expectedSignature, $signature)) {
+            return self::loggedResult(false, 'signature_mismatch', 'block', 0, '', 'Request signature mismatch', $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret);
+        }
+
+        // Only authenticated requests may reserve a nonce. This prevents unauthenticated
+        // callers from filling the replay-protection table with arbitrary values.
         $nonceHash = hash_hmac('sha256', $nonce, $secret);
         try {
             Db::name('dylib_nonce')->insert([
@@ -68,11 +92,6 @@ class DylibVerificationService
         $blackRows = Db::name('black')->where('udid', $udid)->order('id desc')->select();
         if (BlacklistPolicy::findActive($blackRows)) {
             return self::loggedResult(false, 'blacklisted', 'block', 0, '', 'UDID is blocked', $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret);
-        }
-
-        $dylib = Db::name('dylib')->where('dylib_key', $dylibKey)->where('enabled', 1)->find();
-        if (!$dylib) {
-            return self::loggedResult(false, 'dylib_unknown', 'block', 0, '', 'Unknown dylib', $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret);
         }
 
         $binding = Db::name('dylib_app_binding')
@@ -136,6 +155,20 @@ class DylibVerificationService
 
         $code = $state === 'deprecated' ? 'ok_deprecated' : ($state === 'testing' ? 'ok_testing' : 'ok');
         return self::loggedResult(true, $code, 'allow', $offlineGrace, $token, (string)$versionRow['notice'], $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret);
+    }
+
+    public static function canonicalRequest($udid, $bundleId, $dylibKey, $version, $build, $sha256, $timestamp, $nonce)
+    {
+        return implode("\n", [
+            (string)$udid,
+            (string)$bundleId,
+            (string)$dylibKey,
+            (string)$version,
+            (string)$build,
+            strtolower((string)$sha256),
+            (string)(int)$timestamp,
+            (string)$nonce,
+        ]);
     }
 
     protected static function failAction(array $dylib, $binding, $version)
