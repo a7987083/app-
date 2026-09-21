@@ -3,7 +3,7 @@ ZONOE 软件源 Release 2026091919
 基线：2026091918
 阶段：Phase 20 Persistent IPA Parser Service
 发布分支：release/2026091919-persistent-parser-service
-发布状态：预发布验证中
+发布状态：正式发布验证中
 
 更新内容：
 1. 以 source-v2026091918 为冻结基线前滚 2026091919，不覆盖任何历史 Release Tag/Asset。
