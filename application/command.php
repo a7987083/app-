@@ -19,4 +19,5 @@ return [
     'app\admin\command\Api',
     'app\admin\command\IpaWorker',
     'app\admin\command\IpaParseWorker',
+    'app\admin\command\IpaMaintenance',
 ];
