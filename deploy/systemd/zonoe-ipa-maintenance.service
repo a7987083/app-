@@ -1,0 +1,11 @@
+[Unit]
+Description=ZONOE IPA/Dylib maintenance cleanup
+After=mysql.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/zonoe
+Environment=APP_ENV=production
+ExecStart=/usr/bin/php /var/www/zonoe/think ipa:maintenance
