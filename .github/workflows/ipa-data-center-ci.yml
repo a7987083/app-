@@ -7,15 +7,20 @@ on:
   pull_request:
     paths:
       - 'application/admin/controller/IpaCenter.php'
+      - 'application/admin/controller/DylibCenter.php'
       - 'application/admin/command/IpaWorker.php'
       - 'application/admin/command/IpaParseWorker.php'
       - 'application/common/library/Ipa/**'
       - 'application/index/controller/DylibVerify.php'
       - 'application/extra/ipa_data_center.php'
       - 'application/admin/view/ipa_center/**'
+      - 'application/admin/view/dylib_center/**'
       - 'public/assets/js/backend/ipa_center.js'
+      - 'public/assets/js/backend/dylib_center.js'
       - 'database/ipa_data_center_*.sql'
+      - 'clients/ios/ZONDylibVerify/**'
       - 'tests/ipa_range_parser_contract.php'
+      - 'tests/dylib_signing_contract.php'
 
 jobs:
   contracts:
@@ -26,6 +31,7 @@ jobs:
         run: |
           php -v
           php -l application/admin/controller/IpaCenter.php
+          php -l application/admin/controller/DylibCenter.php
           php -l application/admin/command/IpaWorker.php
           php -l application/admin/command/IpaParseWorker.php
           php -l application/common/library/Ipa/OpenListClient.php
@@ -40,6 +46,7 @@ jobs:
           php -l application/index/controller/DylibVerify.php
           php -l application/extra/ipa_data_center.php
           php -l tests/ipa_range_parser_contract.php
+          php -l tests/dylib_signing_contract.php
       - name: Build binary plist fixture
         run: |
           python3 - <<'PY'
@@ -49,16 +56,27 @@ jobs:
           PY
       - name: Range ZIP and plist contracts
         run: php tests/ipa_range_parser_contract.php
+      - name: Dylib signing contract
+        run: php tests/dylib_signing_contract.php
       - name: Baseline isolation contracts
         run: |
           test -f database/ipa_data_center_v1.sql
           test -f database/ipa_data_center_menu_v1.sql
+          test -f database/ipa_data_center_v1_1_request_signing.sql
           grep -q "default_offline_grace.*900" database/ipa_data_center_v1.sql
+          grep -q "verify_secret_ciphertext" database/ipa_data_center_v1.sql
           grep -q "source-v2026091809" docs/IPA_DATA_CENTER_ARCHITECTURE.md
           ! grep -q "IpaCenter" application/admin/controller/Category.php
+          ! grep -q "DylibCenter" application/admin/controller/Category.php
       - name: Manual-only category write-back contract
         run: |
           # Direct fa_category writes are allowed only inside the dedicated manual writeback service.
           test "$(grep -R -l "Db::name('category').*update" application/common/library/Ipa application/admin/controller/IpaCenter.php || true)" = "application/common/library/Ipa/IpaWritebackService.php"
           # Background discovery/parser workers must never invoke the writeback apply path.
           ! grep -R "IpaWritebackService::apply" application/admin/command application/common/library/Ipa/IpaScanService.php application/common/library/Ipa/IpaParserService.php
+      - name: Dylib security contracts
+        run: |
+          grep -q "signature_mismatch" application/common/library/Ipa/DylibVerificationService.php
+          grep -q "Only authenticated requests may reserve a nonce" application/common/library/Ipa/DylibVerificationService.php
+          grep -q "kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly" clients/ios/ZONDylibVerify/ZONVerifyClient.m
+          grep -q "offline_grace" clients/ios/ZONDylibVerify/ZONVerifyClient.m
