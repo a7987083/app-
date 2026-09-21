@@ -23,6 +23,7 @@ VALUES
 ('file',@ipa_pid,'dylib_center/versions','Dylib 版本列表','fa fa-code-fork','','',0,@now,@now,55,'normal'),
 ('file',@ipa_pid,'dylib_center/bindings','Dylib 游戏绑定','fa fa-link','','',0,@now,@now,54,'normal'),
 ('file',@ipa_pid,'dylib_center/logs','Dylib 验证日志','fa fa-list-alt','','',0,@now,@now,53,'normal'),
-('file',@ipa_pid,'dylib_center/saveDylib','保存 Dylib','fa fa-save','','',0,@now,@now,52,'normal'),
-('file',@ipa_pid,'dylib_center/saveVersion','保存 Dylib 版本','fa fa-save','','',0,@now,@now,51,'normal'),
-('file',@ipa_pid,'dylib_center/saveBinding','保存 Dylib 绑定','fa fa-save','','',0,@now,@now,50,'normal');
+('file',@ipa_pid,'dylib_center/generateVerifySecret','生成 Dylib 验证密钥','fa fa-key','','',0,@now,@now,52,'normal'),
+('file',@ipa_pid,'dylib_center/saveDylib','保存 Dylib','fa fa-save','','',0,@now,@now,51,'normal'),
+('file',@ipa_pid,'dylib_center/saveVersion','保存 Dylib 版本','fa fa-save','','',0,@now,@now,50,'normal'),
+('file',@ipa_pid,'dylib_center/saveBinding','保存 Dylib 绑定','fa fa-save','','',0,@now,@now,49,'normal');
