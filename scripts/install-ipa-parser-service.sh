@@ -43,8 +43,8 @@ else
 fi
 
 case "$HOST" in
-  127.0.0.1|localhost|::1) ;;
-  *) echo "ERROR: parser service must bind loopback only" >&2; exit 1 ;;
+  127.0.0.1|localhost) ;;
+  *) echo "ERROR: parser service must bind IPv4 loopback only" >&2; exit 1 ;;
 esac
 case "$PORT" in
   ''|*[!0-9]*) echo "ERROR: invalid port: $PORT" >&2; exit 1 ;;
