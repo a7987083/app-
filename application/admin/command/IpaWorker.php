@@ -3,6 +3,7 @@
 namespace app\admin\command;
 
 use app\common\library\Ipa\IpaScanService;
+use app\common\library\Ipa\SecretBox;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;
@@ -37,7 +38,9 @@ class IpaWorker extends Command
 
             IpaScanService::setJobContext((int)$item['job_id']);
             try {
-                IpaScanService::processItem($item);
+                IpaScanService::processItem($item, function (array $source) {
+                    return empty($source['token_ciphertext']) ? '' : SecretBox::decrypt($source['token_ciphertext']);
+                });
                 $output->info(sprintf('done item=%d type=%s path=%s', $item['id'], $item['item_type'], $item['path']));
             } catch (\Exception $e) {
                 IpaScanService::failItem($item, $e);
