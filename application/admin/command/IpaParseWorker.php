@@ -4,7 +4,6 @@ namespace app\admin\command;
 
 use app\common\library\Ipa\IpaParserService;
 use app\common\library\Ipa\SecretBox;
-use think\Config;
 use think\Db;
 use think\console\Command;
 use think\console\Input;
@@ -92,11 +91,7 @@ class IpaParseWorker extends Command
     protected function decryptToken(array $source)
     {
         if (empty($source['token_ciphertext'])) return '';
-        $secret = (string)Config::get('ipa_data_center.server_secret');
-        if ($secret === '') {
-            throw new \RuntimeException('ipa.server_secret is required to decrypt OpenList token');
-        }
-        return SecretBox::decrypt((string)$source['token_ciphertext'], $secret);
+        return SecretBox::decrypt((string)$source['token_ciphertext']);
     }
 
     protected function failAsset($assetId, \Exception $e)
