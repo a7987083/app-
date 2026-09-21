@@ -62,6 +62,16 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 ]]
             });
 
+            $('#generate-secret').on('click', function () {
+                Fast.api.ajax({url: 'dylib_center/generateVerifySecret', type: 'POST'}, function (data) {
+                    if (data && data.secret) {
+                        $('#verify-secret').attr('type', 'text').val(data.secret);
+                        Toastr.success('验证密钥已生成，请保存并写入对应 OC dylib 配置');
+                    }
+                    return false;
+                });
+            });
+
             $('#dylib-form').on('submit', function (e) {
                 e.preventDefault();
                 Fast.api.ajax({url: 'dylib_center/saveDylib', type: 'POST', data: $(this).serialize()}, function () {
