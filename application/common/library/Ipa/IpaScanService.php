@@ -8,23 +8,44 @@ class IpaScanService
 {
     public static function createJob($sourceId, $mode = 'incremental')
     {
-        $source = Db::name('ipa_source')->where('id', (int)$sourceId)->where('enabled', 1)->find();
-        if (!$source) {
-            throw new \InvalidArgumentException('IPA source not found or disabled');
-        }
-
+        $mode = in_array($mode, ['incremental', 'full'], true) ? $mode : 'incremental';
         $now = time();
-        $jobId = Db::name('ipa_scan_job')->insertGetId([
-            'source_id' => (int)$source['id'],
-            'mode' => in_array($mode, ['incremental', 'full'], true) ? $mode : 'incremental',
-            'status' => 'pending',
-            'root_path' => isset($source['root_path']) ? $source['root_path'] : '/',
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
 
-        self::enqueueItem($jobId, (int)$source['id'], 'directory', $source['root_path'], $now);
-        return $jobId;
+        Db::startTrans();
+        try {
+            $source = Db::name('ipa_source')
+                ->where('id', (int)$sourceId)
+                ->where('enabled', 1)
+                ->lock(true)
+                ->find();
+            if (!$source) {
+                throw new \InvalidArgumentException('IPA source not found or disabled');
+            }
+
+            $active = Db::name('ipa_scan_job')
+                ->where('source_id', (int)$source['id'])
+                ->where('status', 'in', ['pending', 'running'])
+                ->count();
+            if ((int)$active > 0) {
+                throw new \RuntimeException('An IPA scan is already active for this source');
+            }
+
+            $jobId = Db::name('ipa_scan_job')->insertGetId([
+                'source_id' => (int)$source['id'],
+                'mode' => $mode,
+                'status' => 'pending',
+                'root_path' => isset($source['root_path']) ? $source['root_path'] : '/',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            self::enqueueItem($jobId, (int)$source['id'], 'directory', $source['root_path'], $now);
+            Db::commit();
+            return $jobId;
+        } catch (\Exception $e) {
+            Db::rollback();
+            throw $e;
+        }
     }
 
     public static function claimOne($workerId)
@@ -159,17 +180,26 @@ class IpaScanService
                 $mtime = $parsed;
             }
         }
+        $size = isset($row['size']) ? (int)$row['size'] : 0;
 
         $values = [
             'path' => (string)$path,
             'name' => basename((string)$path),
-            'size_bytes' => isset($row['size']) ? (int)$row['size'] : 0,
+            'size_bytes' => $size,
             'modified_at' => $mtime,
             'last_seen_at' => $now,
             'updated_at' => $now,
         ];
 
         if ($existing) {
+            $contentChanged = ((int)$existing['size_bytes'] !== $size)
+                || ($mtime > 0 && (int)$existing['modified_at'] !== $mtime);
+            if ($contentChanged || (string)$existing['status'] === 'missing') {
+                $values['status'] = 'discovered';
+                $values['parsed_at'] = 0;
+                $values['last_error'] = null;
+                $values['raw_url'] = null;
+            }
             Db::name('ipa_asset')->where('id', $existing['id'])->update($values);
             return (int)$existing['id'];
         }
@@ -241,11 +271,30 @@ class IpaScanService
         if ((int)$active > 0) {
             return;
         }
+
+        $job = Db::name('ipa_scan_job')->where('id', (int)$jobId)->find();
+        if (!$job) {
+            return;
+        }
         $failed = Db::name('ipa_scan_item')->where('job_id', $jobId)->where('status', 'failed')->count();
+        $now = time();
+
+        if ((string)$job['mode'] === 'full') {
+            $cutoff = !empty($job['started_at']) ? (int)$job['started_at'] : (int)$job['created_at'];
+            Db::name('ipa_asset')
+                ->where('source_id', (int)$job['source_id'])
+                ->where('last_seen_at', '<', $cutoff)
+                ->where('status', '<>', 'missing')
+                ->update([
+                    'status' => 'missing',
+                    'updated_at' => $now,
+                ]);
+        }
+
         Db::name('ipa_scan_job')->where('id', $jobId)->update([
             'status' => ((int)$failed > 0) ? 'completed_with_errors' : 'completed',
-            'finished_at' => time(),
-            'updated_at' => time(),
+            'finished_at' => $now,
+            'updated_at' => $now,
         ]);
     }
 
