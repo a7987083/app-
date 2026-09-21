@@ -63,6 +63,13 @@ jobs:
           php -l tests/dylib_signing_contract.php
           php -l tests/openlist_mock_router.php
           php -l tests/openlist_client_integration.php
+      - name: ThinkPHP CLI command registration
+        run: |
+          chmod +x think
+          php think list | tee /tmp/think-list.txt
+          grep -q "ipa:worker" /tmp/think-list.txt
+          grep -q "ipa:parse-worker" /tmp/think-list.txt
+          grep -q "ipa:maintenance" /tmp/think-list.txt
       - name: Build binary plist fixture
         run: |
           python3 - <<'PY'
@@ -152,6 +159,7 @@ jobs:
           php -v
           for f in application/admin/controller/IpaCenter.php application/admin/controller/DylibCenter.php application/admin/command/IpaWorker.php application/admin/command/IpaParseWorker.php application/admin/command/IpaMaintenance.php application/common/library/Ipa/*.php application/index/controller/DylibVerify.php application/extra/ipa_data_center.php tests/ipa_range_parser_contract.php tests/dylib_signing_contract.php tests/openlist_client_integration.php tests/openlist_mock_router.php; do php -l "$f"; done
           php tests/dylib_signing_contract.php
+          php think list | grep -q "ipa:worker"
 
   ios-sdk-compile:
     runs-on: macos-latest
