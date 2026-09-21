@@ -54,8 +54,42 @@
         </div>
 
         <div class="panel panel-default">
-            <div class="panel-heading"><strong>IPA 资产</strong></div>
+            <div class="panel-heading"><strong>IPA 资产</strong> <span class="text-muted">解析完成后可手动写回项目管理</span></div>
             <div class="panel-body"><table id="asset-table"></table></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="writeback-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title">手动写回 fa_category</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="wb-asset-id" value="0">
+                <div class="form-group">
+                    <label>目标项目</label>
+                    <div class="input-group">
+                        <input type="text" id="wb-category-search" class="form-control" placeholder="输入项目 ID 或应用名称">
+                        <span class="input-group-btn"><button class="btn btn-default" type="button" id="wb-search-btn">搜索</button></span>
+                    </div>
+                </div>
+                <div id="wb-category-results"></div>
+                <hr>
+                <div id="wb-preview" class="hide">
+                    <div id="wb-warnings"></div>
+                    <table class="table table-bordered table-condensed">
+                        <thead><tr><th width="70">写回</th><th>字段</th><th>当前值</th><th>IPA 建议值</th></tr></thead>
+                        <tbody id="wb-diff-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary disabled" id="wb-apply-btn">确认写回所选字段</button>
+            </div>
         </div>
     </div>
 </div>
