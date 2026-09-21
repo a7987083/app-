@@ -34,7 +34,6 @@ class IpaScanService
 
         Db::startTrans();
         try {
-            // Recover abandoned locks conservatively.
             Db::name('ipa_scan_item')
                 ->where('status', 'processing')
                 ->where('locked_at', '<', $staleBefore)
@@ -97,9 +96,7 @@ class IpaScanService
         if (is_callable($tokenResolver)) {
             $token = (string)call_user_func($tokenResolver, $source);
         } elseif (!empty($source['token_ciphertext'])) {
-            // Foundation fallback only. Production deployments should provide a resolver
-            // that decrypts token_ciphertext outside the database layer.
-            $token = (string)$source['token_ciphertext'];
+            throw new \RuntimeException('Encrypted OpenList token requires a token resolver');
         }
 
         $client = new OpenListClient($source['base_url'], $token, $source['request_timeout']);
@@ -183,7 +180,10 @@ class IpaScanService
         $values['created_at'] = $now;
         $assetId = Db::name('ipa_asset')->insertGetId($values);
 
-        Db::name('ipa_scan_job')->where('id', self::currentJobId())->setInc('discovered_count');
+        $jobId = self::currentJobId();
+        if ($jobId > 0) {
+            Db::name('ipa_scan_job')->where('id', $jobId)->setInc('discovered_count');
+        }
         return $assetId;
     }
 
@@ -267,7 +267,6 @@ class IpaScanService
         try {
             Db::name('ipa_scan_item')->insert($data);
         } catch (\think\exception\PDOException $e) {
-            // Duplicate job/path is idempotent. Other DB errors should still surface.
             if (stripos($e->getMessage(), 'Duplicate entry') === false) {
                 throw $e;
             }
