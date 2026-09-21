@@ -31,6 +31,7 @@ jobs:
           php -l application/common/library/Ipa/OpenListClient.php
           php -l application/common/library/Ipa/IpaScanService.php
           php -l application/common/library/Ipa/IpaParserService.php
+          php -l application/common/library/Ipa/IpaWritebackService.php
           php -l application/common/library/Ipa/HttpRangeClient.php
           php -l application/common/library/Ipa/RemoteZipReader.php
           php -l application/common/library/Ipa/PlistDecoder.php
@@ -55,6 +56,9 @@ jobs:
           grep -q "default_offline_grace.*900" database/ipa_data_center_v1.sql
           grep -q "source-v2026091809" docs/IPA_DATA_CENTER_ARCHITECTURE.md
           ! grep -q "IpaCenter" application/admin/controller/Category.php
-      - name: No automatic category write-back
+      - name: Manual-only category write-back contract
         run: |
-          ! grep -R "Db::name('category').*update" application/common/library/Ipa application/admin/controller/IpaCenter.php
+          # Direct fa_category writes are allowed only inside the dedicated manual writeback service.
+          test "$(grep -R -l "Db::name('category').*update" application/common/library/Ipa application/admin/controller/IpaCenter.php || true)" = "application/common/library/Ipa/IpaWritebackService.php"
+          # Background discovery/parser workers must never invoke the writeback apply path.
+          ! grep -R "IpaWritebackService::apply" application/admin/command application/common/library/Ipa/IpaScanService.php application/common/library/Ipa/IpaParserService.php
