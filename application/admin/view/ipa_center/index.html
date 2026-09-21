@@ -1,0 +1,61 @@
+<div class="panel panel-default panel-intro">
+    <div class="panel-heading">
+        {:build_heading(null,FALSE)}
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-sm-2"><div class="well text-center"><strong>{$summary.sources}</strong><br>OpenList 数据源</div></div>
+            <div class="col-sm-2"><div class="well text-center"><strong>{$summary.assets}</strong><br>IPA</div></div>
+            <div class="col-sm-2"><div class="well text-center"><strong>{$summary.pending}</strong><br>待处理</div></div>
+            <div class="col-sm-2"><div class="well text-center"><strong>{$summary.failed}</strong><br>失败任务</div></div>
+            <div class="col-sm-2"><div class="well text-center"><strong>{$summary.dylibs}</strong><br>Dylib</div></div>
+            <div class="col-sm-2"><div class="well text-center"><strong>{$summary.verify24h}</strong><br>24h 验证</div></div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>OpenList 数据源</strong></div>
+            <div class="panel-body">
+                <form id="source-form" class="form-inline">
+                    <input type="hidden" name="id" value="0">
+                    <div class="form-group"><input class="form-control" name="name" placeholder="名称" required></div>
+                    <div class="form-group"><input class="form-control" style="min-width:260px" name="base_url" placeholder="https://openlist.example.com" required></div>
+                    <div class="form-group"><input class="form-control" name="root_path" value="/" placeholder="/IPA"></div>
+                    <div class="form-group"><input class="form-control" name="token" type="password" placeholder="Token（编辑留空不修改）"></div>
+                    <input type="hidden" name="enabled" value="1">
+                    <input type="hidden" name="scan_page_size" value="500">
+                    <input type="hidden" name="request_timeout" value="20">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> 保存</button>
+                </form>
+                <hr>
+                <table class="table table-bordered table-striped">
+                    <thead><tr><th>ID</th><th>名称</th><th>URL</th><th>根目录</th><th>状态</th><th>操作</th></tr></thead>
+                    <tbody>
+                    {foreach name="sources" item="source"}
+                    <tr>
+                        <td>{$source.id}</td>
+                        <td>{$source.name|htmlentities}</td>
+                        <td>{$source.base_url|htmlentities}</td>
+                        <td>{$source.root_path|htmlentities}</td>
+                        <td>{if condition="$source.enabled"}<span class="label label-success">启用</span>{else/}<span class="label label-default">停用</span>{/if}</td>
+                        <td>
+                            <button class="btn btn-xs btn-success btn-scan" data-id="{$source.id}" data-mode="incremental">增量扫描</button>
+                            <button class="btn btn-xs btn-warning btn-scan" data-id="{$source.id}" data-mode="full">全量扫描</button>
+                        </td>
+                    </tr>
+                    {/foreach}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>扫描任务</strong></div>
+            <div class="panel-body"><table id="job-table"></table></div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>IPA 资产</strong></div>
+            <div class="panel-body"><table id="asset-table"></table></div>
+        </div>
+    </div>
+</div>
