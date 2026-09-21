@@ -10,6 +10,7 @@ on:
       - 'application/admin/controller/DylibCenter.php'
       - 'application/admin/command/IpaWorker.php'
       - 'application/admin/command/IpaParseWorker.php'
+      - 'application/admin/command/IpaMaintenance.php'
       - 'application/common/library/Ipa/**'
       - 'application/index/controller/DylibVerify.php'
       - 'application/extra/ipa_data_center.php'
@@ -19,6 +20,7 @@ on:
       - 'public/assets/js/backend/dylib_center.js'
       - 'database/ipa_data_center_*.sql'
       - 'clients/ios/ZONDylibVerify/**'
+      - 'deploy/systemd/**'
       - 'tests/ipa_range_parser_contract.php'
       - 'tests/dylib_signing_contract.php'
 
@@ -34,6 +36,7 @@ jobs:
           php -l application/admin/controller/DylibCenter.php
           php -l application/admin/command/IpaWorker.php
           php -l application/admin/command/IpaParseWorker.php
+          php -l application/admin/command/IpaMaintenance.php
           php -l application/common/library/Ipa/OpenListClient.php
           php -l application/common/library/Ipa/IpaScanService.php
           php -l application/common/library/Ipa/IpaParserService.php
@@ -70,9 +73,7 @@ jobs:
           ! grep -q "DylibCenter" application/admin/controller/Category.php
       - name: Manual-only category write-back contract
         run: |
-          # Direct fa_category writes are allowed only inside the dedicated manual writeback service.
           test "$(grep -R -l "Db::name('category').*update" application/common/library/Ipa application/admin/controller/IpaCenter.php || true)" = "application/common/library/Ipa/IpaWritebackService.php"
-          # Background discovery/parser workers must never invoke the writeback apply path.
           ! grep -R "IpaWritebackService::apply" application/admin/command application/common/library/Ipa/IpaScanService.php application/common/library/Ipa/IpaParserService.php
       - name: Dylib security contracts
         run: |
@@ -80,3 +81,10 @@ jobs:
           grep -q "Only authenticated requests may reserve a nonce" application/common/library/Ipa/DylibVerificationService.php
           grep -q "kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly" clients/ios/ZONDylibVerify/ZONVerifyClient.m
           grep -q "offline_grace" clients/ios/ZONDylibVerify/ZONVerifyClient.m
+      - name: Operations contracts
+        run: |
+          grep -q "IpaMaintenance" application/command.php
+          grep -q "ipa:worker" deploy/systemd/zonoe-ipa-worker.service
+          grep -q "ipa:parse-worker" deploy/systemd/zonoe-ipa-parse-worker.service
+          grep -q "ipa:maintenance" deploy/systemd/zonoe-ipa-maintenance.service
+          grep -q "OnCalendar" deploy/systemd/zonoe-ipa-maintenance.timer
