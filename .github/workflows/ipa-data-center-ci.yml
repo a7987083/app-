@@ -52,13 +52,6 @@ jobs:
           php -l application/index/controller/DylibVerify.php
           php -l application/extra/ipa_data_center.php
           for f in tests/*.php; do php -l "$f"; done
-      - name: ThinkPHP CLI command registration
-        run: |
-          chmod +x think
-          php think list | tee /tmp/think-list.txt
-          grep -q "ipa:worker" /tmp/think-list.txt
-          grep -q "ipa:parse-worker" /tmp/think-list.txt
-          grep -q "ipa:maintenance" /tmp/think-list.txt
       - name: Build binary plist fixture
         run: |
           python3 - <<'PY'
@@ -175,7 +168,13 @@ jobs:
           php tests/macho_inspector_contract.php
           php tests/macho_inspector_fat_contract.php
           php tests/macho_inspector_parser_contract.php
-          php think list | grep -q "ipa:worker"
+      - name: ThinkPHP CLI command registration on target runtime
+        run: |
+          chmod +x think
+          php think list | tee /tmp/think-list.txt
+          grep -q "ipa:worker" /tmp/think-list.txt
+          grep -q "ipa:parse-worker" /tmp/think-list.txt
+          grep -q "ipa:maintenance" /tmp/think-list.txt
 
   ios-sdk-compile:
     runs-on: macos-latest
