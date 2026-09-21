@@ -8,12 +8,14 @@ on:
     paths:
       - 'application/admin/controller/IpaCenter.php'
       - 'application/admin/command/IpaWorker.php'
+      - 'application/admin/command/IpaParseWorker.php'
       - 'application/common/library/Ipa/**'
       - 'application/index/controller/DylibVerify.php'
       - 'application/extra/ipa_data_center.php'
       - 'application/admin/view/ipa_center/**'
       - 'public/assets/js/backend/ipa_center.js'
       - 'database/ipa_data_center_*.sql'
+      - 'tests/ipa_range_parser_contract.php'
 
 jobs:
   contracts:
@@ -25,12 +27,27 @@ jobs:
           php -v
           php -l application/admin/controller/IpaCenter.php
           php -l application/admin/command/IpaWorker.php
+          php -l application/admin/command/IpaParseWorker.php
           php -l application/common/library/Ipa/OpenListClient.php
           php -l application/common/library/Ipa/IpaScanService.php
+          php -l application/common/library/Ipa/IpaParserService.php
+          php -l application/common/library/Ipa/HttpRangeClient.php
+          php -l application/common/library/Ipa/RemoteZipReader.php
+          php -l application/common/library/Ipa/PlistDecoder.php
           php -l application/common/library/Ipa/SecretBox.php
           php -l application/common/library/Ipa/DylibVerificationService.php
           php -l application/index/controller/DylibVerify.php
           php -l application/extra/ipa_data_center.php
+          php -l tests/ipa_range_parser_contract.php
+      - name: Build binary plist fixture
+        run: |
+          python3 - <<'PY'
+          import plistlib
+          with open('/tmp/ipa_binary_plist_fixture.bin', 'wb') as f:
+              plistlib.dump({'CFBundleIdentifier':'com.example.binary','CFBundleVersion':'57'}, f, fmt=plistlib.FMT_BINARY)
+          PY
+      - name: Range ZIP and plist contracts
+        run: php tests/ipa_range_parser_contract.php
       - name: Baseline isolation contracts
         run: |
           test -f database/ipa_data_center_v1.sql
