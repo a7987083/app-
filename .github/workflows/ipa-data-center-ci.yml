@@ -92,6 +92,25 @@ jobs:
           mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1_1_request_signing.sql
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME LIKE 'fa_ipa_%'" )" -ge 6
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME='fa_dylib' AND COLUMN_NAME='verify_secret_ciphertext'" )" = "1"
+      - name: MySQL 5.7 worker claim contention
+        run: |
+          mysql -h127.0.0.1 -uroot -proot ipa_ci < tests/worker_claim_concurrency.sql
+          cat > /tmp/claim.sql <<'SQL'
+          START TRANSACTION;
+          SELECT id INTO @id FROM fa_ipa_scan_item WHERE status='pending' ORDER BY id ASC LIMIT 1 FOR UPDATE;
+          UPDATE fa_ipa_scan_item SET status='processing', worker_id=@worker, locked_at=UNIX_TIMESTAMP() WHERE id=@id AND status='pending';
+          COMMIT;
+          SELECT @id;
+          SQL
+          (mysql -N -B -h127.0.0.1 -uroot -proot ipa_ci --init-command="SET @worker='w1'" < /tmp/claim.sql > /tmp/claim1.out) &
+          P1=$!
+          (mysql -N -B -h127.0.0.1 -uroot -proot ipa_ci --init-command="SET @worker='w2'" < /tmp/claim.sql > /tmp/claim2.out) &
+          P2=$!
+          wait $P1
+          wait $P2
+          cat /tmp/claim1.out /tmp/claim2.out
+          test "$(sort -u /tmp/claim1.out /tmp/claim2.out | wc -l | tr -d ' ')" = "2"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_ci -e "SELECT COUNT(*) FROM fa_ipa_scan_item WHERE status='processing'")" = "2"
       - name: MySQL 5.7 100k scale integration
         run: |
           START=$(date +%s)
