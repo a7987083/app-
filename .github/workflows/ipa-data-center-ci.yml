@@ -136,3 +136,19 @@ jobs:
           grep -q "ipa:parse-worker" deploy/systemd/zonoe-ipa-parse-worker.service
           grep -q "ipa:maintenance" deploy/systemd/zonoe-ipa-maintenance.service
           grep -q "OnCalendar" deploy/systemd/zonoe-ipa-maintenance.timer
+
+  ios-sdk-compile:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile verifier with iPhoneOS SDK for arm64
+        run: |
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang \
+            -arch arm64 \
+            -fobjc-arc \
+            -miphoneos-version-min=12.0 \
+            -isysroot "$SDK" \
+            -c clients/ios/ZONDylibVerify/ZONVerifyClient.m \
+            -o /tmp/ZONVerifyClient.o
+          file /tmp/ZONVerifyClient.o
