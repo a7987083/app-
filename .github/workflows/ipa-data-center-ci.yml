@@ -72,6 +72,8 @@ jobs:
         run: |
           php tests/macho_inspector_contract.php
           php tests/macho_inspector_fat_contract.php
+          grep -q "hash('sha256', \$bytes)" application/common/library/Ipa/IpaParserService.php
+          grep -q "MachOInspector" application/common/library/Ipa/IpaParserService.php
       - name: Dylib signing contract
         run: php tests/dylib_signing_contract.php
       - name: OpenList HTTP integration
