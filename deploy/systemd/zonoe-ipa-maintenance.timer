@@ -1,0 +1,11 @@
+[Unit]
+Description=Run ZONOE IPA/Dylib maintenance daily
+
+[Timer]
+OnCalendar=*-*-* 04:20:00
+Persistent=true
+RandomizedDelaySec=300
+Unit=zonoe-ipa-maintenance.service
+
+[Install]
+WantedBy=timers.target
