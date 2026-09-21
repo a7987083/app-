@@ -58,6 +58,7 @@ application/index/view/index/unbind.html
 nginx.rewrite
 # Phase 20 IPA Management
 application/admin/controller/IpaCenter.php
+application/admin/controller/IpaRuntime.php
 application/admin/controller/IpaRecovery.php
 application/admin/controller/IpaProduction.php
 application/admin/controller/IpaLifecycle.php
@@ -103,6 +104,8 @@ application/common/library/IpaRetentionService.php
 scripts/ipa-range-info.py
 scripts/ipa-parser-service.py
 scripts/install-ipa-parser-service.sh
+scripts/install-ipa-worker-service.sh
+scripts/zonoe-server-bootstrap.sh
 public/assets/js/fast.js
 public/assets/js/backend/ipa_center.js
 public/assets/js/backend/ipa_mysql_source.js
