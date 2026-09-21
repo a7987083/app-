@@ -18,4 +18,5 @@ return [
     'app\admin\command\Addon',
     'app\admin\command\Api',
     'app\admin\command\IpaWorker',
+    'app\admin\command\IpaParseWorker',
 ];
