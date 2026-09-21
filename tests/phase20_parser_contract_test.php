@@ -40,6 +40,8 @@ p20ParserContractAssert(strpos($runner,'install-ipa-parser-service.sh')!==false,
 p20ParserContractAssert(strpos($parserServiceScript,'socketserver.TCPServer')!==false,'persistent parser owns a long-lived TCP server');
 p20ParserContractAssert(strpos($parserServiceScript,"parser.run_remote(req)")!==false,'service reuses mature range parser instead of duplicating parser logic');
 p20ParserContractAssert(strpos($parserServiceScript,"'127.0.0.1'")!==false && strpos($parserServiceScript,'loopback only')!==false,'parser service is loopback-only');
+p20ParserContractAssert(strpos($parserServiceScript,'os.execv')!==false && strpos($parserServiceScript,'source_signature')!==false,'persistent parser self-reloads after online source replacement');
+p20ParserContractAssert(strpos($runner,'for ($attempt = 0; $attempt < 2; $attempt++)')!==false,'RPC client retries once across parser self-reload');
 p20ParserContractAssert(strpos($installer,'Restart=always')!==false && strpos($installer,'systemctl enable --now')!==false,'systemd installer provides durable restart/enable semantics');
 p20ParserContractAssert(strpos($manifest,'scripts/ipa-parser-service.py')!==false,'online update contains persistent parser service');
 p20ParserContractAssert(strpos($manifest,'scripts/install-ipa-parser-service.sh')!==false,'online update contains service installer');
@@ -62,5 +64,16 @@ for($i=0;$i<40;$i++){
 }
 p20ParserContractAssert(!empty($health['ok']),'PHP 7 runner reaches persistent parser service');
 p20ParserContractAssert(isset($health['service'])&&$health['service']==='zonoe-ipa-parser','persistent parser health identity');
+
+$childCommand=escapeshellarg(PHP_BINARY).' -d disable_functions=proc_open,exec,shell_exec,system,passthru,popen '.escapeshellarg($root.'/tests/phase20_parser_client_health_test.php');
+$childSpec=[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']];
+$child=proc_open($childCommand,$childSpec,$childPipes,$root);
+p20ParserContractAssert(is_resource($child),'CI can launch disabled-functions PHP compatibility probe');
+if(isset($childPipes[0])&&is_resource($childPipes[0]))fclose($childPipes[0]);
+$childOut=stream_get_contents($childPipes[1]);$childErr=stream_get_contents($childPipes[2]);
+fclose($childPipes[1]);fclose($childPipes[2]);$childExit=proc_close($child);
+p20ParserContractAssert($childExit===0,'proc_open-disabled PHP RPC probe failed: '.trim($childErr));
+p20ParserContractAssert(strpos($childOut,'proc_open_disabled=passed')!==false,'disabled-functions compatibility proof missing');
+
 proc_terminate($proc);proc_close($proc);@unlink($log);putenv('ZONOE_IPA_PARSER_ENDPOINT');
-echo "OK phase20_parser_contract_test persistent_rpc=passed process_spawn_removed=passed\n";
+echo "OK phase20_parser_contract_test persistent_rpc=passed proc_open_disabled=passed process_spawn_removed=passed\n";
