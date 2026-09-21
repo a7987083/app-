@@ -137,6 +137,22 @@ jobs:
           grep -q "ipa:maintenance" deploy/systemd/zonoe-ipa-maintenance.service
           grep -q "OnCalendar" deploy/systemd/zonoe-ipa-maintenance.timer
 
+  php70-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP 7.0
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          extensions: curl, openssl, mbstring
+          coverage: none
+      - name: PHP 7.0 syntax and contracts
+        run: |
+          php -v
+          for f in application/admin/controller/IpaCenter.php application/admin/controller/DylibCenter.php application/admin/command/IpaWorker.php application/admin/command/IpaParseWorker.php application/admin/command/IpaMaintenance.php application/common/library/Ipa/*.php application/index/controller/DylibVerify.php application/extra/ipa_data_center.php tests/ipa_range_parser_contract.php tests/dylib_signing_contract.php tests/openlist_client_integration.php tests/openlist_mock_router.php; do php -l "$f"; done
+          php tests/dylib_signing_contract.php
+
   ios-sdk-compile:
     runs-on: macos-latest
     steps:
