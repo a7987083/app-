@@ -3,6 +3,11 @@
         <div class="panel-lead"><em>IPA 元数据</em>当前工作集只展示被启用 MySQL 软件源引用的 IPA；HTTP Range 只读取 ZIP Central Directory、Info.plist 和必要的小文件，不完整下载 IPA。</div>
     </div>
     <div class="panel-body">
+        <div id="ipa-runtime-health" class="alert alert-danger" style="display:none">
+            <strong>IPA 后台运行环境异常：</strong>
+            <span class="ipa-runtime-message"></span>
+            <div style="margin-top:8px"><code class="ipa-runtime-command">sudo bash scripts/zonoe-server-bootstrap.sh</code></div>
+        </div>
         <div id="toolbar" class="toolbar">
             <div class="btn-group ipa-meta-filter">
                 <button type="button" class="btn btn-primary" data-state="">全部</button>
@@ -15,19 +20,50 @@
             <input type="text" id="ipa-meta-search" class="form-control" style="display:inline-block;width:260px" placeholder="IPA / Bundle ID / 应用名">
             <span id="ipa-meta-refresh-state" class="text-muted" style="margin-left:10px"></span>
         </div>
-        <div class="alert alert-info" style="margin-top:15px">Parser 优先复用相同 MD5 + 文件大小 + Parser Version 的已解析结果；只有缓存未命中才发起 Range 请求。失败默认 30 分钟后重试，最多 3 次。刷新失败时会明确标记当前表格为旧数据。</div>
+        <div class="alert alert-info" style="margin-top:15px">Parser 优先复用相同 MD5 + 文件大小 + Parser Version 的已解析结果；只有缓存未命中才发起 Range 请求。失败默认 30 分钟后重试。解析/扫描只写入 durable queue，Web 请求不会执行耗时解析。</div>
         <table id="ipa-meta-table" class="table table-striped table-bordered table-hover" width="100%"></table>
     </div>
 </div>
 <script>
 require(['jquery'],function($){
     var text=function(message,failed){$('#ipa-meta-refresh-state').toggleClass('text-danger',!!failed).toggleClass('text-muted',!failed).text(message);};
+    var health=function(){
+        Fast.api.ajax({url:'ipa_runtime/health?_='+(new Date().getTime()),type:'GET',loading:false},function(data){
+            data=data||{};var worker=data.worker||{},parser=data.parser||{},box=$('#ipa-runtime-health');
+            if(data.ok){box.hide();return false;}
+            var parts=[];
+            if(!worker.online)parts.push('Persistent IPA Worker 未运行，队列任务不会被消费');
+            if(!parser.ok)parts.push('Persistent Parser Service 不可用：'+(parser.error||'unknown'));
+            box.find('.ipa-runtime-message').text(parts.join('；'));
+            box.find('.ipa-runtime-command').text(data.bootstrap_command||'sudo bash scripts/zonoe-server-bootstrap.sh');
+            box.show();return false;
+        },function(){
+            var box=$('#ipa-runtime-health');box.find('.ipa-runtime-message').text('运行时健康检查请求失败');box.show();return false;
+        });
+    };
+    var forceRefresh=function(){
+        var table=$('#ipa-meta-table');
+        text('正在从服务器重新读取…',false);
+        table.bootstrapTable('refresh',{silent:false,query:{_refresh_ts:(new Date().getTime())}});
+        health();
+    };
     $(function(){
         var table=$('#ipa-meta-table');
         table.on('load-success.bs.table.ipaMetaFresh',function(){var d=new Date();text('最后成功刷新：'+d.toLocaleTimeString(),false);});
         table.on('load-error.bs.table.ipaMetaFresh',function(){text('刷新失败，当前显示的是上一次成功加载的旧数据',true);});
-        $('.btn-ipa-meta-refresh,.ipa-meta-filter button').on('click.ipaMetaFresh',function(){text('正在刷新…',false);});
+        $('.ipa-meta-filter button').on('click.ipaMetaFresh',function(){text('正在刷新…',false);});
         $('#ipa-meta-search').on('change.ipaMetaFresh keyup.ipaMetaFresh',function(e){if(e.type==='change'||e.keyCode===13)text('正在刷新…',false);});
+        document.addEventListener('click',function(e){
+            var node=e.target;
+            while(node&&node!==document&&!$(node).hasClass('btn-ipa-meta-refresh'))node=node.parentNode;
+            if(!node||node===document)return;
+            e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();forceRefresh();
+        },true);
+        $('.btn-ipa-parse').on('click.ipaMetaWatch',function(){
+            health();
+            var count=0,timer=window.setInterval(function(){forceRefresh();count++;if(count>=20)window.clearInterval(timer);},3000);
+        });
+        health();
     });
 });
 </script>
