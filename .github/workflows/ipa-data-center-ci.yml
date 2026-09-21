@@ -94,6 +94,16 @@ jobs:
           mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1_1_request_signing.sql
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME LIKE 'fa_ipa_%'" )" -ge 6
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME='fa_dylib' AND COLUMN_NAME='verify_secret_ciphertext'" )" = "1"
+      - name: MySQL 5.7 100k scale integration
+        run: |
+          START=$(date +%s)
+          mysql -h127.0.0.1 -uroot -proot ipa_ci < tests/mysql_100k_scale.sql | tee /tmp/mysql-100k.out
+          ELAPSED=$(( $(date +%s) - START ))
+          echo "100k fixture elapsed=${ELAPSED}s"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_ci -e "SELECT COUNT(*) FROM fa_ipa_asset")" = "100000"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_ci -e "SELECT COUNT(*) FROM fa_ipa_asset WHERE status='parse_failed'")" = "5000"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_ci -e "SELECT COUNT(*) FROM fa_ipa_asset WHERE bundle_id='com.scale.game99999'")" = "1"
+          test "$ELAPSED" -le 60
           mysql -h127.0.0.1 -uroot -proot -e "DROP DATABASE ipa_ci"
       - name: Baseline isolation contracts
         run: |
