@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS `fa_dylib` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `dylib_key` varchar(128) NOT NULL,
   `name` varchar(255) NOT NULL,
+  `verify_secret_ciphertext` text,
   `enabled` tinyint(1) unsigned NOT NULL DEFAULT '1',
   `default_offline_grace` int unsigned NOT NULL DEFAULT '900',
   `default_fail_action` varchar(32) NOT NULL DEFAULT 'disable_feature',
