@@ -1,0 +1,43 @@
+name: IPA Data Center CI
+
+on:
+  push:
+    branches:
+      - feature/ipa-data-center-v1
+  pull_request:
+    paths:
+      - 'application/admin/controller/IpaCenter.php'
+      - 'application/admin/command/IpaWorker.php'
+      - 'application/common/library/Ipa/**'
+      - 'application/index/controller/DylibVerify.php'
+      - 'application/extra/ipa_data_center.php'
+      - 'application/admin/view/ipa_center/**'
+      - 'public/assets/js/backend/ipa_center.js'
+      - 'database/ipa_data_center_*.sql'
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -v
+          php -l application/admin/controller/IpaCenter.php
+          php -l application/admin/command/IpaWorker.php
+          php -l application/common/library/Ipa/OpenListClient.php
+          php -l application/common/library/Ipa/IpaScanService.php
+          php -l application/common/library/Ipa/SecretBox.php
+          php -l application/common/library/Ipa/DylibVerificationService.php
+          php -l application/index/controller/DylibVerify.php
+          php -l application/extra/ipa_data_center.php
+      - name: Baseline isolation contracts
+        run: |
+          test -f database/ipa_data_center_v1.sql
+          test -f database/ipa_data_center_menu_v1.sql
+          grep -q "default_offline_grace.*900" database/ipa_data_center_v1.sql
+          grep -q "source-v2026091809" docs/IPA_DATA_CENTER_ARCHITECTURE.md
+          ! grep -q "IpaCenter" application/admin/controller/Category.php
+      - name: No automatic category write-back
+        run: |
+          ! grep -R "Db::name('category').*update" application/common/library/Ipa application/admin/controller/IpaCenter.php
