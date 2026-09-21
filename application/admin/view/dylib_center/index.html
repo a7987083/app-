@@ -10,6 +10,14 @@
                             <input type="hidden" name="id" value="0">
                             <div class="form-group"><label>Dylib Key</label><input class="form-control" name="dylib_key" placeholder="zonoe.main" required></div>
                             <div class="form-group"><label>名称</label><input class="form-control" name="name" required></div>
+                            <div class="form-group">
+                                <label>验证密钥 <small class="text-muted">新建必填，编辑留空则不修改</small></label>
+                                <div class="input-group">
+                                    <input class="form-control" id="verify-secret" name="verify_secret" type="password" autocomplete="new-password" placeholder="至少32字符">
+                                    <span class="input-group-btn"><button class="btn btn-default" type="button" id="generate-secret">生成</button></span>
+                                </div>
+                                <p class="help-block">该密钥只在创建/轮换时显示给管理员，用于编译进对应 OC dylib。数据库仅保存加密后的密文。</p>
+                            </div>
                             <div class="form-group"><label>默认离线容错(秒)</label><input class="form-control" type="number" min="0" max="86400" name="default_offline_grace" value="900"></div>
                             <div class="form-group"><label>默认失败动作</label>
                                 <select class="form-control" name="default_fail_action">
