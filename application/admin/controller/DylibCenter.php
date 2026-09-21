@@ -3,6 +3,7 @@
 namespace app\admin\controller;
 
 use app\common\controller\Backend;
+use app\common\library\Ipa\SecretBox;
 use think\Db;
 
 class DylibCenter extends Backend
@@ -77,12 +78,19 @@ class DylibCenter extends Backend
         return json(['total' => (int)$total, 'rows' => $rows]);
     }
 
+    public function generateVerifySecret()
+    {
+        $this->requirePost();
+        $this->success('generated', null, ['secret' => bin2hex(random_bytes(32))]);
+    }
+
     public function saveDylib()
     {
         $this->requirePost();
         $id = (int)$this->request->post('id', 0);
         $key = trim((string)$this->request->post('dylib_key', ''));
         $name = trim((string)$this->request->post('name', ''));
+        $verifySecret = trim((string)$this->request->post('verify_secret', ''));
         $grace = max(0, min(86400, (int)$this->request->post('default_offline_grace', 900)));
         $action = trim((string)$this->request->post('default_fail_action', 'disable_feature'));
         if (!preg_match('/^[A-Za-z0-9._-]{2,128}$/', $key)) {
@@ -94,6 +102,12 @@ class DylibCenter extends Backend
         if (!in_array($action, $this->failActions, true)) {
             $this->error('Invalid fail action');
         }
+        if ($id <= 0 && strlen($verifySecret) < 32) {
+            $this->error('New dylib requires a verify secret with at least 32 characters');
+        }
+        if ($verifySecret !== '' && strlen($verifySecret) < 32) {
+            $this->error('Verify secret must contain at least 32 characters');
+        }
         $now = time();
         $data = [
             'dylib_key' => $key,
@@ -103,6 +117,9 @@ class DylibCenter extends Backend
             'default_fail_action' => $action,
             'updated_at' => $now,
         ];
+        if ($verifySecret !== '') {
+            $data['verify_secret_ciphertext'] = SecretBox::encrypt($verifySecret);
+        }
         try {
             if ($id > 0) {
                 Db::name('dylib')->where('id', $id)->update($data);
