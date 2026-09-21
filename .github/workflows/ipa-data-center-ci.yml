@@ -21,12 +21,23 @@ on:
       - 'database/ipa_data_center_*.sql'
       - 'clients/ios/ZONDylibVerify/**'
       - 'deploy/systemd/**'
-      - 'tests/ipa_range_parser_contract.php'
-      - 'tests/dylib_signing_contract.php'
+      - 'tests/**'
 
 jobs:
   contracts:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - name: PHP syntax
@@ -50,6 +61,8 @@ jobs:
           php -l application/extra/ipa_data_center.php
           php -l tests/ipa_range_parser_contract.php
           php -l tests/dylib_signing_contract.php
+          php -l tests/openlist_mock_router.php
+          php -l tests/openlist_client_integration.php
       - name: Build binary plist fixture
         run: |
           python3 - <<'PY'
@@ -61,6 +74,27 @@ jobs:
         run: php tests/ipa_range_parser_contract.php
       - name: Dylib signing contract
         run: php tests/dylib_signing_contract.php
+      - name: OpenList HTTP integration
+        run: |
+          php -S 127.0.0.1:18081 tests/openlist_mock_router.php >/tmp/openlist-mock.log 2>&1 &
+          echo $! >/tmp/openlist-mock.pid
+          trap 'kill $(cat /tmp/openlist-mock.pid) 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            if curl -s -o /dev/null http://127.0.0.1:18081/; then break; fi
+            sleep 0.25
+          done
+          php tests/openlist_client_integration.php
+      - name: MySQL 5.7 schema integration
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq default-mysql-client
+          mysql -h127.0.0.1 -uroot -proot -e "CREATE DATABASE ipa_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
+          mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1.sql
+          mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1_1_request_signing.sql
+          mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1_1_request_signing.sql
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME LIKE 'fa_ipa_%'" )" -ge 6
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME='fa_dylib' AND COLUMN_NAME='verify_secret_ciphertext'" )" = "1"
+          mysql -h127.0.0.1 -uroot -proot -e "DROP DATABASE ipa_ci"
       - name: Baseline isolation contracts
         run: |
           test -f database/ipa_data_center_v1.sql
@@ -81,6 +115,10 @@ jobs:
           grep -q "Only authenticated requests may reserve a nonce" application/common/library/Ipa/DylibVerificationService.php
           grep -q "kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly" clients/ios/ZONDylibVerify/ZONVerifyClient.m
           grep -q "offline_grace" clients/ios/ZONDylibVerify/ZONVerifyClient.m
+      - name: Scan service safety contracts
+        run: |
+          grep -q "Encrypted OpenList token requires a token resolver" application/common/library/Ipa/IpaScanService.php
+          ! grep -q "Foundation fallback only" application/common/library/Ipa/IpaScanService.php
       - name: Operations contracts
         run: |
           grep -q "IpaMaintenance" application/command.php
