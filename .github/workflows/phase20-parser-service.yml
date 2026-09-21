@@ -1,0 +1,81 @@
+name: Phase 20 Persistent IPA Parser Service
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'application/common/library/IpaParserRunner.php'
+      - 'scripts/ipa-range-info.py'
+      - 'scripts/ipa-parser-service.py'
+      - 'scripts/install-ipa-parser-service.sh'
+      - 'tests/phase20_parser_contract_test.php'
+      - 'tests/phase20_parser_client_health_test.php'
+      - 'release/online-update-files.txt'
+      - '.github/workflows/phase20-parser-service.yml'
+  pull_request:
+    paths:
+      - 'application/common/library/IpaParserRunner.php'
+      - 'scripts/ipa-range-info.py'
+      - 'scripts/ipa-parser-service.py'
+      - 'scripts/install-ipa-parser-service.sh'
+      - 'tests/phase20_parser_contract_test.php'
+      - 'tests/phase20_parser_client_health_test.php'
+      - 'release/online-update-files.txt'
+      - '.github/workflows/phase20-parser-service.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parser-service-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: Syntax and parser self-tests
+        run: |
+          set -euo pipefail
+          php -l application/common/library/IpaParserRunner.php
+          php -l tests/phase20_parser_contract_test.php
+          php -l tests/phase20_parser_client_health_test.php
+          bash -n scripts/install-ipa-parser-service.sh
+          python3 -m py_compile scripts/ipa-range-info.py scripts/ipa-parser-service.py
+          python3 scripts/ipa-range-info.py --self-test
+          python3 scripts/ipa-parser-service.py --health-self-test
+          php tests/phase20_parser_contract_test.php
+      - name: Production compatibility with proc_open disabled
+        run: |
+          set -euo pipefail
+          export ZONOE_IPA_PARSER_ENDPOINT='tcp://127.0.0.1:19193'
+          python3 scripts/ipa-parser-service.py --host 127.0.0.1 --port 19193 >"${RUNNER_TEMP}/ipa-parser-service.log" 2>&1 &
+          parser_pid=$!
+          trap 'kill $parser_pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 40); do
+            if python3 - <<'PY'
+import json,socket
+try:
+    s=socket.create_connection(('127.0.0.1',19193),0.2)
+    s.sendall(b'{"op":"health"}\n')
+    data=s.recv(4096)
+    s.close()
+    assert json.loads(data.split(b'\n',1)[0].decode()).get('ok') is True
+except Exception:
+    raise SystemExit(1)
+PY
+            then break; fi
+            sleep 0.1
+          done
+          php -d disable_functions=proc_open,exec,shell_exec,system,passthru,popen tests/phase20_parser_client_health_test.php
+      - name: Verify online-update payload contract
+        run: |
+          set -euo pipefail
+          grep -Fx 'scripts/ipa-parser-service.py' release/online-update-files.txt
+          grep -Fx 'scripts/install-ipa-parser-service.sh' release/online-update-files.txt
+          ! grep -F 'proc_open' application/common/library/IpaParserRunner.php
+          grep -F 'stream_socket_client' application/common/library/IpaParserRunner.php
+          grep -F 'Restart=always' scripts/install-ipa-parser-service.sh

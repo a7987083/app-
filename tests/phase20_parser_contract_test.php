@@ -2,11 +2,14 @@
 function p20ParserContractAssert($condition,$message){if(!$condition){fwrite(STDERR,"FAIL phase20_parser_contract_test: {$message}\n");exit(1);}}
 $root=dirname(__DIR__);
 $script=file_get_contents($root.'/scripts/ipa-range-info.py');
+$parserServiceScript=file_get_contents($root.'/scripts/ipa-parser-service.py');
+$installer=file_get_contents($root.'/scripts/install-ipa-parser-service.sh');
 $service=file_get_contents($root.'/application/common/library/IpaParserService.php');
 $cache=file_get_contents($root.'/application/common/library/IpaParseCache.php');
 $workset=file_get_contents($root.'/application/common/library/IpaMetadataWorksetService.php');
 $runner=file_get_contents($root.'/application/common/library/IpaParserRunner.php');
 $client=file_get_contents($root.'/application/common/library/IpaOpenListClient.php');
+$manifest=file_get_contents($root.'/release/online-update-files.txt');
 p20ParserContractAssert(strpos($script,"'Range':")!==false,'python parser sends Range header');
 p20ParserContractAssert(strpos($script,'DEFAULT_MAX_FETCH')!==false,'range safety cap exists');
 p20ParserContractAssert(strpos($script,"Payload/[^/]+\\.app/Info\\.plist")!==false,'main Info.plist discovery');
@@ -30,6 +33,34 @@ p20ParserContractAssert(strpos($cache,'payload_json')!==false,'parse cache prese
 p20ParserContractAssert(strpos($workset,'latestSnapshot')!==false,'legacy workset facade reads JSON snapshot instead of mutating workset rows');
 p20ParserContractAssert(strpos($service,'RETRY_DELAY = 1800')!==false,'30 minute failure cooldown');
 p20ParserContractAssert(strpos($service,"Db::name('category')")===false,'parser must not write category');
-p20ParserContractAssert(strpos($runner,'proc_open')!==false,'Range parser remains isolated from PHP worker');
+p20ParserContractAssert(strpos($runner,'stream_socket_client')!==false,'PHP parser runner talks to persistent parser over local socket');
+p20ParserContractAssert(strpos($runner,'tcp://127.0.0.1:19191')!==false,'parser RPC defaults to loopback endpoint');
+p20ParserContractAssert(strpos($runner,'proc_open')===false && strpos($runner,'shell_exec')===false && strpos($runner,'function_exists(\'exec\')')===false,'production parser runner has no process-spawn dependency');
+p20ParserContractAssert(strpos($runner,'install-ipa-parser-service.sh')!==false,'service-unavailable error includes deterministic recovery command');
+p20ParserContractAssert(strpos($parserServiceScript,'socketserver.TCPServer')!==false,'persistent parser owns a long-lived TCP server');
+p20ParserContractAssert(strpos($parserServiceScript,"parser.run_remote(req)")!==false,'service reuses mature range parser instead of duplicating parser logic');
+p20ParserContractAssert(strpos($parserServiceScript,"'127.0.0.1'")!==false && strpos($parserServiceScript,'loopback only')!==false,'parser service is loopback-only');
+p20ParserContractAssert(strpos($installer,'Restart=always')!==false && strpos($installer,'systemctl enable --now')!==false,'systemd installer provides durable restart/enable semantics');
+p20ParserContractAssert(strpos($manifest,'scripts/ipa-parser-service.py')!==false,'online update contains persistent parser service');
+p20ParserContractAssert(strpos($manifest,'scripts/install-ipa-parser-service.sh')!==false,'online update contains service installer');
 p20ParserContractAssert(strpos($client,"'/fs/get'")!==false,'raw_url obtained privately via fs/get');
-echo "OK phase20_parser_contract_test\n";
+
+require_once $root.'/application/common/library/IpaParserRunner.php';
+$port=19192;
+$log=sys_get_temp_dir().'/zonoe-parser-service-test-'.getmypid().'.log';
+$command='python3 '.escapeshellarg($root.'/scripts/ipa-parser-service.py').' --host 127.0.0.1 --port '.$port;
+$spec=[0=>['pipe','r'],1=>['file',$log,'a'],2=>['file',$log,'a']];
+$proc=proc_open($command,$spec,$pipes,$root);
+p20ParserContractAssert(is_resource($proc),'CI can start parser service fixture');
+if(isset($pipes[0])&&is_resource($pipes[0]))fclose($pipes[0]);
+putenv('ZONOE_IPA_PARSER_ENDPOINT=tcp://127.0.0.1:'.$port);
+$health=['ok'=>false];
+for($i=0;$i<40;$i++){
+    $health=\app\common\library\IpaParserRunner::health(0.2);
+    if(!empty($health['ok']))break;
+    usleep(100000);
+}
+p20ParserContractAssert(!empty($health['ok']),'PHP 7 runner reaches persistent parser service');
+p20ParserContractAssert(isset($health['service'])&&$health['service']==='zonoe-ipa-parser','persistent parser health identity');
+proc_terminate($proc);proc_close($proc);@unlink($log);putenv('ZONOE_IPA_PARSER_ENDPOINT');
+echo "OK phase20_parser_contract_test persistent_rpc=passed process_spawn_removed=passed\n";

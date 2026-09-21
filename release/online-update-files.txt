@@ -101,6 +101,8 @@ application/common/library/IpaGovernanceLifecycleService.php
 application/common/library/IpaRangeMetricsService.php
 application/common/library/IpaRetentionService.php
 scripts/ipa-range-info.py
+scripts/ipa-parser-service.py
+scripts/install-ipa-parser-service.sh
 public/assets/js/fast.js
 public/assets/js/backend/ipa_center.js
 public/assets/js/backend/ipa_mysql_source.js
