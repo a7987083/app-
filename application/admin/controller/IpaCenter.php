@@ -4,6 +4,7 @@ namespace app\admin\controller;
 
 use app\common\controller\Backend;
 use app\common\library\Ipa\IpaScanService;
+use app\common\library\Ipa\IpaWritebackService;
 use app\common\library\Ipa\SecretBox;
 use think\Db;
 
@@ -51,6 +52,55 @@ class IpaCenter extends Backend
             ->field('id,source_id,mode,status,root_path,discovered_count,processed_count,failed_count,worker_id,started_at,finished_at,created_at')
             ->order('id desc')->limit($offset, $limit)->select();
         return json(['total' => (int)$total, 'rows' => $rows]);
+    }
+
+    public function categorySearch()
+    {
+        $q = trim((string)$this->request->get('q', ''));
+        $limit = max(1, min(50, (int)$this->request->get('limit', 20)));
+        $query = Db::name('category')->field('id,name,nickname,bt1a,bt2a,status')->where('pid', 0);
+        if ($q !== '') {
+            if (ctype_digit($q)) {
+                $query->where(function ($where) use ($q) {
+                    $where->where('id', (int)$q)->whereOr('name', 'like', '%' . $q . '%');
+                });
+            } else {
+                $query->where('name', 'like', '%' . $q . '%');
+            }
+        }
+        return json(['rows' => $query->order('id desc')->limit($limit)->select()]);
+    }
+
+    public function writebackPreview()
+    {
+        try {
+            $data = IpaWritebackService::preview(
+                (int)$this->request->request('asset_id', 0),
+                (int)$this->request->request('category_id', 0)
+            );
+            return json(['code' => 1, 'msg' => 'ok', 'data' => $data]);
+        } catch (\Exception $e) {
+            return json(['code' => 0, 'msg' => $e->getMessage(), 'data' => null]);
+        }
+    }
+
+    public function writebackApply()
+    {
+        if (!$this->request->isPost()) {
+            $this->error('POST required');
+        }
+        $fields = $this->request->post('fields/a', []);
+        try {
+            $result = IpaWritebackService::apply(
+                (int)$this->request->post('asset_id', 0),
+                (int)$this->request->post('category_id', 0),
+                is_array($fields) ? $fields : [],
+                (int)$this->auth->id
+            );
+            $this->success('writeback applied', null, $result);
+        } catch (\Exception $e) {
+            $this->error($e->getMessage());
+        }
     }
 
     public function saveSource()
