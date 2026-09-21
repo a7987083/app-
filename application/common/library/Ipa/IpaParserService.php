@@ -2,7 +2,6 @@
 
 namespace app\common\library\Ipa;
 
-use think\Config;
 use think\Db;
 
 class IpaParserService
@@ -68,7 +67,7 @@ class IpaParserService
             ]);
 
             Db::name('ipa_binary')->where('asset_id', (int)$asset['id'])->delete();
-            self::indexBinaries((int)$asset['id'], $entries, $executable, $now);
+            self::indexBinaries((int)$asset['id'], $zip, $entries, $executable, $now);
             Db::commit();
         } catch (\Exception $e) {
             Db::rollback();
@@ -86,22 +85,47 @@ class IpaParserService
         ];
     }
 
-    protected static function indexBinaries($assetId, array $entries, $executable, $now)
+    protected static function indexBinaries($assetId, RemoteZipReader $zip, array $entries, $executable, $now)
     {
+        $inspector = new MachOInspector();
         foreach ($entries as $name => $entry) {
             $type = self::binaryType($name, $executable);
             if ($type === null || substr($name, -1) === '/') {
                 continue;
             }
+
+            $sha256 = '';
+            $architectures = '';
+            $installName = '';
+            $uncompressedSize = (int)$entry['uncompressed_size'];
+
+            // Hash/inspect bounded binary members only. Very large executables remain indexed by path/size
+            // and can be enriched by a dedicated binary worker later without blocking IPA metadata parsing.
+            if ($uncompressedSize > 0 && $uncompressedSize <= 64 * 1024 * 1024) {
+                try {
+                    $bytes = $zip->extract($entry, 64 * 1024 * 1024);
+                    $sha256 = hash('sha256', $bytes);
+                    $meta = $inspector->inspect($bytes);
+                    if (!empty($meta['architectures']) && is_array($meta['architectures'])) {
+                        $architectures = implode(',', array_values(array_unique($meta['architectures'])));
+                    }
+                    if (!empty($meta['install_name'])) {
+                        $installName = (string)$meta['install_name'];
+                    }
+                } catch (\Exception $e) {
+                    // Binary enrichment is best-effort: a malformed/non-Mach-O member must not discard IPA metadata.
+                }
+            }
+
             Db::name('ipa_binary')->insert([
                 'asset_id' => $assetId,
                 'relative_path' => $name,
                 'binary_type' => $type,
                 'name' => basename($name),
-                'sha256' => '',
-                'size_bytes' => (int)$entry['uncompressed_size'],
-                'architectures' => '',
-                'install_name' => '',
+                'sha256' => $sha256,
+                'size_bytes' => $uncompressedSize,
+                'architectures' => $architectures,
+                'install_name' => $installName,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
