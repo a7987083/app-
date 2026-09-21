@@ -1,31 +1,37 @@
-ZONOE 软件源 Release 2026091918
-版本：2026091918
-基线：2026091917
-阶段：Phase 20 IPA scan JSON snapshot convergence
-发布分支：release/2026091918-openlist-json-scan
+ZONOE 软件源 Release 2026091919
+版本：2026091919
+基线：2026091918
+阶段：Phase 20 Persistent IPA Parser Service
+发布分支：release/2026091919-persistent-parser-service
 发布状态：预发布验证中
 
 更新内容：
-1. source-v2026091917 已发布并冻结；本次扫描模型收敛进入 2026091918，不覆盖任何历史 Release Tag/Asset。
-2. 以旧项目 OpenList 成熟模型为基线：一次扫描作为一次当前状态快照，权威工作集写入 fa_ipa_scan_task.cursor_json，不再依赖 fa_ipa_metadata.referenced / needs_reparse 维护本轮引用关系。
-3. 新扫描不再逐文件写 fa_ipa_scan_task_item；JSON snapshot 保存 current_paths、parse_ids、new_ids、changed_ids、summary、snapshot_version 和 workset_hash。
-4. fa_ipa_metadata 暂时继续作为当前解析/绑定索引，避免一次性重写解析、绑定和治理业务；扫描层只更新真正 new/changed/unchanged 的当前元数据。
-5. Parser 按 snapshot 的 parse_ids 领取任务，不再依赖 referenced / needs_reparse；解析期间使用源 fingerprint 校验，源文件变化时丢弃过期解析结果并重新置 pending。
-6. Metadata 列表、统计和 IPA Center 仪表盘移除 referenced 硬依赖，使生产库即使没有历史 workset 字段也可执行扫描和展示。
-7. IpaMetadataWorksetService 保留兼容入口但不再执行 relational workset prune；历史表/字段本版本不做破坏性 DROP，便于安全在线升级和回滚。
-8. Persistent Worker 调度模型保持不变；本版本只收敛扫描/解析状态模型，不重新引入 exec/nohup 临时 Worker。
-9. 1917 暴露的在线更新历史 migration 未实际落库问题作为独立升级器缺陷继续跟踪；1918 的扫描核心不再以 workset 字段存在为运行前提。
+1. 以 source-v2026091918 为冻结基线前滚 2026091919，不覆盖任何历史 Release Tag/Asset。
+2. IPA 解析从 PHP proc_open 每文件启动 Python，迁移为常驻 Python Persistent Parser Service；PHP 通过 loopback TCP RPC 调用，不再依赖 proc_open/exec/shell_exec/system/popen。
+3. 保留成熟 scripts/ipa-range-info.py 的 HTTP Range、ZIP、binary plist、Mach-O、图标、mobileprovision、Framework/Dylib 等解析逻辑，不重写解析语义，PARSER_VERSION 保持 1，现有 MD5 parse cache 可继续复用。
+4. 新增 scripts/ipa-parser-service.py，仅绑定 127.0.0.1/localhost，使用 newline-delimited JSON RPC，默认 tcp://127.0.0.1:19191。
+5. Parser Service 检测服务文件或 ipa-range-info.py 被在线更新替换后自动 os.execv 自刷新；PHP RPC 客户端在自刷新窗口自动重试一次，未来更新无需依赖 PHP 进程启动权限。
+6. 新增 scripts/install-ipa-parser-service.sh，一次性以 root 安装 systemd 单元，服务使用非 root 用户运行并设置 Restart=always、开机自启和基础 systemd sandbox。
+7. 在线更新包包含 Parser Service 与安装器；由于 Web 更新器不拥有 root/systemd 权限，首次升级 2026091919 后需在服务器执行一次 sudo bash scripts/install-ipa-parser-service.sh。
+8. 正式 parser contract 增加生产兼容验证：启动 Persistent Parser Service 后，以 disable_functions=proc_open,exec,shell_exec,system,passthru,popen 的 PHP 7.0 子进程验证 RPC health 成功，覆盖本次生产故障条件。
+9. 1918 的 JSON scan snapshot、Persistent IPA Worker、MySQL 5.7、OpenList HTTP E2E、回滚与发布逻辑保持不变。
 
 验证要求：
 - PHP 7.0 syntax / regression 必须通过。
-- Phase 20 scan/parser/worker contracts 必须通过并验证无 referenced / needs_reparse / ipa_scan_task_item 新依赖。
-- MySQL 5.7 验证应覆盖没有 workset 扩展字段的 metadata schema。
-- ZONOE Source Release package-and-release 必须成功生成 source-v2026091918。
+- Phase 20 parser contract 必须证明 production IpaParserRunner 不包含进程启动依赖，并在 proc_open 等函数禁用时仍可通过 Persistent Parser Service RPC。
+- Phase 20 scan/parser/worker contracts、MySQL 5.7、OpenList HTTP E2E、updater rollback 必须继续通过。
+- 在线更新 RC package 必须包含 scripts/ipa-parser-service.py 与 scripts/install-ipa-parser-service.sh。
+- ZONOE Source Release package-and-release 必须成功生成 source-v2026091919。
 - 最终 e2e-online-upgrade 必须通过真实 GitHub Release 在线升级测试。
 
 在线更新：
-- 目标 GitHub Release 标签：source-v2026091918。
+- 目标 GitHub Release 标签：source-v2026091919。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- VERSION、public/update/ver.txt、PHASE13_RELEASE.txt 同步为 2026091918。
-- file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee；本次不修改 UpdateIntegrity 四个哨兵文件。
-- source-v2026091917 及更早 Release Tag/Asset 均保持不变。
+- VERSION、public/update/ver.txt、ver.json、PHASE13_RELEASE.txt 同步为 2026091919。
+- UpdateIntegrity 四个哨兵文件未修改，file_sign 保持 8be29c04c34ba1d1cc7ec77d392b2bee。
+- source-v2026091918 及更早 Release Tag/Asset 均保持不变。
+
+首次升级后一次性服务安装：
+cd <站点根目录>
+sudo bash scripts/install-ipa-parser-service.sh
+systemctl status zonoe-ipa-parser.service --no-pager
