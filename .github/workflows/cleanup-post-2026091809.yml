@@ -1,0 +1,29 @@
+name: Cleanup post-2026091809 GitHub refs
+
+on:
+  push:
+    branches:
+      - cleanup/2026091809-baseline
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  REPO: ${{ github.repository }}
+
+jobs:
+  cleanup:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[execute-cleanup]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify retained baseline
+        run: |
+          test "$(cat VERSION)" = "2026091809"
+          git merge-base --is-ancestor 21307ba5ec9b65ce0b5f0643555ccc7f7bec0ad9 HEAD
+      - name: Remove releases tags and branches newer than 2026091809
+        env:
+          APPLY: "1"
+        run: bash tools/cleanup_post_2026091809_github.sh
