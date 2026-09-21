@@ -48,21 +48,10 @@ jobs:
           php -l application/admin/command/IpaWorker.php
           php -l application/admin/command/IpaParseWorker.php
           php -l application/admin/command/IpaMaintenance.php
-          php -l application/common/library/Ipa/OpenListClient.php
-          php -l application/common/library/Ipa/IpaScanService.php
-          php -l application/common/library/Ipa/IpaParserService.php
-          php -l application/common/library/Ipa/IpaWritebackService.php
-          php -l application/common/library/Ipa/HttpRangeClient.php
-          php -l application/common/library/Ipa/RemoteZipReader.php
-          php -l application/common/library/Ipa/PlistDecoder.php
-          php -l application/common/library/Ipa/SecretBox.php
-          php -l application/common/library/Ipa/DylibVerificationService.php
+          for f in application/common/library/Ipa/*.php; do php -l "$f"; done
           php -l application/index/controller/DylibVerify.php
           php -l application/extra/ipa_data_center.php
-          php -l tests/ipa_range_parser_contract.php
-          php -l tests/dylib_signing_contract.php
-          php -l tests/openlist_mock_router.php
-          php -l tests/openlist_client_integration.php
+          for f in tests/*.php; do php -l "$f"; done
       - name: ThinkPHP CLI command registration
         run: |
           chmod +x think
@@ -79,6 +68,8 @@ jobs:
           PY
       - name: Range ZIP and plist contracts
         run: php tests/ipa_range_parser_contract.php
+      - name: Mach-O inspector contract
+        run: php tests/macho_inspector_contract.php
       - name: Dylib signing contract
         run: php tests/dylib_signing_contract.php
       - name: OpenList HTTP integration
@@ -157,8 +148,9 @@ jobs:
       - name: PHP 7.0 syntax and contracts
         run: |
           php -v
-          for f in application/admin/controller/IpaCenter.php application/admin/controller/DylibCenter.php application/admin/command/IpaWorker.php application/admin/command/IpaParseWorker.php application/admin/command/IpaMaintenance.php application/common/library/Ipa/*.php application/index/controller/DylibVerify.php application/extra/ipa_data_center.php tests/ipa_range_parser_contract.php tests/dylib_signing_contract.php tests/openlist_client_integration.php tests/openlist_mock_router.php; do php -l "$f"; done
+          for f in application/admin/controller/IpaCenter.php application/admin/controller/DylibCenter.php application/admin/command/IpaWorker.php application/admin/command/IpaParseWorker.php application/admin/command/IpaMaintenance.php application/common/library/Ipa/*.php application/index/controller/DylibVerify.php application/extra/ipa_data_center.php tests/ipa_range_parser_contract.php tests/macho_inspector_contract.php tests/dylib_signing_contract.php tests/openlist_client_integration.php tests/openlist_mock_router.php; do php -l "$f"; done
           php tests/dylib_signing_contract.php
+          php tests/macho_inspector_contract.php
           php think list | grep -q "ipa:worker"
 
   ios-sdk-compile:
