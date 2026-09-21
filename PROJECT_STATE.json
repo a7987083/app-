@@ -1,45 +1,17 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "branch": "release/2026091807-unified-announcement-expiry",
-    "phase": "19.4.2",
-    "version": "2026091807",
-    "commit": "1ef93306dec0a7b09bb99df55b785511d5b8b4c6",
-    "release": "source-v2026091807",
-    "feature_ci_run": 35306216020,
-    "feature_ci_result": "success",
-    "release_run": 35306308086,
-    "release_result": "success",
-    "online_update_from": "2026091806",
-    "online_update_e2e": "passed"
+    "version": "2026091809",
+    "tag": "source-v2026091809",
+    "commit": "21307ba5ec9b65ce0b5f0643555ccc7f7bec0ad9",
+    "status": "selected_rollback_baseline"
   },
-  "online_update": {
-    "tag": "source-v2026091807",
-    "zip": "zonoe-online-update.zip",
-    "sha256_asset": "zonoe-online-update.zip.sha256",
-    "release_asset_sha256": "f5d7d82249440c862d3a19a4711e3df3d89387b0e92de48705d4b99fdc570c06",
-    "self_update": "passed",
-    "progress": "passed",
-    "history": "passed",
-    "db_migration": "yes"
+  "rollback": {
+    "reason": "Production was intentionally rolled back to the last pre-Phase-20 stable release. Versions after 2026091809 introduced the Phase 20 IPA Management Center workstream and related parser/worker/persistence/runtime changes. The project will refactor from 2026091809 instead of incrementally removing Phase 20 from later releases.",
+    "retire_versions_after": "2026091809",
+    "phase20_active": false,
+    "cleanup_record": "ROLLBACK_2026091809.md"
   },
-  "announcement": {
-    "public_time_model": "single_clock",
-    "public_variables": [
-      "授权状态",
-      "到期时间",
-      "剩余时间"
-    ],
-    "priority": "full_source > partial_apps > verify_only",
-    "inactive_text": "已过期或未解锁本源",
-    "legacy_scope_time_tokens": "hidden_from_editor_and_mapped_to_generic_clock",
-    "migration": "release/sql/2026091807_unified_announcement_expiry.sql"
-  },
-  "authorization_page": {
-    "safe_route": "/authorization",
-    "legacy_route": "/license",
-    "exact_license_nginx_issue": "production Nginx may still intercept /license before PHP"
-  },
-  "next_task": "Verify 2026091807 on production UI/source refresh; use /authorization for authorization lookup unless active Nginx /license rule is fixed.",
+  "next_task": "Audit and refactor the codebase from source-v2026091809 without reintroducing Phase 20 behavior unless explicitly redesigned.",
   "roadmap": "ROADMAP.md"
 }
