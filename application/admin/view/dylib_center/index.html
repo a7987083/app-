@@ -1,0 +1,90 @@
+<div class="panel panel-default panel-intro">
+    <div class="panel-heading">{:build_heading(null,FALSE)}</div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>Dylib 注册</strong></div>
+                    <div class="panel-body">
+                        <form id="dylib-form">
+                            <input type="hidden" name="id" value="0">
+                            <div class="form-group"><label>Dylib Key</label><input class="form-control" name="dylib_key" placeholder="zonoe.main" required></div>
+                            <div class="form-group"><label>名称</label><input class="form-control" name="name" required></div>
+                            <div class="form-group"><label>默认离线容错(秒)</label><input class="form-control" type="number" min="0" max="86400" name="default_offline_grace" value="900"></div>
+                            <div class="form-group"><label>默认失败动作</label>
+                                <select class="form-control" name="default_fail_action">
+                                    {foreach name="failActions" item="action"}<option value="{$action}">{$action}</option>{/foreach}
+                                </select>
+                            </div>
+                            <input type="hidden" name="enabled" value="1">
+                            <button class="btn btn-primary" type="submit">保存 Dylib</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>已注册 Dylib</strong></div>
+                    <table class="table table-bordered table-striped" id="dylib-list">
+                        <thead><tr><th>ID</th><th>Key</th><th>名称</th><th>离线</th><th>失败动作</th><th>状态</th></tr></thead>
+                        <tbody>
+                        {foreach name="dylibs" item="dylib"}
+                        <tr data-id="{$dylib.id}">
+                            <td>{$dylib.id}</td><td>{$dylib.dylib_key|htmlentities}</td><td>{$dylib.name|htmlentities}</td>
+                            <td>{$dylib.default_offline_grace}s</td><td>{$dylib.default_fail_action}</td>
+                            <td>{if condition="$dylib.enabled"}<span class="label label-success">启用</span>{else/}<span class="label label-default">停用</span>{/if}</td>
+                        </tr>
+                        {/foreach}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>版本策略</strong></div>
+                    <div class="panel-body">
+                        <form id="version-form" class="form-inline" style="margin-bottom:10px">
+                            <select class="form-control" name="dylib_id" required><option value="">Dylib</option>{foreach name="dylibs" item="dylib"}<option value="{$dylib.id}">{$dylib.name|htmlentities}</option>{/foreach}</select>
+                            <input class="form-control" name="version" placeholder="Version" required>
+                            <input class="form-control" name="build" placeholder="Build">
+                            <select class="form-control" name="state">{foreach name="states" item="state"}<option value="{$state}" {if condition="$state=='testing'"}selected{/if}>{$state}</option>{/foreach}</select>
+                            <button class="btn btn-primary" type="submit">添加版本</button>
+                            <div style="margin-top:8px">
+                                <input class="form-control" style="width:360px" name="sha256" placeholder="SHA256（可留空）">
+                                <input class="form-control" style="width:120px" type="number" name="offline_grace" value="900" placeholder="离线秒">
+                                <select class="form-control" name="fail_action">{foreach name="failActions" item="action"}<option value="{$action}">{$action}</option>{/foreach}</select>
+                                <input class="form-control" style="width:240px" name="notice" placeholder="提示信息">
+                            </div>
+                        </form>
+                        <table id="version-table"></table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>游戏 BundleID 绑定</strong></div>
+                    <div class="panel-body">
+                        <form id="binding-form" class="form-inline" style="margin-bottom:10px">
+                            <select class="form-control" name="dylib_id" required><option value="">Dylib</option>{foreach name="dylibs" item="dylib"}<option value="{$dylib.id}">{$dylib.name|htmlentities}</option>{/foreach}</select>
+                            <input class="form-control" style="width:260px" name="bundle_id" placeholder="com.example.game" required>
+                            <select class="form-control" name="fail_action_override"><option value="">继承</option>{foreach name="failActions" item="action"}<option value="{$action}">{$action}</option>{/foreach}</select>
+                            <input class="form-control" style="width:110px" type="number" name="offline_grace_override" value="0" placeholder="离线覆盖">
+                            <input type="hidden" name="enabled" value="1">
+                            <button class="btn btn-primary" type="submit">绑定</button>
+                        </form>
+                        <table id="binding-table"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>验证日志</strong></div>
+            <div class="panel-body"><table id="verify-log-table"></table></div>
+        </div>
+    </div>
+</div>
