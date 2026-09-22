@@ -1,50 +1,76 @@
-# ZONOE 软件源 2026091809
+# ZONOE 软件源 2026092201
 
 ## 更新内容
 
-本版本是项目管理性能 Hotfix，不引入 Phase 20 功能。
+本版本从稳定基线 `2026091809` 引入 **IPA Data Center v1** 与 **Dylib Verification Center v1**，并保持原在线更新协议和 Category 性能逻辑不变。
 
-### 项目管理性能
+### IPA 数据中心
 
-- 新增/编辑页面不再为隐藏的父分类字段构建完整 `parentList` / Tree。
-- 新增项目服务端固定 `pid=0`；编辑项目保留原 `pid`。
-- 移除编辑路径中的 `Category::select()` 全表子节点校验，避免 2 万级数据下额外全表读取。
-- 隐藏父级字段由 select/selectpicker 改成普通 hidden input。
-- 项目列表继续保持默认 1000 条/页，分页选项保持 200 / 500 / 1000。
+- OpenList 数据源管理，Token 加密保存。
+- 增量/全量扫描、分页枚举、任务队列、独立 Scan Worker / Parse Worker。
+- HTTP Range 读取 ZIP Central Directory，按成员读取 `Info.plist`，支持 XML plist 与 binary plist。
+- IPA 元数据、Bundle ID、版本、MinimumOS、SHA256 及二进制索引。
+- Mach-O 深度解析：SHA256、architectures、`LC_ID_DYLIB/install_name`。
+- `fa_category` 仅允许管理员手动 preview → apply 写回，Worker 不自动写项目表。
 
-### CRUD 不自动刷新
+### Dylib 验证中心
 
-- 新增成功后只关闭弹窗，不刷新父级 1000 行列表。
-- 编辑成功后只关闭弹窗，不刷新父级 1000 行列表。
-- 单行删除成功后使用 `bootstrapTable('remove')` 本地移除对应行，并阻止 FastAdmin 默认整表 refresh。
-- 工具栏批量删除同样注册 no-refresh 回调，删除完成后本地移除已删除行。
+- Dylib 注册、版本管理、多游戏 BundleID 绑定、验证日志。
+- 版本策略支持 `active / deprecated / testing / blocked / revoked`，客户端不写死业务状态。
+- 服务端校验 UDID、卡密有效期、黑名单、BundleID、Dylib ID/版本、可选 SHA256。
+- HMAC-SHA256 请求签名、timestamp + nonce 防重放、短期 session token。
+- 默认离线容忍 900 秒，失败行为由服务端策略下发。
+- Objective-C / iPhoneOS arm64 客户端实现已通过 Apple SDK 编译门禁。
 
-### 性能回归门禁
+### Worker 与运维
 
-新增 `tests/phase19_4_y_category_performance_test.php`，持续检查：
+新增 ThinkPHP CLI：
 
-- Category 控制器不得重新出现 `buildParentList`。
-- add/edit 路径不得重新出现 `Category::select()` 全表加载。
-- 不得重新依赖 `fast\Tree` 构建隐藏父级树。
-- add 固定 `pid=0`，edit 保留原 `pid`。
-- 模板不得重新渲染 pid select/selectpicker 或 `parentList`。
-- 默认分页必须保持 1000 条。
-- 新增/编辑/删除不得恢复自动整表刷新。
-- 在线更新清单必须包含本次 4 个业务文件。
+- `php think ipa:worker`
+- `php think ipa:parse-worker`
+- `php think ipa:maintenance`
+
+仓库同时提供 systemd service/timer 模板；在线更新只覆盖站点目录，不会擅自修改 `/etc/systemd/system`。
+
+### 数据库
+
+在线更新包新增：
+
+- `release/sql/2026092201_ipa_data_center.sql`
+
+迁移为 MySQL 5.7 兼容、可重复执行设计，创建 IPA / Dylib 相关表及 FastAdmin 权限菜单节点。
 
 ### 在线更新
 
-在线更新包包含：
+本版本继续沿用现有 `UpdateManager / UpdateInstaller`：
 
-- `application/admin/controller/Category.php`
-- `application/admin/view/category/add.html`
-- `application/admin/view/category/edit.html`
-- `public/assets/js/backend/category.js`
+- 下载更新 ZIP
+- SHA256 校验
+- 程序及数据库备份
+- 执行 `mysql/*.sql`
+- 覆盖 `program/*`
+- 覆盖后 SHA256 文件校验
+- 写入版本号
+- 失败自动回滚
 
-`file_sign` 继续为 `f3f6e072f814d06403ce5e393967c9e2`，因为本版本没有修改 `UpdateIntegrity::files()` 监控的 4 个关键文件。
+在线更新清单已经加入 IPA Data Center / Dylib Verification Center 的服务器运行文件。
+
+`file_sign` 继续为 `f3f6e072f814d06403ce5e393967c9e2`，因为本版本未修改 `UpdateIntegrity::files()` 当前监控的 4 个关键文件。
 
 ### 验证
 
-- Phase 19.4.y 专项 PHP 7.0 / JS / 性能契约 / 在线更新包门禁。
-- 正式 Release 继续执行 PHP 7.0 全回归、MySQL 5.7、HTTP load、更新包校验。
-- 正式执行 `2026091808 → 2026091809` GitHub Release 在线更新 E2E。
+- PHP 7.0 兼容与 ThinkPHP CLI 真启动。
+- PHP 8.x 静态/契约测试。
+- MySQL 5.7.44 schema 与 migration。
+- 100,000 IPA 资产规模测试。
+- 多 Worker claim contention。
+- OpenList HTTP 集成测试。
+- Range ZIP / XML plist / binary plist。
+- Mach-O thin / FAT 解析。
+- Dylib HMAC 固定签名向量。
+- iPhoneOS SDK arm64 Objective-C 编译。
+- `2026091809 → 2026092201` 正式 GitHub Release 在线更新 E2E 作为发布门禁。
+
+### 上线前配置
+
+生产服务器需要设置 `IPA_SERVER_SECRET`（至少 32 bytes）后再保存 OpenList Token 或生成 Dylib 验证密钥。
