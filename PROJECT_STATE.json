@@ -1,45 +1,40 @@
 {
   "repository": "a7987083/app-",
+  "branch": "release/2026092206-ipa-controls-regression-hotfix",
+  "commit": "2cf0e030eb2db3a4aa079462c7a4399720214d1b",
+  "baseline": "source-v2026092205",
   "stable_release": {
-    "branch": "release/2026091807-unified-announcement-expiry",
-    "phase": "19.4.2",
-    "version": "2026091807",
-    "commit": "1ef93306dec0a7b09bb99df55b785511d5b8b4c6",
-    "release": "source-v2026091807",
-    "feature_ci_run": 35306216020,
-    "feature_ci_result": "success",
-    "release_run": 35306308086,
+    "version": "2026092206",
+    "release": "source-v2026092206",
+    "release_commit": "2cf0e030eb2db3a4aa079462c7a4399720214d1b",
+    "ipa_gate_run": 35782863429,
+    "ipa_gate_result": "success",
+    "release_run": 35782863008,
     "release_result": "success",
-    "online_update_from": "2026091806",
+    "online_update_from": "2026092205",
     "online_update_e2e": "passed"
   },
-  "online_update": {
-    "tag": "source-v2026091807",
+  "build": {
+    "php70_regression": "passed",
+    "mysql57_migration": "passed",
+    "http_load_gate": "passed",
+    "package_and_release": "passed",
+    "artifact": "zonoe-source-2026092206-online-update",
+    "artifact_id": 10719265057
+  },
+  "release_asset": {
     "zip": "zonoe-online-update.zip",
-    "sha256_asset": "zonoe-online-update.zip.sha256",
-    "release_asset_sha256": "f5d7d82249440c862d3a19a4711e3df3d89387b0e92de48705d4b99fdc570c06",
-    "self_update": "passed",
-    "progress": "passed",
-    "history": "passed",
-    "db_migration": "yes"
+    "zip_size": 200118,
+    "zip_sha256": "45553d5fd4ef5ef42f097486262ab27d223e166c8df83ffeec5144b03fa45e6f",
+    "sha256_asset": "zonoe-online-update.zip.sha256"
   },
-  "announcement": {
-    "public_time_model": "single_clock",
-    "public_variables": [
-      "授权状态",
-      "到期时间",
-      "剩余时间"
-    ],
-    "priority": "full_source > partial_apps > verify_only",
-    "inactive_text": "已过期或未解锁本源",
-    "legacy_scope_time_tokens": "hidden_from_editor_and_mapped_to_generic_clock",
-    "migration": "release/sql/2026091807_unified_announcement_expiry.sql"
+  "runtime": {
+    "github_release_e2e": "passed",
+    "production_manual_verification": "pending",
+    "real_device_verification": "pending"
   },
-  "authorization_page": {
-    "safe_route": "/authorization",
-    "legacy_route": "/license",
-    "exact_license_nginx_issue": "production Nginx may still intercept /license before PHP"
-  },
-  "next_task": "Verify 2026091807 on production UI/source refresh; use /authorization for authorization lookup unless active Nginx /license rule is fixed.",
-  "roadmap": "ROADMAP.md"
+  "phase": "IPA Data Center controls regression hotfix",
+  "next_task": "Perform production/manual verification of source-v2026092206: software-source save/test interaction, pause/resume orphan recovery, clear-parse-results safety, and 2205->2206 update on the real deployment.",
+  "roadmap": "ROADMAP.md",
+  "known_issues": "KNOWN_ISSUES.md"
 }

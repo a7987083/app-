@@ -1,32 +1,47 @@
 # Software Source Development Handoff
 
-## Stable baseline
+## Current stable release
 
 - Repository: `a7987083/app-`
-- Stable branch: `release/2026091807-unified-announcement-expiry`
-- Stable phase/version: `Phase 19.4.2 / 2026091807`
-- Release commit: `1ef93306dec0a7b09bb99df55b785511d5b8b4c6`
-- Release: `source-v2026091807`
-- Unified-announcement CI: `35306216020` — SUCCESS
-- Formal Release Run: `35306308086` — SUCCESS
-- Online-update E2E: `2026091806 -> 2026091807` — SUCCESS
+- Branch: `release/2026092206-ipa-controls-regression-hotfix`
+- Release: `source-v2026092206`
+- Release commit: `2cf0e030eb2db3a4aa079462c7a4399720214d1b`
+- Previous stable baseline: `source-v2026092205`
+- IPA gate: `35782863429` — SUCCESS
+- Formal release: `35782863008` — SUCCESS
+- GitHub Release online-update E2E: `2026092205 -> 2026092206` — SUCCESS
 
-## Announcement contract
+## 2206 implementation
 
-The announcement editor exposes one authorization clock only:
+The regression hotfix changes four runtime files relative to 2205:
 
-- `[授权状态]`
-- `[到期时间]`
-- `[剩余时间]`
+1. `application/admin/controller/IpaCenter.php`
+2. `application/admin/controller/IpaSourceCenter.php`
+3. `application/common/library/Ipa/IpaSoftwareSourceService.php`
+4. `public/assets/js/backend/ipa_source_center.js`
 
-Internal entitlement scopes remain separate. The effective clock is selected by priority:
-whole source -> partial Apps -> verify-only.
+Core behavior:
 
-If no active entitlement exists, all three public fields use:
-`已过期或未解锁本源`.
+- Software-source test remains read-only and explicitly blocks table-row selection propagation.
+- Software-source writes use guarded defaults and transactional rollback on exceptions/Throwable.
+- Pause does not kill an active Parse Worker task; it prevents new work and only reclaims orphaned `parsing` rows if the worker is offline.
+- Clear parse results first reclaims orphaned work, then refuses unsafe clearing while genuine parsing is active.
+- Clearing preserves OpenList discovery records, source configuration and `fa_category`.
+- No 2206 SQL migration was added.
 
-Legacy scope-specific time tokens are hidden from the editor and mapped to the same generic clock at runtime. SQL migration `2026091807_unified_announcement_expiry.sql` rewrites historical templates to the generic tokens.
+## Release / update contract
 
-## Authorization page
+- Existing `UpdateManager / UpdateInstaller` semantics are unchanged.
+- Release asset: `zonoe-online-update.zip`, SHA256 `45553d5fd4ef5ef42f097486262ab27d223e166c8df83ffeec5144b03fa45e6f`.
+- CI Artifact: `zonoe-source-2026092206-online-update` (artifact id `10719265057`).
+- `UpdateIntegrity` sentinel files were unchanged from 2205, therefore `ver.json.file_sign` remains `f3f6e072f814d06403ce5e393967c9e2`.
 
-`/authorization` remains the online-update-safe public lookup URL. `/license` remains routed in ThinkPHP but can still be intercepted by the production Nginx LICENSE rule before PHP.
+## Verification boundary
+
+Verified: source diff, GitHub CI, PHP 7.0 regression, MySQL 5.7 migration regression, HTTP load gate, package build, GitHub Release publication, GitHub Release online-update E2E.
+
+Not yet verified: production BaoTa deployment and manual/real-device UI behavior.
+
+## Next task
+
+Deploy/update a production test instance from 2205 to 2206 and manually verify source save/test, pause/resume orphan recovery and clear-parse-results behavior. Do not rewrite the released 2206 history; subsequent fixes must use a new version/commit.
