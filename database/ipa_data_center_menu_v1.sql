@@ -19,6 +19,8 @@ VALUES
 ('file',@ipa_pid,'ipa_center/writebackPreview','写回预览','fa fa-eye','','',0,@now,@now,74,'normal'),
 ('file',@ipa_pid,'ipa_center/writebackApply','手动写回项目','fa fa-exchange','','',0,@now,@now,73,'normal'),
 ('file',@ipa_pid,'ipa_center/saveSource','保存 OpenList 数据源','fa fa-database','','',0,@now,@now,70,'normal'),
+('file',@ipa_pid,'ipa_center/deleteSource','删除 OpenList 数据源','fa fa-trash','','',0,@now,@now,69,'normal'),
+('file',@ipa_pid,'ipa_center/retryParse','重新解析 IPA','fa fa-repeat','','',0,@now,@now,68,'normal'),
 ('file',@ipa_pid,'ipa_center/startScan','启动扫描','fa fa-play','','',0,@now,@now,60,'normal'),
 ('file',@ipa_pid,'dylib_center/versions','Dylib 版本列表','fa fa-code-fork','','',0,@now,@now,55,'normal'),
 ('file',@ipa_pid,'dylib_center/bindings','Dylib 游戏绑定','fa fa-link','','',0,@now,@now,54,'normal'),
