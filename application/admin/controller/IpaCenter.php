@@ -6,6 +6,7 @@ use app\common\controller\Backend;
 use app\common\library\Ipa\IpaScanService;
 use app\common\library\Ipa\IpaWritebackService;
 use app\common\library\Ipa\SecretBox;
+use app\common\library\Ipa\WorkerState;
 use think\Db;
 
 class IpaCenter extends Backend
@@ -14,11 +15,20 @@ class IpaCenter extends Backend
 
     public function index()
     {
+        $workers = [];
+        try {
+            $workers = WorkerState::snapshot(15);
+        } catch (\Exception $e) {
+            // Upgrade-safe: the UI can still load before the worker-state migration is applied.
+        }
+        $this->view->assign('workers', $workers);
         $this->view->assign('summary', [
             'sources' => (int)Db::name('ipa_source')->count(),
             'assets' => (int)Db::name('ipa_asset')->count(),
             'pending' => (int)Db::name('ipa_scan_item')->where('status', 'pending')->count(),
             'failed' => (int)Db::name('ipa_scan_item')->where('status', 'failed')->count(),
+            'parse_pending' => (int)Db::name('ipa_asset')->where('status', 'discovered')->count(),
+            'parse_failed' => (int)Db::name('ipa_asset')->where('status', 'parse_failed')->count(),
             'dylibs' => (int)Db::name('dylib')->count(),
             'verify24h' => (int)Db::name('dylib_verify_log')->where('created_at', '>=', time() - 86400)->count(),
         ]);
@@ -38,7 +48,7 @@ class IpaCenter extends Backend
             });
         }
         $total = (clone $query)->count();
-        $rows = $query->field('id,source_id,name,path,size_bytes,status,bundle_id,app_name,app_version,build_version,last_seen_at,parsed_at')
+        $rows = $query->field('id,source_id,name,path,size_bytes,status,bundle_id,app_name,app_version,build_version,last_error,last_seen_at,parsed_at')
             ->order('id desc')->limit($offset, $limit)->select();
         return json(['total' => (int)$total, 'rows' => $rows]);
     }
@@ -119,6 +129,9 @@ class IpaCenter extends Backend
         if (stripos($baseUrl, 'https://') !== 0 && stripos($baseUrl, 'http://') !== 0) {
             $this->error('Only HTTP/HTTPS OpenList URLs are allowed');
         }
+        if ($id > 0 && !Db::name('ipa_source')->where('id', $id)->find()) {
+            $this->error('OpenList source not found');
+        }
         $rootPath = '/' . ltrim(preg_replace('#/+#', '/', $rootPath), '/');
         $now = time();
         $data = [
@@ -131,7 +144,11 @@ class IpaCenter extends Backend
             'updated_at' => $now,
         ];
         if ($token !== '') {
-            $data['token_ciphertext'] = SecretBox::encrypt($token);
+            try {
+                $data['token_ciphertext'] = SecretBox::encrypt($token);
+            } catch (\Exception $e) {
+                $this->error($e->getMessage());
+            }
         }
         if ($id > 0) {
             Db::name('ipa_source')->where('id', $id)->update($data);
@@ -140,6 +157,66 @@ class IpaCenter extends Backend
             $id = Db::name('ipa_source')->insertGetId($data);
         }
         $this->success('saved', null, ['id' => (int)$id]);
+    }
+
+    public function deleteSource()
+    {
+        if (!$this->request->isPost()) {
+            $this->error('POST required');
+        }
+        $id = (int)$this->request->post('id', 0);
+        $source = Db::name('ipa_source')->where('id', $id)->find();
+        if (!$source) {
+            $this->error('OpenList source not found');
+        }
+        $activeJobs = Db::name('ipa_scan_job')->where('source_id', $id)->where('status', 'in', ['pending', 'running'])->count();
+        $parsing = Db::name('ipa_asset')->where('source_id', $id)->where('status', 'parsing')->count();
+        if ((int)$activeJobs > 0 || (int)$parsing > 0) {
+            $this->error('Source has active scan/parse work; wait for workers to finish before deleting');
+        }
+
+        Db::startTrans();
+        try {
+            while (true) {
+                $rows = Db::name('ipa_asset')->field('id')->where('source_id', $id)->limit(500)->select();
+                if (!$rows) break;
+                $assetIds = [];
+                foreach ($rows as $row) $assetIds[] = (int)$row['id'];
+                Db::name('ipa_binary')->where('asset_id', 'in', $assetIds)->delete();
+                Db::name('ipa_category_binding')->where('asset_id', 'in', $assetIds)->delete();
+                Db::name('ipa_asset')->where('id', 'in', $assetIds)->delete();
+            }
+            Db::name('ipa_scan_item')->where('source_id', $id)->delete();
+            Db::name('ipa_scan_job')->where('source_id', $id)->delete();
+            Db::name('ipa_source')->where('id', $id)->delete();
+            Db::commit();
+        } catch (\Exception $e) {
+            Db::rollback();
+            $this->error($e->getMessage());
+        }
+        $this->success('source deleted');
+    }
+
+    public function retryParse()
+    {
+        if (!$this->request->isPost()) {
+            $this->error('POST required');
+        }
+        $assetId = (int)$this->request->post('asset_id', 0);
+        $asset = Db::name('ipa_asset')->where('id', $assetId)->find();
+        if (!$asset) {
+            $this->error('IPA asset not found');
+        }
+        if ((string)$asset['status'] === 'parsing') {
+            $this->error('IPA is currently parsing');
+        }
+        Db::name('ipa_asset')->where('id', $assetId)->update([
+            'status' => 'discovered',
+            'last_error' => null,
+            'parsed_at' => 0,
+            'updated_at' => time(),
+        ]);
+        $this->success('IPA queued for parsing');
     }
 
     public function startScan()
