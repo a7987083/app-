@@ -66,19 +66,26 @@ class IpaCenter extends Backend
     public function saveParseSettings()
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
-        try{$cfg=IpaOpsSettings::save($this->request->post());$this->success('解析设置已保存',url('ipa_center/index'),$cfg);}catch(\Exception $e){$this->error($e->getMessage());}
+        try{$cfg=IpaOpsSettings::save($this->request->post());$this->success('解析设置已保存',url('ipa_center/index'),$cfg);}catch(\Throwable $e){$this->error($this->errorMessage($e,'解析设置保存失败'));}
     }
 
     public function pauseParse()
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
-        try{IpaOpsSettings::save(['parse_enabled'=>0]);$this->success('自动解析已暂停；已开始的当前 IPA 允许完成，之后不会领取新任务');}catch(\Exception $e){$this->error($e->getMessage());}
+        try{
+            IpaOpsSettings::save(['parse_enabled'=>0]);
+            $reclaimed=$this->reclaimOrphanedParsing();
+            $message='自动解析已暂停；不会再领取新任务';
+            if($reclaimed>0)$message.='；已回收 '.$reclaimed.' 个无存活 Worker 的解析任务';
+            else $message.='；若当前 Parse Worker 仍存活，正在处理的 1 个 IPA 会允许完成';
+            $this->success($message);
+        }catch(\Throwable $e){$this->error($this->errorMessage($e,'暂停解析失败'));}
     }
 
     public function resumeParse()
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
-        try{IpaOpsSettings::save(['parse_enabled'=>1]);$this->success('自动解析已恢复');}catch(\Exception $e){$this->error($e->getMessage());}
+        try{IpaOpsSettings::save(['parse_enabled'=>1]);$this->success('自动解析已恢复');}catch(\Throwable $e){$this->error($this->errorMessage($e,'恢复解析失败'));}
     }
 
     public function clearParseResults()
@@ -86,8 +93,9 @@ class IpaCenter extends Backend
         if(!$this->request->isPost())$this->error('仅支持 POST');
         $settings=IpaOpsSettings::all();
         if(!empty($settings['parse_enabled']))$this->error('请先暂停自动解析，再清空解析结果');
+        $reclaimed=$this->reclaimOrphanedParsing();
         $parsing=(int)Db::name('ipa_asset')->where('status','parsing')->count();
-        if($parsing>0)$this->error('仍有 '.$parsing.' 个 IPA 正在解析，请等待当前任务结束后再清空');
+        if($parsing>0)$this->error('仍有 '.$parsing.' 个 IPA 正由存活的 Parse Worker 解析；请等待当前任务结束后再清空');
         $now=time();$affected=0;
         Db::startTrans();
         try{
@@ -104,8 +112,10 @@ class IpaCenter extends Backend
             }
             Db::name('ipa_parse_attempt')->delete(true);
             Db::commit();
-        }catch(\Exception $e){Db::rollback();$this->error($e->getMessage());}
-        $this->success('已清空 '.$affected.' 个 IPA 的解析/比对结果，文件扫描记录和 fa_category 均未删除');
+        }catch(\Throwable $e){Db::rollback();$this->error($this->errorMessage($e,'清空解析结果失败'));}
+        $message='已清空 '.$affected.' 个 IPA 的解析/比对结果，文件扫描记录和 fa_category 均未删除';
+        if($reclaimed>0)$message.='；同时回收了 '.$reclaimed.' 个孤立解析任务';
+        $this->success($message);
     }
 
     public function assetDetail()
@@ -201,5 +211,26 @@ class IpaCenter extends Backend
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
         try{$jobId=IpaScanService::createJob((int)$this->request->post('source_id'),(string)$this->request->post('mode','incremental'));$this->success('扫描任务已加入队列',null,['job_id'=>(int)$jobId]);}catch(\Exception $e){$this->error($e->getMessage());}
+    }
+
+    protected function reclaimOrphanedParsing()
+    {
+        $settings=IpaOpsSettings::all();
+        $workers=[];
+        try{$workers=WorkerState::snapshot($settings['worker_alive_seconds']);}catch(\Throwable $e){return 0;}
+        $parse=isset($workers['parse'])?$workers['parse']:null;
+        if($parse && !empty($parse['alive']))return 0;
+        $now=time();
+        return (int)Db::name('ipa_asset')->where('status','parsing')->update([
+            'status'=>'discovered',
+            'last_error'=>'Parse Worker 已离线，系统已回收孤立解析任务',
+            'updated_at'=>$now,
+        ]);
+    }
+
+    protected function errorMessage($e,$fallback)
+    {
+        $message=trim((string)$e->getMessage());
+        return $message!==''?$message:$fallback.'（'.get_class($e).'）';
     }
 }
