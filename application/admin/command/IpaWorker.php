@@ -5,6 +5,7 @@ namespace app\admin\command;
 use app\common\library\Ipa\IpaScanService;
 use app\common\library\Ipa\SecretBox;
 use app\common\library\Ipa\WorkerState;
+use think\Db;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;
@@ -25,6 +26,18 @@ class IpaWorker extends Command
         $once = (bool)$input->getOption('once');
         $sleep = max(1, min(30, (int)$input->getOption('sleep')));
         $workerId = gethostname() . ':' . getmypid();
+
+        try {
+            $this->preflightSecrets();
+        } catch (\Exception $e) {
+            $output->error('IPA 扫描 Worker 启动检查失败：' . $e->getMessage());
+            try {
+                WorkerState::heartbeat('scan', $workerId, 'stopped', 0);
+            } catch (\Exception $ignored) {
+            }
+            return 1;
+        }
+
         $output->info('IPA worker started: ' . $workerId);
         WorkerState::heartbeat('scan', $workerId, 'idle', 0);
 
@@ -60,5 +73,22 @@ class IpaWorker extends Command
 
         WorkerState::heartbeat('scan', $workerId, 'stopped', 0);
         return 0;
+    }
+
+    protected function preflightSecrets()
+    {
+        $sources = Db::name('ipa_source')
+            ->field('id,token_ciphertext')
+            ->where('enabled', 1)
+            ->where('token_ciphertext', '<>', '')
+            ->select();
+        if (!$sources) {
+            return;
+        }
+
+        SecretBox::assertConfigured();
+        foreach ($sources as $source) {
+            SecretBox::decrypt((string)$source['token_ciphertext']);
+        }
     }
 }
