@@ -86,8 +86,11 @@ jobs:
           mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1.sql
           mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1_1_request_signing.sql
           mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1_1_request_signing.sql
-          test "$(mysql -N -B -h127.0.0.1 -uroot -proot -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME LIKE 'fa_ipa_%'" )" -ge 6
+          mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1_2_worker_state.sql
+          mysql -h127.0.0.1 -uroot -proot ipa_ci < database/ipa_data_center_v1_2_worker_state.sql
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME LIKE 'fa_ipa_%'" )" -ge 7
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME='fa_dylib' AND COLUMN_NAME='verify_secret_ciphertext'" )" = "1"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_ci -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_ci' AND TABLE_NAME='fa_ipa_worker_state'" )" = "1"
       - name: MySQL 5.7 worker claim contention
         run: |
           mysql -h127.0.0.1 -uroot -proot ipa_ci < tests/worker_claim_concurrency.sql
@@ -123,6 +126,7 @@ jobs:
           test -f database/ipa_data_center_v1.sql
           test -f database/ipa_data_center_menu_v1.sql
           test -f database/ipa_data_center_v1_1_request_signing.sql
+          test -f database/ipa_data_center_v1_2_worker_state.sql
           grep -q "default_offline_grace.*900" database/ipa_data_center_v1.sql
           grep -q "verify_secret_ciphertext" database/ipa_data_center_v1.sql
           grep -q "source-v2026091809" docs/IPA_DATA_CENTER_ARCHITECTURE.md
@@ -141,7 +145,19 @@ jobs:
       - name: Scan service safety contracts
         run: |
           grep -q "Encrypted OpenList token requires a token resolver" application/common/library/Ipa/IpaScanService.php
+          grep -q "listDirectory(\$item\['path'\], \$page, \$pageSize, false)" application/common/library/Ipa/IpaScanService.php
           ! grep -q "Foundation fallback only" application/common/library/Ipa/IpaScanService.php
+      - name: Management and memory safety contracts
+        run: |
+          grep -q "function deleteSource" application/admin/controller/IpaCenter.php
+          grep -q "function retryParse" application/admin/controller/IpaCenter.php
+          grep -q "function extractPrefix" application/common/library/Ipa/RemoteZipReader.php
+          grep -q "binaryHeaderLimit" application/common/library/Ipa/IpaParserService.php
+          grep -q "WorkerState::heartbeat('scan'" application/admin/command/IpaWorker.php
+          grep -q "WorkerState::heartbeat('parse'" application/admin/command/IpaParseWorker.php
+          grep -q "btn-source-delete" public/assets/js/backend/ipa_center.js
+          grep -q "btn-source-edit" public/assets/js/backend/ipa_center.js
+          grep -q "btn-parse-retry" public/assets/js/backend/ipa_center.js
       - name: Operations contracts
         run: |
           grep -q "IpaMaintenance" application/command.php
@@ -164,6 +180,7 @@ jobs:
         run: |
           php -v
           for f in application/admin/controller/IpaCenter.php application/admin/controller/DylibCenter.php application/admin/command/IpaWorker.php application/admin/command/IpaParseWorker.php application/admin/command/IpaMaintenance.php application/common/library/Ipa/*.php application/index/controller/DylibVerify.php application/extra/ipa_data_center.php tests/ipa_range_parser_contract.php tests/macho_inspector_contract.php tests/macho_inspector_fat_contract.php tests/macho_inspector_parser_contract.php tests/dylib_signing_contract.php tests/openlist_client_integration.php tests/openlist_mock_router.php; do php -l "$f"; done
+          php -r 'exit(function_exists("inflate_init") && function_exists("inflate_add") ? 0 : 1);'
           php tests/dylib_signing_contract.php
           php tests/macho_inspector_contract.php
           php tests/macho_inspector_fat_contract.php
