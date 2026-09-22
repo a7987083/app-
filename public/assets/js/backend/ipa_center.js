@@ -45,24 +45,98 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     {field: 'app_version', title: 'Version'},
                     {field: 'build_version', title: 'Build'},
                     {field: 'size_bytes', title: '大小(B)'},
-                    {field: 'status', title: '状态'},
+                    {
+                        field: 'status',
+                        title: '状态',
+                        formatter: function (value, row) {
+                            var map = {
+                                discovered: '<span class="label label-info">待解析</span>',
+                                parsing: '<span class="label label-warning">解析中</span>',
+                                parsed: '<span class="label label-success">已解析</span>',
+                                parse_failed: '<span class="label label-danger">解析失败</span>',
+                                missing: '<span class="label label-default">已缺失</span>'
+                            };
+                            var html = map[value] || Controller.api.escape(value || '');
+                            if (value === 'parse_failed' && row.last_error) {
+                                html += ' <span class="text-danger" title="' + Controller.api.escape(row.last_error) + '">详情</span>';
+                            }
+                            return html;
+                        }
+                    },
                     {field: 'last_seen_at', title: '最后发现', formatter: Table.api.formatter.datetime},
                     {
                         field: 'operate',
                         title: '操作',
                         formatter: function (value, row) {
-                            var disabled = row.status === 'parsed' ? '' : ' disabled';
-                            return '<button type="button" class="btn btn-xs btn-primary btn-writeback' + disabled + '" data-id="' + row.id + '">手动写回</button>';
+                            var buttons = [];
+                            if (row.status === 'parsed') {
+                                buttons.push('<button type="button" class="btn btn-xs btn-primary btn-writeback" data-id="' + row.id + '">手动写回</button>');
+                                buttons.push('<button type="button" class="btn btn-xs btn-default btn-parse-retry" data-id="' + row.id + '">重新解析</button>');
+                            } else if (row.status === 'parse_failed') {
+                                buttons.push('<button type="button" class="btn btn-xs btn-danger btn-parse-retry" data-id="' + row.id + '">重试解析</button>');
+                            } else if (row.status === 'discovered') {
+                                buttons.push('<span class="text-muted">等待解析 Worker</span>');
+                            } else if (row.status === 'parsing') {
+                                buttons.push('<span class="text-muted">解析中…</span>');
+                            }
+                            return buttons.join(' ');
                         }
                     }
                 ]]
             });
+
+            function resetSourceForm() {
+                var form = $('#source-form');
+                form.find('[name="id"]').val('0');
+                form.find('[name="name"]').val('');
+                form.find('[name="base_url"]').val('');
+                form.find('[name="root_path"]').val('/');
+                form.find('[name="token"]').val('');
+                form.find('[name="enabled"]').val('1');
+                form.find('[name="scan_page_size"]').val('500');
+                form.find('[name="request_timeout"]').val('20');
+                $('#source-save-label').text('保存');
+                $('#source-edit-cancel').addClass('hide');
+            }
 
             $('#source-form').on('submit', function (e) {
                 e.preventDefault();
                 Fast.api.ajax({url: 'ipa_center/saveSource', type: 'POST', data: $(this).serialize()}, function () {
                     location.reload();
                     return false;
+                });
+            });
+
+            $(document).on('click', '.btn-source-edit', function () {
+                var button = $(this);
+                var form = $('#source-form');
+                form.find('[name="id"]').val(button.data('id'));
+                form.find('[name="name"]').val(button.attr('data-name') || '');
+                form.find('[name="base_url"]').val(button.attr('data-base-url') || '');
+                form.find('[name="root_path"]').val(button.attr('data-root-path') || '/');
+                form.find('[name="token"]').val('');
+                form.find('[name="enabled"]').val(String(button.attr('data-enabled')));
+                form.find('[name="scan_page_size"]').val(button.attr('data-scan-page-size') || '500');
+                form.find('[name="request_timeout"]').val(button.attr('data-request-timeout') || '20');
+                $('#source-save-label').text('保存修改');
+                $('#source-edit-cancel').removeClass('hide');
+                $('html,body').animate({scrollTop: form.offset().top - 80}, 150);
+            });
+
+            $('#source-edit-cancel').on('click', function () {
+                resetSourceForm();
+            });
+
+            $(document).on('click', '.btn-source-delete', function () {
+                var button = $(this);
+                var id = parseInt(button.data('id'), 10) || 0;
+                var name = button.attr('data-name') || ('#' + id);
+                Layer.confirm('确定删除 OpenList 数据源“' + Controller.api.escape(name) + '”吗？\n该源的扫描任务、IPA 资产、Mach-O 索引和 IPA 绑定记录会一并删除；fa_category 不会被删除。', {title: '删除数据源'}, function (index) {
+                    Layer.close(index);
+                    Fast.api.ajax({url: 'ipa_center/deleteSource', type: 'POST', data: {id: id}}, function () {
+                        location.reload();
+                        return false;
+                    });
                 });
             });
 
@@ -78,8 +152,20 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 });
             });
 
+            $(document).on('click', '.btn-parse-retry', function () {
+                var button = $(this);
+                Fast.api.ajax({
+                    url: 'ipa_center/retryParse',
+                    type: 'POST',
+                    data: {asset_id: button.data('id')}
+                }, function () {
+                    $('#asset-table').bootstrapTable('refresh');
+                    return false;
+                });
+            });
+
             var selectedCategoryId = 0;
-            $(document).on('click', '.btn-writeback:not(.disabled)', function () {
+            $(document).on('click', '.btn-writeback', function () {
                 selectedCategoryId = 0;
                 $('#wb-asset-id').val($(this).data('id'));
                 $('#wb-category-search').val('');
