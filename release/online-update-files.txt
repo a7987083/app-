@@ -65,6 +65,8 @@ application/admin/controller/IpaSourceCenter.php
 application/admin/controller/DylibCenter.php
 application/admin/view/ipa_center/index.html
 application/admin/view/ipa_source_center/index.html
+application/admin/view/ipa_source_center/add.html
+application/admin/view/ipa_source_center/edit.html
 application/admin/view/dylib_center/index.html
 application/common/library/Ipa/DylibVerificationService.php
 application/common/library/Ipa/HttpRangeClient.php
@@ -85,3 +87,5 @@ application/index/controller/DylibVerify.php
 public/assets/js/backend/ipa_center.js
 public/assets/js/backend/ipa_source_center.js
 public/assets/js/backend/dylib_center.js
+deploy/systemd/zonoe-ipa-parse-worker.service
+deploy/systemd/zonoe-ipa-parse-worker.timer
