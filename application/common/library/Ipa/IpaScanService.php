@@ -40,7 +40,12 @@ class IpaScanService
     {
         $source=Db::name('ipa_source')->where('id',(int)$item['source_id'])->find();
         if(!$source||!(int)$source['enabled'])throw new \RuntimeException('OpenList 数据源不可用');
-        $token='';if(is_callable($tokenResolver))$token=(string)call_user_func($tokenResolver,$source);elseif(!empty($source['token_ciphertext']))throw new \RuntimeException('加密 Token 需要解密器');
+        $token='';
+        if(is_callable($tokenResolver)){
+            $token=(string)call_user_func($tokenResolver,$source);
+        }elseif(!empty($source['token_ciphertext'])){
+            throw new \RuntimeException('Encrypted OpenList token requires a token resolver');
+        }
         $client=new OpenListClient($source['base_url'],$token,$source['request_timeout']);
         if($item['item_type']==='directory')self::processDirectory($client,$source,$item);else self::touchAssetFromFile($client,$source,$item['path']);
         self::markDone($item);
@@ -57,7 +62,10 @@ class IpaScanService
         }
         $page=1;$pageSize=max(20,min(1000,(int)$source['scan_page_size']));
         do{
-            $data=$client->listDirectory($item['path'],$page,$pageSize,false);$rows=isset($data['content'])&&is_array($data['content'])?$data['content']:[];self::consumeDirectoryRows($source,$item,$rows);$total=isset($data['total'])?(int)$data['total']:count($rows);$page++;
+            $data=$client->listDirectory($item['path'], $page, $pageSize, false);
+            $rows=isset($data['content'])&&is_array($data['content'])?$data['content']:[];
+            self::consumeDirectoryRows($source,$item,$rows);
+            $total=isset($data['total'])?(int)$data['total']:count($rows);$page++;
         }while(!empty($rows)&&(($page-1)*$pageSize)<$total);
     }
 

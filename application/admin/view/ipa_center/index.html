@@ -11,18 +11,18 @@
         </div>
 
         <div class="panel panel-default">
-            <div class="panel-heading"><strong>Worker 状态</strong></div>
+            <div class="panel-heading"><strong>后台任务</strong></div>
             <div class="panel-body">
-                <span style="margin-right:25px">扫描 Worker：{if condition="isset($workers['scan']) && !empty($workers['scan']['alive'])"}<span class="label label-success">运行中</span> <span class="text-muted">{$workers.scan.worker_id|htmlentities} / {$workers.scan.status|htmlentities}</span>{else/}<span class="label label-danger">未检测到</span>{/if}</span>
-                <span>解析 Worker：{if condition="isset($workers['parse']) && !empty($workers['parse']['alive'])"}<span class="label label-success">运行中</span> <span class="text-muted">{$workers.parse.worker_id|htmlentities} / {$workers.parse.status|htmlentities}</span>{else/}<span class="label label-danger">未检测到</span>{/if}</span>
-                <div class="text-muted" style="margin-top:8px">Worker 心跳宽限 {$parseSettings.worker_alive_seconds} 秒；解析较大的 IPA 时不会再按 15 秒误判掉线。</div>
+                <span style="margin-right:25px">扫描 Worker：{if condition="isset($workers['scan']) && !empty($workers['scan']['alive'])"}<span class="label label-success">运行中</span> <span class="text-muted">{$workers.scan.worker_id|htmlentities} / {$workers.scan.status|htmlentities}</span>{else/}<span class="label label-default">未运行</span>{/if}</span>
+                <span>解析调度：{if condition="$parseSettings.parse_enabled"}<span class="label label-success">已启用</span>{else/}<span class="label label-default">已停用</span>{/if} <span class="text-muted">每 {$parseSettings.parse_window_minutes} 分钟最多 {$parseSettings.parse_window_limit} 个；按批次顺序解析，不要求常驻 Parse Worker。</span></span>
             </div>
         </div>
 
         <div class="panel panel-default">
             <div class="panel-heading"><strong>解析设置</strong></div>
             <div class="panel-body">
-                <form id="parse-settings-form" class="form-inline">
+                <form id="parse-settings-form" class="form-inline" role="form" data-toggle="validator" method="POST" action="{:url('ipa_center/saveParseSettings')}">
+                    <input type="hidden" name="parse_enabled" value="0">
                     <label class="checkbox-inline"><input type="checkbox" name="parse_enabled" value="1" {if condition="$parseSettings.parse_enabled"}checked{/if}> 自动解析</label>
                     <div class="form-group"><span>每</span> <input class="form-control" style="width:80px" type="number" min="1" max="1440" name="parse_window_minutes" value="{$parseSettings.parse_window_minutes}"> <span>分钟最多</span> <input class="form-control" style="width:80px" type="number" min="1" max="1000" name="parse_window_limit" value="{$parseSettings.parse_window_limit}"> <span>个</span></div>
                     <div class="form-group"><span>每小时</span> <input class="form-control" style="width:85px" type="number" min="1" name="parse_hour_limit" value="{$parseSettings.parse_hour_limit}"></div>

@@ -15,6 +15,7 @@ on:
       - 'release/sql/2026092201_ipa_data_center.sql'
       - 'release/sql/2026092202_ipa_management_hotfix.sql'
       - 'release/sql/2026092203_ipa_ops_controls.sql'
+      - 'release/sql/2026092204_worker_source_hotfix.sql'
       - 'application/command.php'
       - 'application/admin/command/Ipa*.php'
       - 'application/admin/controller/Ipa*.php'
@@ -23,6 +24,8 @@ on:
       - 'application/common/library/Ipa/**'
       - 'public/assets/js/backend/ipa_center.js'
       - 'public/assets/js/backend/ipa_source_center.js'
+      - 'deploy/systemd/zonoe-ipa-parse-worker.service'
+      - 'deploy/systemd/zonoe-ipa-parse-worker.timer'
       - 'tools/build_online_update.php'
       - '.github/workflows/ipa-online-update-release-gate.yml'
   workflow_dispatch:
@@ -57,7 +60,9 @@ jobs:
           VERSION="$(tr -d '\r\n ' < VERSION)"
           test "$VERSION" = "$(tr -d '\r\n ' < public/update/ver.txt)"
           test "$VERSION" = "$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo $j["version"];')"
-          test "$VERSION" = "2026092203"
+          test "$VERSION" = "2026092204"
+          grep -F "ZONOE 软件源 ${VERSION}" release/RELEASE_NOTES.md
+          grep -F "版本：${VERSION}" PHASE13_RELEASE.txt
 
       - name: Build the real online update package
         run: |
@@ -68,7 +73,7 @@ jobs:
           ACTUAL="$(sha256sum zonoe-online-update.zip | awk '{print $1}')"
           test "$EXPECTED" = "$ACTUAL"
 
-      - name: Verify 2026092203 payload
+      - name: Verify 2026092204 payload
         run: |
           set -euo pipefail
           ZIP=zonoe-online-update.zip
@@ -78,6 +83,8 @@ jobs:
             program/application/admin/controller/IpaSourceCenter.php \
             program/application/admin/view/ipa_center/index.html \
             program/application/admin/view/ipa_source_center/index.html \
+            program/application/admin/view/ipa_source_center/add.html \
+            program/application/admin/view/ipa_source_center/edit.html \
             program/application/common/library/Ipa/IpaOpsSettings.php \
             program/application/common/library/Ipa/IpaSoftwareSourceService.php \
             program/application/common/library/Ipa/IpaCompareService.php \
@@ -85,7 +92,10 @@ jobs:
             program/application/common/library/Ipa/OpenListClient.php \
             program/public/assets/js/backend/ipa_center.js \
             program/public/assets/js/backend/ipa_source_center.js \
-            mysql/2026092203_ipa_ops_controls.sql; do
+            program/deploy/systemd/zonoe-ipa-parse-worker.service \
+            program/deploy/systemd/zonoe-ipa-parse-worker.timer \
+            mysql/2026092203_ipa_ops_controls.sql \
+            mysql/2026092204_worker_source_hotfix.sql; do
               unzip -Z1 "$ZIP" | grep -Fx "$f"
           done
 
@@ -115,24 +125,22 @@ jobs:
           ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
           SQL
 
-      - name: Prepare 2026092202 installed state
+      - name: Prepare 2026092203 installed state
         run: |
           set -euo pipefail
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092201_ipa_data_center.sql
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092202_ipa_management_hotfix.sql
-          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME='fa_ipa_worker_state'")" = "1"
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092203_ipa_ops_controls.sql
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME='fa_ipa_software_source'")" = "1"
 
-      - name: Apply 2026092203 migration twice on MySQL 5.7
+      - name: Apply 2026092204 migration twice on MySQL 5.7
         run: |
           set -euo pipefail
-          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092203_ipa_ops_controls.sql
-          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092203_ipa_ops_controls.sql
-          for t in fa_ipa_setting fa_ipa_parse_attempt fa_ipa_software_source fa_ipa_compare_result; do
-            test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME='$t'")" = "1"
-          done
-          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_source_center/index'")" = "1"
-          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_center/assetDetail'")" = "1"
-          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_ipa_setting WHERE setting_key='parse_window_minutes' AND setting_value='5'")" = "1"
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092204_worker_source_hotfix.sql
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092204_worker_source_hotfix.sql
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_source_center/add'")" = "1"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_source_center/edit'")" = "1"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_source_center/del'")" = "1"
 
       - name: Verify PHP 7.0 runtime contracts
         run: |

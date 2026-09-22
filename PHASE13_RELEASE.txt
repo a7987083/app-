@@ -1,23 +1,23 @@
-ZONOE 软件源 Release 2026092203
-版本：2026092203
-基线：source-v2026092202
-阶段：IPA Data Center 生产运维控制与软件源对账
-发布分支：release/2026092203-ipa-ops-controls
+ZONOE 软件源 Release 2026092204
+版本：2026092204
+基线：source-v2026092203
+阶段：IPA Data Center FastAdmin/解析调度/软件源热修复
+发布分支：release/2026092204-worker-source-hotfix
 发布状态：候选（CI 验证中）
 
 更新内容：
-1. 新增解析限速设置：每 N 分钟最多 N 个，并有小时/每日上限。
-2. Parse Worker 启动前校验服务器密钥，系统配置错误不再污染 IPA parse_failed。
-3. Worker 心跳宽限默认 180 秒，降低长解析时“未检测到”误判。
-4. 解析失败详情可点击查看真实错误。
-5. OpenList 扫描优先 refresh=false + per_page=0，失败自动回退分页。
-6. OpenList 数据源支持停止活动任务后删除，并增加并发回写保护。
-7. 新增“软件源”子菜单，支持多 MySQL 源、测试、编辑、删除、优先级、启停、只读/允许写回。
-8. IPA 解析完成后自动与软件源数据库比对，状态旁新增异常列。
-9. 异常详情显示数据库值与 IPA 值，可人工选择字段写回；高风险字段默认不选，默认不自动写数据库。
-10. 新增 fa_ipa_setting、fa_ipa_parse_attempt、fa_ipa_software_source、fa_ipa_compare_result。
+1. 软件源新增/编辑/删除改回 FastAdmin 原生 Table/Form 流程，避免手写 AJAX 成功后空错误和必须手动刷新。
+2. 软件源测试连接保留只读测试动作，并返回明确失败原因。
+3. 解析设置改为 FastAdmin Form.api.bindevent 标准提交。
+4. Parse 执行模型改为 one-shot 批次调度，不再要求常驻 Parse Worker；解析数量继续受每 N 分钟/小时/每日额度控制。
+5. IPA 解析完成后自动触发软件源数据库比对；异常详情无历史结果时会主动生成比对结果。
+6. CLI Secret/Token 在领取任务前预检，配置错误不再污染 IPA 为 parse_failed。
+7. OpenList 扫描 Worker 同样执行 Secret 预检；继续使用 refresh=false + per_page=0 优先策略。
+8. OpenList 数据源可安全停止未执行任务并删除，避免 pending 队列永久卡住删除。
+9. 异常详情继续保持预览后人工选择字段写回；不自动修改软件源数据库。
+10. 新增 MySQL 5.7 幂等迁移 release/sql/2026092204_worker_source_hotfix.sql。
 
 在线更新：
-- 目标升级：source-v2026092202 -> source-v2026092203。
-- 增量数据库迁移：release/sql/2026092203_ipa_ops_controls.sql。
-- 在线更新仍沿用原 UpdateManager / UpdateInstaller，未改变下载、SHA256、备份、SQL、文件覆盖、版本写入和失败回滚逻辑。
+- 目标升级：source-v2026092203 -> source-v2026092204。
+- 增量数据库迁移：release/sql/2026092204_worker_source_hotfix.sql。
+- 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、SQL、文件覆盖、版本写入和失败回滚逻辑。

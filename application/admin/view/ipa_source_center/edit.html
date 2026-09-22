@@ -1,0 +1,15 @@
+<form id="edit-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
+    <div class="alert alert-info">软件源默认只读。密码留空表示保留原密码；只有明确开启“允许字段写回”后，异常预览页才允许人工勾选字段写回。</div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">名称</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="row[name]" data-rule="required" type="text" value="{$row.name|htmlentities}"></div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Slug</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="row[slug]" data-rule="required" type="text" value="{$row.slug|htmlentities}"></div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">MySQL Host</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="row[host]" data-rule="required" type="text" value="{$row.host|htmlentities}"></div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Port</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="row[port]" type="number" min="1" max="65535" value="{$row.port}"></div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Database</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="row[database_name]" data-rule="required" type="text" value="{$row.database_name|htmlentities}"></div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Username</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="row[username]" data-rule="required" type="text" value="{$row.username|htmlentities}"></div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">Password</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="row[password]" type="password" autocomplete="new-password" placeholder="留空保持原密码"></div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">应用表</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="row[table_name]" type="text" value="{$row.table_name|htmlentities}"></div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">优先级</label><div class="col-xs-12 col-sm-8"><input class="form-control" name="row[priority]" type="number" value="{$row.priority}"></div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">启用</label><div class="col-xs-12 col-sm-8">{:build_radios('row[enabled]', ['1'=>'是','0'=>'否'], (string)$row.enabled)}</div></div>
+    <div class="form-group"><label class="control-label col-xs-12 col-sm-2">允许字段写回</label><div class="col-xs-12 col-sm-8">{:build_radios('row[allow_write]', ['1'=>'允许','0'=>'只读'], (string)$row.allow_write)}</div></div>
+    <div class="form-group layer-footer"><label class="control-label col-xs-12 col-sm-2"></label><div class="col-xs-12 col-sm-8"><button type="submit" class="btn btn-success btn-embossed disabled">{:__('OK')}</button><button type="reset" class="btn btn-default btn-embossed">{:__('Reset')}</button></div></div>
+</form>
