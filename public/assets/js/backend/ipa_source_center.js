@@ -47,11 +47,16 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                             icon: 'fa fa-plug',
                             classname: 'btn btn-xs btn-success btn-source-test',
                             click: function (e, value, row) {
+                                if (e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }
                                 Fast.api.ajax({
                                     url: 'ipa_source_center/testSource',
                                     type: 'POST',
                                     data: {id: row.id}
                                 });
+                                return false;
                             }
                         }],
                         formatter: Table.api.formatter.operate
@@ -59,6 +64,11 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 ]]
             });
             Table.api.bindevent(table);
+
+            table.on('click', '.btn-source-test', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
         },
         add: function () {
             Controller.api.bindevent();
