@@ -66,7 +66,46 @@ class IpaCenter extends Backend
     public function saveParseSettings()
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
-        try{$cfg=IpaOpsSettings::save($this->request->post());$this->success('解析设置已保存',null,$cfg);}catch(\Exception $e){$this->error($e->getMessage());}
+        try{$cfg=IpaOpsSettings::save($this->request->post());$this->success('解析设置已保存',url('ipa_center/index'),$cfg);}catch(\Exception $e){$this->error($e->getMessage());}
+    }
+
+    public function pauseParse()
+    {
+        if(!$this->request->isPost())$this->error('仅支持 POST');
+        try{IpaOpsSettings::save(['parse_enabled'=>0]);$this->success('自动解析已暂停；已开始的当前 IPA 允许完成，之后不会领取新任务');}catch(\Exception $e){$this->error($e->getMessage());}
+    }
+
+    public function resumeParse()
+    {
+        if(!$this->request->isPost())$this->error('仅支持 POST');
+        try{IpaOpsSettings::save(['parse_enabled'=>1]);$this->success('自动解析已恢复');}catch(\Exception $e){$this->error($e->getMessage());}
+    }
+
+    public function clearParseResults()
+    {
+        if(!$this->request->isPost())$this->error('仅支持 POST');
+        $settings=IpaOpsSettings::all();
+        if(!empty($settings['parse_enabled']))$this->error('请先暂停自动解析，再清空解析结果');
+        $parsing=(int)Db::name('ipa_asset')->where('status','parsing')->count();
+        if($parsing>0)$this->error('仍有 '.$parsing.' 个 IPA 正在解析，请等待当前任务结束后再清空');
+        $now=time();$affected=0;
+        Db::startTrans();
+        try{
+            while(true){
+                $rows=Db::name('ipa_asset')->field('id')->where('status','in',['parsed','parse_failed'])->limit(500)->select();
+                if(!$rows)break;
+                $ids=[];foreach($rows as $row)$ids[]=(int)$row['id'];
+                Db::name('ipa_compare_result')->where('asset_id','in',$ids)->delete();
+                Db::name('ipa_binary')->where('asset_id','in',$ids)->delete();
+                Db::name('ipa_asset')->where('id','in',$ids)->update([
+                    'status'=>'discovered','bundle_id'=>'','app_name'=>'','app_version'=>'','build_version'=>'','minimum_os'=>'','sha256'=>'','last_error'=>null,'parsed_at'=>0,'updated_at'=>$now
+                ]);
+                $affected+=count($ids);
+            }
+            Db::name('ipa_parse_attempt')->delete(true);
+            Db::commit();
+        }catch(\Exception $e){Db::rollback();$this->error($e->getMessage());}
+        $this->success('已清空 '.$affected.' 个 IPA 的解析/比对结果，文件扫描记录和 fa_category 均未删除');
     }
 
     public function assetDetail()
@@ -120,7 +159,7 @@ class IpaCenter extends Backend
         $rootPath='/'.ltrim(preg_replace('#/+#','/',$rootPath),'/');$now=time();
         $data=['name'=>$name,'base_url'=>$baseUrl,'root_path'=>$rootPath,'enabled'=>(int)$this->request->post('enabled',1)?1:0,'scan_page_size'=>max(20,min(1000,(int)$this->request->post('scan_page_size',500))),'request_timeout'=>max(3,min(120,(int)$this->request->post('request_timeout',20))),'updated_at'=>$now];
         if($token!==''){try{$data['token_ciphertext']=SecretBox::encrypt($token);}catch(\Exception $e){$this->error($e->getMessage());}}
-        if($id>0)Db::name('ipa_source')->where('id',$id)->update($data);else{$data['created_at']=$now;$id=Db::name('ipa_source')->insertGetId($data);} $this->success('已保存',null,['id'=>(int)$id]);
+        if($id>0)Db::name('ipa_source')->where('id',$id)->update($data);else{$data['created_at']=$now;$id=Db::name('ipa_source')->insertGetId($data);} $this->success('已保存',url('ipa_center/index'),['id'=>(int)$id]);
     }
 
     public function deleteSource()
