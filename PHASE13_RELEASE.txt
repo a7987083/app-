@@ -3,7 +3,7 @@ ZONOE 软件源 Release 2026092202
 基线：source-v2026092201
 阶段：IPA Data Center 管理与解析稳定性热修
 发布分支：release/2026092202-ipa-management-hotfix
-发布状态：候选正式 Release，等待完整门禁与在线更新 E2E
+发布状态：正式 Release
 
 更新内容：
 1. OpenList 数据源新增编辑、取消编辑和安全删除。
