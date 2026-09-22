@@ -50,6 +50,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                             click: function (e, value, row) {
                                 if (e) {
                                     e.preventDefault();
+                                    e.stopPropagation();
                                     e.stopImmediatePropagation();
                                 }
                                 Fast.api.ajax({
@@ -68,6 +69,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
 
             table.on('mousedown mouseup click', '.btn-source-test', function (e) {
                 e.preventDefault();
+                e.stopPropagation();
                 e.stopImmediatePropagation();
                 return false;
             });
