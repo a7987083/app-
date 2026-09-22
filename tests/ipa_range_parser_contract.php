@@ -11,9 +11,15 @@ use app\common\library\Ipa\PlistDecoder;
 class MemoryRangeClient extends HttpRangeClient
 {
     private $bytes;
+    public $requestedBytes = 0;
+    public $maxRequestBytes = 0;
     public function __construct($bytes) { $this->bytes = $bytes; }
     public function size() { return strlen($this->bytes); }
-    public function getRange($start, $length) { return substr($this->bytes, $start, $length); }
+    public function getRange($start, $length) {
+        $this->requestedBytes += (int)$length;
+        $this->maxRequestBytes = max($this->maxRequestBytes, (int)$length);
+        return substr($this->bytes, $start, $length);
+    }
 }
 
 function buildZipOne($name, $data)
@@ -35,6 +41,29 @@ $decoded = (new PlistDecoder())->decode($zip->extract($entry));
 if ($decoded['CFBundleIdentifier'] !== 'com.example.game' || $decoded['CFBundleShortVersionString'] !== '1.2.3') {
     fwrite(STDERR, "XML plist contract failed\n"); exit(1);
 }
+
+// Exercise the production OOM fix against a genuinely large deflated ZIP member. The parser
+// must materialize only the requested 2 MiB prefix, not the 32 MiB uncompressed member.
+$large = '';
+for ($i = 0; $i < 32768; $i++) {
+    // Deterministic but deliberately poorly compressible enough to require multiple input chunks.
+    $large .= hash('sha256', 'ipa-prefix-fixture-' . $i, true) . str_repeat(chr($i & 0xff), 992);
+}
+$large = substr($large, 0, 32 * 1024 * 1024);
+$largeZipBytes = buildZipOne('Payload/Game.app/Game', $large);
+$memory = new MemoryRangeClient($largeZipBytes);
+$largeZip = new RemoteZipReader($memory);
+$largeEntry = $largeZip->findFirst('#^Payload/Game\\.app/Game$#');
+if (!$largeEntry) { fwrite(STDERR, "Large binary entry not found\n"); exit(1); }
+$prefixLimit = 2 * 1024 * 1024;
+$prefix = $largeZip->extractPrefix($largeEntry, $prefixLimit, 128 * 1024);
+if (strlen($prefix) !== $prefixLimit || $prefix !== substr($large, 0, $prefixLimit)) {
+    fwrite(STDERR, "Bounded deflate prefix extraction failed\n"); exit(1);
+}
+if ($memory->maxRequestBytes > 2 * 1024 * 1024) {
+    fwrite(STDERR, "Bounded prefix used an oversized HTTP range\n"); exit(1);
+}
+unset($large, $largeZipBytes, $prefix);
 
 $binaryFixture = '/tmp/ipa_binary_plist_fixture.bin';
 if (is_file($binaryFixture)) {
