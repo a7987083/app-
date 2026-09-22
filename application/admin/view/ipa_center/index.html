@@ -1,7 +1,5 @@
 <div class="panel panel-default panel-intro">
-    <div class="panel-heading">
-        {:build_heading(null,FALSE)}
-    </div>
+    <div class="panel-heading">{:build_heading(null,FALSE)}</div>
     <div class="panel-body">
         <div class="row">
             <div class="col-sm-2"><div class="well text-center"><strong>{$summary.sources}</strong><br>OpenList 数据源</div></div>
@@ -15,19 +13,24 @@
         <div class="panel panel-default">
             <div class="panel-heading"><strong>Worker 状态</strong></div>
             <div class="panel-body">
-                <span style="margin-right:25px">扫描 Worker：
-                    {if condition="isset($workers['scan']) && !empty($workers['scan']['alive'])"}
-                    <span class="label label-success">运行中</span>
-                    <span class="text-muted"> {$workers.scan.worker_id|htmlentities} / {$workers.scan.status|htmlentities}</span>
-                    {else/}<span class="label label-danger">未检测到</span>{/if}
-                </span>
-                <span>解析 Worker：
-                    {if condition="isset($workers['parse']) && !empty($workers['parse']['alive'])"}
-                    <span class="label label-success">运行中</span>
-                    <span class="text-muted"> {$workers.parse.worker_id|htmlentities} / {$workers.parse.status|htmlentities}</span>
-                    {else/}<span class="label label-danger">未检测到</span>{/if}
-                </span>
-                <div class="text-muted" style="margin-top:8px">目录扫描优先使用 OpenList 缓存；IPA 元数据使用 HTTP Range，小范围读取 Info.plist 和 Mach-O 头部。</div>
+                <span style="margin-right:25px">扫描 Worker：{if condition="isset($workers['scan']) && !empty($workers['scan']['alive'])"}<span class="label label-success">运行中</span> <span class="text-muted">{$workers.scan.worker_id|htmlentities} / {$workers.scan.status|htmlentities}</span>{else/}<span class="label label-danger">未检测到</span>{/if}</span>
+                <span>解析 Worker：{if condition="isset($workers['parse']) && !empty($workers['parse']['alive'])"}<span class="label label-success">运行中</span> <span class="text-muted">{$workers.parse.worker_id|htmlentities} / {$workers.parse.status|htmlentities}</span>{else/}<span class="label label-danger">未检测到</span>{/if}</span>
+                <div class="text-muted" style="margin-top:8px">Worker 心跳宽限 {$parseSettings.worker_alive_seconds} 秒；解析较大的 IPA 时不会再按 15 秒误判掉线。</div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>解析设置</strong></div>
+            <div class="panel-body">
+                <form id="parse-settings-form" class="form-inline">
+                    <label class="checkbox-inline"><input type="checkbox" name="parse_enabled" value="1" {if condition="$parseSettings.parse_enabled"}checked{/if}> 自动解析</label>
+                    <div class="form-group"><span>每</span> <input class="form-control" style="width:80px" type="number" min="1" max="1440" name="parse_window_minutes" value="{$parseSettings.parse_window_minutes}"> <span>分钟最多</span> <input class="form-control" style="width:80px" type="number" min="1" max="1000" name="parse_window_limit" value="{$parseSettings.parse_window_limit}"> <span>个</span></div>
+                    <div class="form-group"><span>每小时</span> <input class="form-control" style="width:85px" type="number" min="1" name="parse_hour_limit" value="{$parseSettings.parse_hour_limit}"></div>
+                    <div class="form-group"><span>每天</span> <input class="form-control" style="width:85px" type="number" min="1" name="parse_day_limit" value="{$parseSettings.parse_day_limit}"></div>
+                    <div class="form-group"><span>失败冷却</span> <input class="form-control" style="width:85px" type="number" min="1" name="parse_retry_minutes" value="{$parseSettings.parse_retry_minutes}"> <span>分钟</span></div>
+                    <button class="btn btn-primary" type="submit"><i class="fa fa-save"></i> 保存设置</button>
+                </form>
+                {if condition="!empty($parseQuota)"}<div class="text-muted" style="margin-top:8px">当前用量：窗口 {$parseQuota.window_used}/{$parseSettings.parse_window_limit}，小时 {$parseQuota.hour_used}/{$parseSettings.parse_hour_limit}，今日 {$parseQuota.day_used}/{$parseSettings.parse_day_limit}。</div>{/if}
             </div>
         </div>
 
@@ -36,94 +39,34 @@
             <div class="panel-body">
                 <form id="source-form" class="form-inline">
                     <input type="hidden" name="id" value="0">
-                    <div class="form-group"><input class="form-control" name="name" placeholder="名称" required></div>
-                    <div class="form-group"><input class="form-control" style="min-width:260px" name="base_url" placeholder="https://openlist.example.com" required></div>
-                    <div class="form-group"><input class="form-control" name="root_path" value="/" placeholder="/IPA"></div>
-                    <div class="form-group"><input class="form-control" name="token" type="password" placeholder="Token（编辑留空不修改）"></div>
-                    <div class="form-group">
-                        <select class="form-control" name="enabled">
-                            <option value="1">启用</option>
-                            <option value="0">停用</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><input class="form-control" style="width:105px" type="number" min="20" max="1000" name="scan_page_size" value="500" title="扫描分页"></div>
-                    <div class="form-group"><input class="form-control" style="width:90px" type="number" min="3" max="120" name="request_timeout" value="20" title="超时秒数"></div>
+                    <input class="form-control" name="name" placeholder="名称" required>
+                    <input class="form-control" style="min-width:260px" name="base_url" placeholder="https://openlist.example.com" required>
+                    <input class="form-control" name="root_path" value="/" placeholder="/IPA">
+                    <input class="form-control" name="token" type="password" placeholder="Token（编辑留空不修改）">
+                    <select class="form-control" name="enabled"><option value="1">启用</option><option value="0">停用</option></select>
+                    <input class="form-control" style="width:105px" type="number" min="20" max="1000" name="scan_page_size" value="500" title="分页回退大小">
+                    <input class="form-control" style="width:90px" type="number" min="3" max="120" name="request_timeout" value="20" title="超时秒数">
                     <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> <span id="source-save-label">保存</span></button>
                     <button type="button" class="btn btn-default hide" id="source-edit-cancel">取消编辑</button>
                 </form>
+                <div class="text-muted" style="margin-top:8px">扫描优先使用 OpenList 缓存（refresh=false）和单目录完整清单；不兼容 per_page=0 时自动回退分页。</div>
                 <hr>
-                <table class="table table-bordered table-striped">
-                    <thead><tr><th>ID</th><th>名称</th><th>URL</th><th>根目录</th><th>状态</th><th>操作</th></tr></thead>
-                    <tbody>
-                    {foreach name="sources" item="source"}
-                    <tr>
-                        <td>{$source.id}</td>
-                        <td>{$source.name|htmlentities}</td>
-                        <td>{$source.base_url|htmlentities}</td>
-                        <td>{$source.root_path|htmlentities}</td>
-                        <td>{if condition="$source.enabled"}<span class="label label-success">启用</span>{else/}<span class="label label-default">停用</span>{/if}</td>
-                        <td>
-                            <button type="button" class="btn btn-xs btn-primary btn-source-edit"
-                                    data-id="{$source.id}"
-                                    data-name="{$source.name|htmlentities}"
-                                    data-base-url="{$source.base_url|htmlentities}"
-                                    data-root-path="{$source.root_path|htmlentities}"
-                                    data-enabled="{$source.enabled}"
-                                    data-scan-page-size="{$source.scan_page_size}"
-                                    data-request-timeout="{$source.request_timeout}">编辑</button>
-                            <button type="button" class="btn btn-xs btn-success btn-scan" data-id="{$source.id}" data-mode="incremental">增量扫描</button>
-                            <button type="button" class="btn btn-xs btn-warning btn-scan" data-id="{$source.id}" data-mode="full">全量扫描</button>
-                            <button type="button" class="btn btn-xs btn-danger btn-source-delete" data-id="{$source.id}" data-name="{$source.name|htmlentities}">删除</button>
-                        </td>
-                    </tr>
-                    {/foreach}
-                    </tbody>
-                </table>
+                <table class="table table-bordered table-striped"><thead><tr><th>ID</th><th>名称</th><th>URL</th><th>根目录</th><th>状态</th><th>操作</th></tr></thead><tbody>
+                {foreach name="sources" item="source"}<tr><td>{$source.id}</td><td>{$source.name|htmlentities}</td><td>{$source.base_url|htmlentities}</td><td>{$source.root_path|htmlentities}</td><td>{if condition="$source.enabled"}<span class="label label-success">启用</span>{else/}<span class="label label-default">停用</span>{/if}</td><td>
+                    <button type="button" class="btn btn-xs btn-primary btn-source-edit" data-id="{$source.id}" data-name="{$source.name|htmlentities}" data-base-url="{$source.base_url|htmlentities}" data-root-path="{$source.root_path|htmlentities}" data-enabled="{$source.enabled}" data-scan-page-size="{$source.scan_page_size}" data-request-timeout="{$source.request_timeout}">编辑</button>
+                    <button type="button" class="btn btn-xs btn-success btn-scan" data-id="{$source.id}" data-mode="incremental">增量扫描</button>
+                    <button type="button" class="btn btn-xs btn-warning btn-scan" data-id="{$source.id}" data-mode="full">全量扫描</button>
+                    <button type="button" class="btn btn-xs btn-danger btn-source-delete" data-id="{$source.id}" data-name="{$source.name|htmlentities}">删除</button>
+                </td></tr>{/foreach}
+                </tbody></table>
             </div>
         </div>
 
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>扫描任务</strong></div>
-            <div class="panel-body"><table id="job-table"></table></div>
-        </div>
-
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>IPA 资产</strong> <span class="text-muted">discovered=等待解析，parsing=解析中，parsed=完成，parse_failed=可重试</span></div>
-            <div class="panel-body"><table id="asset-table"></table></div>
-        </div>
+        <div class="panel panel-default"><div class="panel-heading"><strong>扫描任务</strong></div><div class="panel-body"><table id="job-table"></table></div></div>
+        <div class="panel panel-default"><div class="panel-heading"><strong>IPA 资产</strong> <span class="text-muted">解析完成后自动与“软件源”中的 MySQL 数据库比对；只生成异常，不自动写数据库。</span></div><div class="panel-body"><table id="asset-table"></table></div></div>
     </div>
 </div>
 
-<div class="modal fade" id="writeback-modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                <h4 class="modal-title">手动写回 fa_category</h4>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="wb-asset-id" value="0">
-                <div class="form-group">
-                    <label>目标项目</label>
-                    <div class="input-group">
-                        <input type="text" id="wb-category-search" class="form-control" placeholder="输入项目 ID 或应用名称">
-                        <span class="input-group-btn"><button class="btn btn-default" type="button" id="wb-search-btn">搜索</button></span>
-                    </div>
-                </div>
-                <div id="wb-category-results"></div>
-                <hr>
-                <div id="wb-preview" class="hide">
-                    <div id="wb-warnings"></div>
-                    <table class="table table-bordered table-condensed">
-                        <thead><tr><th width="70">写回</th><th>字段</th><th>当前值</th><th>IPA 建议值</th></tr></thead>
-                        <tbody id="wb-diff-body"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary disabled" id="wb-apply-btn">确认写回所选字段</button>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="ipa-detail-modal" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button><h4 class="modal-title">IPA / 异常详情</h4></div><div class="modal-body" id="ipa-detail-body"></div><div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">关闭</button></div></div></div></div>
+
+<div class="modal fade" id="writeback-modal" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button><h4 class="modal-title">预览写回 fa_category</h4></div><div class="modal-body"><input type="hidden" id="wb-asset-id" value="0"><div class="alert alert-warning">不会修改 IPA 文件；只有你最终确认的字段才会写入数据库。</div><div class="form-group"><label>目标项目</label><div class="input-group"><input type="text" id="wb-category-search" class="form-control" placeholder="输入项目 ID 或应用名称"><span class="input-group-btn"><button class="btn btn-default" type="button" id="wb-search-btn">搜索</button></span></div></div><div id="wb-category-results"></div><hr><div id="wb-preview" class="hide"><div id="wb-warnings"></div><table class="table table-bordered table-condensed"><thead><tr><th width="70">写回</th><th>字段</th><th>当前值</th><th>IPA 建议值</th></tr></thead><tbody id="wb-diff-body"></tbody></table></div></div><div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">取消</button><button type="button" class="btn btn-primary disabled" id="wb-apply-btn">确认写回所选字段</button></div></div></div></div>
