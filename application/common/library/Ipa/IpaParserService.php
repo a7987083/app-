@@ -90,7 +90,9 @@ class IpaParserService
     protected static function indexBinaries($assetId, RemoteZipReader $zip, array $entries, $executable, $now)
     {
         $inspector = new MachOInspector();
-        $safeExtractLimit = self::binaryEnrichmentLimit();
+        $fullHashLimit = self::binaryHashLimit();
+        $headerLimit = self::binaryHeaderLimit();
+
         foreach ($entries as $name => $entry) {
             $type = self::binaryType($name, $executable);
             if ($type === null || substr($name, -1) === '/') {
@@ -103,26 +105,37 @@ class IpaParserService
             $uncompressedSize = (int)$entry['uncompressed_size'];
             $compressedSize = isset($entry['compressed_size']) ? (int)$entry['compressed_size'] : $uncompressedSize;
 
-            // RemoteZipReader::extract() temporarily holds both compressed and uncompressed data.
-            // Keep synchronous enrichment deliberately small so a large game binary cannot kill a
-            // long-running PHP 7 worker with a 128M memory_limit. Large binaries are still indexed
-            // by path/type/size and IPA metadata parsing is allowed to complete.
-            if ($uncompressedSize > 0
-                && $uncompressedSize <= $safeExtractLimit
-                && $compressedSize <= $safeExtractLimit) {
+            // Architecture/load-command inspection only needs the beginning of a Mach-O member.
+            // Use bounded streaming inflate so large game binaries never become large PHP strings.
+            if ($uncompressedSize > 0) {
                 try {
-                    $bytes = $zip->extract($entry, $safeExtractLimit);
-                    $sha256 = hash('sha256', $bytes);
-                    $meta = $inspector->inspect($bytes);
-                    if (!empty($meta['architectures']) && is_array($meta['architectures'])) {
-                        $architectures = implode(',', array_values(array_unique($meta['architectures'])));
+                    $prefix = $zip->extractPrefix($entry, $headerLimit);
+                    if ($prefix !== '') {
+                        $meta = $inspector->inspect($prefix);
+                        if (!empty($meta['architectures']) && is_array($meta['architectures'])) {
+                            $architectures = implode(',', array_values(array_unique($meta['architectures'])));
+                        }
+                        if (!empty($meta['install_name'])) {
+                            $installName = (string)$meta['install_name'];
+                        }
                     }
-                    if (!empty($meta['install_name'])) {
-                        $installName = (string)$meta['install_name'];
-                    }
-                    unset($bytes, $meta);
+                    unset($prefix, $meta);
                 } catch (\Exception $e) {
-                    // Binary enrichment is best-effort: a malformed/non-Mach-O member must not discard IPA metadata.
+                    // Header enrichment is best effort. IPA metadata remains authoritative and must finish.
+                }
+            }
+
+            // SHA256 requires the complete uncompressed member. Keep that synchronous only for small files;
+            // large members remain indexed and can be hashed later by a dedicated streaming enrichment worker.
+            if ($uncompressedSize > 0
+                && $uncompressedSize <= $fullHashLimit
+                && $compressedSize <= $fullHashLimit) {
+                try {
+                    $bytes = $zip->extract($entry, $fullHashLimit);
+                    $sha256 = hash('sha256', $bytes);
+                    unset($bytes);
+                } catch (\Exception $e) {
+                    // Hash enrichment is best effort.
                 }
             }
 
@@ -141,11 +154,15 @@ class IpaParserService
         }
     }
 
-    protected static function binaryEnrichmentLimit()
+    protected static function binaryHeaderLimit()
     {
-        // 8 MiB is safe on the production PHP 7 configuration currently using memory_limit=128M.
-        // RemoteZipReader may hold compressed+inflated copies simultaneously, so the previous 64 MiB
-        // ceiling was unsafe even when the final uncompressed member itself was below 64 MiB.
+        // 2 MiB comfortably covers normal Mach-O headers/load commands while keeping Range traffic bounded.
+        return 2 * 1024 * 1024;
+    }
+
+    protected static function binaryHashLimit()
+    {
+        // Full-member hashing remains intentionally conservative under production PHP 7 memory_limit=128M.
         return 8 * 1024 * 1024;
     }
 
