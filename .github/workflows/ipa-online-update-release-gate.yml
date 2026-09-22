@@ -24,8 +24,8 @@ on:
       - 'application/common/library/Ipa/**'
       - 'public/assets/js/backend/ipa_center.js'
       - 'public/assets/js/backend/ipa_source_center.js'
-      - 'deploy/systemd/zonoe-ipa-parse-schedule.service'
-      - 'deploy/systemd/zonoe-ipa-parse-schedule.timer'
+      - 'deploy/systemd/zonoe-ipa-parse-worker.service'
+      - 'deploy/systemd/zonoe-ipa-parse-worker.timer'
       - 'tools/build_online_update.php'
       - '.github/workflows/ipa-online-update-release-gate.yml'
   workflow_dispatch:
@@ -92,6 +92,8 @@ jobs:
             program/application/common/library/Ipa/OpenListClient.php \
             program/public/assets/js/backend/ipa_center.js \
             program/public/assets/js/backend/ipa_source_center.js \
+            program/deploy/systemd/zonoe-ipa-parse-worker.service \
+            program/deploy/systemd/zonoe-ipa-parse-worker.timer \
             mysql/2026092203_ipa_ops_controls.sql \
             mysql/2026092204_worker_source_hotfix.sql; do
               unzip -Z1 "$ZIP" | grep -Fx "$f"
