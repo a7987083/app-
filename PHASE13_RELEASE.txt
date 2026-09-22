@@ -1,30 +1,23 @@
-ZONOE 软件源 Release 2026092201
-版本：2026092201
-基线：2026091809
-阶段：IPA Data Center v1 + Dylib Verification Center v1
-发布分支：release/2026092201-ipa-data-center
+ZONOE 软件源 Release 2026092202
+版本：2026092202
+基线：source-v2026092201
+阶段：IPA Data Center 管理与解析稳定性热修
+发布分支：release/2026092202-ipa-management-hotfix
 发布状态：候选正式 Release，等待完整门禁与在线更新 E2E
 
 更新内容：
-1. 新增 IPA 数据中心：OpenList 数据源、分页扫描、增量/全量扫描、扫描队列、独立解析 Worker。
-2. 新增 HTTP Range IPA/ZIP 解析，支持 XML/binary plist，避免为读取元数据下载整包 IPA。
-3. 新增 Mach-O 深度索引：SHA256、arm64/x86_64 等 architectures、LC_ID_DYLIB/install_name。
-4. 新增 IPA -> fa_category 手动 preview/apply 写回，后台 Worker 禁止自动写回。
-5. 新增 Dylib 验证中心：Dylib 注册、版本策略、多 BundleID 绑定、验证日志、独立验证密钥。
-6. 新增 Dylib 验证 API：UDID/卡密/黑名单/BundleID/版本/SHA256/HMAC/timestamp/nonce/短期 session。
-7. 默认离线容忍 900 秒；失败动作与版本状态均由服务端策略控制，不在客户端写死。
-8. 新增 Objective-C arm64 验证客户端，包含宿主 BundleID、自身 SHA256、HMAC、Keychain 离线缓存。
-9. 新增 ipa:worker、ipa:parse-worker、ipa:maintenance 与 systemd 模板。
-10. 新增 MySQL 5.7 / 100000 资产 / Worker contention / PHP 7.0 / iPhoneOS arm64 / OpenList HTTP 集成门禁。
+1. OpenList 数据源新增编辑、取消编辑和安全删除。
+2. 删除数据源时清理该源扫描任务、队列、IPA 资产、Mach-O 索引和 IPA 绑定；不删除 fa_category。
+3. IPA 资产新增重新解析/失败重试入口，并明确展示 discovered/parsing/parsed/parse_failed 状态。
+4. Scan Worker / Parse Worker 新增心跳状态，后台直接显示运行状态。
+5. OpenList 扫描继续固定 refresh=false，优先使用 OpenList 缓存。
+6. 修复 PHP 7.0 memory_limit=128M 下大 Mach-O 解析 OOM：Info.plist 元数据仍优先完成；Mach-O 头部使用最多 2MiB 流式 Range 解压；完整 SHA256 仅同步处理 <=8MiB 二进制。
+7. RemoteZipReader 新增 bounded extractPrefix，deflate 成员使用 inflate_init/inflate_add 分块解压，不再把几十 MB 二进制一次性放入 PHP 内存。
+8. OpenList Token 保存异常现在显示真实错误信息，不再只弹通用 error。
+9. 新增 fa_ipa_worker_state 表和 FastAdmin deleteSource/retryParse 权限节点。
 
 在线更新：
-- GitHub Release 标签：source-v2026092201。
-- 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
-- 在线更新程序包已加入 IPA Data Center / Dylib Verification Center 的服务器运行文件。
-- 数据库迁移：release/sql/2026092201_ipa_data_center.sql；MySQL 5.7 幂等设计。
-- file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity 监控的 4 个关键文件。
-- 在线更新仍沿用原 UpdateManager / UpdateInstaller：下载、SHA256、备份、数据库迁移、文件覆盖校验、版本写入和失败回滚逻辑均不改变。
-
-上线后配置：
-- 生产环境必须设置 IPA_SERVER_SECRET（至少 32 bytes）后再保存 OpenList Token 或生成 Dylib 验证密钥。
-- 在线更新会安装 Worker 代码；systemd 服务文件保留在 deploy/systemd 供服务器运维启用，不由 updater 自动写入 /etc/systemd/system。
+- 目标升级：source-v2026092201 -> source-v2026092202。
+- 增量数据库迁移：release/sql/2026092202_ipa_management_hotfix.sql。
+- 在线更新仍沿用原 UpdateManager / UpdateInstaller，未改变下载、SHA256、备份、SQL、文件覆盖、版本写入和失败回滚逻辑。
+- file_sign 继续为 f3f6e072f814d06403ce5e393967c9e2；未修改 UpdateIntegrity 当前监控的 4 个关键文件。
