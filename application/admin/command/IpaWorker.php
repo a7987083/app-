@@ -4,6 +4,7 @@ namespace app\admin\command;
 
 use app\common\library\Ipa\IpaScanService;
 use app\common\library\Ipa\SecretBox;
+use app\common\library\Ipa\WorkerState;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;
@@ -25,17 +26,21 @@ class IpaWorker extends Command
         $sleep = max(1, min(30, (int)$input->getOption('sleep')));
         $workerId = gethostname() . ':' . getmypid();
         $output->info('IPA worker started: ' . $workerId);
+        WorkerState::heartbeat('scan', $workerId, 'idle', 0);
 
         do {
+            WorkerState::heartbeat('scan', $workerId, 'idle', 0);
             $item = IpaScanService::claimOne($workerId);
             if (!$item) {
                 if ($once) {
+                    WorkerState::heartbeat('scan', $workerId, 'stopped', 0);
                     return 0;
                 }
                 sleep($sleep);
                 continue;
             }
 
+            WorkerState::heartbeat('scan', $workerId, 'working', (int)$item['id']);
             IpaScanService::setJobContext((int)$item['job_id']);
             try {
                 IpaScanService::processItem($item, function (array $source) {
@@ -46,12 +51,14 @@ class IpaWorker extends Command
                 IpaScanService::failItem($item, $e);
                 $output->error(sprintf('failed item=%d: %s', $item['id'], $e->getMessage()));
             }
+            WorkerState::heartbeat('scan', $workerId, 'idle', 0);
 
             if ($once) {
                 break;
             }
         } while (true);
 
+        WorkerState::heartbeat('scan', $workerId, 'stopped', 0);
         return 0;
     }
 }
