@@ -19,6 +19,7 @@ class IpaParseWorker extends Command
     {
         $this->setName('ipa:parse-worker')
             ->addOption('once', null, Option::VALUE_NONE, 'Parse at most one IPA and exit')
+            ->addOption('scheduled', null, Option::VALUE_NONE, 'Run one scheduled parse batch and exit')
             ->addOption('sleep', null, Option::VALUE_OPTIONAL, 'Idle sleep seconds', 2)
             ->setDescription('Parse discovered IPA assets with HTTP Range and configured rate limits');
     }
@@ -26,6 +27,7 @@ class IpaParseWorker extends Command
     protected function execute(Input $input, Output $output)
     {
         $once=(bool)$input->getOption('once');
+        $scheduled=(bool)$input->getOption('scheduled');
         $sleep=max(1,min(30,(int)$input->getOption('sleep')));
         $workerId=gethostname().':'.getmypid();
 
@@ -37,22 +39,23 @@ class IpaParseWorker extends Command
             return 2;
         }
 
-        $output->info('IPA parse worker started: '.$workerId);
+        $output->info(($scheduled ? 'IPA parse schedule started: ' : 'IPA parse worker started: ').$workerId);
         WorkerState::heartbeat('parse',$workerId,'idle',0);
         do {
             WorkerState::heartbeat('parse',$workerId,'idle',0);
             try { $quota=IpaOpsSettings::parseQuotaStatus(); }
             catch (\Exception $e) { $quota=['allowed'=>true,'settings'=>IpaOpsSettings::all()]; }
             if (empty($quota['allowed'])) {
-                WorkerState::heartbeat('parse',$workerId,'throttled',0);
-                if ($once) return 0;
+                WorkerState::heartbeat('parse',$workerId,$scheduled?'stopped':'throttled',0);
+                if ($once || $scheduled) return 0;
                 sleep(max(5,$sleep));
                 continue;
             }
 
             $asset=$this->claimAsset($workerId);
             if (!$asset) {
-                if ($once) { WorkerState::heartbeat('parse',$workerId,'stopped',0); return 0; }
+                WorkerState::heartbeat('parse',$workerId,'stopped',0);
+                if ($once || $scheduled) return 0;
                 sleep($sleep); continue;
             }
 
