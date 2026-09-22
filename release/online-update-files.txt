@@ -74,6 +74,7 @@ application/common/library/Ipa/OpenListClient.php
 application/common/library/Ipa/PlistDecoder.php
 application/common/library/Ipa/RemoteZipReader.php
 application/common/library/Ipa/SecretBox.php
+application/common/library/Ipa/WorkerState.php
 application/extra/ipa_data_center.php
 application/index/controller/DylibVerify.php
 public/assets/js/backend/ipa_center.js
