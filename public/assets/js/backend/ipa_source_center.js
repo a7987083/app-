@@ -20,6 +20,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 sidePagination: 'server',
                 pagination: false,
                 search: false,
+                clickToSelect: false,
                 columns: [[
                     {checkbox: true},
                     {field: 'id', title: 'ID'},
@@ -49,7 +50,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                             click: function (e, value, row) {
                                 if (e) {
                                     e.preventDefault();
-                                    e.stopPropagation();
+                                    e.stopImmediatePropagation();
                                 }
                                 Fast.api.ajax({
                                     url: 'ipa_source_center/testSource',
@@ -65,9 +66,10 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             });
             Table.api.bindevent(table);
 
-            table.on('click', '.btn-source-test', function (e) {
+            table.on('mousedown mouseup click', '.btn-source-test', function (e) {
                 e.preventDefault();
-                e.stopPropagation();
+                e.stopImmediatePropagation();
+                return false;
             });
         },
         add: function () {
