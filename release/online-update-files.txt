@@ -61,14 +61,19 @@ application/admin/command/IpaWorker.php
 application/admin/command/IpaParseWorker.php
 application/admin/command/IpaMaintenance.php
 application/admin/controller/IpaCenter.php
+application/admin/controller/IpaSourceCenter.php
 application/admin/controller/DylibCenter.php
 application/admin/view/ipa_center/index.html
+application/admin/view/ipa_source_center/index.html
 application/admin/view/dylib_center/index.html
 application/common/library/Ipa/DylibVerificationService.php
 application/common/library/Ipa/HttpRangeClient.php
 application/common/library/Ipa/IpaParserService.php
 application/common/library/Ipa/IpaScanService.php
 application/common/library/Ipa/IpaWritebackService.php
+application/common/library/Ipa/IpaOpsSettings.php
+application/common/library/Ipa/IpaSoftwareSourceService.php
+application/common/library/Ipa/IpaCompareService.php
 application/common/library/Ipa/MachOInspector.php
 application/common/library/Ipa/OpenListClient.php
 application/common/library/Ipa/PlistDecoder.php
@@ -78,4 +83,5 @@ application/common/library/Ipa/WorkerState.php
 application/extra/ipa_data_center.php
 application/index/controller/DylibVerify.php
 public/assets/js/backend/ipa_center.js
+public/assets/js/backend/ipa_source_center.js
 public/assets/js/backend/dylib_center.js
