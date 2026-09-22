@@ -14,14 +14,24 @@ define(['jquery','bootstrap','backend','table','form'], function ($, undefined, 
                 {field:'operate',title:'操作',formatter:function(v,r){var b=[];if(r.status==='parsed'){b.push('<button class="btn btn-xs btn-info btn-asset-detail" data-id="'+r.id+'">异常预览</button>');b.push('<button class="btn btn-xs btn-default btn-parse-retry" data-id="'+r.id+'">重新解析</button>');}else if(r.status==='parse_failed'){b.push('<button class="btn btn-xs btn-danger btn-parse-retry" data-id="'+r.id+'">重试解析</button>');}else if(r.status==='discovered'){b.push('<span class="text-muted">等待解析调度</span>');}else if(r.status==='parsing'){b.push('<span class="text-muted">解析中…</span>');}return b.join(' ');}}
             ]]});
 
-            Form.api.bindevent($('#parse-settings-form'));
+            Form.api.bindevent($('#parse-settings-form'),function(data,ret){
+                parent.Toastr.success(ret&&ret.msg?ret.msg:'解析设置已保存');
+                window.location.reload();
+                return false;
+            });
 
             function resetSourceForm(){var f=$('#source-form');f.find('[name=id]').val('0');f.find('[name=name]').val('');f.find('[name=base_url]').val('');f.find('[name=root_path]').val('/');f.find('[name=token]').val('');f.find('[name=enabled]').val('1');f.find('[name=scan_page_size]').val('500');f.find('[name=request_timeout]').val('20');$('#source-save-label').text('保存');$('#source-edit-cancel').addClass('hide');}
-            $('#source-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'ipa_center/saveSource',type:'POST',data:$(this).serialize()},function(){location.reload();return false;});});
+            Form.api.bindevent($('#source-form'),function(data,ret){
+                parent.Toastr.success(ret&&ret.msg?ret.msg:'OpenList 数据源已保存');
+                window.location.reload();
+                return false;
+            });
             $(document).on('click','.btn-source-edit',function(){var b=$(this),f=$('#source-form');f.find('[name=id]').val(b.data('id'));f.find('[name=name]').val(b.attr('data-name')||'');f.find('[name=base_url]').val(b.attr('data-base-url')||'');f.find('[name=root_path]').val(b.attr('data-root-path')||'/');f.find('[name=token]').val('');f.find('[name=enabled]').val(String(b.attr('data-enabled')));f.find('[name=scan_page_size]').val(b.attr('data-scan-page-size')||'500');f.find('[name=request_timeout]').val(b.attr('data-request-timeout')||'20');$('#source-save-label').text('保存修改');$('#source-edit-cancel').removeClass('hide');$('html,body').animate({scrollTop:f.offset().top-80},150);});
             $('#source-edit-cancel').on('click',resetSourceForm);
-            $(document).on('click','.btn-source-delete',function(){var b=$(this),id=parseInt(b.data('id'),10)||0,name=b.attr('data-name')||('#'+id);Layer.confirm('删除 OpenList 数据源“'+esc(name)+'”？\n如果存在活动任务，可在下一步选择“停止任务并删除”。',{title:'删除数据源'},function(i){Layer.close(i);Fast.api.ajax({url:'ipa_center/deleteSource',type:'POST',data:{id:id}},function(){location.reload();return false;},function(resp){if(resp&&resp.msg&&resp.msg.indexOf('停止任务并删除')!==-1){Layer.confirm('当前有活动任务。确定停止任务并删除该数据源及其 IPA/扫描数据吗？fa_category 不会删除。',{title:'停止任务并删除'},function(j){Layer.close(j);Fast.api.ajax({url:'ipa_center/forceDeleteSource',type:'POST',data:{id:id}},function(){location.reload();return false;});});return false;}return true;});});});
+            $(document).on('click','.btn-source-delete',function(){var b=$(this),id=parseInt(b.data('id'),10)||0,name=b.attr('data-name')||('#'+id);Layer.confirm('删除 OpenList 数据源“'+esc(name)+'”？\n如果存在活动任务，可在下一步选择“停止任务并删除”。',{title:'删除数据源'},function(i){Layer.close(i);Fast.api.ajax({url:'ipa_center/deleteSource',type:'POST',data:{id:id}},function(){window.location.reload();return false;},function(resp){if(resp&&resp.msg&&resp.msg.indexOf('停止任务并删除')!==-1){Layer.confirm('当前有活动任务。确定停止任务并删除该数据源及其 IPA/扫描数据吗？fa_category 不会删除。',{title:'停止任务并删除'},function(j){Layer.close(j);Fast.api.ajax({url:'ipa_center/forceDeleteSource',type:'POST',data:{id:id}},function(){window.location.reload();return false;});});return false;}return true;});});});
             $(document).on('click','.btn-scan',function(){var b=$(this);Fast.api.ajax({url:'ipa_center/startScan',type:'POST',data:{source_id:b.data('id'),mode:b.data('mode')}},function(){$('#job-table').bootstrapTable('refresh');return false;});});
+            $(document).on('click','.btn-parse-toggle',function(){var url=parseInt($(this).data('enabled'),10)===1?'ipa_center/pauseParse':'ipa_center/resumeParse';Fast.api.ajax({url:url,type:'POST'},function(){window.location.reload();return false;});});
+            $(document).on('click','.btn-clear-parse-results',function(){Layer.confirm('这会清空全部 IPA 的解析结果、二进制索引和数据库比对结果，并把已解析/失败项重新设为“待解析”。\n不会删除 IPA 扫描记录，也不会修改 fa_category。确定继续？',{title:'清空全部解析结果'},function(i){Layer.close(i);Fast.api.ajax({url:'ipa_center/clearParseResults',type:'POST'},function(){window.location.reload();return false;});});});
             $(document).on('click','.btn-parse-retry',function(){Fast.api.ajax({url:'ipa_center/retryParse',type:'POST',data:{asset_id:$(this).data('id')}},function(){$('#asset-table').bootstrapTable('refresh');return false;});});
             $(document).on('click','.btn-compare',function(){Fast.api.ajax({url:'ipa_center/compareAsset',type:'POST',data:{asset_id:$(this).data('id')}},function(){$('#asset-table').bootstrapTable('refresh');return false;});});
             $(document).on('click','.btn-asset-detail',function(){Controller.api.loadAssetDetail($(this).data('id'),false);});
