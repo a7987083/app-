@@ -1,8 +1,8 @@
 # ZONOE 软件源 2026092202
 
-## IPA Data Center 管理与解析稳定性热修
+## 更新内容
 
-本版本以 `source-v2026092201` 为升级基线，不改变原在线更新协议、Category 写回原则或 Dylib 验证协议。
+本版本以 `source-v2026092201` 为升级基线，属于 IPA Data Center 管理与解析稳定性热修；不改变原在线更新协议、Category 写回原则或 Dylib 验证协议。
 
 ### 数据源管理
 
