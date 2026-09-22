@@ -127,7 +127,7 @@ jobs:
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092201_ipa_data_center.sql
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092201_ipa_data_center.sql
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME LIKE 'fa_ipa_%'")" = "6"
-          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME LIKE 'fa_dylib%'")" = "5"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME LIKE 'fa_dylib%'")" = "6"
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_center'")" = "1"
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='dylib_center/index'")" = "1"
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME='fa_dylib' AND COLUMN_NAME='verify_secret_ciphertext'")" = "1"
