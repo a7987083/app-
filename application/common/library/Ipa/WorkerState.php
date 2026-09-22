@@ -38,7 +38,12 @@ class WorkerState
         $rows = Db::name('ipa_worker_state')->select();
         $out = [];
         foreach ($rows as $row) {
-            $row['alive'] = !empty($row['heartbeat_at']) && ((int)$row['heartbeat_at'] >= $now - $aliveSeconds);
+            $status = isset($row['status']) ? (string)$row['status'] : '';
+            $grace = $status === 'working' ? max($aliveSeconds, 600) : $aliveSeconds;
+            $row['alive'] = $status !== 'stopped'
+                && !empty($row['heartbeat_at'])
+                && ((int)$row['heartbeat_at'] >= $now - $grace);
+            $row['alive_grace_seconds'] = $grace;
             $out[(string)$row['worker_type']] = $row;
         }
         return $out;
