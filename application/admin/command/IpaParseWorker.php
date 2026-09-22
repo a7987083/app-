@@ -4,6 +4,7 @@ namespace app\admin\command;
 
 use app\common\library\Ipa\IpaParserService;
 use app\common\library\Ipa\SecretBox;
+use app\common\library\Ipa\WorkerState;
 use think\Db;
 use think\console\Command;
 use think\console\Input;
@@ -26,18 +27,25 @@ class IpaParseWorker extends Command
         $sleep = max(1, min(30, (int)$input->getOption('sleep')));
         $workerId = gethostname() . ':' . getmypid();
         $output->info('IPA parse worker started: ' . $workerId);
+        WorkerState::heartbeat('parse', $workerId, 'idle', 0);
 
         do {
+            WorkerState::heartbeat('parse', $workerId, 'idle', 0);
             $asset = $this->claimAsset($workerId);
             if (!$asset) {
-                if ($once) return 0;
+                if ($once) {
+                    WorkerState::heartbeat('parse', $workerId, 'stopped', 0);
+                    return 0;
+                }
                 sleep($sleep);
                 continue;
             }
 
+            WorkerState::heartbeat('parse', $workerId, 'working', (int)$asset['id']);
             $source = Db::name('ipa_source')->where('id', (int)$asset['source_id'])->find();
             if (!$source || !(int)$source['enabled']) {
                 $this->failAsset($asset['id'], new \RuntimeException('Source unavailable'));
+                WorkerState::heartbeat('parse', $workerId, 'idle', 0);
                 if ($once) break;
                 continue;
             }
@@ -50,9 +58,11 @@ class IpaParseWorker extends Command
                 $this->failAsset($asset['id'], $e);
                 $output->error(sprintf('parse failed asset=%d: %s', $asset['id'], $e->getMessage()));
             }
+            WorkerState::heartbeat('parse', $workerId, 'idle', 0);
 
             if ($once) break;
         } while (true);
+        WorkerState::heartbeat('parse', $workerId, 'stopped', 0);
         return 0;
     }
 
