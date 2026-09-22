@@ -80,6 +80,67 @@ class RemoteZipReader
         return null;
     }
 
+    protected function dataOffset(array $entry)
+    {
+        $local = $this->http->getRange((int)$entry['local_offset'], 30);
+        if (substr($local, 0, 4) !== "PK\x03\x04") {
+            throw new \RuntimeException('Invalid ZIP local header');
+        }
+        $h = unpack('Vsig/vneed/vflags/vmethod/vtime/vdate/Vcrc/Vcompressed/Vuncompressed/vnameLen/vextraLen', $local);
+        return (int)$entry['local_offset'] + 30 + (int)$h['nameLen'] + (int)$h['extraLen'];
+    }
+
+    /**
+     * Extract only the first part of a ZIP member. This is intentionally bounded and is used
+     * for Mach-O headers/load commands so large executables are never inflated into PHP memory.
+     */
+    public function extractPrefix(array $entry, $maxOutputBytes = 2097152, $chunkBytes = 262144)
+    {
+        if (($entry['flags'] & 0x1) !== 0) {
+            throw new \RuntimeException('Encrypted ZIP entry is not supported');
+        }
+        $maxOutputBytes = max(4096, min(8 * 1024 * 1024, (int)$maxOutputBytes));
+        $chunkBytes = max(32768, min(1024 * 1024, (int)$chunkBytes));
+        $dataOffset = $this->dataOffset($entry);
+        $compressedSize = (int)$entry['compressed_size'];
+
+        if ((int)$entry['method'] === 0) {
+            $length = min($maxOutputBytes, (int)$entry['uncompressed_size']);
+            return $length > 0 ? $this->http->getRange($dataOffset, $length) : '';
+        }
+        if ((int)$entry['method'] !== 8) {
+            throw new \RuntimeException('Unsupported ZIP compression method ' . (int)$entry['method']);
+        }
+        if (!function_exists('inflate_init') || !function_exists('inflate_add')) {
+            throw new \RuntimeException('Streaming inflate is unavailable');
+        }
+
+        $ctx = inflate_init(ZLIB_ENCODING_RAW);
+        if ($ctx === false) {
+            throw new \RuntimeException('Unable to initialize streaming inflate');
+        }
+        $out = '';
+        $read = 0;
+        while ($read < $compressedSize && strlen($out) < $maxOutputBytes) {
+            $length = min($chunkBytes, $compressedSize - $read);
+            $chunk = $this->http->getRange($dataOffset + $read, $length);
+            if ($chunk === '') {
+                break;
+            }
+            $read += strlen($chunk);
+            $flush = $read >= $compressedSize ? ZLIB_FINISH : ZLIB_SYNC_FLUSH;
+            $piece = @inflate_add($ctx, $chunk, $flush);
+            if ($piece === false) {
+                throw new \RuntimeException('Unable to inflate ZIP prefix');
+            }
+            if ($piece !== '') {
+                $remaining = $maxOutputBytes - strlen($out);
+                $out .= strlen($piece) > $remaining ? substr($piece, 0, $remaining) : $piece;
+            }
+        }
+        return $out;
+    }
+
     public function extract(array $entry, $maxUncompressedBytes = 67108864)
     {
         if (($entry['flags'] & 0x1) !== 0) {
@@ -88,12 +149,7 @@ class RemoteZipReader
         if ((int)$entry['uncompressed_size'] > (int)$maxUncompressedBytes) {
             throw new \RuntimeException('ZIP entry exceeds extraction limit');
         }
-        $local = $this->http->getRange((int)$entry['local_offset'], 30);
-        if (substr($local, 0, 4) !== "PK\x03\x04") {
-            throw new \RuntimeException('Invalid ZIP local header');
-        }
-        $h = unpack('Vsig/vneed/vflags/vmethod/vtime/vdate/Vcrc/Vcompressed/Vuncompressed/vnameLen/vextraLen', $local);
-        $dataOffset = (int)$entry['local_offset'] + 30 + (int)$h['nameLen'] + (int)$h['extraLen'];
+        $dataOffset = $this->dataOffset($entry);
         $compressed = $this->http->getRange($dataOffset, (int)$entry['compressed_size']);
         if ((int)$entry['method'] === 0) {
             $data = $compressed;
