@@ -169,14 +169,50 @@ class IpaCenter extends Backend
         if (!$source) {
             $this->error('OpenList source not found');
         }
-        $activeJobs = Db::name('ipa_scan_job')->where('source_id', $id)->where('status', 'in', ['pending', 'running'])->count();
+
         $parsing = Db::name('ipa_asset')->where('source_id', $id)->where('status', 'parsing')->count();
-        if ((int)$activeJobs > 0 || (int)$parsing > 0) {
-            $this->error('Source has active scan/parse work; wait for workers to finish before deleting');
+        if ((int)$parsing > 0) {
+            $this->error('该数据源仍有正在解析的 IPA，请等待当前解析结束后再删除');
+        }
+
+        $now = time();
+        $scanState = Db::name('ipa_worker_state')->where('worker_type', 'scan')->find();
+        if ($scanState
+            && (string)$scanState['status'] === 'working'
+            && (int)$scanState['current_item_id'] > 0
+            && (int)$scanState['heartbeat_at'] >= $now - 600) {
+            $activeSourceId = Db::name('ipa_scan_item')
+                ->where('id', (int)$scanState['current_item_id'])
+                ->value('source_id');
+            if ((int)$activeSourceId === $id) {
+                $this->error('该数据源仍有扫描 Worker 正在处理，请等待当前条目结束后再删除');
+            }
         }
 
         Db::startTrans();
         try {
+            Db::name('ipa_source')->where('id', $id)->update([
+                'enabled' => 0,
+                'updated_at' => $now,
+            ]);
+            Db::name('ipa_scan_item')
+                ->where('source_id', $id)
+                ->where('status', 'in', ['pending', 'processing'])
+                ->update([
+                    'status' => 'cancelled',
+                    'worker_id' => '',
+                    'locked_at' => 0,
+                    'updated_at' => $now,
+                ]);
+            Db::name('ipa_scan_job')
+                ->where('source_id', $id)
+                ->where('status', 'in', ['pending', 'running'])
+                ->update([
+                    'status' => 'cancelled',
+                    'finished_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
             while (true) {
                 $rows = Db::name('ipa_asset')->field('id')->where('source_id', $id)->limit(500)->select();
                 if (!$rows) break;
@@ -194,7 +230,7 @@ class IpaCenter extends Backend
             Db::rollback();
             $this->error($e->getMessage());
         }
-        $this->success('source deleted');
+        $this->success('数据源已删除，未执行的扫描任务已取消');
     }
 
     public function retryParse()
