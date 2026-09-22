@@ -1,23 +1,30 @@
-ZONOE 软件源 Release 2026091809
-版本：2026091809
-基线：2026091808
-阶段：Phase 19.4.y — Category Performance Hotfix
-发布分支：release/2026091809-category-performance
-发布状态：重新触发正式 Release Workflow（已升级旧 category listing 回归契约）
+ZONOE 软件源 Release 2026092201
+版本：2026092201
+基线：2026091809
+阶段：IPA Data Center v1 + Dylib Verification Center v1
+发布分支：release/2026092201-ipa-data-center
+发布状态：候选正式 Release，等待完整门禁与在线更新 E2E
 
 更新内容：
-1. 项目管理新增/编辑不再加载全量 parentList / Tree，避免 2 万级数据下无意义的全表扫描和海量 option 渲染。
-2. 新增项目服务端强制 pid=0；编辑项目保持原 pid，不再触发 Category::select() 全表子节点校验。
-3. 移除隐藏 pid selectpicker，改为轻量 hidden input。
-4. 项目列表按用户要求保持默认 1000 条/页，pageList 保持 200/500/1000。
-5. 新增、编辑成功后只关闭弹窗，不自动刷新当前 1000 行列表；管理员按需手动刷新。
-6. 删除成功后只从 BootstrapTable 本地移除对应行，阻止 FastAdmin 自动整表 refresh；工具栏删除同样应用该策略。
-7. 新增 Phase 19.4.y 性能回归门禁，禁止 add/edit 路径重新出现全量 Category Tree / Category::select()。
-8. 在线更新包明确包含 Category.php、add.html、edit.html、category.js。
-9. 升级历史 category_listing_contract_test，使其与 1809 的 no-tree / no-refresh 性能契约一致。
+1. 新增 IPA 数据中心：OpenList 数据源、分页扫描、增量/全量扫描、扫描队列、独立解析 Worker。
+2. 新增 HTTP Range IPA/ZIP 解析，支持 XML/binary plist，避免为读取元数据下载整包 IPA。
+3. 新增 Mach-O 深度索引：SHA256、arm64/x86_64 等 architectures、LC_ID_DYLIB/install_name。
+4. 新增 IPA -> fa_category 手动 preview/apply 写回，后台 Worker 禁止自动写回。
+5. 新增 Dylib 验证中心：Dylib 注册、版本策略、多 BundleID 绑定、验证日志、独立验证密钥。
+6. 新增 Dylib 验证 API：UDID/卡密/黑名单/BundleID/版本/SHA256/HMAC/timestamp/nonce/短期 session。
+7. 默认离线容忍 900 秒；失败动作与版本状态均由服务端策略控制，不在客户端写死。
+8. 新增 Objective-C arm64 验证客户端，包含宿主 BundleID、自身 SHA256、HMAC、Keychain 离线缓存。
+9. 新增 ipa:worker、ipa:parse-worker、ipa:maintenance 与 systemd 模板。
+10. 新增 MySQL 5.7 / 100000 资产 / Worker contention / PHP 7.0 / iPhoneOS arm64 / OpenList HTTP 集成门禁。
 
 在线更新：
-- GitHub Release 标签：source-v2026091809。
+- GitHub Release 标签：source-v2026092201。
 - 资产：zonoe-online-update.zip + zonoe-online-update.zip.sha256。
+- 在线更新程序包已加入 IPA Data Center / Dylib Verification Center 的服务器运行文件。
+- 数据库迁移：release/sql/2026092201_ipa_data_center.sql；MySQL 5.7 幂等设计。
 - file_sign 沿用 f3f6e072f814d06403ce5e393967c9e2；本版本未修改 UpdateIntegrity 监控的 4 个关键文件。
-- 发布前门禁：专项 PHP 7.0/JS/性能契约、正式 PHP 7.0 全回归、MySQL 5.7、HTTP load、更新包完整性、1808 -> 1809 在线更新 E2E。
+- 在线更新仍沿用原 UpdateManager / UpdateInstaller：下载、SHA256、备份、数据库迁移、文件覆盖校验、版本写入和失败回滚逻辑均不改变。
+
+上线后配置：
+- 生产环境必须设置 IPA_SERVER_SECRET（至少 32 bytes）后再保存 OpenList Token 或生成 Dylib 验证密钥。
+- 在线更新会安装 Worker 代码；systemd 服务文件保留在 deploy/systemd 供服务器运维启用，不由 updater 自动写入 /etc/systemd/system。
