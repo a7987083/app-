@@ -14,7 +14,7 @@
             <div class="panel-heading"><strong>后台任务</strong></div>
             <div class="panel-body">
                 <span style="margin-right:25px">扫描 Worker：{if condition="isset($workers['scan']) && !empty($workers['scan']['alive'])"}<span class="label label-success">运行中</span> <span class="text-muted">{$workers.scan.worker_id|htmlentities} / {$workers.scan.status|htmlentities}</span>{else/}<span class="label label-default">未运行</span>{/if}</span>
-                <span>解析调度：{if condition="$parseSettings.parse_enabled"}<span class="label label-success">已启用</span>{else/}<span class="label label-default">已停用</span>{/if} <span class="text-muted">每 {$parseSettings.parse_window_minutes} 分钟最多 {$parseSettings.parse_window_limit} 个；按批次顺序解析，不要求常驻 Parse Worker。</span></span>
+                <span>解析调度：{if condition="$parseSettings.parse_enabled"}<span class="label label-success">已启用</span>{else/}<span class="label label-default">已暂停</span>{/if} <span class="text-muted">每 {$parseSettings.parse_window_minutes} 分钟最多 {$parseSettings.parse_window_limit} 个；按批次顺序解析，不要求常驻 Parse Worker。</span></span>
             </div>
         </div>
 
@@ -29,7 +29,14 @@
                     <div class="form-group"><span>每天</span> <input class="form-control" style="width:85px" type="number" min="1" name="parse_day_limit" value="{$parseSettings.parse_day_limit}"></div>
                     <div class="form-group"><span>失败冷却</span> <input class="form-control" style="width:85px" type="number" min="1" name="parse_retry_minutes" value="{$parseSettings.parse_retry_minutes}"> <span>分钟</span></div>
                     <button class="btn btn-primary" type="submit"><i class="fa fa-save"></i> 保存设置</button>
+                    {if condition="$parseSettings.parse_enabled"}
+                    <button class="btn btn-warning btn-parse-toggle" type="button" data-enabled="1"><i class="fa fa-pause"></i> 暂停解析</button>
+                    {else/}
+                    <button class="btn btn-success btn-parse-toggle" type="button" data-enabled="0"><i class="fa fa-play"></i> 继续解析</button>
+                    {/if}
+                    <button class="btn btn-danger btn-clear-parse-results" type="button"><i class="fa fa-trash"></i> 清空全部解析结果</button>
                 </form>
+                <div class="help-block">“暂停解析”只阻止后续批次领取任务，已经开始的当前 IPA 允许完成。“清空全部解析结果”会保留扫描发现的 IPA 文件记录，仅清除解析、二进制索引和数据库比对结果，不会修改 fa_category。</div>
                 {if condition="!empty($parseQuota)"}<div class="text-muted" style="margin-top:8px">当前用量：窗口 {$parseQuota.window_used}/{$parseSettings.parse_window_limit}，小时 {$parseQuota.hour_used}/{$parseSettings.parse_hour_limit}，今日 {$parseQuota.day_used}/{$parseSettings.parse_day_limit}。</div>{/if}
             </div>
         </div>
@@ -37,12 +44,12 @@
         <div class="panel panel-default">
             <div class="panel-heading"><strong>OpenList 数据源</strong></div>
             <div class="panel-body">
-                <form id="source-form" class="form-inline">
+                <form id="source-form" class="form-inline" role="form" data-toggle="validator" method="POST" action="{:url('ipa_center/saveSource')}">
                     <input type="hidden" name="id" value="0">
-                    <input class="form-control" name="name" placeholder="名称" required>
-                    <input class="form-control" style="min-width:260px" name="base_url" placeholder="https://openlist.example.com" required>
+                    <input class="form-control" name="name" placeholder="名称" data-rule="required">
+                    <input class="form-control" style="min-width:260px" name="base_url" placeholder="https://openlist.example.com" data-rule="required;url">
                     <input class="form-control" name="root_path" value="/" placeholder="/IPA">
-                    <input class="form-control" name="token" type="password" placeholder="Token（编辑留空不修改）">
+                    <input class="form-control" name="token" type="password" placeholder="Token（编辑留空不修改）" autocomplete="new-password">
                     <select class="form-control" name="enabled"><option value="1">启用</option><option value="0">停用</option></select>
                     <input class="form-control" style="width:105px" type="number" min="20" max="1000" name="scan_page_size" value="500" title="分页回退大小">
                     <input class="form-control" style="width:90px" type="number" min="3" max="120" name="request_timeout" value="20" title="超时秒数">
