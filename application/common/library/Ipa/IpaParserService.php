@@ -38,6 +38,7 @@ class IpaParserService
 
         $plistBytes = $zip->extract($plistEntry, 8388608);
         $plist = (new PlistDecoder())->decode($plistBytes);
+        unset($plistBytes);
         if (!is_array($plist)) {
             throw new \RuntimeException('Info.plist root is not a dictionary');
         }
@@ -49,6 +50,7 @@ class IpaParserService
         $buildVersion = self::str($plist, 'CFBundleVersion');
         $minimumOs = self::str($plist, 'MinimumOSVersion');
         $executable = self::str($plist, 'CFBundleExecutable');
+        unset($plist);
 
         $now = time();
         Db::startTrans();
@@ -88,6 +90,7 @@ class IpaParserService
     protected static function indexBinaries($assetId, RemoteZipReader $zip, array $entries, $executable, $now)
     {
         $inspector = new MachOInspector();
+        $safeExtractLimit = self::binaryEnrichmentLimit();
         foreach ($entries as $name => $entry) {
             $type = self::binaryType($name, $executable);
             if ($type === null || substr($name, -1) === '/') {
@@ -98,12 +101,17 @@ class IpaParserService
             $architectures = '';
             $installName = '';
             $uncompressedSize = (int)$entry['uncompressed_size'];
+            $compressedSize = isset($entry['compressed_size']) ? (int)$entry['compressed_size'] : $uncompressedSize;
 
-            // Hash/inspect bounded binary members only. Very large executables remain indexed by path/size
-            // and can be enriched by a dedicated binary worker later without blocking IPA metadata parsing.
-            if ($uncompressedSize > 0 && $uncompressedSize <= 64 * 1024 * 1024) {
+            // RemoteZipReader::extract() temporarily holds both compressed and uncompressed data.
+            // Keep synchronous enrichment deliberately small so a large game binary cannot kill a
+            // long-running PHP 7 worker with a 128M memory_limit. Large binaries are still indexed
+            // by path/type/size and IPA metadata parsing is allowed to complete.
+            if ($uncompressedSize > 0
+                && $uncompressedSize <= $safeExtractLimit
+                && $compressedSize <= $safeExtractLimit) {
                 try {
-                    $bytes = $zip->extract($entry, 64 * 1024 * 1024);
+                    $bytes = $zip->extract($entry, $safeExtractLimit);
                     $sha256 = hash('sha256', $bytes);
                     $meta = $inspector->inspect($bytes);
                     if (!empty($meta['architectures']) && is_array($meta['architectures'])) {
@@ -112,6 +120,7 @@ class IpaParserService
                     if (!empty($meta['install_name'])) {
                         $installName = (string)$meta['install_name'];
                     }
+                    unset($bytes, $meta);
                 } catch (\Exception $e) {
                     // Binary enrichment is best-effort: a malformed/non-Mach-O member must not discard IPA metadata.
                 }
@@ -130,6 +139,14 @@ class IpaParserService
                 'updated_at' => $now,
             ]);
         }
+    }
+
+    protected static function binaryEnrichmentLimit()
+    {
+        // 8 MiB is safe on the production PHP 7 configuration currently using memory_limit=128M.
+        // RemoteZipReader may hold compressed+inflated copies simultaneously, so the previous 64 MiB
+        // ceiling was unsafe even when the final uncompressed member itself was below 64 MiB.
+        return 8 * 1024 * 1024;
     }
 
     protected static function binaryType($path, $executable)
