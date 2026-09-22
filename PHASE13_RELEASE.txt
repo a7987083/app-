@@ -1,23 +1,23 @@
-ZONOE 软件源 Release 2026092202
-版本：2026092202
-基线：source-v2026092201
-阶段：IPA Data Center 管理与解析稳定性热修
-发布分支：release/2026092202-ipa-management-hotfix
-发布状态：正式 Release
+ZONOE 软件源 Release 2026092203
+版本：2026092203
+基线：source-v2026092202
+阶段：IPA Data Center 生产运维控制与软件源对账
+发布分支：release/2026092203-ipa-ops-controls
+发布状态：候选
 
 更新内容：
-1. OpenList 数据源新增编辑、取消编辑和安全删除。
-2. 删除数据源时清理该源扫描任务、队列、IPA 资产、Mach-O 索引和 IPA 绑定；不删除 fa_category。
-3. IPA 资产新增重新解析/失败重试入口，并明确展示 discovered/parsing/parsed/parse_failed 状态。
-4. Scan Worker / Parse Worker 新增心跳状态，后台直接显示运行状态。
-5. OpenList 扫描继续固定 refresh=false，优先使用 OpenList 缓存。
-6. 修复 PHP 7.0 memory_limit=128M 下大 Mach-O 解析 OOM：Info.plist 元数据仍优先完成；Mach-O 头部使用最多 2MiB 流式 Range 解压；完整 SHA256 仅同步处理 <=8MiB 二进制。
-7. RemoteZipReader 新增 bounded extractPrefix，deflate 成员使用 inflate_init/inflate_add 分块解压，不再把几十 MB 二进制一次性放入 PHP 内存。
-8. OpenList Token 保存异常现在显示真实错误信息，不再只弹通用 error。
-9. 新增 fa_ipa_worker_state 表和 FastAdmin deleteSource/retryParse 权限节点。
+1. 新增解析限速设置：每 N 分钟最多 N 个，并有小时/每日上限。
+2. Parse Worker 启动前校验服务器密钥，系统配置错误不再污染 IPA parse_failed。
+3. Worker 心跳宽限默认 180 秒，降低长解析时“未检测到”误判。
+4. 解析失败详情可点击查看真实错误。
+5. OpenList 扫描优先 refresh=false + per_page=0，失败自动回退分页。
+6. OpenList 数据源支持停止活动任务后删除，并增加并发回写保护。
+7. 新增“软件源”子菜单，支持多 MySQL 源、测试、编辑、删除、优先级、启停、只读/允许写回。
+8. IPA 解析完成后自动与软件源数据库比对，状态旁新增异常列。
+9. 异常详情显示数据库值与 IPA 值，可人工选择字段写回；高风险字段默认不选，默认不自动写数据库。
+10. 新增 fa_ipa_setting、fa_ipa_parse_attempt、fa_ipa_software_source、fa_ipa_compare_result。
 
 在线更新：
-- 目标升级：source-v2026092201 -> source-v2026092202。
-- 增量数据库迁移：release/sql/2026092202_ipa_management_hotfix.sql。
+- 目标升级：source-v2026092202 -> source-v2026092203。
+- 增量数据库迁移：release/sql/2026092203_ipa_ops_controls.sql。
 - 在线更新仍沿用原 UpdateManager / UpdateInstaller，未改变下载、SHA256、备份、SQL、文件覆盖、版本写入和失败回滚逻辑。
-- file_sign 继续为 f3f6e072f814d06403ce5e393967c9e2；未修改 UpdateIntegrity 当前监控的 4 个关键文件。
