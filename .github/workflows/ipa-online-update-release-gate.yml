@@ -1,0 +1,148 @@
+name: IPA Online Update Release Gate
+
+on:
+  push:
+    branches:
+      - feature/ipa-data-center-v1
+      - 'release/**'
+    paths:
+      - 'VERSION'
+      - 'public/update/ver.txt'
+      - 'ver.json'
+      - 'PHASE13_RELEASE.txt'
+      - 'release/RELEASE_NOTES.md'
+      - 'release/online-update-files.txt'
+      - 'release/sql/2026092201_ipa_data_center.sql'
+      - 'application/command.php'
+      - 'application/admin/command/Ipa*.php'
+      - 'application/admin/controller/IpaCenter.php'
+      - 'application/admin/controller/DylibCenter.php'
+      - 'application/admin/view/ipa_center/**'
+      - 'application/admin/view/dylib_center/**'
+      - 'application/common/library/Ipa/**'
+      - 'application/index/controller/DylibVerify.php'
+      - 'application/extra/ipa_data_center.php'
+      - 'public/assets/js/backend/ipa_center.js'
+      - 'public/assets/js/backend/dylib_center.js'
+      - 'tools/build_online_update.php'
+      - '.github/workflows/ipa-online-update-release-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  online-update-package:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ipa_release_gate
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: zip
+
+      - name: Validate release version metadata
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '\r\n ' < VERSION)"
+          test "$VERSION" = "$(tr -d '\r\n ' < public/update/ver.txt)"
+          test "$VERSION" = "$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo $j["version"];')"
+          test "$VERSION" = "2026092201"
+
+      - name: Build the real online update package
+        run: |
+          set -euo pipefail
+          php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
+          unzip -t zonoe-online-update.zip >/dev/null
+          test -s zonoe-online-update.zip.sha256
+          EXPECTED="$(awk '{print $1}' zonoe-online-update.zip.sha256)"
+          ACTUAL="$(sha256sum zonoe-online-update.zip | awk '{print $1}')"
+          test "$EXPECTED" = "$ACTUAL"
+
+      - name: Verify IPA Data Center payload is inside ZIP
+        run: |
+          set -euo pipefail
+          ZIP=zonoe-online-update.zip
+          for f in \
+            program/application/command.php \
+            program/application/admin/command/IpaWorker.php \
+            program/application/admin/command/IpaParseWorker.php \
+            program/application/admin/command/IpaMaintenance.php \
+            program/application/admin/controller/IpaCenter.php \
+            program/application/admin/controller/DylibCenter.php \
+            program/application/common/library/Ipa/IpaScanService.php \
+            program/application/common/library/Ipa/IpaParserService.php \
+            program/application/common/library/Ipa/MachOInspector.php \
+            program/application/common/library/Ipa/DylibVerificationService.php \
+            program/application/index/controller/DylibVerify.php \
+            program/public/assets/js/backend/ipa_center.js \
+            program/public/assets/js/backend/dylib_center.js \
+            mysql/2026092201_ipa_data_center.sql; do
+              unzip -Z1 "$ZIP" | grep -Fx "$f"
+          done
+
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq default-mysql-client
+
+      - name: Prepare FastAdmin auth table fixture
+        run: |
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate <<'SQL'
+          CREATE TABLE IF NOT EXISTS fa_auth_rule (
+            id int unsigned NOT NULL AUTO_INCREMENT,
+            type enum('menu','file') NOT NULL DEFAULT 'file',
+            pid int unsigned NOT NULL DEFAULT 0,
+            name varchar(100) NOT NULL DEFAULT '',
+            title varchar(50) NOT NULL DEFAULT '',
+            icon varchar(50) NOT NULL DEFAULT '',
+            `condition` varchar(255) NOT NULL DEFAULT '',
+            remark varchar(255) NOT NULL DEFAULT '',
+            ismenu tinyint unsigned NOT NULL DEFAULT 0,
+            createtime int DEFAULT NULL,
+            updatetime int DEFAULT NULL,
+            weigh int NOT NULL DEFAULT 0,
+            status varchar(30) NOT NULL DEFAULT '',
+            PRIMARY KEY (id),
+            UNIQUE KEY name (name),
+            KEY pid (pid),
+            KEY weigh (weigh)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+          SQL
+
+      - name: Apply 2026092201 migration twice on MySQL 5.7
+        run: |
+          set -euo pipefail
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092201_ipa_data_center.sql
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092201_ipa_data_center.sql
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME LIKE 'fa_ipa_%'")" = "6"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME LIKE 'fa_dylib%'")" = "5"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_center'")" = "1"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='dylib_center/index'")" = "1"
+          test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='ipa_release_gate' AND TABLE_NAME='fa_dylib' AND COLUMN_NAME='verify_secret_ciphertext'")" = "1"
+
+      - name: Verify target runtime contracts
+        run: |
+          set -euo pipefail
+          php -l application/admin/command/IpaWorker.php
+          php -l application/admin/command/IpaParseWorker.php
+          php -l application/common/library/Ipa/IpaParserService.php
+          php -l application/common/library/Ipa/MachOInspector.php
+          php -l application/common/library/Ipa/DylibVerificationService.php
+          php tests/dylib_signing_contract.php
+          php tests/macho_inspector_contract.php
+          php tests/macho_inspector_fat_contract.php
+          php think list | grep -q 'ipa:worker'
+          php think list | grep -q 'ipa:parse-worker'
+          php think list | grep -q 'ipa:maintenance'
