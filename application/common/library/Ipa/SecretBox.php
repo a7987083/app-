@@ -10,6 +10,12 @@ use think\Config;
  */
 class SecretBox
 {
+    public static function assertConfigured()
+    {
+        self::masterSecret();
+        return true;
+    }
+
     public static function encrypt($plaintext)
     {
         $secret = self::masterSecret();
