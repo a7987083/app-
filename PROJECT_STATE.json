@@ -1,40 +1,51 @@
 {
   "repository": "a7987083/app-",
-  "branch": "release/2026092206-ipa-controls-regression-hotfix",
-  "commit": "2cf0e030eb2db3a4aa079462c7a4399720214d1b",
-  "baseline": "source-v2026092205",
+  "branch": "release/2026092207-ipa-controls-regression-fix",
+  "baseline_branch": "release/2026092206-ipa-controls-regression-hotfix",
+  "baseline_commit": "cd719391f25713224dab4a1301f9e551b0cde969",
+  "code_head": "51518a17b7338670d63ab68b925caa82c9010904",
   "stable_release": {
     "version": "2026092206",
     "release": "source-v2026092206",
-    "release_commit": "2cf0e030eb2db3a4aa079462c7a4399720214d1b",
-    "ipa_gate_run": 35782863429,
-    "ipa_gate_result": "success",
-    "release_run": 35782863008,
-    "release_result": "success",
-    "online_update_from": "2026092205",
-    "online_update_e2e": "passed"
+    "release_commit": "2cf0e030eb2db3a4aa079462c7a4399720214d1b"
+  },
+  "development": {
+    "version": "2026092207",
+    "phase": "IPA controls regression fix",
+    "pull_request": 22,
+    "pull_request_state": "draft",
+    "code_commits": [
+      "8a81c4456d00e20f5fc19d18b680d25a362eba4f",
+      "f21ee17da7ddd2634546880ec50c817be0eaab69",
+      "6286116d15566e7611d5b86f3a708cbc0ba3b32e",
+      "51518a17b7338670d63ab68b925caa82c9010904"
+    ]
   },
   "build": {
-    "php70_regression": "passed",
-    "mysql57_migration": "passed",
-    "http_load_gate": "passed",
-    "package_and_release": "passed",
-    "artifact": "zonoe-source-2026092206-online-update",
-    "artifact_id": 10719265057
-  },
-  "release_asset": {
-    "zip": "zonoe-online-update.zip",
-    "zip_size": 200118,
-    "zip_sha256": "45553d5fd4ef5ef42f097486262ab27d223e166c8df83ffeec5144b03fa45e6f",
-    "sha256_asset": "zonoe-online-update.zip.sha256"
+    "ipa_data_center_ci_run": 35919441555,
+    "ipa_data_center_ci": "passed",
+    "regression_checks_run": 35919441640,
+    "regression_checks": "passed",
+    "phase14_hardening_run": 35919441698,
+    "phase14_hardening": "passed",
+    "php70": "passed",
+    "ios_sdk_arm64_compile": "passed",
+    "mysql57_contracts": "passed",
+    "openlist_contracts": "passed",
+    "artifact": null
   },
   "runtime": {
-    "github_release_e2e": "passed",
-    "production_manual_verification": "pending",
-    "real_device_verification": "pending"
+    "baota_deployment": "not_verified",
+    "browser_ui": "not_verified",
+    "live_full_scan_restart": "not_verified",
+    "pause_resume_ui": "not_verified",
+    "parse_without_quota": "not_verified",
+    "clear_parse_preservation": "not_verified",
+    "real_device": "not_performed"
   },
-  "phase": "IPA Data Center controls regression hotfix",
-  "next_task": "Perform production/manual verification of source-v2026092206: software-source save/test interaction, pause/resume orphan recovery, clear-parse-results safety, and 2205->2206 update on the real deployment.",
+  "next_task": "Deploy 2207 to a test BaoTa instance and manually verify full-scan replacement, pause/resume response flow, quota-free parsing, and clear-parse preservation boundaries before any 2026092207 release.",
   "roadmap": "ROADMAP.md",
+  "changelog": "CHANGELOG_DEV.md",
+  "handoff": "HANDOFF.md",
   "known_issues": "KNOWN_ISSUES.md"
 }
