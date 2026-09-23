@@ -4,11 +4,10 @@
 
 - Repository: `a7987083/app-`
 - Stable release branch: `release/2026092206-ipa-controls-regression-hotfix`
-- Stable version: `2026092206`
-- Stable release: `source-v2026092206`
-- 2207 development branch: `release/2026092207-ipa-controls-regression-fix`
-- 2207 baseline: `cd719391f25713224dab4a1301f9e551b0cde969`
-- 2207 code HEAD: `51518a17b7338670d63ab68b925caa82c9010904`
+- Previous stable release: `source-v2026092206`
+- Current 2207 branch: `release/2026092207-ipa-controls-regression-fix`
+- 2207 release commit: `49372574305bbf2e52b6b1965e4151a142de8a8a`
+- 2207 release: `source-v2026092207`
 - Validation PR: `#22` (draft, base = 2206 hotfix branch)
 
 ## 2026092207 — IPA controls regression fix
@@ -18,9 +17,11 @@
 - [x] 移除 IPA Center 新增的 Worker 状态和限额用量 UI。
 - [x] 修复 `pauseParse` / `resumeParse` / `saveParseSettings` / `startScan` 捕获框架正常 `HttpResponseException` 的响应链。
 - [x] 清空解析继续保留 IPA 扫描/发现记录与 `fa_category`，仅清解析派生数据。
-- [x] `IPA Data Center CI` Run `35919441555` — SUCCESS。
-- [x] `Regression Checks` Run `35919441640` — SUCCESS。
-- [x] `Phase14 Production Hardening` Run `35919441698` — SUCCESS。
+- [x] 2207 Online Update Release Gate Run `35929007415` — SUCCESS。
+- [x] ZONOE Source Release Run `35930081424` — SUCCESS。
+- [x] `source-v2026092207` 已发布，目标升级路径 `source-v2026092206 -> source-v2026092207`。
+- [x] CI Artifact `zonoe-source-2026092207-online-update` 已生成。
+- [x] GitHub Release 在线升级 E2E — SUCCESS。
 - [ ] 真实 BaoTa/后台页面手工验证。
 - [ ] 验证 full scan 在正在扫描时点击后旧 job 变 cancelled、新 full job 正常完成。
 - [ ] 验证暂停/继续页面不再出现 `think\exception\HttpResponseException`。
@@ -29,4 +30,4 @@
 
 ## Next Task
 
-在真实测试部署上执行上述 4 项 UI/运行时验证；通过后再决定是否打 `2026092207` 正式更新包。不要改写 `source-v2026092206` 历史 Release。
+2207 已具备正式在线更新产物和 CI/E2E 证据。下一步在真实 BaoTa/测试环境执行 2206 -> 2207 在线更新，并完成上述 4 项 UI/运行时验证。不要改写 `source-v2026092206` 历史 Release。

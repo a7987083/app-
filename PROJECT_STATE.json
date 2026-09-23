@@ -3,15 +3,15 @@
   "branch": "release/2026092207-ipa-controls-regression-fix",
   "baseline_branch": "release/2026092206-ipa-controls-regression-hotfix",
   "baseline_commit": "cd719391f25713224dab4a1301f9e551b0cde969",
-  "code_head": "51518a17b7338670d63ab68b925caa82c9010904",
+  "release_commit": "49372574305bbf2e52b6b1965e4151a142de8a8a",
   "stable_release": {
-    "version": "2026092206",
-    "release": "source-v2026092206",
-    "release_commit": "2cf0e030eb2db3a4aa079462c7a4399720214d1b"
+    "version": "2026092207",
+    "release": "source-v2026092207",
+    "previous_release": "source-v2026092206"
   },
   "development": {
     "version": "2026092207",
-    "phase": "IPA controls regression fix",
+    "phase": "IPA controls regression fix / online update release",
     "pull_request": 22,
     "pull_request_state": "draft",
     "code_commits": [
@@ -22,17 +22,26 @@
     ]
   },
   "build": {
-    "ipa_data_center_ci_run": 35919441555,
-    "ipa_data_center_ci": "passed",
-    "regression_checks_run": 35919441640,
-    "regression_checks": "passed",
-    "phase14_hardening_run": 35919441698,
-    "phase14_hardening": "passed",
+    "online_update_gate_run": 35929007415,
+    "online_update_gate": "passed",
+    "source_release_run": 35930081424,
+    "source_release": "passed",
     "php70": "passed",
-    "ios_sdk_arm64_compile": "passed",
-    "mysql57_contracts": "passed",
-    "openlist_contracts": "passed",
-    "artifact": null
+    "source_integrity": "passed",
+    "mysql57": "passed",
+    "http_load_gate": "passed",
+    "github_release_e2e": "passed",
+    "artifact": {
+      "name": "zonoe-source-2026092207-online-update",
+      "id": 10780897151,
+      "size_bytes": 193451,
+      "digest": "sha256:afa9181e40a75cd40dc5ada936a1de9a3e14e71e6214547a4752f6fa0cecb44c"
+    },
+    "release_asset": {
+      "name": "zonoe-online-update.zip",
+      "size_bytes": 200266,
+      "sha256": "6f828567e3b3d535f8dab60de4fa543d620818b3a1be2189a3f9ef324389f5fc"
+    }
   },
   "runtime": {
     "baota_deployment": "not_verified",
@@ -40,10 +49,9 @@
     "live_full_scan_restart": "not_verified",
     "pause_resume_ui": "not_verified",
     "parse_without_quota": "not_verified",
-    "clear_parse_preservation": "not_verified",
-    "real_device": "not_performed"
+    "clear_parse_preservation": "not_verified"
   },
-  "next_task": "Deploy 2207 to a test BaoTa instance and manually verify full-scan replacement, pause/resume response flow, quota-free parsing, and clear-parse preservation boundaries before any 2026092207 release.",
+  "next_task": "Run a real BaoTa/test 2206 -> 2207 online update and manually verify the four IPA control regression scenarios.",
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
   "handoff": "HANDOFF.md",
