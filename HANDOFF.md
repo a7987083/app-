@@ -1,47 +1,44 @@
 # Software Source Development Handoff
 
-## Current stable release
+## Current state
 
 - Repository: `a7987083/app-`
-- Branch: `release/2026092206-ipa-controls-regression-hotfix`
-- Release: `source-v2026092206`
-- Release commit: `2cf0e030eb2db3a4aa079462c7a4399720214d1b`
-- Previous stable baseline: `source-v2026092205`
-- IPA gate: `35782863429` — SUCCESS
-- Formal release: `35782863008` — SUCCESS
-- GitHub Release online-update E2E: `2026092205 -> 2026092206` — SUCCESS
+- Previous stable release: `source-v2026092206`
+- Active/release branch: `release/2026092207-ipa-controls-regression-fix`
+- 2207 release commit: `49372574305bbf2e52b6b1965e4151a142de8a8a`
+- Current release: `source-v2026092207`
+- Validation PR: `#22` (draft; keep draft until production/manual runtime verification unless explicitly instructed otherwise)
 
-## 2206 implementation
+## 2207 implementation
 
-The regression hotfix changes four runtime files relative to 2205:
+1. Full scan: incremental remains mutually exclusive; full scan cancels active same-source jobs/items and creates a new full job. Cancellation is cooperative during row consumption.
+2. Parse limits: persisted quota fields remain for compatibility, but only `parse_enabled` blocks new claims.
+3. UI: Worker-status/rate-limit panel removed from IPA Center; internal `WorkerState` remains for orphan recovery.
+4. Pause/resume: targeted framework success responses are outside broad exception catches, avoiding normal `HttpResponseException` being displayed as a failure.
+5. Clear parse: preserves IPA discovery/OpenList source rows and `fa_category`; clears/reset only parse-derived data.
 
-1. `application/admin/controller/IpaCenter.php`
-2. `application/admin/controller/IpaSourceCenter.php`
-3. `application/common/library/Ipa/IpaSoftwareSourceService.php`
-4. `public/assets/js/backend/ipa_source_center.js`
+## Release evidence
 
-Core behavior:
-
-- Software-source test remains read-only and explicitly blocks table-row selection propagation.
-- Software-source writes use guarded defaults and transactional rollback on exceptions/Throwable.
-- Pause does not kill an active Parse Worker task; it prevents new work and only reclaims orphaned `parsing` rows if the worker is offline.
-- Clear parse results first reclaims orphaned work, then refuses unsafe clearing while genuine parsing is active.
-- Clearing preserves OpenList discovery records, source configuration and `fa_category`.
-- No 2206 SQL migration was added.
-
-## Release / update contract
-
-- Existing `UpdateManager / UpdateInstaller` semantics are unchanged.
-- Release asset: `zonoe-online-update.zip`, SHA256 `45553d5fd4ef5ef42f097486262ab27d223e166c8df83ffeec5144b03fa45e6f`.
-- CI Artifact: `zonoe-source-2026092206-online-update` (artifact id `10719265057`).
-- `UpdateIntegrity` sentinel files were unchanged from 2205, therefore `ver.json.file_sign` remains `f3f6e072f814d06403ce5e393967c9e2`.
+- Online Update Release Gate Run `35929007415`: SUCCESS.
+- ZONOE Source Release Run `35930081424`: SUCCESS.
+- Release `source-v2026092207` targets commit `49372574305bbf2e52b6b1965e4151a142de8a8a`.
+- Release assets: `zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`.
+- Release ZIP size: `200266` bytes; SHA256: `6f828567e3b3d535f8dab60de4fa543d620818b3a1be2189a3f9ef324389f5fc`.
+- CI Artifact: `zonoe-source-2026092207-online-update`, ID `10780897151`, size `193451` bytes, digest `sha256:afa9181e40a75cd40dc5ada936a1de9a3e14e71e6214547a4752f6fa0cecb44c`.
+- Real GitHub Release online-update E2E from previous stable release to 2207: SUCCESS.
 
 ## Verification boundary
 
-Verified: source diff, GitHub CI, PHP 7.0 regression, MySQL 5.7 migration regression, HTTP load gate, package build, GitHub Release publication, GitHub Release online-update E2E.
+Verified: source diff, PHP 7.0 regression, source integrity, MySQL 5.7 migration tests, concurrency/load gate, update-package build, GitHub Release publishing, SHA256 asset, and GitHub Release online-update E2E.
 
-Not yet verified: production BaoTa deployment and manual/real-device UI behavior.
+Not verified: actual BaoTa deployment, browser click path, live production OpenList timing/data, manual pause/resume UI, production clear-parse result.
 
 ## Next task
 
-Deploy/update a production test instance from 2205 to 2206 and manually verify source save/test, pause/resume orphan recovery and clear-parse-results behavior. Do not rewrite the released 2206 history; subsequent fixes must use a new version/commit.
+Run the real BaoTa/test deployment online updater from 2206 to 2207 and manually exercise:
+1. active scan -> full re-scan replacement;
+2. pause/resume without `think\exception\HttpResponseException`;
+3. parsing beyond old quota limits;
+4. clear parse preserving IPA discovery rows and `fa_category`.
+
+Do not rewrite or replace historical `source-v2026092206`.

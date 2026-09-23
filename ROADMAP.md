@@ -4,29 +4,30 @@
 
 - Repository: `a7987083/app-`
 - Stable release branch: `release/2026092206-ipa-controls-regression-hotfix`
-- Stable version: `2026092206`
-- Release commit: `2cf0e030eb2db3a4aa079462c7a4399720214d1b`
-- Release: `source-v2026092206`
-- IPA Online Update Release Gate `35782863429`: SUCCESS
-- Formal Release Run `35782863008`: SUCCESS
-- Online-update E2E `2026092205 -> 2026092206`: SUCCESS
+- Previous stable release: `source-v2026092206`
+- Current 2207 branch: `release/2026092207-ipa-controls-regression-fix`
+- 2207 release commit: `49372574305bbf2e52b6b1965e4151a142de8a8a`
+- 2207 release: `source-v2026092207`
+- Validation PR: `#22` (draft, base = 2206 hotfix branch)
 
-## 2026092206 — 已发布
+## 2026092207 — IPA controls regression fix
 
-- [x] 修复软件源测试按钮事件传播导致的行勾选问题。
-- [x] 加固软件源保存默认值、事务和异常回滚链。
-- [x] 暂停解析时识别 Parse Worker 存活状态并回收孤立 `parsing` 任务。
-- [x] 清空解析结果前回收孤立任务，并保护真实运行中的解析任务。
-- [x] PHP 7.0 全量回归通过。
-- [x] MySQL 5.7 迁移回归通过。
-- [x] HTTP 并发负载门禁通过。
-- [x] GitHub Release 在线更新 E2E 通过。
-- [x] `source-v2026092206` 与在线更新资产已发布。
+- [x] 全量扫描恢复“重新扫描”语义：同源旧 pending/running 扫描先取消，再创建新的 full job；增量扫描仍保持互斥。
+- [x] 移除每 N 分钟/每小时/每天的解析数量限额执行逻辑；保留显式自动解析开关。
+- [x] 移除 IPA Center 新增的 Worker 状态和限额用量 UI。
+- [x] 修复 `pauseParse` / `resumeParse` / `saveParseSettings` / `startScan` 捕获框架正常 `HttpResponseException` 的响应链。
+- [x] 清空解析继续保留 IPA 扫描/发现记录与 `fa_category`，仅清解析派生数据。
+- [x] 2207 Online Update Release Gate Run `35929007415` — SUCCESS。
+- [x] ZONOE Source Release Run `35930081424` — SUCCESS。
+- [x] `source-v2026092207` 已发布，目标升级路径 `source-v2026092206 -> source-v2026092207`。
+- [x] CI Artifact `zonoe-source-2026092207-online-update` 已生成。
+- [x] GitHub Release 在线升级 E2E — SUCCESS。
+- [ ] 真实 BaoTa/后台页面手工验证。
+- [ ] 验证 full scan 在正在扫描时点击后旧 job 变 cancelled、新 full job 正常完成。
+- [ ] 验证暂停/继续页面不再出现 `think\exception\HttpResponseException`。
+- [ ] 验证大量 IPA 自动解析不再被 5 分钟/小时/每日配额阻断。
+- [ ] 验证清空解析后 IPA discovery 记录和 `fa_category` 不变。
 
 ## Next Task
 
-- [ ] 在真实生产环境从 `2026092205` 执行在线升级到 `2026092206`。
-- [ ] 验证软件源新增/编辑/测试操作，确认测试按钮不再勾选行且保存失败能显示真实错误。
-- [ ] 验证解析暂停/继续、Worker 离线后的孤立任务回收。
-- [ ] 验证“清空全部解析结果”仅清解析/索引/比对/尝试记录，不删除 OpenList 扫描记录、软件源和 `fa_category`。
-- [ ] 完成生产验证后再决定下一阶段功能，不改写 2206 历史 Release。
+2207 已具备正式在线更新产物和 CI/E2E 证据。下一步在真实 BaoTa/测试环境执行 2206 -> 2207 在线更新，并完成上述 4 项 UI/运行时验证。不要改写 `source-v2026092206` 历史 Release。

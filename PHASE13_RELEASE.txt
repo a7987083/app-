@@ -1,21 +1,21 @@
-ZONOE 软件源 Release 2026092206
-版本：2026092206
-基线：source-v2026092205
-阶段：IPA Data Center 控制链回归热修复
-发布分支：release/2026092206-ipa-controls-regression-hotfix
-发布状态：候选（CI 验证中）
+ZONOE 软件源 Release 2026092207
+版本：2026092207
+基线：source-v2026092206
+阶段：IPA Data Center 控制链回归修复
+发布分支：release/2026092207-ipa-controls-regression-fix
+发布状态：候选（正式发布 CI 验证中）
 
 更新内容：
-1. 软件源保存补齐字段默认值、事务与 Throwable 回滚，避免异常输入造成半写入。
-2. 软件源测试按钮同时阻止事件传播和同元素后续处理，保持只读测试且不误勾选表格行。
-3. 暂停解析时仅在 Parse Worker 已离线的情况下回收遗留 parsing 任务。
-4. 孤立任务恢复为 discovered 并记录回收原因；存活 Worker 正在处理的 IPA 继续允许完成。
-5. 清空解析结果前先回收孤立任务，再阻止仍有真实解析中的 IPA 被清空。
-6. 清空操作继续保留 OpenList 扫描记录、软件源和 fa_category，不自动修改目标软件源数据库。
+1. 全量扫描恢复“重新扫描”语义：同一数据源存在活动扫描时，全量扫描取消旧任务并创建新的 full scan；增量扫描仍保持互斥保护。
+2. 扫描任务增加协作式取消检查，取消任务不再执行最终 full-scan 缺失标记收口。
+3. 移除每 5 分钟 / 每小时 / 每日解析数量限制的强制拦截；保留 parse_enabled 作为暂停/继续开关。
+4. IPA Data Center 页面移除扫描 Worker 状态和解析配额 UI，恢复旧版控制面表现。
+5. 修复 pause/resume/startScan/clearParseResults 等控制器把 FastAdmin/ThinkPHP 正常响应异常重新捕获的问题，避免显示 think\exception\HttpResponseException。
+6. 清空解析继续仅删除解析派生结果、二进制索引、比对结果和解析尝试，并将已解析/失败 IPA 恢复为 discovered；保留 IPA 扫描/发现记录、OpenList 软件源和 fa_category。
 7. 本版本无新增数据库迁移；继续使用 2026092205 数据库结构。
-8. PHP 7.0、MySQL 5.7 既有迁移、Mach-O/FAT/IPA parser contract 和在线更新门禁已通过。
+8. PHP 7.0、MySQL 5.7、Mach-O/FAT/IPA parser、扫描安全、运维控制和回归 CI 已通过；当前继续验证正式在线更新发布流程。
 
 在线更新：
-- 目标升级：source-v2026092205 -> source-v2026092206。
-- 本版本无新增 SQL；数据库状态沿用 source-v2026092205。
-- 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、SQL、文件覆盖、版本写入和失败回滚逻辑。
+- 目标升级：source-v2026092206 -> source-v2026092207。
+- 本版本无新增 SQL；数据库状态沿用 source-v2026092206。
+- 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、既有 SQL、文件覆盖、版本写入和失败回滚逻辑。

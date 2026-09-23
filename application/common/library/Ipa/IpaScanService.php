@@ -15,7 +15,26 @@ class IpaScanService
         try{
             $source=Db::name('ipa_source')->where('id',(int)$sourceId)->where('enabled',1)->lock(true)->find();
             if(!$source)throw new \InvalidArgumentException('OpenList 数据源不存在或已停用');
-            if((int)Db::name('ipa_scan_job')->where('source_id',(int)$source['id'])->where('status','in',['pending','running'])->count()>0)throw new \RuntimeException('该数据源已有扫描任务正在运行');
+
+            $activeJobIds=Db::name('ipa_scan_job')
+                ->where('source_id',(int)$source['id'])
+                ->where('status','in',['pending','running'])
+                ->column('id');
+            if($activeJobIds){
+                if($mode!=='full')throw new \RuntimeException('该数据源已有扫描任务正在运行');
+                Db::name('ipa_scan_job')->where('id','in',$activeJobIds)->update([
+                    'status'=>'cancelled',
+                    'finished_at'=>$now,
+                    'updated_at'=>$now,
+                ]);
+                Db::name('ipa_scan_item')->where('job_id','in',$activeJobIds)->where('status','in',['pending','processing'])->update([
+                    'status'=>'cancelled',
+                    'worker_id'=>'',
+                    'locked_at'=>0,
+                    'updated_at'=>$now,
+                ]);
+            }
+
             $jobId=Db::name('ipa_scan_job')->insertGetId(['source_id'=>(int)$source['id'],'mode'=>$mode,'status'=>'pending','root_path'=>$source['root_path'],'created_at'=>$now,'updated_at'=>$now]);
             self::enqueueItem($jobId,(int)$source['id'],'directory',$source['root_path'],$now);Db::commit();return $jobId;
         }catch(\Exception $e){Db::rollback();throw $e;}
@@ -38,6 +57,7 @@ class IpaScanService
 
     public static function processItem(array $item,$tokenResolver=null)
     {
+        self::assertJobActive((int)$item['job_id']);
         $source=Db::name('ipa_source')->where('id',(int)$item['source_id'])->find();
         if(!$source||!(int)$source['enabled'])throw new \RuntimeException('OpenList 数据源不可用');
         $token='';
@@ -47,22 +67,30 @@ class IpaScanService
             throw new \RuntimeException('Encrypted OpenList token requires a token resolver');
         }
         $client=new OpenListClient($source['base_url'],$token,$source['request_timeout']);
+        self::assertJobActive((int)$item['job_id']);
         if($item['item_type']==='directory')self::processDirectory($client,$source,$item);else self::touchAssetFromFile($client,$source,$item['path']);
+        self::assertJobActive((int)$item['job_id']);
         self::markDone($item);
     }
 
     protected static function processDirectory(OpenListClient $client,array $source,array $item)
     {
         try{
+            self::assertJobActive((int)$item['job_id']);
             $data=$client->listDirectory($item['path'],1,0,false);
+            self::assertJobActive((int)$item['job_id']);
             self::consumeDirectoryRows($source,$item,isset($data['content'])&&is_array($data['content'])?$data['content']:[]);
             return;
+        }catch(\RuntimeException $e){
+            if($e->getMessage()==='扫描任务已取消')throw $e;
         }catch(\Exception $e){
             // Some OpenList versions/drivers do not accept per_page=0. Fall back to configured pagination.
         }
         $page=1;$pageSize=max(20,min(1000,(int)$source['scan_page_size']));
         do{
+            self::assertJobActive((int)$item['job_id']);
             $data=$client->listDirectory($item['path'], $page, $pageSize, false);
+            self::assertJobActive((int)$item['job_id']);
             $rows=isset($data['content'])&&is_array($data['content'])?$data['content']:[];
             self::consumeDirectoryRows($source,$item,$rows);
             $total=isset($data['total'])?(int)$data['total']:count($rows);$page++;
@@ -71,13 +99,16 @@ class IpaScanService
 
     protected static function consumeDirectoryRows(array $source,array $item,array $rows)
     {
+        $index=0;
         foreach($rows as $row){
+            if(($index++ % 50)===0)self::assertJobActive((int)$item['job_id']);
             if(empty($row['name']))continue;
             if(!Db::name('ipa_source')->where('id',(int)$source['id'])->where('enabled',1)->find())throw new \RuntimeException('数据源已停止，取消当前扫描');
             $path=rtrim($item['path'],'/').'/'.ltrim($row['name'],'/');
             if(!empty($row['is_dir'])){self::enqueueItem($item['job_id'],$item['source_id'],'directory',$path);continue;}
             if(strtolower(substr($row['name'],-4))!=='.ipa')continue;self::upsertAsset($source,$path,$row);
         }
+        self::assertJobActive((int)$item['job_id']);
     }
 
     protected static function touchAssetFromFile(OpenListClient $client,array $source,$path){$data=$client->getFile($path);self::upsertAsset($source,$path,$data);}
@@ -113,6 +144,12 @@ class IpaScanService
         $failed=(int)Db::name('ipa_scan_item')->where('job_id',$jobId)->where('status','failed')->count();$now=time();
         if((string)$job['mode']==='full'){$cutoff=!empty($job['started_at'])?(int)$job['started_at']:(int)$job['created_at'];Db::name('ipa_asset')->where('source_id',(int)$job['source_id'])->where('last_seen_at','<',$cutoff)->where('status','<>','missing')->update(['status'=>'missing','updated_at'=>$now]);}
         Db::name('ipa_scan_job')->where('id',$jobId)->update(['status'=>$failed>0?'completed_with_errors':'completed','finished_at'=>$now,'updated_at'=>$now]);
+    }
+
+    protected static function assertJobActive($jobId)
+    {
+        $status=(string)Db::name('ipa_scan_job')->where('id',(int)$jobId)->value('status');
+        if($status===''||in_array($status,['cancelled','completed','completed_with_errors'],true))throw new \RuntimeException('扫描任务已取消');
     }
 
     protected static function enqueueItem($jobId,$sourceId,$type,$path,$availableAt=null)

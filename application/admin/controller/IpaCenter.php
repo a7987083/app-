@@ -18,13 +18,7 @@ class IpaCenter extends Backend
     public function index()
     {
         $settings=IpaOpsSettings::all();
-        $workers=[];
-        try { $workers=WorkerState::snapshot($settings['worker_alive_seconds']); } catch (\Exception $e) {}
-        $quota=[];
-        try { $quota=IpaOpsSettings::parseQuotaStatus(); } catch (\Exception $e) {}
-        $this->view->assign('workers',$workers);
         $this->view->assign('parseSettings',$settings);
-        $this->view->assign('parseQuota',$quota);
         $this->view->assign('summary',[
             'sources'=>(int)Db::name('ipa_source')->count(),
             'assets'=>(int)Db::name('ipa_asset')->count(),
@@ -66,7 +60,9 @@ class IpaCenter extends Backend
     public function saveParseSettings()
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
-        try{$cfg=IpaOpsSettings::save($this->request->post());$this->success('解析设置已保存',url('ipa_center/index'),$cfg);}catch(\Throwable $e){$this->error($this->errorMessage($e,'解析设置保存失败'));}
+        try{$cfg=IpaOpsSettings::save($this->request->post());}
+        catch(\Throwable $e){$this->error($this->errorMessage($e,'解析设置保存失败'));return;}
+        $this->success('解析设置已保存',url('ipa_center/index'),$cfg);
     }
 
     public function pauseParse()
@@ -78,14 +74,16 @@ class IpaCenter extends Backend
             $message='自动解析已暂停；不会再领取新任务';
             if($reclaimed>0)$message.='；已回收 '.$reclaimed.' 个无存活 Worker 的解析任务';
             else $message.='；若当前 Parse Worker 仍存活，正在处理的 1 个 IPA 会允许完成';
-            $this->success($message);
-        }catch(\Throwable $e){$this->error($this->errorMessage($e,'暂停解析失败'));}
+        }catch(\Throwable $e){$this->error($this->errorMessage($e,'暂停解析失败'));return;}
+        $this->success($message);
     }
 
     public function resumeParse()
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
-        try{IpaOpsSettings::save(['parse_enabled'=>1]);$this->success('自动解析已恢复');}catch(\Throwable $e){$this->error($this->errorMessage($e,'恢复解析失败'));}
+        try{IpaOpsSettings::save(['parse_enabled'=>1]);}
+        catch(\Throwable $e){$this->error($this->errorMessage($e,'恢复解析失败'));return;}
+        $this->success('自动解析已恢复');
     }
 
     public function clearParseResults()
@@ -112,7 +110,7 @@ class IpaCenter extends Backend
             }
             Db::name('ipa_parse_attempt')->delete(true);
             Db::commit();
-        }catch(\Throwable $e){Db::rollback();$this->error($this->errorMessage($e,'清空解析结果失败'));}
+        }catch(\Throwable $e){Db::rollback();$this->error($this->errorMessage($e,'清空解析结果失败'));return;}
         $message='已清空 '.$affected.' 个 IPA 的解析/比对结果，文件扫描记录和 fa_category 均未删除';
         if($reclaimed>0)$message.='；同时回收了 '.$reclaimed.' 个孤立解析任务';
         $this->success($message);
@@ -210,7 +208,9 @@ class IpaCenter extends Backend
     public function startScan()
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
-        try{$jobId=IpaScanService::createJob((int)$this->request->post('source_id'),(string)$this->request->post('mode','incremental'));$this->success('扫描任务已加入队列',null,['job_id'=>(int)$jobId]);}catch(\Exception $e){$this->error($e->getMessage());}
+        try{$jobId=IpaScanService::createJob((int)$this->request->post('source_id'),(string)$this->request->post('mode','incremental'));}
+        catch(\Exception $e){$this->error($e->getMessage());return;}
+        $this->success('扫描任务已加入队列',null,['job_id'=>(int)$jobId]);
     }
 
     protected function reclaimOrphanedParsing()
