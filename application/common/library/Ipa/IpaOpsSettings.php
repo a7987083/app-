@@ -68,7 +68,11 @@ class IpaOpsSettings
         $hour = (int)Db::name('ipa_parse_attempt')->where('created_at', '>=', $now - 3600)->count();
         $dayStart = strtotime(date('Y-m-d 00:00:00', $now));
         $day = (int)Db::name('ipa_parse_attempt')->where('created_at', '>=', $dayStart)->count();
-        return ['allowed'=>$cfg['parse_enabled'] && $window < $cfg['parse_window_limit'] && $hour < $cfg['parse_hour_limit'] && $day < $cfg['parse_day_limit'],'window_used'=>$window,'hour_used'=>$hour,'day_used'=>$day,'settings'=>$cfg];
+
+        // 2026092207 regression fix: historical parsing had no time-window/hour/day throttle.
+        // Keep the counters/settings for compatibility and diagnostics, but only the explicit
+        // parse_enabled switch may stop workers from claiming new IPA assets.
+        return ['allowed'=>$cfg['parse_enabled'],'window_used'=>$window,'hour_used'=>$hour,'day_used'=>$day,'settings'=>$cfg];
     }
 
     public static function recordAttempt($assetId, $workerId, $result, $error = '')
