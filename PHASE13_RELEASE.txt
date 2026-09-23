@@ -3,7 +3,7 @@ ZONOE 软件源 Release 2026092207
 基线：source-v2026092206
 阶段：IPA Data Center 控制链回归修复
 发布分支：release/2026092207-ipa-controls-regression-fix
-发布状态：候选（CI 验证中）
+发布状态：候选（正式发布 CI 验证中）
 
 更新内容：
 1. 全量扫描恢复“重新扫描”语义：同一数据源存在活动扫描时，全量扫描取消旧任务并创建新的 full scan；增量扫描仍保持互斥保护。
@@ -13,7 +13,7 @@ ZONOE 软件源 Release 2026092207
 5. 修复 pause/resume/startScan/clearParseResults 等控制器把 FastAdmin/ThinkPHP 正常响应异常重新捕获的问题，避免显示 think\exception\HttpResponseException。
 6. 清空解析继续仅删除解析派生结果、二进制索引、比对结果和解析尝试，并将已解析/失败 IPA 恢复为 discovered；保留 IPA 扫描/发现记录、OpenList 软件源和 fa_category。
 7. 本版本无新增数据库迁移；继续使用 2026092205 数据库结构。
-8. PHP 7.0、MySQL 5.7、Mach-O/FAT/IPA parser、扫描安全、运维控制和回归 CI 已通过；本提交继续验证正式在线更新 Gate。
+8. PHP 7.0、MySQL 5.7、Mach-O/FAT/IPA parser、扫描安全、运维控制和回归 CI 已通过；当前继续验证正式在线更新发布流程。
 
 在线更新：
 - 目标升级：source-v2026092206 -> source-v2026092207。
