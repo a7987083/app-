@@ -1,59 +1,64 @@
 {
   "repository": "a7987083/app-",
-  "branch": "release/2026092401-ipa-worker-autostart-hotfix",
-  "baseline_branch": "release/2026092207-ipa-controls-regression-fix",
-  "release_commit": "050dbae659ae48ba2184063361f1b91fb959b6d5",
+  "branch": "release/2026092402-openbasedir-worker-hotfix",
+  "baseline_branch": "release/2026092401-ipa-worker-autostart-hotfix",
+  "release_commit": "54b15d01d4d848e7243600a145500a865ae6fdfd",
   "stable_release": {
-    "version": "2026092401",
-    "release": "source-v2026092401",
-    "previous_release": "source-v2026092207"
+    "version": "2026092402",
+    "release": "source-v2026092402",
+    "previous_release": "source-v2026092401"
   },
   "development": {
-    "version": "2026092401",
-    "phase": "IPA scan worker production runtime hotfix",
-    "pull_request": 23,
-    "pull_request_state": "draft",
-    "code_commits": [
-      "3e19df4411708757ff3839a1659fbbdd4a475015",
-      "7601ff566a8f14312acc097d98d1c988ec344ead",
-      "af2930c0152e8880d43dfd620dcd1fa89034ca9e"
+    "version": "2026092402",
+    "phase": "IPA worker open_basedir and management hotfix",
+    "changes": [
+      "remove external PHP CLI filesystem probes under open_basedir",
+      "preflight scan worker before inserting scan job",
+      "clear all scan jobs without deleting IPA assets",
+      "delete/clear IPA assets and derived rows",
+      "show OpenList source provenance for IPA assets",
+      "hide disabled OpenList sources by default",
+      "add FastAdmin cleanup action permissions"
     ]
   },
   "build": {
-    "online_update_gate_run": 35938782889,
+    "online_update_gate_run": 35945370518,
     "online_update_gate": "passed",
-    "source_release_run": 35938782890,
+    "source_release_run": 35945370658,
     "source_release": "passed",
     "php70": "passed",
     "mysql57": "passed",
     "http_load_gate": "passed",
     "github_release_e2e": "passed",
     "artifact": {
-      "name": "zonoe-source-2026092401-online-update",
-      "id": 10784416382,
-      "size_bytes": 194805,
-      "digest": "sha256:6cfba91e01f2346ce2f601f540a73678d3209f6bdf3bcd30ab8825bedbdd964d"
+      "name": "zonoe-source-2026092402-online-update",
+      "id": 10786194133,
+      "size_bytes": 196887,
+      "digest": "sha256:51416c88a6191be5ba202e473254a948fc6721c9e2acef6e02cc67ad58e16f3b"
     },
     "release_asset": {
       "name": "zonoe-online-update.zip",
-      "size_bytes": 202039,
-      "sha256": "0e230d19e5803f800482678da4c4de23b17acc2bdaa09625e2e979630e1a4f73"
+      "id": 584965054,
+      "size_bytes": 203900,
+      "sha256": "5bdd7f86ec0f75c4d259eb31db74b2ffd41f1f14b6460c2d8df588f3d31d0cf2"
     }
   },
   "runtime": {
     "observed_site_php": "7.0",
     "observed_shell_php": "8.2",
-    "worker_launcher_fix": "released",
-    "fpm_secret_inheritance_fix": "released",
-    "baota_2026092401_deployment": "not_verified",
-    "live_scan_autostart": "not_verified",
-    "proc_open_available": "not_verified"
+    "observed_2401_open_basedir_failure": true,
+    "open_basedir_launcher_fix": "released",
+    "orphan_pending_prevention": "released",
+    "baota_2026092402_deployment": "not_verified",
+    "live_full_scan": "not_verified",
+    "cleanup_controls": "not_verified_on_production"
   },
   "known_risks": [
     "If PHP-FPM disables proc_open, automatic worker spawn will report an explicit startup error.",
-    "Full-scan cancellation remains cooperative during row consumption and may allow a small mid-batch upsert before the next cancellation check."
+    "Full-scan cancellation remains cooperative during row consumption and may allow a small mid-batch upsert before the next cancellation check.",
+    "Clearing active scan jobs cancels/deletes queue state; a worker already inside a row batch stops at its next job-active check."
   ],
-  "next_task": "Install source-v2026092401 on the real BaoTa server and verify one full scan transitions from pending to running/completed without manual SSH worker startup.",
+  "next_task": "Install source-v2026092402 on the real BaoTa server, clear stale 2401 scan jobs, then verify full scan auto-starts without open_basedir errors and reaches running/completed.",
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
   "handoff": "HANDOFF.md",
