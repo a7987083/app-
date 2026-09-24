@@ -57,7 +57,18 @@ class IpaOpsSettings
                 Db::name('ipa_setting')->insert(['setting_key'=>$key,'setting_value'=>$stored,'updated_at'=>$now]);
             }
         }
-        return self::all();
+
+        $saved = self::all();
+        if (!empty($saved['parse_enabled'])) {
+            try {
+                IpaWorkerLauncher::ensureParseWorker();
+            } catch (\Exception $e) {
+                // Settings remain saved. Runtime execution errors are reflected by
+                // asset/worker state instead of turning a valid settings response
+                // into a framework exception.
+            }
+        }
+        return $saved;
     }
 
     public static function parseQuotaStatus($now = null)
