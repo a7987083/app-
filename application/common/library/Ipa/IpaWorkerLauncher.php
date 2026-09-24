@@ -34,7 +34,7 @@ class IpaWorkerLauncher
         }
         $log = $logDir . DIRECTORY_SEPARATOR . 'ipa_scan_worker.log';
 
-        // Mark the worker as starting before spawning so rapid repeated clicks do not fan out workers.
+        // Mark as starting before spawning so rapid repeated clicks do not fan out workers.
         $launcherId = 'launcher:' . gethostname() . ':' . getmypid();
         WorkerState::heartbeat('scan', $launcherId, 'starting', 0);
 
@@ -48,7 +48,8 @@ class IpaWorkerLauncher
             1 => ['file', '/dev/null', 'a'],
             2 => ['file', '/dev/null', 'a'],
         ];
-        $process = @proc_open(['/bin/sh', '-c', $cmd], $descriptors, $pipes, $root, null);
+        // String form is required for PHP 7.0; array commands are only supported by newer PHP.
+        $process = @proc_open($cmd, $descriptors, $pipes, $root, null);
         if (!is_resource($process)) {
             WorkerState::heartbeat('scan', $launcherId, 'stopped', 0);
             throw new \RuntimeException('无法创建 IPA 扫描 Worker 进程');
