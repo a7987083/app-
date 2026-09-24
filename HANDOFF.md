@@ -3,49 +3,51 @@
 ## Current state
 
 - Repository: `a7987083/app-`
-- Previous stable release: `source-v2026092402`
-- Active release branch: `release/2026092403-openlist-inline-scan`
-- Release commit: `987e62f28b7c2f70fb669c75f8e9e2c7598e6aab`
-- Current release: `source-v2026092403`
+- Previous stable release: `source-v2026092403`
+- Active release branch: `release/2026092404-inline-parse-refresh-source-fix`
+- Release commit: `23bd77bbff667a2c6e304a76dd2c62c1394f3cd8`
+- Current release: `source-v2026092404`
 - Historical releases must not be rewritten.
 
-## 2026092403 implementation
+## 2026092404 implementation
 
-1. OpenList Web scans no longer create a separate PHP CLI process.
-2. `IpaWorkerLauncher::ensureScanWorker()` schedules a shutdown consumer in the current PHP-FPM process; under FPM it first calls `fastcgi_finish_request()` so the browser receives the response, then drains the existing scan queue.
-3. Queue execution reuses `IpaScanService::claimOne()`, `processItem()`, `failItem()` and existing job reconciliation. Full-scan restart, incremental mutual exclusion, cancellation, retry backoff and progress counters remain intact.
-4. Token decrypt occurs in the same FPM runtime that already has `PHP_IPA_SERVER_SECRET`; no CLI environment inheritance is required.
-5. Existing `php think ipa:worker` remains an optional external queue consumer, but is not required for UI scans.
-6. 2402 management controls remain: clear scan jobs, delete/clear IPA assets and derived rows, asset OpenList provenance, disabled-source filtering. These operations do not modify `fa_category` or delete actual OpenList IPA files.
+1. Scan and parse Web execution now share the PHP-FPM in-process queue-consumer model. No UI action requires Web-side child-process creation.
+2. `IpaWorkerLauncher::ensureParseWorker()` schedules Parse work after the response; `IpaOpsSettings::save()` invokes it when `parse_enabled=1`.
+3. The Scan consumer continues into parsing when auto-parse is enabled, so newly discovered IPA records can move `discovered -> parsing -> parsed/parse_failed` without a CLI parse worker.
+4. Parse execution reuses `IpaParserService`, encrypted OpenList token handling, attempt records, comparison refresh and existing asset statuses. The CLI `ipa:parse-worker` remains optional compatibility tooling only.
+5. IPA Center has a manual refresh button and 5-second visible-page refresh for scan jobs and IPA assets. Parse pause/resume controls update in place.
+6. `IpaSourceCenter` no longer catches normal FastAdmin success-response `HttpResponseException`. Correct saves report success; actual service errors report failure.
+7. Software-source configuration remains save-first/test-separately: invalid MySQL credentials may be stored, while `测试连接` is authoritative and surfaces the PDO/MySQL error.
+8. 2402/2403 management behavior remains: scan cleanup, asset delete/clear, source provenance, disabled-source filtering; none of these operations modifies `fa_category` or deletes actual OpenList IPA files.
 
 ## Release evidence
 
-- Final IPA Online Update Release Gate `35956707429`: SUCCESS.
-- ZONOE Source Release `35956499625`: SUCCESS.
+- Final Online Update Release Gate `35964464124`: SUCCESS.
+- ZONOE Source Release `35964382173`: SUCCESS.
 - PHP 7.0 regression: SUCCESS.
 - MySQL 5.7 migration: SUCCESS.
 - HTTP concurrency/load gate: SUCCESS.
 - Package/Release: SUCCESS.
-- Real GitHub Release online-update E2E `2402 -> 2403`: SUCCESS.
-- GitHub Release `source-v2026092403` targets `987e62f28b7c2f70fb669c75f8e9e2c7598e6aab`.
-- Release ZIP: `zonoe-online-update.zip`, size `203965`, SHA256 `0ef18ec9acdbeeeb43446e21989ceeb68f2b7c4aa15ed2828c7c8a9a4f9b359b`.
-- Release asset ID: `585158312`.
-- CI Artifact: `zonoe-source-2026092403-online-update`, ID `10791135406`, size `196963`, digest `sha256:1416beff9b49b43ba52ac6681ec90665f0feec87518651e8144c04148e7e3e88`.
+- Real GitHub Release online-update E2E `2403 -> 2404`: SUCCESS.
+- GitHub Release `source-v2026092404` targets `23bd77bbff667a2c6e304a76dd2c62c1394f3cd8`.
+- Release ZIP: `zonoe-online-update.zip`, size `205268`, SHA256 `88e278c3da6765e49373af56746e61866c5dad48caf0d6b4b35b06caab22d474`.
+- Release asset ID: `585309359`.
+- CI Artifact: `zonoe-source-2026092404-online-update`, ID `10793492573`, size `198556`, digest `sha256:60a91d6335a5f5145b5523b0d6e1d06004c2b6f3b20b0235b9929697cff131f2`.
 
 ## Verification boundary
 
-Verified in CI/release: PHP 7.0 syntax/regression, MySQL 5.7 migration/idempotence, HTTP load gate, release package generation, GitHub Release publication, 2402 -> 2403 real online-update E2E, and a runtime contract preventing the Web scan launcher from returning to the child-process implementation.
+Verified in CI/release: PHP 7.0 syntax/regression, MySQL 5.7, source integrity, package publication, HTTP load gate, final 2404 runtime contracts, and real 2403 -> 2404 GitHub Release online-update E2E.
 
-Not yet verified: actual user's BaoTa PHP-FPM executing the shutdown consumer through a complete real OpenList tree; production cleanup controls against real data; remaining 2207 browser/runtime scenarios.
+Not yet verified on the user's BaoTa host: complete live FPM parse of real IPA data, UI refresh timing under production load, correct/incorrect software-source save + test behavior, and FPM capacity during a large combined scan+parse workload.
 
 ## Production verification sequence
 
-1. Online update from 2402 to 2403.
-2. Click `清理全部扫描任务` once to remove stale scan jobs left from 2401/2402 failures.
-3. Confirm disabled OpenList entries are hidden by default and `显示已停用` reveals them.
-4. Click one enabled source's `全量扫描`.
-5. Expected: request returns normally; no PHP CLI process creation is attempted; the FPM process consumes the queue and the Job moves `pending -> running -> completed`.
-6. Confirm IPA assets show OpenList source name/ID.
-7. Verify asset delete/clear does not modify `fa_category`; if the actual OpenList IPA remains, a later scan should recreate the asset.
+1. Online update `source-v2026092403 -> source-v2026092404`.
+2. Run/observe one OpenList scan with auto-parse enabled; expect discovered IPA to proceed to parsing/parsed without SSH or CLI workers.
+3. Pause parsing, confirm no new IPA is claimed; resume, confirm parsing starts again.
+4. Use manual refresh and observe the 5-second automatic table refresh without full-page reload.
+5. Save one valid software-source configuration: expected save success, no `HttpResponseException` error; test connection should succeed.
+6. Save one deliberately invalid test configuration if desired: expected save itself can succeed, while test connection should return the real PDO/MySQL error.
+7. Continue verifying cleanup operations do not modify `fa_category`.
 
-Do not restore the 2401/2402 Web -> CLI launcher merely to solve scan execution. OpenList scan execution in 2403 is intentionally in-process.
+Do not restore the 2401/2402 Web -> CLI launcher to solve scan or parse execution.
