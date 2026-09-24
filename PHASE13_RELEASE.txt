@@ -1,21 +1,20 @@
-ZONOE 软件源 Release 2026092207
-版本：2026092207
-基线：source-v2026092206
-阶段：IPA Data Center 控制链回归修复
-发布分支：release/2026092207-ipa-controls-regression-fix
+ZONOE 软件源 Release 2026092401
+版本：2026092401
+基线：source-v2026092207
+阶段：IPA Scan Worker 生产运行链修复
+发布分支：release/2026092401-ipa-worker-autostart-hotfix
 发布状态：候选（正式发布 CI 验证中）
 
 更新内容：
-1. 全量扫描恢复“重新扫描”语义：同一数据源存在活动扫描时，全量扫描取消旧任务并创建新的 full scan；增量扫描仍保持互斥保护。
-2. 扫描任务增加协作式取消检查，取消任务不再执行最终 full-scan 缺失标记收口。
-3. 移除每 5 分钟 / 每小时 / 每日解析数量限制的强制拦截；保留 parse_enabled 作为暂停/继续开关。
-4. IPA Data Center 页面移除扫描 Worker 状态和解析配额 UI，恢复旧版控制面表现。
-5. 修复 pause/resume/startScan/clearParseResults 等控制器把 FastAdmin/ThinkPHP 正常响应异常重新捕获的问题，避免显示 think\exception\HttpResponseException。
-6. 清空解析继续仅删除解析派生结果、二进制索引、比对结果和解析尝试，并将已解析/失败 IPA 恢复为 discovered；保留 IPA 扫描/发现记录、OpenList 软件源和 fa_category。
-7. 本版本无新增数据库迁移；继续使用 2026092205 数据库结构。
-8. PHP 7.0、MySQL 5.7、Mach-O/FAT/IPA parser、扫描安全、运维控制和回归 CI 已通过；当前继续验证正式在线更新发布流程。
+1. 修复后台点击全量/增量扫描后任务长期停留 pending、无人领取的问题：创建扫描任务后会检查 Scan Worker，缺失时自动启动。
+2. 自动启动 Worker 使用当前 PHP-FPM 安装对应的 PHP CLI（PHP_BINDIR/php），避免服务器 /usr/bin/php 指向 PHP 8.2 导致旧 ThinkPHP Fatal。
+3. 自动启动的 Worker 继承 PHP-FPM 运行环境，包括生产已有的 PHP_IPA_SERVER_SECRET，因此可继续解密既有 OpenList token_ciphertext，无需重新保存 Token。
+4. Worker 启动前写入 starting 心跳，降低短时间重复点击导致并发拉起多个 Worker 的概率。
+5. 新增 IpaWorkerLauncher，并纳入在线更新文件清单；IpaCenter::startScan() 在成功创建任务后确保扫描 Worker 可运行。
+6. 本版本不新增数据库迁移；继续沿用 2026092205 数据库结构和 2026092207 的扫描/解析控制语义。
+7. PHP 7.0 兼容、MySQL 5.7 队列竞争、扫描安全契约、回归检查已通过候选分支 CI；正式在线更新流程继续由现有 Gate/Source Release 验证。
 
 在线更新：
-- 目标升级：source-v2026092206 -> source-v2026092207。
-- 本版本无新增 SQL；数据库状态沿用 source-v2026092206。
+- 目标升级：source-v2026092207 -> source-v2026092401。
+- 本版本无新增 SQL；数据库状态沿用 source-v2026092207。
 - 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、既有 SQL、文件覆盖、版本写入和失败回滚逻辑。

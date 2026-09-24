@@ -61,7 +61,7 @@ jobs:
           VERSION="$(tr -d '\r\n ' < VERSION)"
           test "$VERSION" = "$(tr -d '\r\n ' < public/update/ver.txt)"
           test "$VERSION" = "$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo $j["version"];')"
-          test "$VERSION" = "2026092207"
+          test "$VERSION" = "2026092401"
           grep -F "ZONOE 软件源 ${VERSION}" release/RELEASE_NOTES.md
           grep -F "版本：${VERSION}" PHASE13_RELEASE.txt
 
@@ -74,7 +74,7 @@ jobs:
           ACTUAL="$(sha256sum zonoe-online-update.zip | awk '{print $1}')"
           test "$EXPECTED" = "$ACTUAL"
 
-      - name: Verify 2026092207 payload
+      - name: Verify 2026092401 payload
         run: |
           set -euo pipefail
           ZIP=zonoe-online-update.zip
@@ -88,6 +88,7 @@ jobs:
             program/application/common/library/Ipa/IpaOpsSettings.php \
             program/application/common/library/Ipa/IpaSoftwareSourceService.php \
             program/application/common/library/Ipa/IpaCompareService.php \
+            program/application/common/library/Ipa/IpaWorkerLauncher.php \
             program/public/assets/js/backend/ipa_center.js \
             program/public/assets/js/backend/ipa_source_center.js \
             mysql/2026092204_worker_source_hotfix.sql \
@@ -161,6 +162,7 @@ jobs:
           php -l application/common/library/Ipa/IpaSoftwareSourceService.php
           php -l application/common/library/Ipa/IpaCompareService.php
           php -l application/common/library/Ipa/IpaScanService.php
+          php -l application/common/library/Ipa/IpaWorkerLauncher.php
           php -l application/common/library/Ipa/OpenListClient.php
           php -l application/common/library/Ipa/IpaParserService.php
           php -l application/common/library/Ipa/RemoteZipReader.php
@@ -171,6 +173,8 @@ jobs:
           grep -q 'btn-clear-parse-results' application/admin/view/ipa_center/index.html
           grep -q 'pauseParse' application/admin/controller/IpaCenter.php
           grep -q 'clearParseResults' application/admin/controller/IpaCenter.php
+          grep -q 'IpaWorkerLauncher::ensureScanWorker' application/admin/controller/IpaCenter.php
+          grep -q 'PHP_BINDIR' application/common/library/Ipa/IpaWorkerLauncher.php
           grep -q 'stopPropagation' public/assets/js/backend/ipa_source_center.js
           php think list | grep -q 'ipa:worker'
           php think list | grep -q 'ipa:parse-worker'

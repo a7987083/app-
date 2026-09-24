@@ -1,36 +1,26 @@
-# ZONOE 软件源 2026092207
+# ZONOE 软件源 2026092401
 
 ## 更新内容
 
-本版本以 `source-v2026092206` 为升级基线，修复 IPA Data Center 控制链在扫描、解析暂停/继续、配额限制和解析清理上的回归问题。该版本继续沿用现有在线更新协议，不新增数据库迁移，不自动修改 `fa_category` 或软件源目标数据库。
+本版本以 `source-v2026092207` 为升级基线，修复 IPA Data Center 在真实宝塔生产环境中“扫描任务创建成功但长期停留 pending”的 Worker 运行链问题。该版本继续沿用现有在线更新协议，不新增数据库迁移。
 
-### 扫描控制
+### 扫描 Worker 自动启动
 
-- 全量扫描恢复“重新扫描”语义：若同一数据源已有 pending/running 扫描任务，旧任务会被取消并创建新的 full scan。
-- 增量扫描继续保持同一数据源互斥，避免并发重复扫描。
-- 扫描流程增加协作式取消检查；已取消任务不会再执行最终 full-scan 缺失标记收口。
-
-### 解析控制
-
-- 移除每 5 分钟、每小时、每日解析数量限制的强制拦截；`parse_enabled` 继续作为暂停/继续解析总开关。
-- IPA Data Center 页面移除新增的扫描 Worker 状态和解析配额展示，恢复旧版控制面表现。
-- 修复 FastAdmin/ThinkPHP 正常 success 响应被宽泛异常捕获的问题，暂停、继续、启动扫描和清空解析不再把 `think\exception\HttpResponseException` 当作业务失败展示。
-
-### 清空解析
-
-- 清空解析继续只删除解析派生结果、Mach-O/二进制索引、数据库比对结果和解析尝试记录。
-- 已解析或解析失败的 IPA 恢复为 `discovered`。
-- OpenList 扫描/发现记录、软件源配置和 `fa_category` 保持不变。
+- 后台创建全量/增量扫描任务后检查 Scan Worker 是否存活。
+- Worker 不在时，由当前站点 PHP-FPM 环境自动拉起扫描 Worker。
+- 使用 `PHP_BINDIR/php` 作为 CLI，确保与站点 PHP-FPM 使用同一 PHP 安装，避免 `/usr/bin/php` 指向 PHP 8.x 而旧 ThinkPHP 需要 PHP 7.0 的兼容问题。
+- 子进程继承 FPM 环境变量，包括生产现有 `PHP_IPA_SERVER_SECRET`，可继续解密既有 OpenList `token_ciphertext`。
+- 启动前写入 `starting` 心跳，降低连续点击导致重复拉起 Worker 的概率。
 
 ### 兼容性与验证
 
-- PHP 7.0 语法与运行契约通过。
-- MySQL 5.7 既有迁移与并发/规模测试通过；本版本无新增 SQL。
-- Mach-O / FAT Mach-O / IPA bounded parser、扫描安全、管理与内存安全、运维控制和回归检查通过。
-- 2026092207 正式在线更新 Gate 用于验证真实 ZIP、SHA256、既有 SQL 和版本元数据一致性。
+- PHP 7.0 语法/运行兼容检查通过。
+- MySQL 5.7 schema、worker claim contention、100k scale integration 通过。
+- 扫描安全、管理/内存安全、运维控制和回归检查通过。
+- 本版本无新增 SQL，继续沿用 2026092205 数据库结构。
 
 ### 在线更新
 
 继续沿用现有 `UpdateManager / UpdateInstaller`：ZIP 下载、SHA256 校验、备份、既有增量 SQL、文件覆盖、文件校验、版本写入和失败回滚逻辑均不改变。
 
-目标升级路径：`source-v2026092206 -> source-v2026092207`。
+目标升级路径：`source-v2026092207 -> source-v2026092401`。
