@@ -1,66 +1,54 @@
 {
   "repository": "a7987083/app-",
-  "branch": "release/2026092404-inline-parse-refresh-source-fix",
-  "baseline_branch": "release/2026092403-openlist-inline-scan",
-  "release_commit": "23bd77bbff667a2c6e304a76dd2c62c1394f3cd8",
+  "branch": "release/2026092405-dylib-lifecycle-integration",
+  "baseline_branch": "release/2026092404-inline-parse-refresh-source-fix",
+  "baseline_head": "c27ad2347e025dd0dda1e24afda65856691fef06",
+  "code_head_before_release_metadata": "36e9104f6fe6b26cd7809f4d064f4016114add1f",
   "stable_release": {
     "version": "2026092404",
-    "release": "source-v2026092404",
-    "previous_release": "source-v2026092403"
+    "release": "source-v2026092404"
   },
   "development": {
-    "version": "2026092404",
-    "phase": "FPM inline parse, live refresh, software source response fix",
+    "version": "2026092405",
+    "phase": "Dylib lifecycle, integration workflow and admin readability",
     "changes": [
-      "run scan and parse Web queues inside PHP-FPM after response flush",
-      "schedule parse consumer immediately when automatic parsing is enabled",
-      "continue from scan discovery into parsing when enabled",
-      "add manual and 5-second scan/asset table refresh",
-      "fix software-source HttpResponseException false failure responses",
-      "keep software-source save and connection-test semantics separate"
+      "edit/enable/disable/guarded-delete registered dylibs",
+      "preserve disabled dylib configuration and history while verifier remains fail-closed",
+      "immutable dylib_key during edit for client protocol compatibility",
+      "real integration instructions extracted from existing server/client contract",
+      "register -> integration -> game authorization -> version control -> verification records layout",
+      "UI-only Chinese mappings for states/actions/result codes"
     ]
   },
   "build": {
-    "online_update_gate_run": 35964464124,
-    "online_update_gate": "passed",
-    "source_release_run": 35964382173,
-    "source_release": "passed",
+    "pr": 24,
+    "ipa_data_center_ci_run": 36020461657,
+    "ipa_data_center_ci": "passed",
+    "regression_run": 36020461082,
+    "regression": "passed",
+    "phase14_run": 36020461401,
+    "phase14": "passed",
     "php70": "passed",
     "mysql57": "passed",
-    "http_load_gate": "passed",
-    "github_release_e2e": "passed",
-    "artifact": {
-      "name": "zonoe-source-2026092404-online-update",
-      "id": 10793492573,
-      "size_bytes": 198556,
-      "digest": "sha256:60a91d6335a5f5145b5523b0d6e1d06004c2b6f3b20b0235b9929697cff131f2"
-    },
-    "release_asset": {
-      "name": "zonoe-online-update.zip",
-      "id": 585309359,
-      "size_bytes": 205268,
-      "sha256": "88e278c3da6765e49373af56746e61866c5dad48caf0d6b4b35b06caab22d474"
-    }
+    "dylib_contract": "passed",
+    "ios_arm64_compile": "passed",
+    "source_release": "pending",
+    "github_release_e2e": "pending",
+    "online_update_gate": "pending"
   },
   "runtime": {
-    "observed_site_php": "7.0",
-    "observed_shell_php": "8.2",
-    "web_cli_launcher": "not_required_for_scan_or_parse",
-    "fpm_in_process_scan_consumer": "released",
-    "fpm_in_process_parse_consumer": "released",
-    "live_status_refresh": "released",
-    "software_source_response_fix": "released",
-    "baota_2026092404_deployment": "not_verified",
-    "live_full_scan": "not_verified_on_2404",
-    "live_parse": "not_verified",
-    "software_source_save_test": "not_verified_on_production"
+    "baota_2026092405_deployment": "not_verified",
+    "dylib_edit": "not_verified_on_production",
+    "dylib_disable_enable": "not_verified_on_production",
+    "dylib_delete_guard": "not_verified_on_production",
+    "integration_panel": "not_verified_on_production"
   },
   "known_risks": [
-    "A PHP-FPM worker remains occupied while a post-response scan or parse consumer drains work; production capacity under large queues still needs observation.",
-    "Full-scan cancellation remains cooperative during row consumption and may allow a small mid-batch upsert before the next cancellation check.",
-    "Clearing active scan jobs is cooperative with a consumer already inside a row batch."
+    "A disabled dylib intentionally appears as dylib_unknown to clients because the existing verifier filters enabled=1.",
+    "Dylib hard deletion is intentionally unavailable after business/audit history exists; disable is the lifecycle operation.",
+    "2404 IPA FPM production verification remains outstanding independently of the 2405 Dylib work."
   ],
-  "next_task": "Install source-v2026092404 on the real BaoTa server and verify automatic parsing, pause/resume, manual/5-second refresh, and valid/invalid software-source save/test behavior without CLI workers.",
+  "next_task": "Publish source-v2026092405, pass 2404->2405 GitHub Release online-update E2E and Final Gate, then verify the Dylib lifecycle UI on the real BaoTa host.",
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
   "handoff": "HANDOFF.md",

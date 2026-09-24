@@ -1,22 +1,23 @@
-ZONOE 软件源 Release 2026092404
-版本：2026092404
-基线：source-v2026092403
-阶段：IPA FPM 统一解析 / 状态刷新 / 软件源响应修复
-发布分支：release/2026092404-inline-parse-refresh-source-fix
+ZONOE 软件源 Release 2026092405
+版本：2026092405
+基线：source-v2026092404
+阶段：Dylib 生命周期管理 / 真实接入说明 / 管理 UI 中文化
+发布分支：release/2026092405-dylib-lifecycle-integration
 发布状态：候选（正式发布 CI 验证中）
 
 更新内容：
-1. 扫描与解析统一为 PHP-FPM 同进程后台消费模型；开启自动解析后不再要求 CLI ipa:parse-worker 常驻，也不依赖 proc_open/nohup。
-2. 扫描完成且自动解析开启时，同一 FPM 执行链继续领取 discovered IPA，完成 IPA 元数据解析、二进制索引和软件源数据库比对。
-3. “继续解析/开启解析”保存 parse_enabled=1 后会立即调度 FPM Parse consumer；暂停解析阻止继续领取新 IPA，当前已领取项允许完成。
-4. “重试解析/重新解析”在自动解析开启时会立即唤醒解析 consumer；暂停状态下只回到待解析，不擅自恢复自动解析。
-5. IPA 中心新增手动“刷新”按钮，并每 5 秒轻量刷新扫描任务与 IPA 资产状态，不再需要浏览器整页刷新才能看到进度。
-6. 修复软件源 add/edit/saveSource/testSource/deleteSource 将正常 success() 的 HttpResponseException 错误捕获为失败的问题；数据已保存时不再误报“软件源保存失败”。
-7. 软件源继续保持“配置可先保存、连接正确性由单独测试连接判断”的原语义；测试连接失败时返回 PDO/MySQL 原始错误用于诊断。
-8. 保留 2026092403 的 OpenList FPM 内联扫描，以及 2026092402 的扫描任务清理、IPA 资产删除/清空、来源显示和停用数据源筛选。
+1. 已注册 Dylib 新增编辑、停用、启用、删除和接入说明入口；编辑时 Dylib Key 保持只读，避免破坏现有客户端签名/查找协议。
+2. 停用仅修改 enabled=0，保留配置、版本、BundleID 授权和验证历史；服务端验证链继续只读取 enabled=1，停用后按既有 dylib_unknown / block 语义拒绝。
+3. 删除采用引用保护：无版本、无 BundleID 授权、无验证历史时允许硬删；一旦产生业务历史则禁止删除并要求停用，避免审计记录和逻辑引用成为孤儿。
+4. Dylib 管理页重排为“注册 → 接入 → 游戏授权 → 版本控制 → 验证记录”。
+5. active/testing/deprecated/blocked/revoked、allow/disable_feature/show_message/block、result_code 等底层枚举保持不变，仅在 UI 做中文映射。
+6. 接入说明来自现有 DylibVerify 控制器、DylibVerificationService 和 Objective-C ZONVerifyClient，接口仍为 POST /index/dylib_verify/verify，HMAC 字段顺序不变。
+7. 验证记录将 result_code、action、UDID Hash、BundleID 等改为面向管理员的可读显示；底层日志字段和存储格式不变。
+8. 删除使用项目现有 Layer.confirm 二次确认，所有写操作继续走 Fast.api.ajax / Backend 权限与既有 CSRF 机制。
 
 在线更新：
-- 目标升级：source-v2026092403 -> source-v2026092404。
+- 目标升级：source-v2026092404 -> source-v2026092405。
 - 不新增业务表结构或 SQL 迁移。
 - PHP 7.0 / MySQL 5.7 兼容要求不变。
+- 旧 Objective-C 客户端请求字段、签名顺序、版本规则和 BundleID 绑定行为不变。
 - 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、SQL 执行、文件覆盖、版本写入和失败回滚逻辑。
