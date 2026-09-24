@@ -3,30 +3,29 @@
 ## 当前稳定基线
 
 - Repository: `a7987083/app-`
-- Previous stable release: `source-v2026092401`
-- Current release branch: `release/2026092402-openbasedir-worker-hotfix`
-- Current release commit: `54b15d01d4d848e7243600a145500a865ae6fdfd`
-- Current release: `source-v2026092402`
-- Historical 2206/2207/2401 releases must not be rewritten.
+- Previous stable release: `source-v2026092402`
+- Current release branch: `release/2026092403-openlist-inline-scan`
+- Current release commit: `987e62f28b7c2f70fb669c75f8e9e2c7598e6aab`
+- Current release: `source-v2026092403`
+- Historical 2206/2207/2401/2402 releases must not be rewritten.
 
-## 2026092402 — open_basedir / IPA management hotfix
+## 2026092403 — OpenList FPM in-process scan hotfix
 
-- [x] 修复宝塔 `open_basedir` 阻止 `is_file(/www/server/php/70/bin/php)` 导致 Scan Worker 自动启动失败。
-- [x] 保留 `PHP_BINDIR/php` 同版本启动方案，但不再对站点目录外 PHP CLI 做 `is_file/is_executable` 探测。
-- [x] 在创建扫描 Job 前先完成 Worker 启动预检；启动失败不再留下永久 `pending` Job。
-- [x] 新增“清理全部扫描任务”：取消活动 Job 后删除 Job/Item 历史，不删 IPA 资产/OpenList/`fa_category`。
-- [x] IPA 资产新增单条删除与全部清空；同步清理解析/二进制/比对/分类绑定派生记录，不删除 OpenList 实际文件或 `fa_category`。
-- [x] IPA 资产列表显示 OpenList 来源名称与 Source ID。
-- [x] OpenList 默认隐藏已停用项，并提供“显示已停用/隐藏已停用”切换；停用不等于删除。
-- [x] 新增 MySQL 5.7 幂等权限迁移 `2026092402_ipa_cleanup_controls.sql`。
-- [x] IPA Online Update Release Gate Run `35945370518` — SUCCESS。
-- [x] ZONOE Source Release Run `35945370658` — SUCCESS。
-- [x] GitHub Release `source-v2026092402` 已发布。
-- [x] Real GitHub Release online-update E2E (`2401 -> 2402`) — SUCCESS。
-- [x] CI Artifact `zonoe-source-2026092402-online-update` 已生成。
-- [ ] 真实 BaoTa 2401 -> 2402 在线更新后，点击“清理全部扫描任务”清掉 2401 遗留 pending，再执行全量扫描。
-- [ ] 确认不再出现 open_basedir 错误，Job 自动进入 running/completed。
-- [ ] 验证停用 OpenList 默认隐藏、资产来源展示与删除/清空按钮。
+- [x] 撤销 2401/2402 的 Web -> CLI 子进程扫描启动链。
+- [x] OpenList 扫描不再依赖 `proc_open`、`nohup`、`/dev/null` 或 `PHP_BINDIR/php`。
+- [x] 保留 `ipa_scan_job / ipa_scan_item` 队列及全量重扫、增量互斥、失败重试语义。
+- [x] HTTP 响应结束后由当前 PHP-FPM 进程继续 `claimOne -> processItem` 消费扫描队列。
+- [x] PHP-FPM 环境直接使用既有 `PHP_IPA_SERVER_SECRET` 解密 OpenList Token，不再存在 FPM/CLI 密钥环境分裂。
+- [x] 保留 2402 的扫描任务清理、IPA 资产单条/全部删除、OpenList 来源显示、停用源筛选。
+- [x] PHP 7.0 regression — SUCCESS。
+- [x] MySQL 5.7 migration/idempotence — SUCCESS。
+- [x] HTTP concurrency/load gate — SUCCESS。
+- [x] ZONOE Source Release Run `35956499625` — SUCCESS。
+- [x] GitHub Release `source-v2026092403` 已发布。
+- [x] Real GitHub Release online-update E2E (`2402 -> 2403`) — SUCCESS。
+- [x] IPA Online Update Release Gate Run `35956707429` — SUCCESS。
+- [x] CI Artifact `zonoe-source-2026092403-online-update` 已生成。
+- [ ] 真实 BaoTa 更新到 2403 后，清理 2402 遗留扫描任务，再点全量扫描，确认无需 SSH/CLI Worker 即进入 running/completed。
 
 ## 保留验证项
 
@@ -34,7 +33,8 @@
 - [ ] 暂停/继续不再显示 `think\exception\HttpResponseException`。
 - [ ] 自动解析不再受旧 5 分钟/小时/每日配额阻断。
 - [ ] 清空解析保留 IPA discovery/OpenList/source/`fa_category`。
+- [ ] IPA 资产删除/清空在真实生产数据上不修改 `fa_category`，OpenList 文件仍可再次扫描发现。
 
 ## Next Task
 
-在真实 BaoTa 服务器从 `source-v2026092401` 在线更新到 `source-v2026092402`。更新后先使用“清理全部扫描任务”删除 2401 故障期间留下的 pending Job，再点击一次全量扫描；预期不再触发 open_basedir，Worker 自动拉起并领取队列。若还有启动异常，检查 `runtime/log/ipa_scan_worker.log` 和 PHP 7.0 `disable_functions` 中的 `proc_open`。
+真实 BaoTa 从 `source-v2026092402` 在线更新到 `source-v2026092403`。更新后先点击“清理全部扫描任务”移除 2402 故障期间遗留的 pending/running 历史，再对启用的 OpenList 数据源执行一次全量扫描。预期：页面正常返回；无需 `proc_open`、无需 SSH 手工启动 Worker；FPM 同进程后台消费队列，任务进入 `running -> completed`，IPA 资产显示正确 OpenList 来源。
