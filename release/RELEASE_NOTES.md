@@ -1,42 +1,35 @@
-# ZONOE 软件源 2026092404
+# ZONOE 软件源 2026092405
 
 ## 更新内容
 
-本版本以 `source-v2026092403` 为升级基线，把 IPA 扫描与 IPA 解析统一到 PHP-FPM 当前进程内消费模型，并修复软件源保存成功却被误报失败的问题。
+本版本以 `source-v2026092404` 为唯一升级基线，完善 Dylib 管理生命周期和接入可视化；不改变现有 Dylib 验证协议、版本状态枚举或 BundleID 绑定规则。
 
-### IPA 解析执行链统一
+### Dylib 生命周期管理
 
-- 开启自动解析后不再要求 CLI `ipa:parse-worker` 常驻，也不需要 Web 创建任何子进程。
-- `IpaWorkerLauncher` 同时调度 Scan / Parse 两条 FPM consumer；HTTP 响应结束后由当前 FPM 进程继续消费队列。
-- 扫描完成后若 `parse_enabled=1`，会继续解析新发现的 IPA，并执行软件源数据库比对。
-- “继续解析/开启解析”会立即调度 Parse consumer，而不再只是修改设置值。
-- “重试解析/重新解析”在自动解析开启时立即唤醒解析；暂停状态下仅回到待解析。
-- 原 `php think ipa:parse-worker` 仍保留为可选兼容入口，但 Web 操作不依赖它。
+- 已注册 Dylib 增加编辑、停用、启用、删除和接入说明。
+- 编辑时 `dylib_key` 只读，因为它参与客户端查找和 HMAC 签名契约；验证密钥留空表示不轮换。
+- 停用只写入 `enabled=0`，版本、BundleID 授权、验证历史与其他配置全部保留。
+- 验证服务仍按原逻辑只查询 `enabled=1` 的 Dylib；停用后现有客户端得到既有 `dylib_unknown` / `block` 结果。
+- 删除采用历史保护：仅从未产生版本、BundleID 授权和验证记录的注册项允许硬删；已有业务历史的 Dylib 禁止删除，应使用停用。
 
-### 状态刷新
+### 页面与接入说明
 
-- IPA 中心新增手动“刷新”按钮。
-- 页面可见时每 5 秒自动刷新扫描任务与 IPA 资产表，扫描/解析进度无需整页刷新即可看到。
-- 暂停/继续解析的按钮状态在原页面即时更新。
+- 页面结构调整为：注册 → 接入 → 游戏授权 → 版本控制 → 验证记录。
+- 接入说明直接来自现有服务端与 Objective-C 客户端：`POST /index/dylib_verify/verify`。
+- 请求字段、HMAC-SHA256 canonical 字段顺序和响应字段均保持现有协议，不新增或猜测 endpoint。
+- 现有 `clients/ios/ZONDylibVerify/ZONVerifyClient.h/.m` 继续兼容；不会替换旧 `Index::dylib()` / `Index::apiface()`。
 
-### 软件源保存/测试修复
+### 中文化与日志可读性
 
-- 修复 `IpaSourceCenter` 的 broad catch 捕获 FastAdmin 正常 `success()` 所抛 `think\exception\HttpResponseException`，造成“记录已经保存但页面仍提示保存失败”的问题。
-- `add / edit / saveSource / testSource / deleteSource` 均改为只捕获真实业务异常，正常成功响应移到 catch 外。
-- 保留原有配置语义：MySQL 软件源允许先保存配置，连接是否正确由“测试连接”单独判断。
-- 测试连接失败会返回 PDO/MySQL 原始异常信息，便于定位主机、端口、账号、密码、库名或权限问题。
+- `active/testing/deprecated/blocked/revoked`、`allow/disable_feature/show_message/block` 和服务端 `result_code` 均保持底层原值，仅在后台 UI 映射中文。
+- 验证记录改为“验证结果 / 客户端动作 / 设备标识哈希 / 游戏 BundleID”等管理员可读字段，UDID 仍只显示哈希前 12 位。
 
-### 保留能力
+### 安全与兼容性
 
-- 保留 2026092403 的 OpenList FPM 内联扫描，不依赖 `proc_open`/`nohup`。
-- 保留全量重扫、增量互斥、失败重试和扫描进度语义。
-- 保留扫描任务清理、IPA 资产单条删除/全部清空、OpenList 来源显示和停用数据源筛选。
-- 删除/清理继续不修改 `fa_category`，也不会删除 OpenList 上的实际 IPA 文件。
-
-### 兼容性
-
-- 不新增业务表结构或 SQL 迁移。
+- 删除操作使用项目现有 `Layer.confirm` 二次确认；写操作继续使用 `Fast.api.ajax` 和 Backend 权限/CSRF 链。
+- 不新增业务表或 SQL 迁移。
 - PHP 7.0 / MySQL 5.7 兼容要求不变。
-- 在线更新继续沿用现有 `UpdateManager / UpdateInstaller`，保留下载、SHA256、备份、SQL、文件覆盖、版本写入及失败回滚流程。
+- 旧客户端协议、已有版本规则、BundleID 绑定和签名算法均不变。
+- 在线更新继续沿用现有 `UpdateManager / UpdateInstaller` 下载、SHA256、备份、覆盖、版本写入和失败回滚流程。
 
-目标升级路径：`source-v2026092403 -> source-v2026092404`。
+目标升级路径：`source-v2026092404 -> source-v2026092405`。

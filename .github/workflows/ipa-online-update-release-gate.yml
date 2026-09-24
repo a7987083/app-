@@ -21,11 +21,18 @@ on:
       - 'application/command.php'
       - 'application/admin/command/Ipa*.php'
       - 'application/admin/controller/Ipa*.php'
+      - 'application/admin/controller/DylibCenter.php'
       - 'application/admin/view/ipa_center/**'
       - 'application/admin/view/ipa_source_center/**'
+      - 'application/admin/view/dylib_center/**'
       - 'application/common/library/Ipa/**'
+      - 'application/index/controller/DylibVerify.php'
       - 'public/assets/js/backend/ipa_center.js'
       - 'public/assets/js/backend/ipa_source_center.js'
+      - 'public/assets/js/backend/dylib_center.js'
+      - 'clients/ios/ZONDylibVerify/**'
+      - 'tests/dylib_signing_contract.php'
+      - 'tests/phase2405_dylib_lifecycle_contract_test.php'
       - 'deploy/systemd/zonoe-ipa-parse-worker.service'
       - 'deploy/systemd/zonoe-ipa-parse-worker.timer'
       - 'tools/build_online_update.php'
@@ -62,7 +69,7 @@ jobs:
           VERSION="$(tr -d '\r\n ' < VERSION)"
           test "$VERSION" = "$(tr -d '\r\n ' < public/update/ver.txt)"
           test "$VERSION" = "$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo $j["version"];')"
-          test "$VERSION" = "2026092404"
+          test "$VERSION" = "2026092405"
           grep -F "ZONOE 软件源 ${VERSION}" release/RELEASE_NOTES.md
           grep -F "版本：${VERSION}" PHASE13_RELEASE.txt
 
@@ -75,23 +82,28 @@ jobs:
           ACTUAL="$(sha256sum zonoe-online-update.zip | awk '{print $1}')"
           test "$EXPECTED" = "$ACTUAL"
 
-      - name: Verify 2026092404 payload
+      - name: Verify 2026092405 payload
         run: |
           set -euo pipefail
           ZIP=zonoe-online-update.zip
           for f in \
             program/application/admin/controller/IpaCenter.php \
             program/application/admin/controller/IpaSourceCenter.php \
+            program/application/admin/controller/DylibCenter.php \
             program/application/admin/view/ipa_center/index.html \
             program/application/admin/view/ipa_source_center/index.html \
             program/application/admin/view/ipa_source_center/add.html \
             program/application/admin/view/ipa_source_center/edit.html \
+            program/application/admin/view/dylib_center/index.html \
             program/application/common/library/Ipa/IpaOpsSettings.php \
             program/application/common/library/Ipa/IpaSoftwareSourceService.php \
             program/application/common/library/Ipa/IpaCompareService.php \
             program/application/common/library/Ipa/IpaWorkerLauncher.php \
+            program/application/common/library/Ipa/DylibVerificationService.php \
+            program/application/index/controller/DylibVerify.php \
             program/public/assets/js/backend/ipa_center.js \
             program/public/assets/js/backend/ipa_source_center.js \
+            program/public/assets/js/backend/dylib_center.js \
             mysql/2026092204_worker_source_hotfix.sql \
             mysql/2026092205_ipa_ui_controls_hotfix.sql \
             mysql/2026092402_ipa_cleanup_controls.sql; do
@@ -163,6 +175,7 @@ jobs:
           set -euo pipefail
           php -l application/admin/controller/IpaCenter.php
           php -l application/admin/controller/IpaSourceCenter.php
+          php -l application/admin/controller/DylibCenter.php
           php -l application/admin/command/IpaWorker.php
           php -l application/admin/command/IpaParseWorker.php
           php -l application/common/library/Ipa/IpaOpsSettings.php
@@ -170,18 +183,27 @@ jobs:
           php -l application/common/library/Ipa/IpaCompareService.php
           php -l application/common/library/Ipa/IpaScanService.php
           php -l application/common/library/Ipa/IpaWorkerLauncher.php
+          php -l application/common/library/Ipa/DylibVerificationService.php
           php -l application/common/library/Ipa/OpenListClient.php
           php -l application/common/library/Ipa/IpaParserService.php
           php -l application/common/library/Ipa/RemoteZipReader.php
+          php -l application/index/controller/DylibVerify.php
+          php -l tests/phase2405_dylib_lifecycle_contract_test.php
+          php tests/dylib_signing_contract.php
           php tests/macho_inspector_contract.php
           php tests/macho_inspector_fat_contract.php
           php tests/macho_inspector_parser_contract.php
           node --check public/assets/js/backend/ipa_center.js
+          node --check public/assets/js/backend/dylib_center.js
           grep -q 'btn-parse-toggle' application/admin/view/ipa_center/index.html
           grep -q 'btn-clear-parse-results' application/admin/view/ipa_center/index.html
           grep -q 'btn-clear-scan-jobs' application/admin/view/ipa_center/index.html
           grep -q 'btn-clear-assets' application/admin/view/ipa_center/index.html
           grep -q 'source-disabled' application/admin/view/ipa_center/index.html
+          grep -q 'setDylibEnabled' application/admin/controller/DylibCenter.php
+          grep -q 'deleteDylib' application/admin/controller/DylibCenter.php
+          grep -q 'Layer.confirm' public/assets/js/backend/dylib_center.js
+          grep -q 'POST /index/dylib_verify/verify' application/admin/view/dylib_center/index.html
           grep -q 'clearScanJobs' application/admin/controller/IpaCenter.php
           grep -q 'deleteAsset' application/admin/controller/IpaCenter.php
           grep -q 'clearAssets' application/admin/controller/IpaCenter.php

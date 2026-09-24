@@ -1,97 +1,165 @@
 <div class="panel panel-default panel-intro">
     <div class="panel-heading">{:build_heading(null,FALSE)}</div>
     <div class="panel-body">
-        <div class="row">
-            <div class="col-md-4">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Dylib 注册</strong></div>
-                    <div class="panel-body">
+        <div class="panel panel-default" id="section-register">
+            <div class="panel-heading"><strong>1. Dylib 注册</strong></div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-4">
                         <form id="dylib-form">
                             <input type="hidden" name="id" value="0">
-                            <div class="form-group"><label>Dylib Key</label><input class="form-control" name="dylib_key" placeholder="zonoe.main" required></div>
+                            <input type="hidden" name="enabled" value="1">
+                            <div class="form-group">
+                                <label>Dylib Key</label>
+                                <input class="form-control" name="dylib_key" placeholder="zonoe.main" required>
+                                <p class="help-block">注册后不可修改。该值参与客户端查找和签名协议。</p>
+                            </div>
                             <div class="form-group"><label>名称</label><input class="form-control" name="name" required></div>
                             <div class="form-group">
-                                <label>验证密钥 <small class="text-muted">新建必填，编辑留空则不修改</small></label>
+                                <label>验证密钥 <small class="text-muted">新建必填；编辑留空表示不轮换</small></label>
                                 <div class="input-group">
                                     <input class="form-control" id="verify-secret" name="verify_secret" type="password" autocomplete="new-password" placeholder="至少32字符">
                                     <span class="input-group-btn"><button class="btn btn-default" type="button" id="generate-secret">生成</button></span>
                                 </div>
-                                <p class="help-block">该密钥只在创建/轮换时显示给管理员，用于编译进对应 OC dylib。数据库仅保存加密后的密文。</p>
+                                <p class="help-block">仅在生成/轮换时提供给管理员；数据库只保存加密密文。轮换密钥会要求客户端同步更新。</p>
                             </div>
-                            <div class="form-group"><label>默认离线容错(秒)</label><input class="form-control" type="number" min="0" max="86400" name="default_offline_grace" value="900"></div>
+                            <div class="form-group"><label>默认离线容错（秒）</label><input class="form-control" type="number" min="0" max="86400" name="default_offline_grace" value="900"></div>
                             <div class="form-group"><label>默认失败动作</label>
                                 <select class="form-control" name="default_fail_action">
-                                    {foreach name="failActions" item="action"}<option value="{$action}">{$action}</option>{/foreach}
+                                    <option value="disable_feature">停用受保护功能</option>
+                                    <option value="show_message">显示提示</option>
+                                    <option value="block">阻止使用</option>
                                 </select>
                             </div>
-                            <input type="hidden" name="enabled" value="1">
-                            <button class="btn btn-primary" type="submit">保存 Dylib</button>
+                            <button class="btn btn-primary" type="submit"><span class="js-dylib-submit-label">注册 Dylib</span></button>
+                            <button class="btn btn-default hidden" type="button" id="cancel-dylib-edit">取消编辑</button>
                         </form>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-8">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>已注册 Dylib</strong></div>
-                    <table class="table table-bordered table-striped" id="dylib-list">
-                        <thead><tr><th>ID</th><th>Key</th><th>名称</th><th>离线</th><th>失败动作</th><th>状态</th></tr></thead>
-                        <tbody>
-                        {foreach name="dylibs" item="dylib"}
-                        <tr data-id="{$dylib.id}">
-                            <td>{$dylib.id}</td><td>{$dylib.dylib_key|htmlentities}</td><td>{$dylib.name|htmlentities}</td>
-                            <td>{$dylib.default_offline_grace}s</td><td>{$dylib.default_fail_action}</td>
-                            <td>{if condition="$dylib.enabled"}<span class="label label-success">启用</span>{else/}<span class="label label-default">停用</span>{/if}</td>
-                        </tr>
-                        {/foreach}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>版本策略</strong></div>
-                    <div class="panel-body">
-                        <form id="version-form" class="form-inline" style="margin-bottom:10px">
-                            <select class="form-control" name="dylib_id" required><option value="">Dylib</option>{foreach name="dylibs" item="dylib"}<option value="{$dylib.id}">{$dylib.name|htmlentities}</option>{/foreach}</select>
-                            <input class="form-control" name="version" placeholder="Version" required>
-                            <input class="form-control" name="build" placeholder="Build">
-                            <select class="form-control" name="state">{foreach name="states" item="state"}<option value="{$state}" {if condition="$state=='testing'"}selected{/if}>{$state}</option>{/foreach}</select>
-                            <button class="btn btn-primary" type="submit">添加版本</button>
-                            <div style="margin-top:8px">
-                                <input class="form-control" style="width:360px" name="sha256" placeholder="SHA256（可留空）">
-                                <input class="form-control" style="width:120px" type="number" name="offline_grace" value="900" placeholder="离线秒">
-                                <select class="form-control" name="fail_action">{foreach name="failActions" item="action"}<option value="{$action}">{$action}</option>{/foreach}</select>
-                                <input class="form-control" style="width:240px" name="notice" placeholder="提示信息">
-                            </div>
-                        </form>
-                        <table id="version-table"></table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>游戏 BundleID 绑定</strong></div>
-                    <div class="panel-body">
-                        <form id="binding-form" class="form-inline" style="margin-bottom:10px">
-                            <select class="form-control" name="dylib_id" required><option value="">Dylib</option>{foreach name="dylibs" item="dylib"}<option value="{$dylib.id}">{$dylib.name|htmlentities}</option>{/foreach}</select>
-                            <input class="form-control" style="width:260px" name="bundle_id" placeholder="com.example.game" required>
-                            <select class="form-control" name="fail_action_override"><option value="">继承</option>{foreach name="failActions" item="action"}<option value="{$action}">{$action}</option>{/foreach}</select>
-                            <input class="form-control" style="width:110px" type="number" name="offline_grace_override" value="0" placeholder="离线覆盖">
-                            <input type="hidden" name="enabled" value="1">
-                            <button class="btn btn-primary" type="submit">绑定</button>
-                        </form>
-                        <table id="binding-table"></table>
+                    <div class="col-md-8">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" id="dylib-list">
+                                <thead><tr><th>ID</th><th>Key</th><th>名称</th><th>离线策略</th><th>失败动作</th><th>状态</th><th style="min-width:250px">操作</th></tr></thead>
+                                <tbody>
+                                {foreach name="dylibs" item="dylib"}
+                                <tr data-id="{$dylib.id}"
+                                    data-key="{$dylib.dylib_key|htmlentities}"
+                                    data-name="{$dylib.name|htmlentities}"
+                                    data-grace="{$dylib.default_offline_grace}"
+                                    data-action="{$dylib.default_fail_action|htmlentities}"
+                                    data-enabled="{$dylib.enabled}">
+                                    <td>{$dylib.id}</td>
+                                    <td><code>{$dylib.dylib_key|htmlentities}</code></td>
+                                    <td>{$dylib.name|htmlentities}</td>
+                                    <td>{$dylib.default_offline_grace}s</td>
+                                    <td>
+                                        {if condition="$dylib.default_fail_action=='block'"}阻止使用
+                                        {elseif condition="$dylib.default_fail_action=='show_message'"/}显示提示
+                                        {else/}停用受保护功能{/if}
+                                    </td>
+                                    <td>{if condition="$dylib.enabled"}<span class="label label-success">已启用</span>{else/}<span class="label label-default">已停用</span>{/if}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-xs btn-primary js-dylib-edit">编辑</button>
+                                        {if condition="$dylib.enabled"}
+                                        <button type="button" class="btn btn-xs btn-warning js-dylib-toggle" data-enabled="0">停用</button>
+                                        {else/}
+                                        <button type="button" class="btn btn-xs btn-success js-dylib-toggle" data-enabled="1">启用</button>
+                                        {/if}
+                                        <button type="button" class="btn btn-xs btn-info js-dylib-integration">接入说明</button>
+                                        <button type="button" class="btn btn-xs btn-danger js-dylib-delete">删除</button>
+                                    </td>
+                                </tr>
+                                {/foreach}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="alert alert-info" style="margin-bottom:0">
+                            停用只改变 <code>enabled</code>，配置、版本、游戏授权和验证历史全部保留。验证服务只读取 <code>enabled=1</code> 的 Dylib，停用后现有客户端会收到 <code>dylib_unknown / block</code>。
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>验证日志</strong></div>
+        <div class="panel panel-info" id="section-integration">
+            <div class="panel-heading"><strong>2. 接入说明</strong> <span class="text-muted">（来自现有服务端控制器与 Objective-C 客户端协议）</span></div>
+            <div class="panel-body">
+                <p>当前选择：<strong id="integration-name">请选择已注册 Dylib</strong> <code id="integration-key"></code></p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><strong>请求</strong></h5>
+                        <p><code>POST /index/dylib_verify/verify</code>，<code>Content-Type: application/json</code></p>
+                        <p>必填：<code>udid</code>、<code>bundle_id</code>、<code>dylib_key</code>、<code>dylib_version</code>、<code>timestamp</code>、<code>nonce</code>、<code>signature</code></p>
+                        <p>可选：<code>dylib_build</code>、<code>dylib_sha256</code></p>
+                        <h5><strong>HMAC-SHA256 原文顺序</strong></h5>
+                        <pre>udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce</pre>
+                        <p class="help-block">使用该 Dylib 的验证密钥计算 HMAC-SHA256，发送小写 64 位十六进制 <code>signature</code>。</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><strong>响应</strong></h5>
+                        <p><code>ok</code>、<code>code</code>、<code>action</code>、<code>offline_grace_seconds</code>、<code>token</code>、<code>message</code>、<code>server_time</code></p>
+                        <h5><strong>现有 iOS 客户端</strong></h5>
+                        <p><code>clients/ios/ZONDylibVerify/ZONVerifyClient.h/.m</code></p>
+                        <p>客户端明确使用上述 POST 接口；它不会替换旧的 <code>Index::dylib()</code> 或 <code>Index::apiface()</code>。</p>
+                        <div class="alert alert-warning" style="margin-bottom:0">
+                            后台无法读取明文验证密钥。首次注册或主动轮换后，应把当次显示的密钥同步到对应客户端配置；不要从数据库密文反推。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default" id="section-binding">
+            <div class="panel-heading"><strong>3. 游戏授权（BundleID）</strong></div>
+            <div class="panel-body">
+                <form id="binding-form" class="form-inline" style="margin-bottom:10px">
+                    <select class="form-control" name="dylib_id" required><option value="">Dylib</option>{foreach name="dylibs" item="dylib"}<option value="{$dylib.id}">{$dylib.name|htmlentities}</option>{/foreach}</select>
+                    <input class="form-control" style="width:260px" name="bundle_id" placeholder="com.example.game" required>
+                    <select class="form-control" name="fail_action_override">
+                        <option value="">继承 Dylib 默认策略</option>
+                        <option value="disable_feature">停用受保护功能</option>
+                        <option value="show_message">显示提示</option>
+                        <option value="block">阻止使用</option>
+                    </select>
+                    <input class="form-control" style="width:125px" type="number" name="offline_grace_override" value="0" placeholder="离线覆盖秒">
+                    <input type="hidden" name="enabled" value="1">
+                    <button class="btn btn-primary" type="submit">添加游戏授权</button>
+                </form>
+                <table id="binding-table"></table>
+            </div>
+        </div>
+
+        <div class="panel panel-default" id="section-version">
+            <div class="panel-heading"><strong>4. 版本控制</strong></div>
+            <div class="panel-body">
+                <form id="version-form" class="form-inline" style="margin-bottom:10px">
+                    <select class="form-control" name="dylib_id" required><option value="">Dylib</option>{foreach name="dylibs" item="dylib"}<option value="{$dylib.id}">{$dylib.name|htmlentities}</option>{/foreach}</select>
+                    <input class="form-control" name="version" placeholder="版本号" required>
+                    <input class="form-control" name="build" placeholder="Build">
+                    <select class="form-control" name="state">
+                        <option value="testing" selected>测试中</option>
+                        <option value="active">正式启用</option>
+                        <option value="deprecated">已弃用（仍允许）</option>
+                        <option value="blocked">已阻止</option>
+                        <option value="revoked">已撤销</option>
+                    </select>
+                    <button class="btn btn-primary" type="submit">添加版本</button>
+                    <div style="margin-top:8px">
+                        <input class="form-control" style="width:360px" name="sha256" placeholder="SHA256（可留空）">
+                        <input class="form-control" style="width:125px" type="number" name="offline_grace" value="900" placeholder="离线秒">
+                        <select class="form-control" name="fail_action">
+                            <option value="disable_feature">停用受保护功能</option>
+                            <option value="show_message">显示提示</option>
+                            <option value="block">阻止使用</option>
+                        </select>
+                        <input class="form-control" style="width:240px" name="notice" placeholder="客户端提示信息">
+                    </div>
+                </form>
+                <table id="version-table"></table>
+            </div>
+        </div>
+
+        <div class="panel panel-default" id="section-logs">
+            <div class="panel-heading"><strong>5. 验证记录</strong></div>
             <div class="panel-body"><table id="verify-log-table"></table></div>
         </div>
     </div>

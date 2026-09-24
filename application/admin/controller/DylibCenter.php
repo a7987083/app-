@@ -108,11 +108,25 @@ class DylibCenter extends Backend
         if ($verifySecret !== '' && strlen($verifySecret) < 32) {
             $this->error('Verify secret must contain at least 32 characters');
         }
+
+        $existing = null;
+        if ($id > 0) {
+            $existing = Db::name('dylib')->where('id', $id)->find();
+            if (!$existing) {
+                $this->error('Dylib not found');
+            }
+            // dylib_key participates in the client signing/lookup contract. Keep it immutable
+            // after registration so an admin edit cannot silently break existing clients.
+            if ((string)$existing['dylib_key'] !== $key) {
+                $this->error('Dylib key cannot be changed after registration');
+            }
+        }
+
         $now = time();
         $data = [
             'dylib_key' => $key,
             'name' => $name,
-            'enabled' => (int)$this->request->post('enabled', 1) ? 1 : 0,
+            'enabled' => (int)$this->request->post('enabled', $existing ? (int)$existing['enabled'] : 1) ? 1 : 0,
             'default_offline_grace' => $grace,
             'default_fail_action' => $action,
             'updated_at' => $now,
@@ -131,6 +145,60 @@ class DylibCenter extends Backend
         } catch (\think\exception\PDOException $e) {
             $this->error(stripos($e->getMessage(), 'Duplicate') !== false ? 'Dylib key already exists' : $e->getMessage());
         }
+    }
+
+    public function setDylibEnabled()
+    {
+        $this->requirePost();
+        $id = (int)$this->request->post('id', 0);
+        $enabledRaw = $this->request->post('enabled', null);
+        if ($id <= 0 || !in_array((string)$enabledRaw, ['0', '1'], true)) {
+            $this->error('Invalid dylib status');
+        }
+        $dylib = Db::name('dylib')->where('id', $id)->find();
+        if (!$dylib) {
+            $this->error('Dylib not found');
+        }
+        $enabled = (int)$enabledRaw;
+        Db::name('dylib')->where('id', $id)->update([
+            'enabled' => $enabled,
+            'updated_at' => time(),
+        ]);
+        $this->success($enabled ? 'enabled' : 'disabled', null, [
+            'id' => $id,
+            'enabled' => $enabled,
+        ]);
+    }
+
+    public function deleteDylib()
+    {
+        $this->requirePost();
+        $id = (int)$this->request->post('id', 0);
+        if ($id <= 0) {
+            $this->error('Invalid dylib id');
+        }
+        $dylib = Db::name('dylib')->where('id', $id)->find();
+        if (!$dylib) {
+            $this->error('Dylib not found');
+        }
+
+        // The schema intentionally has no foreign keys and no soft-delete column. A hard
+        // delete is only safe before the registration has any business history. Once used,
+        // disabling preserves versions, BundleID policy and the audit log without orphans.
+        $versionCount = (int)Db::name('dylib_version')->where('dylib_id', $id)->count();
+        $bindingCount = (int)Db::name('dylib_app_binding')->where('dylib_id', $id)->count();
+        $logCount = (int)Db::name('dylib_verify_log')->where('dylib_key', (string)$dylib['dylib_key'])->count();
+        if ($versionCount > 0 || $bindingCount > 0 || $logCount > 0) {
+            $this->error(sprintf(
+                '该 Dylib 已产生业务历史（版本 %d / 游戏授权 %d / 验证记录 %d），为保留历史禁止删除，请改为停用',
+                $versionCount,
+                $bindingCount,
+                $logCount
+            ));
+        }
+
+        Db::name('dylib')->where('id', $id)->delete();
+        $this->success('deleted', null, ['id' => $id]);
     }
 
     public function saveVersion()

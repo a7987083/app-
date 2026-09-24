@@ -3,51 +3,49 @@
 ## Current state
 
 - Repository: `a7987083/app-`
-- Previous stable release: `source-v2026092403`
-- Active release branch: `release/2026092404-inline-parse-refresh-source-fix`
-- Release commit: `23bd77bbff667a2c6e304a76dd2c62c1394f3cd8`
-- Current release: `source-v2026092404`
-- Historical releases must not be rewritten.
+- Previous stable release: `source-v2026092404`
+- Active release branch: `release/2026092405-dylib-lifecycle-integration`
+- Release commit: `f2cb8536b2a5196b4dab1c135c74033f740ed398`
+- Current release: `source-v2026092405`
+- Draft PR: `#24`
+- Historical releases through 2404 must not be rewritten.
 
-## 2026092404 implementation
+## 2026092405 implementation
 
-1. Scan and parse Web execution now share the PHP-FPM in-process queue-consumer model. No UI action requires Web-side child-process creation.
-2. `IpaWorkerLauncher::ensureParseWorker()` schedules Parse work after the response; `IpaOpsSettings::save()` invokes it when `parse_enabled=1`.
-3. The Scan consumer continues into parsing when auto-parse is enabled, so newly discovered IPA records can move `discovered -> parsing -> parsed/parse_failed` without a CLI parse worker.
-4. Parse execution reuses `IpaParserService`, encrypted OpenList token handling, attempt records, comparison refresh and existing asset statuses. The CLI `ipa:parse-worker` remains optional compatibility tooling only.
-5. IPA Center has a manual refresh button and 5-second visible-page refresh for scan jobs and IPA assets. Parse pause/resume controls update in place.
-6. `IpaSourceCenter` no longer catches normal FastAdmin success-response `HttpResponseException`. Correct saves report success; actual service errors report failure.
-7. Software-source configuration remains save-first/test-separately: invalid MySQL credentials may be stored, while `测试连接` is authoritative and surfaces the PDO/MySQL error.
-8. 2402/2403 management behavior remains: scan cleanup, asset delete/clear, source provenance, disabled-source filtering; none of these operations modifies `fa_category` or deletes actual OpenList IPA files.
+1. `DylibCenter` supports edit, enable, disable and guarded delete. Dylib Key is immutable after registration because it is part of the existing signed lookup contract.
+2. Disable preserves the row and all version/binding/log history. `DylibVerificationService` still queries `enabled=1`; disabled entries therefore fail closed using the existing `dylib_unknown / block` response.
+3. The schema has no Dylib soft-delete column or foreign keys. Hard delete is allowed only when there are no `dylib_version`, `dylib_app_binding` or `dylib_verify_log` references; otherwise the admin must disable the Dylib.
+4. Admin workflow is Register → Integration → Game authorization → Version control → Verification records.
+5. Integration documentation is extracted from the real `DylibVerify` controller, `DylibVerificationService` and Objective-C `ZONVerifyClient`; endpoint remains `POST /index/dylib_verify/verify` and canonical HMAC order is unchanged.
+6. Chinese labels are presentation-only. Raw protocol/storage enums and result codes remain unchanged.
+7. Verification log keeps stored fields unchanged; UI translates result/action and labels the truncated UDID hash clearly.
+8. Delete keeps the existing `Layer.confirm`, `Fast.api.ajax`, Backend authorization and CSRF path.
 
 ## Release evidence
 
-- Final Online Update Release Gate `35964464124`: SUCCESS.
-- ZONOE Source Release `35964382173`: SUCCESS.
-- PHP 7.0 regression: SUCCESS.
-- MySQL 5.7 migration: SUCCESS.
-- HTTP concurrency/load gate: SUCCESS.
-- Package/Release: SUCCESS.
-- Real GitHub Release online-update E2E `2403 -> 2404`: SUCCESS.
-- GitHub Release `source-v2026092404` targets `23bd77bbff667a2c6e304a76dd2c62c1394f3cd8`.
-- Release ZIP: `zonoe-online-update.zip`, size `205268`, SHA256 `88e278c3da6765e49373af56746e61866c5dad48caf0d6b4b35b06caab22d474`.
-- Release asset ID: `585309359`.
-- CI Artifact: `zonoe-source-2026092404-online-update`, ID `10793492573`, size `198556`, digest `sha256:60a91d6335a5f5145b5523b0d6e1d06004c2b6f3b20b0235b9929697cff131f2`.
+- Pre-release IPA Data Center CI `36020461657`: SUCCESS.
+- Regression Checks `36020461082`: SUCCESS.
+- Phase14 Production Hardening `36020461401`: SUCCESS.
+- Final IPA Online Update Release Gate `36021185353`: SUCCESS on release commit `f2cb8536...`.
+- ZONOE Source Release `36021185414`: SUCCESS.
+- PHP 7.0 / MySQL 5.7 / HTTP load / package publication: SUCCESS.
+- Real GitHub Release online-update E2E `2404 -> 2405`: SUCCESS.
+- GitHub Release `source-v2026092405` targets `f2cb8536b2a5196b4dab1c135c74033f740ed398`.
+- Release ZIP: `zonoe-online-update.zip`, size `208933`, SHA256 `abc851d4e63fd98b78eda7ce06ff9cac73b5909380efbef3511a529bc949e0f4`, asset ID `586260722`.
+- CI Artifact: `zonoe-source-2026092405-online-update`, ID `10816991706`, size `202158`, digest `sha256:91f2d63221448f9f858035c1672a17abe3082399db9b326d382a4ff7e2bb1a55`.
 
 ## Verification boundary
 
-Verified in CI/release: PHP 7.0 syntax/regression, MySQL 5.7, source integrity, package publication, HTTP load gate, final 2404 runtime contracts, and real 2403 -> 2404 GitHub Release online-update E2E.
+Verified: source/contract CI, PHP 7.0, MySQL 5.7, Dylib signing/lifecycle contracts, iPhoneOS arm64 client compile, HTTP load gate, real GitHub Release publication, `2404 -> 2405` online-update E2E, final release gate.
 
-Not yet verified on the user's BaoTa host: complete live FPM parse of real IPA data, UI refresh timing under production load, correct/incorrect software-source save + test behavior, and FPM capacity during a large combined scan+parse workload.
+Not yet verified on the user's BaoTa host: actual admin UI interactions and a real production-client verify call after enable/disable.
 
 ## Production verification sequence
 
-1. Online update `source-v2026092403 -> source-v2026092404`.
-2. Run/observe one OpenList scan with auto-parse enabled; expect discovered IPA to proceed to parsing/parsed without SSH or CLI workers.
-3. Pause parsing, confirm no new IPA is claimed; resume, confirm parsing starts again.
-4. Use manual refresh and observe the 5-second automatic table refresh without full-page reload.
-5. Save one valid software-source configuration: expected save success, no `HttpResponseException` error; test connection should succeed.
-6. Save one deliberately invalid test configuration if desired: expected save itself can succeed, while test connection should return the real PDO/MySQL error.
-7. Continue verifying cleanup operations do not modify `fa_category`.
-
-Do not restore the 2401/2402 Web -> CLI launcher to solve scan or parse execution.
+1. Use the existing updater on a real `source-v2026092404` BaoTa installation; expect `source-v2026092405`.
+2. Edit Dylib name/policy; confirm Dylib Key remains immutable and blank secret does not rotate it.
+3. Disable and call the existing verifier; expect `dylib_unknown / block`; re-enable and confirm existing version/BundleID rules resume.
+4. Delete a never-used registration; it should succeed after second confirmation.
+5. Attempt to delete a registration with version/binding/log history; it must refuse and instruct using disable.
+6. Compare the Integration panel against the existing Objective-C client fields/signing order.
+7. Confirm logs show readable Chinese labels while stored enum/result values remain unchanged.
