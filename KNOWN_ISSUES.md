@@ -1,40 +1,39 @@
 # Known Issues and Refactor Backlog
 
-## P0 — 2026092403 real BaoTa runtime verification pending
+## P0 — 2026092404 real BaoTa runtime verification pending
 
-- `source-v2026092403` 已正式发布；PHP 7.0、MySQL 5.7、HTTP load gate、Source Release、最终 Online Update Gate 和 `2402 -> 2403` GitHub Release 在线升级 E2E 均通过。
-- 2401/2402 在真实 BaoTa 上暴露了同一架构问题的两个阶段：先是站点 `open_basedir` 阻止外部 PHP CLI 路径探测，随后是 Web 请求无法创建扫描子进程。
-- 2403 已把 UI 扫描执行改为当前 PHP-FPM 进程在响应结束后继续消费现有数据库队列；不再要求 Web 请求创建 CLI Worker。
-- Required check: 真实服务器更新到 2403 后先“清理全部扫描任务”，再点全量扫描；任务应无需 SSH/CLI Worker 即进入 `running/completed`。
+- `source-v2026092404` 已正式发布；PHP 7.0、MySQL 5.7、HTTP load、Source Release、最终 Online Update Gate 和 `2403 -> 2404` 真实 GitHub Release 在线升级 E2E 均通过。
+- 2404 已将 Web 扫描和自动解析统一为 PHP-FPM 响应结束后的同进程 queue consumer；不要求 Web 创建 PHP CLI 子进程，也不要求 CLI `ipa:worker` / `ipa:parse-worker` 常驻。
+- Required checks: 真实服务器更新后验证一次完整扫描 + 自动解析；`discovered -> parsing -> parsed/parse_failed` 应无需 SSH/CLI Worker 完成。
+- 同时验证手动/5 秒自动刷新、解析暂停/继续、解析失败重试，以及软件源保存/测试连接响应链。
 
-## P1 — PHP-FPM worker occupancy during in-process scan
+## P1 — PHP-FPM worker occupancy during in-process scan/parse
 
-- 2403 在 `fastcgi_finish_request()` 后由当前 FPM worker 继续消费扫描队列，因此浏览器可先收到响应，但该 FPM worker 在扫描完成前仍被占用。
-- 当前设计避免了生产环境的子进程/open_basedir/CLI secret 分裂问题，但大型 OpenList 树在高并发站点上的 FPM 容量影响仍需真实负载观察。
-- 不应为了规避该风险直接恢复 2401/2402 的 Web -> CLI launcher；若未来需要完全独立执行器，应作为明确的部署级守护架构设计，而不是由 Web 请求临时拉起。
+- `fastcgi_finish_request()` 后浏览器已收到响应，但当前 FPM worker 会继续消费扫描或解析队列，因此在工作结束前仍被占用。
+- 该设计消除了 BaoTa open_basedir、Web 子进程创建和 CLI secret/runtime 分裂问题，但大型 OpenList 树或大量 IPA 连续解析时的 FPM 容量影响需真实负载观察。
+- 不应直接恢复 2401/2402 Web -> CLI launcher；未来如需完全独立执行器，应作为明确的部署级守护架构设计。
+
+## P1 — Software-source validation semantics
+
+- 软件源保存只做基本字段/端口/表名等合法性检查，不以数据库连接成功作为保存前置条件。这是当前明确语义，而不是缺陷。
+- “测试连接”是判断 host/port/user/password/database/table 是否真实可用的独立操作；失败应显示 PDO/MySQL 原始错误。
+- 2404 已修复成功响应被 `think\exception\HttpResponseException` broad catch 误报失败的问题；真实 BaoTa UI 仍待验证。
 
 ## P1 — Clearing active scan jobs is cooperative with an already-running consumer
 
-- “清理全部扫描任务”先将活动 Job/Item 标记 cancelled，再删除扫描队列历史。
-- 已经进入一个 OpenList 目录批次的 consumer 会在下一次 `assertJobActive()` 时停止；极小窗口内可能已有部分 asset upsert 完成。
-- 清理扫描任务不会删除 IPA 资产，也不会执行 cancelled full job 的最终 mark-missing reconciliation。
+- “清理全部扫描任务”先取消活动 Job/Item，再删除扫描队列历史。
+- 已进入 OpenList 目录批次的 consumer 会在下一次 `assertJobActive()` 时停止；极小窗口内可能已有部分 asset upsert。
+- cancelled full job 不执行最终 mark-missing reconciliation。
 
 ## P1 — Full-scan cancellation is cooperative during row consumption
 
-- 旧扫描在 OpenList 调用前后及每 50 行消费时检查取消状态。
-- 若取消发生在一个批次中间，小部分行可能在下一次检查前完成同源 asset upsert。
-- cancelled job 不会执行最终 full-scan mark-missing reconciliation。
+- 扫描在 OpenList 调用前后及每 50 行检查取消状态。
+- 若取消发生在批次中间，小部分行可能在下一次检查前完成同源 asset upsert。
 
 ## P1 — IPA asset cleanup production verification
 
-- 单条/全部资产删除代码会清理 `ipa_parse_attempt`, `ipa_binary`, `ipa_compare_result`, `ipa_category_binding`，不修改 `fa_category`，也不删除 OpenList 实际 IPA 文件。
-- 真实 BaoTa 数据上尚未人工验证；删除后若 OpenList 文件仍存在，下一次扫描应重新发现并建立资产记录。
-
-## P1 — Remaining 2207 browser/runtime checks
-
-- 暂停/继续不得显示 `think\exception\HttpResponseException`。
-- `parse_enabled=1` 时不得再被旧 5 分钟/小时/每日配额阻断。
-- 清空解析必须保留 IPA discovery、OpenList source、`fa_category`。
+- 单条/全部资产删除会清理 `ipa_parse_attempt`, `ipa_binary`, `ipa_compare_result`, `ipa_category_binding`，不修改 `fa_category`，也不删除 OpenList 实际 IPA 文件。
+- 真实 BaoTa 数据尚需人工验证；OpenList 文件仍存在时，下次扫描应重新发现资产。
 
 ## P1 — Exact /license production Nginx interception
 
