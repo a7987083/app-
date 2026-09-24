@@ -62,7 +62,7 @@ jobs:
           VERSION="$(tr -d '\r\n ' < VERSION)"
           test "$VERSION" = "$(tr -d '\r\n ' < public/update/ver.txt)"
           test "$VERSION" = "$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo $j["version"];')"
-          test "$VERSION" = "2026092403"
+          test "$VERSION" = "2026092404"
           grep -F "ZONOE 软件源 ${VERSION}" release/RELEASE_NOTES.md
           grep -F "版本：${VERSION}" PHASE13_RELEASE.txt
 
@@ -75,7 +75,7 @@ jobs:
           ACTUAL="$(sha256sum zonoe-online-update.zip | awk '{print $1}')"
           test "$EXPECTED" = "$ACTUAL"
 
-      - name: Verify 2026092403 payload
+      - name: Verify 2026092404 payload
         run: |
           set -euo pipefail
           ZIP=zonoe-online-update.zip
@@ -176,6 +176,7 @@ jobs:
           php tests/macho_inspector_contract.php
           php tests/macho_inspector_fat_contract.php
           php tests/macho_inspector_parser_contract.php
+          node --check public/assets/js/backend/ipa_center.js
           grep -q 'btn-parse-toggle' application/admin/view/ipa_center/index.html
           grep -q 'btn-clear-parse-results' application/admin/view/ipa_center/index.html
           grep -q 'btn-clear-scan-jobs' application/admin/view/ipa_center/index.html
@@ -185,10 +186,14 @@ jobs:
           grep -q 'deleteAsset' application/admin/controller/IpaCenter.php
           grep -q 'clearAssets' application/admin/controller/IpaCenter.php
           grep -q 'IpaWorkerLauncher::ensureScanWorker' application/common/library/Ipa/IpaScanService.php
+          grep -q 'IpaWorkerLauncher::ensureParseWorker' application/common/library/Ipa/IpaOpsSettings.php
+          grep -q 'ensureParseWorker' application/common/library/Ipa/IpaWorkerLauncher.php
+          grep -q 'drainParseQueue' application/common/library/Ipa/IpaWorkerLauncher.php
           grep -q 'register_shutdown_function' application/common/library/Ipa/IpaWorkerLauncher.php
           grep -q 'fastcgi_finish_request' application/common/library/Ipa/IpaWorkerLauncher.php
-          grep -q 'drainQueue' application/common/library/Ipa/IpaWorkerLauncher.php
           if grep -Eq 'proc_open|nohup|PHP_BINDIR|/dev/null' application/common/library/Ipa/IpaWorkerLauncher.php; then exit 1; fi
+          grep -q 'btn-ipa-refresh' public/assets/js/backend/ipa_center.js
+          grep -q 'setInterval' public/assets/js/backend/ipa_center.js
           grep -q 'stopPropagation' public/assets/js/backend/ipa_source_center.js
           php think list | grep -q 'ipa:worker'
           php think list | grep -q 'ipa:parse-worker'
