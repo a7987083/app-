@@ -1,57 +1,59 @@
 {
   "repository": "a7987083/app-",
-  "branch": "release/2026092207-ipa-controls-regression-fix",
-  "baseline_branch": "release/2026092206-ipa-controls-regression-hotfix",
-  "baseline_commit": "cd719391f25713224dab4a1301f9e551b0cde969",
-  "release_commit": "49372574305bbf2e52b6b1965e4151a142de8a8a",
+  "branch": "release/2026092401-ipa-worker-autostart-hotfix",
+  "baseline_branch": "release/2026092207-ipa-controls-regression-fix",
+  "release_commit": "050dbae659ae48ba2184063361f1b91fb959b6d5",
   "stable_release": {
-    "version": "2026092207",
-    "release": "source-v2026092207",
-    "previous_release": "source-v2026092206"
+    "version": "2026092401",
+    "release": "source-v2026092401",
+    "previous_release": "source-v2026092207"
   },
   "development": {
-    "version": "2026092207",
-    "phase": "IPA controls regression fix / online update release",
-    "pull_request": 22,
+    "version": "2026092401",
+    "phase": "IPA scan worker production runtime hotfix",
+    "pull_request": 23,
     "pull_request_state": "draft",
     "code_commits": [
-      "8a81c4456d00e20f5fc19d18b680d25a362eba4f",
-      "f21ee17da7ddd2634546880ec50c817be0eaab69",
-      "6286116d15566e7611d5b86f3a708cbc0ba3b32e",
-      "51518a17b7338670d63ab68b925caa82c9010904"
+      "3e19df4411708757ff3839a1659fbbdd4a475015",
+      "7601ff566a8f14312acc097d98d1c988ec344ead",
+      "af2930c0152e8880d43dfd620dcd1fa89034ca9e"
     ]
   },
   "build": {
-    "online_update_gate_run": 35929007415,
+    "online_update_gate_run": 35938782889,
     "online_update_gate": "passed",
-    "source_release_run": 35930081424,
+    "source_release_run": 35938782890,
     "source_release": "passed",
     "php70": "passed",
-    "source_integrity": "passed",
     "mysql57": "passed",
     "http_load_gate": "passed",
     "github_release_e2e": "passed",
     "artifact": {
-      "name": "zonoe-source-2026092207-online-update",
-      "id": 10780897151,
-      "size_bytes": 193451,
-      "digest": "sha256:afa9181e40a75cd40dc5ada936a1de9a3e14e71e6214547a4752f6fa0cecb44c"
+      "name": "zonoe-source-2026092401-online-update",
+      "id": 10784416382,
+      "size_bytes": 194805,
+      "digest": "sha256:6cfba91e01f2346ce2f601f540a73678d3209f6bdf3bcd30ab8825bedbdd964d"
     },
     "release_asset": {
       "name": "zonoe-online-update.zip",
-      "size_bytes": 200266,
-      "sha256": "6f828567e3b3d535f8dab60de4fa543d620818b3a1be2189a3f9ef324389f5fc"
+      "size_bytes": 202039,
+      "sha256": "0e230d19e5803f800482678da4c4de23b17acc2bdaa09625e2e979630e1a4f73"
     }
   },
   "runtime": {
-    "baota_deployment": "not_verified",
-    "browser_ui": "not_verified",
-    "live_full_scan_restart": "not_verified",
-    "pause_resume_ui": "not_verified",
-    "parse_without_quota": "not_verified",
-    "clear_parse_preservation": "not_verified"
+    "observed_site_php": "7.0",
+    "observed_shell_php": "8.2",
+    "worker_launcher_fix": "released",
+    "fpm_secret_inheritance_fix": "released",
+    "baota_2026092401_deployment": "not_verified",
+    "live_scan_autostart": "not_verified",
+    "proc_open_available": "not_verified"
   },
-  "next_task": "Run a real BaoTa/test 2206 -> 2207 online update and manually verify the four IPA control regression scenarios.",
+  "known_risks": [
+    "If PHP-FPM disables proc_open, automatic worker spawn will report an explicit startup error.",
+    "Full-scan cancellation remains cooperative during row consumption and may allow a small mid-batch upsert before the next cancellation check."
+  ],
+  "next_task": "Install source-v2026092401 on the real BaoTa server and verify one full scan transitions from pending to running/completed without manual SSH worker startup.",
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
   "handoff": "HANDOFF.md",

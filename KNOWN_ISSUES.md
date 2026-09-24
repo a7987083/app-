@@ -1,33 +1,35 @@
 # Known Issues and Refactor Backlog
 
-## P0 — 2026092207 production/manual verification pending
+## P0 — 2026092401 real BaoTa runtime verification pending
 
-- `source-v2026092207` 已发布，正式 Source Release CI、GitHub Release 在线升级 E2E 和在线更新 Artifact 均已通过/生成。
-- 但实际 BaoTa/browser UI 路径尚未人工执行，不能把 CI/E2E 等同于生产运行验证。
-- Required checks:
-  1. Trigger full scan while a same-source scan is active; old job/items must become `cancelled`, new full job must complete.
-  2. Pause/resume parsing; UI must not expose `think\exception\HttpResponseException`.
-  3. With `parse_enabled=1`, parsing must continue beyond the old 5-minute/hour/day quotas.
-  4. Clear parse must retain IPA discovery rows, OpenList source configuration and `fa_category` while deleting/resetting only parse-derived state.
+- `source-v2026092401` 已正式发布；Online Update Gate、Source Release、PHP 7.0、MySQL 5.7 和 `2207 -> 2401` GitHub Release 在线升级 E2E 均通过。
+- 真实服务器曾确认：站点 PHP-FPM 是 PHP 7.0，而 SSH 默认 `/usr/bin/php` 指向 PHP 8.2；CLI 手工运行还缺失 FPM 的 `PHP_IPA_SERVER_SECRET`。
+- 2026092401 已针对这条生产运行链修复，但尚未在用户实际 BaoTa 服务器安装后验证。
+- Required check: 在线更新到 2026092401 后，点击一次全量扫描，任务应自动从 `pending` 被 Worker 领取并进入 `running/completed`，无需 SSH 手工启动 Worker。
+
+## P1 — PHP-FPM may disable proc_open
+
+- `IpaWorkerLauncher` 使用 `proc_open` 从当前 FPM 环境拉起 `PHP_BINDIR/php think ipa:worker`。
+- 如果生产 PHP 7.0 的 `disable_functions` 禁止 `proc_open`，后台会明确报“服务器已禁用 proc_open，无法自动启动 IPA 扫描 Worker”。
+- 若真实服务器命中此限制，再选择现有宝塔/Supervisor/systemd 守护方案；不要回退到 `/usr/bin/php`。
 
 ## P1 — Full-scan cancellation is cooperative during row consumption
 
-- A running old scan checks cancellation before/after OpenList calls and every 50 consumed rows.
-- If cancellation happens mid-batch, a small part of the current directory batch may still reach same-source asset upsert before the next cancellation check.
-- The cancelled old job cannot complete full-scan reconciliation/mark-missing.
-- If production testing shows a race, tighten cancellation checking to each row or bind job activity validation directly to each write.
+- 旧扫描在 OpenList 调用前后及每 50 行消费时检查取消状态。
+- 若取消发生在一个批次中间，小部分行可能在下一次检查前完成同源 asset upsert。
+- cancelled job 不会执行最终 full-scan mark-missing reconciliation。
 
-## P1 — Dedicated 2207 browser/runtime behavioral coverage remains incomplete
+## P1 — Remaining 2207 browser/runtime checks
 
-- Formal release CI now covers PHP 7.0 regression, source integrity, MySQL 5.7 migrations, HTTP concurrency/load, release packaging and GitHub Release online-upgrade E2E.
-- It still does not reproduce all four 2207 regression scenarios through the real BaoTa/browser UI and production OpenList data.
-- Keep PR `#22` draft until manual runtime verification unless explicitly instructed otherwise.
+- 暂停/继续不得显示 `think\exception\HttpResponseException`。
+- `parse_enabled=1` 时不得再被旧 5 分钟/小时/每日配额阻断。
+- 清空解析必须保留 IPA discovery、OpenList source、`fa_category`。
+- PR #22/#23 保持 draft，除非用户明确要求合并。
 
 ## P1 — Exact /license production Nginx interception
 
-- `/authorization` is the supported online-update-safe authorization lookup route.
-- ThinkPHP still retains `/license`, but production Nginx may intercept it through a case-insensitive LICENSE security rule before PHP.
-- Exact `/license` requires changing/reloading the active BaoTa/Nginx vhost rule.
+- `/authorization` 是在线更新安全的授权查询路由。
+- ThinkPHP 仍保留 `/license`，但生产 Nginx 可能在到达 PHP 前由大小写不敏感的 LICENSE 安全规则截获。
 
 ## Stable announcement contract
 

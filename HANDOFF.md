@@ -3,42 +3,38 @@
 ## Current state
 
 - Repository: `a7987083/app-`
-- Previous stable release: `source-v2026092206`
-- Active/release branch: `release/2026092207-ipa-controls-regression-fix`
-- 2207 release commit: `49372574305bbf2e52b6b1965e4151a142de8a8a`
-- Current release: `source-v2026092207`
-- Validation PR: `#22` (draft; keep draft until production/manual runtime verification unless explicitly instructed otherwise)
+- Previous stable release: `source-v2026092207`
+- Active release branch: `release/2026092401-ipa-worker-autostart-hotfix`
+- Release commit: `050dbae659ae48ba2184063361f1b91fb959b6d5`
+- Current release: `source-v2026092401`
+- Worker hotfix PR: `#23` (draft)
 
-## 2207 implementation
+## 2026092401 implementation
 
-1. Full scan: incremental remains mutually exclusive; full scan cancels active same-source jobs/items and creates a new full job. Cancellation is cooperative during row consumption.
-2. Parse limits: persisted quota fields remain for compatibility, but only `parse_enabled` blocks new claims.
-3. UI: Worker-status/rate-limit panel removed from IPA Center; internal `WorkerState` remains for orphan recovery.
-4. Pause/resume: targeted framework success responses are outside broad exception catches, avoiding normal `HttpResponseException` being displayed as a failure.
-5. Clear parse: preserves IPA discovery/OpenList source rows and `fa_category`; clears/reset only parse-derived data.
+1. `IpaCenter::startScan()` creates a job then calls `IpaWorkerLauncher::ensureScanWorker()`.
+2. Launcher uses `PHP_BINDIR/php` so BaoTa PHP 7.0 FPM launches PHP 7.0 CLI rather than shell `/usr/bin/php` (observed PHP 8.2).
+3. Worker is spawned from FPM and inherits the existing `PHP_IPA_SERVER_SECRET`, retaining compatibility with already encrypted OpenList `token_ciphertext`.
+4. `WorkerState` gets a `starting` heartbeat before spawn to reduce duplicate workers from rapid repeated clicks.
+5. Worker output is written to `runtime/log/ipa_scan_worker.log`.
+6. No new SQL migration; 2026092205 schema and 2207 scan/control semantics remain authoritative.
 
 ## Release evidence
 
-- Online Update Release Gate Run `35929007415`: SUCCESS.
-- ZONOE Source Release Run `35930081424`: SUCCESS.
-- Release `source-v2026092207` targets commit `49372574305bbf2e52b6b1965e4151a142de8a8a`.
-- Release assets: `zonoe-online-update.zip` + `zonoe-online-update.zip.sha256`.
-- Release ZIP size: `200266` bytes; SHA256: `6f828567e3b3d535f8dab60de4fa543d620818b3a1be2189a3f9ef324389f5fc`.
-- CI Artifact: `zonoe-source-2026092207-online-update`, ID `10780897151`, size `193451` bytes, digest `sha256:afa9181e40a75cd40dc5ada936a1de9a3e14e71e6214547a4752f6fa0cecb44c`.
-- Real GitHub Release online-update E2E from previous stable release to 2207: SUCCESS.
+- Online Update Release Gate `35938782889`: SUCCESS.
+- ZONOE Source Release `35938782890`: SUCCESS.
+- GitHub Release `source-v2026092401` targets `050dbae659ae48ba2184063361f1b91fb959b6d5`.
+- Release ZIP: `zonoe-online-update.zip`, size `202039`, SHA256 `0e230d19e5803f800482678da4c4de23b17acc2bdaa09625e2e979630e1a4f73`.
+- CI Artifact: `zonoe-source-2026092401-online-update`, ID `10784416382`, size `194805`, digest `sha256:6cfba91e01f2346ce2f601f540a73678d3209f6bdf3bcd30ab8825bedbdd964d`.
+- Real GitHub Release online-update E2E `2207 -> 2401`: SUCCESS.
 
 ## Verification boundary
 
-Verified: source diff, PHP 7.0 regression, source integrity, MySQL 5.7 migration tests, concurrency/load gate, update-package build, GitHub Release publishing, SHA256 asset, and GitHub Release online-update E2E.
+Verified: PHP 7.0 syntax/regression, MySQL 5.7 migration/contracts, Worker claim contention, OpenList HTTP contracts, scan safety contracts, package build, GitHub Release publication, and online-update E2E.
 
-Not verified: actual BaoTa deployment, browser click path, live production OpenList timing/data, manual pause/resume UI, production clear-parse result.
+Not yet verified: actual user's BaoTa server after installing 2026092401, FPM `proc_open` availability on that server, real OpenList scan completing from UI, and the remaining 2207 browser/runtime scenarios.
 
 ## Next task
 
-Run the real BaoTa/test deployment online updater from 2206 to 2207 and manually exercise:
-1. active scan -> full re-scan replacement;
-2. pause/resume without `think\exception\HttpResponseException`;
-3. parsing beyond old quota limits;
-4. clear parse preserving IPA discovery rows and `fa_category`.
+Install `source-v2026092401` via the existing online updater on the BaoTa server. Then click Full Scan once. Expected path: job created -> Worker auto-started with site PHP/FPM environment -> pending item claimed -> job running/completed. If it remains pending, inspect `runtime/log/ipa_scan_worker.log` and PHP 7.0 `disable_functions` for `proc_open`.
 
-Do not rewrite or replace historical `source-v2026092206`.
+Do not rewrite historical `source-v2026092206` or `source-v2026092207` releases.

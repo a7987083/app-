@@ -3,31 +3,36 @@
 ## 当前稳定基线
 
 - Repository: `a7987083/app-`
-- Stable release branch: `release/2026092206-ipa-controls-regression-hotfix`
-- Previous stable release: `source-v2026092206`
-- Current 2207 branch: `release/2026092207-ipa-controls-regression-fix`
-- 2207 release commit: `49372574305bbf2e52b6b1965e4151a142de8a8a`
-- 2207 release: `source-v2026092207`
-- Validation PR: `#22` (draft, base = 2206 hotfix branch)
+- Previous stable release: `source-v2026092207`
+- Current release branch: `release/2026092401-ipa-worker-autostart-hotfix`
+- Current release commit: `050dbae659ae48ba2184063361f1b91fb959b6d5`
+- Current release: `source-v2026092401`
+- Worker fix PR: `#23` (draft, base = 2207 branch)
+- Historical 2206/2207 releases must not be rewritten.
 
-## 2026092207 — IPA controls regression fix
+## 2026092401 — IPA Scan Worker production hotfix
 
-- [x] 全量扫描恢复“重新扫描”语义：同源旧 pending/running 扫描先取消，再创建新的 full job；增量扫描仍保持互斥。
-- [x] 移除每 N 分钟/每小时/每天的解析数量限额执行逻辑；保留显式自动解析开关。
-- [x] 移除 IPA Center 新增的 Worker 状态和限额用量 UI。
-- [x] 修复 `pauseParse` / `resumeParse` / `saveParseSettings` / `startScan` 捕获框架正常 `HttpResponseException` 的响应链。
-- [x] 清空解析继续保留 IPA 扫描/发现记录与 `fa_category`，仅清解析派生数据。
-- [x] 2207 Online Update Release Gate Run `35929007415` — SUCCESS。
-- [x] ZONOE Source Release Run `35930081424` — SUCCESS。
-- [x] `source-v2026092207` 已发布，目标升级路径 `source-v2026092206 -> source-v2026092207`。
-- [x] CI Artifact `zonoe-source-2026092207-online-update` 已生成。
-- [x] GitHub Release 在线升级 E2E — SUCCESS。
-- [ ] 真实 BaoTa/后台页面手工验证。
-- [ ] 验证 full scan 在正在扫描时点击后旧 job 变 cancelled、新 full job 正常完成。
-- [ ] 验证暂停/继续页面不再出现 `think\exception\HttpResponseException`。
-- [ ] 验证大量 IPA 自动解析不再被 5 分钟/小时/每日配额阻断。
-- [ ] 验证清空解析后 IPA discovery 记录和 `fa_category` 不变。
+- [x] 修复宝塔站点 PHP 7.0、SSH 默认 PHP 8.2 导致 `php think ipa:worker` Fatal 的运行时错配。
+- [x] 扫描任务创建后自动检查/启动 Scan Worker。
+- [x] 自动使用 `PHP_BINDIR/php`，与当前 PHP-FPM 使用同一 PHP 安装。
+- [x] 自动启动 Worker 继承 FPM 环境，继续使用既有 `PHP_IPA_SERVER_SECRET` 解密 OpenList Token。
+- [x] 增加 `starting` 心跳，降低连续点击重复拉起 Worker 的风险。
+- [x] 新增 `IpaWorkerLauncher.php` 并纳入在线更新清单。
+- [x] IPA Online Update Release Gate Run `35938782889` — SUCCESS。
+- [x] ZONOE Source Release Run `35938782890` — SUCCESS。
+- [x] GitHub Release `source-v2026092401` 已发布。
+- [x] Real GitHub Release online-update E2E (`2207 -> 2401`) — SUCCESS。
+- [x] CI Artifact `zonoe-source-2026092401-online-update` 已生成。
+- [ ] 真实 BaoTa 2207 -> 2401 在线更新后，点击全量扫描确认 job 从 pending 进入 running/completed。
+- [ ] 检查 `runtime/log/ipa_scan_worker.log` 无 PHP/secret/进程拉起错误。
+
+## 保留的 2207 验证项
+
+- [ ] active scan -> full scan 时旧 job cancelled、新 full job 正常完成。
+- [ ] 暂停/继续不再显示 `think\exception\HttpResponseException`。
+- [ ] 自动解析不再受旧 5 分钟/小时/每日配额阻断。
+- [ ] 清空解析保留 IPA discovery/OpenList/source/`fa_category`。
 
 ## Next Task
 
-2207 已具备正式在线更新产物和 CI/E2E 证据。下一步在真实 BaoTa/测试环境执行 2206 -> 2207 在线更新，并完成上述 4 项 UI/运行时验证。不要改写 `source-v2026092206` 历史 Release。
+在真实 BaoTa 服务器执行 `source-v2026092207 -> source-v2026092401` 在线更新，然后点击一次全量扫描。预期不再需要 SSH 手工启动 Worker；任务应自动被领取。若失败，优先检查 `runtime/log/ipa_scan_worker.log` 和 PHP `disable_functions` 中是否禁用了 `proc_open`。
