@@ -3,46 +3,49 @@
 ## Current state
 
 - Repository: `a7987083/app-`
-- Previous stable release: `source-v2026092401`
-- Active release branch: `release/2026092402-openbasedir-worker-hotfix`
-- Release commit: `54b15d01d4d848e7243600a145500a865ae6fdfd`
-- Current release: `source-v2026092402`
+- Previous stable release: `source-v2026092402`
+- Active release branch: `release/2026092403-openlist-inline-scan`
+- Release commit: `987e62f28b7c2f70fb669c75f8e9e2c7598e6aab`
+- Current release: `source-v2026092403`
 - Historical releases must not be rewritten.
 
-## 2026092402 implementation
+## 2026092403 implementation
 
-1. `IpaWorkerLauncher` no longer calls `is_file/is_executable` on `PHP_BINDIR/php`, fixing BaoTa `open_basedir` failures while retaining the same-site PHP 7.0 CLI selection.
-2. `IpaScanService::createJob()` ensures the Scan Worker before inserting a new Job, so launcher failures no longer leave orphan `pending` jobs that block incremental scans.
-3. `clearScanJobs` cancels active scan jobs/items then clears scan history; it does not delete IPA assets, OpenList sources, or `fa_category`.
-4. `deleteAsset` / `clearAssets` remove IPA asset records and derived parse/binary/compare/category-binding rows; they do not delete the actual OpenList IPA file or `fa_category`.
-5. Asset list exposes `source_name` + Source ID so provenance is explicit: IPA assets are created from OpenList `.ipa` scan discovery, not from software-source MySQL.
-6. Disabled OpenList sources are hidden by default, with a show/hide toggle. Disable keeps configuration; delete remains a separate action.
-7. New idempotent MySQL 5.7 auth migration adds permissions for the three cleanup actions.
+1. OpenList Web scans no longer create a separate PHP CLI process.
+2. `IpaWorkerLauncher::ensureScanWorker()` schedules a shutdown consumer in the current PHP-FPM process; under FPM it first calls `fastcgi_finish_request()` so the browser receives the response, then drains the existing scan queue.
+3. Queue execution reuses `IpaScanService::claimOne()`, `processItem()`, `failItem()` and existing job reconciliation. Full-scan restart, incremental mutual exclusion, cancellation, retry backoff and progress counters remain intact.
+4. Token decrypt occurs in the same FPM runtime that already has `PHP_IPA_SERVER_SECRET`; no CLI environment inheritance is required.
+5. Existing `php think ipa:worker` remains an optional external queue consumer, but is not required for UI scans.
+6. 2402 management controls remain: clear scan jobs, delete/clear IPA assets and derived rows, asset OpenList provenance, disabled-source filtering. These operations do not modify `fa_category` or delete actual OpenList IPA files.
 
 ## Release evidence
 
-- Online Update Release Gate `35945370518`: SUCCESS.
-- ZONOE Source Release `35945370658`: SUCCESS.
-- GitHub Release `source-v2026092402` targets `54b15d01d4d848e7243600a145500a865ae6fdfd`.
-- Release ZIP: `zonoe-online-update.zip`, size `203900`, SHA256 `5bdd7f86ec0f75c4d259eb31db74b2ffd41f1f14b6460c2d8df588f3d31d0cf2`.
-- Release asset ID: `584965054`.
-- CI Artifact: `zonoe-source-2026092402-online-update`, ID `10786194133`, size `196887`, digest `sha256:51416c88a6191be5ba202e473254a948fc6721c9e2acef6e02cc67ad58e16f3b`.
-- Real GitHub Release online-update E2E `2401 -> 2402`: SUCCESS.
+- Final IPA Online Update Release Gate `35956707429`: SUCCESS.
+- ZONOE Source Release `35956499625`: SUCCESS.
+- PHP 7.0 regression: SUCCESS.
+- MySQL 5.7 migration: SUCCESS.
+- HTTP concurrency/load gate: SUCCESS.
+- Package/Release: SUCCESS.
+- Real GitHub Release online-update E2E `2402 -> 2403`: SUCCESS.
+- GitHub Release `source-v2026092403` targets `987e62f28b7c2f70fb669c75f8e9e2c7598e6aab`.
+- Release ZIP: `zonoe-online-update.zip`, size `203965`, SHA256 `0ef18ec9acdbeeeb43446e21989ceeb68f2b7c4aa15ed2828c7c8a9a4f9b359b`.
+- Release asset ID: `585158312`.
+- CI Artifact: `zonoe-source-2026092403-online-update`, ID `10791135406`, size `196963`, digest `sha256:1416beff9b49b43ba52ac6681ec90665f0feec87518651e8144c04148e7e3e88`.
 
 ## Verification boundary
 
-Verified: PHP 7.0 regression, MySQL 5.7 migration/idempotence, permission rules, HTTP concurrency/load gate, release packaging, GitHub Release publication, and real Release online-update E2E.
+Verified in CI/release: PHP 7.0 syntax/regression, MySQL 5.7 migration/idempotence, HTTP load gate, release package generation, GitHub Release publication, 2402 -> 2403 real online-update E2E, and a runtime contract preventing the Web scan launcher from returning to the child-process implementation.
 
-Not yet verified: actual user's BaoTa server after installing 2026092402, real Worker process launch under that site's `proc_open`/open_basedir configuration, UI cleanup buttons against production data, and full OpenList scan completion.
+Not yet verified: actual user's BaoTa PHP-FPM executing the shutdown consumer through a complete real OpenList tree; production cleanup controls against real data; remaining 2207 browser/runtime scenarios.
 
 ## Production verification sequence
 
-1. Online update from 2401 to 2402.
-2. Click `清理全部扫描任务` to remove the stale 2401 pending Job created before the open_basedir failure.
-3. Confirm disabled OpenList entries are hidden by default; use `显示已停用` to reveal them.
+1. Online update from 2402 to 2403.
+2. Click `清理全部扫描任务` once to remove stale scan jobs left from 2401/2402 failures.
+3. Confirm disabled OpenList entries are hidden by default and `显示已停用` reveals them.
 4. Click one enabled source's `全量扫描`.
-5. Expected: no open_basedir error; Worker starts automatically and Job transitions `pending -> running -> completed`.
-6. Confirm IPA assets show OpenList source name/ID and deletion controls work without modifying `fa_category`.
-7. If Worker startup still fails, inspect `runtime/log/ipa_scan_worker.log` and PHP 7.0 `disable_functions` for `proc_open`.
+5. Expected: request returns normally; no PHP CLI process creation is attempted; the FPM process consumes the queue and the Job moves `pending -> running -> completed`.
+6. Confirm IPA assets show OpenList source name/ID.
+7. Verify asset delete/clear does not modify `fa_category`; if the actual OpenList IPA remains, a later scan should recreate the asset.
 
-Do not rewrite historical `source-v2026092206`, `source-v2026092207`, or `source-v2026092401` releases.
+Do not restore the 2401/2402 Web -> CLI launcher merely to solve scan execution. OpenList scan execution in 2403 is intentionally in-process.
