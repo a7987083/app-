@@ -1,40 +1,47 @@
 # Development Changelog
 
-## 2026-09-24 — Release 2026092401
+## 2026-09-24 — Release 2026092402
 
-Baseline: `source-v2026092207`.
+Baseline: `source-v2026092401`.
 
-### Production failure reproduced
+### Production failures observed
 
-- BaoTa site PHP-FPM: PHP 7.0.
-- SSH default `/usr/bin/php`: symlink to PHP 8.2, causing old ThinkPHP CLI Fatal (`Array and string offset access syntax with curly braces is no longer supported`).
-- Explicit PHP 7.0 CLI then failed because CLI did not inherit FPM's `PHP_IPA_SERVER_SECRET`.
-- A newly generated `.env` secret could not decrypt existing `ipa_source.token_ciphertext`, producing `IPA secret integrity check failed`.
-- Existing production key was confirmed in PHP 7.0 FPM environment; the defect was Worker process/runtime inheritance, not corrupted OpenList data.
+- Real BaoTa click path on 2401 hit `is_file(): open_basedir restriction in effect` when `IpaWorkerLauncher` probed `/www/server/php/70/bin/php` outside the site's allowed paths.
+- The failed full-scan request had already created a `pending` Job, so a later incremental scan correctly reported `该数据源已有扫描任务正在运行`; the real defect was the orphan pending lock left after Worker launch failure.
+- UI gaps observed: no clear-all scan jobs action; no IPA asset delete/clear action; disabled OpenList sources remained visually mixed with enabled sources; IPA asset origin was not obvious.
 
 ### Fix
 
-- Added `application/common/library/Ipa/IpaWorkerLauncher.php`.
-- `IpaCenter::startScan()` now creates the scan job and ensures a Scan Worker is alive.
-- Launcher uses `PHP_BINDIR/php`, so the Worker uses the same PHP installation as the web FPM runtime instead of shell `/usr/bin/php`.
-- Spawned Worker inherits FPM environment including existing `PHP_IPA_SERVER_SECRET`.
-- Added `starting` WorkerState heartbeat before spawn.
-- `IpaWorkerLauncher.php` added to `release/online-update-files.txt`.
-- Fix commits: `3e19df4411708757ff3839a1659fbbdd4a475015`, `7601ff566a8f14312acc097d98d1c988ec344ead`, `af2930c0152e8880d43dfd620dcd1fa89034ca9e`.
-- Release commit: `050dbae659ae48ba2184063361f1b91fb959b6d5`.
+- `IpaWorkerLauncher` keeps `PHP_BINDIR/php` but removes external `is_file/is_executable` probes, so BaoTa `open_basedir` is not relaxed or bypassed.
+- `IpaScanService::createJob()` now preflights/ensures the Worker before inserting a new Job, preventing Worker startup failure from creating an orphan `pending` lock.
+- Added `clearScanJobs`, `deleteAsset`, `clearAssets` controller actions and matching UI controls.
+- Asset deletion cleans `ipa_parse_attempt`, `ipa_binary`, `ipa_compare_result`, `ipa_category_binding`; OpenList files and `fa_category` remain untouched.
+- Asset list now displays OpenList source name/ID; assets originate from OpenList `.ipa` discovery, not from software-source MySQL.
+- Disabled OpenList sources are hidden by default with a show/hide toggle; disabled retains configuration and does not mean delete.
+- Added idempotent MySQL 5.7 permission migration `release/sql/2026092402_ipa_cleanup_controls.sql`.
+- Release commit: `54b15d01d4d848e7243600a145500a865ae6fdfd`.
 
 ### Verification and release
 
-- Candidate PR `#23` remains draft.
-- PHP 7.0 compatibility/regression — SUCCESS.
-- IPA scan safety, OpenList HTTP, MySQL 5.7 schema/worker claim contention/100k scale — SUCCESS.
-- IPA Online Update Release Gate Run `35938782889` — SUCCESS.
-- ZONOE Source Release Run `35938782890` — SUCCESS.
-- Real GitHub Release online-update E2E (`source-v2026092207 -> source-v2026092401`) — SUCCESS.
-- Release `source-v2026092401` targets `050dbae659ae48ba2184063361f1b91fb959b6d5`.
-- Release ZIP size `202039` bytes; SHA256 `0e230d19e5803f800482678da4c4de23b17acc2bdaa09625e2e979630e1a4f73`.
-- CI Artifact `zonoe-source-2026092401-online-update`: ID `10784416382`, size `194805` bytes, digest `sha256:6cfba91e01f2346ce2f601f540a73678d3209f6bdf3bcd30ab8825bedbdd964d`.
-- Actual BaoTa runtime after installing 2026092401: NOT YET VERIFIED.
+- IPA Online Update Release Gate Run `35945370518` — SUCCESS.
+- ZONOE Source Release Run `35945370658` — SUCCESS.
+- PHP 7.0 regression — SUCCESS.
+- MySQL 5.7 migration — SUCCESS.
+- Phase 19.3.1 HTTP concurrency/load gate — SUCCESS.
+- Package/Release — SUCCESS.
+- Real GitHub Release online-update E2E (`source-v2026092401 -> source-v2026092402`) — SUCCESS.
+- Release `source-v2026092402` targets `54b15d01d4d848e7243600a145500a865ae6fdfd`.
+- Release ZIP size `203900` bytes; SHA256 `5bdd7f86ec0f75c4d259eb31db74b2ffd41f1f14b6460c2d8df588f3d31d0cf2`.
+- CI Artifact `zonoe-source-2026092402-online-update`: ID `10786194133`, size `196887` bytes, digest `sha256:51416c88a6191be5ba202e473254a948fc6721c9e2acef6e02cc67ad58e16f3b`.
+- Actual BaoTa runtime after installing 2026092402: NOT YET VERIFIED.
+
+## 2026-09-24 — Release 2026092401
+
+- Fixed PHP 7.0 FPM vs shell PHP 8.2 Worker runtime mismatch and FPM secret inheritance.
+- Added Scan Worker automatic launcher using `PHP_BINDIR/php` and `PHP_IPA_SERVER_SECRET` inheritance.
+- Online Update Gate `35938782889` and Source Release `35938782890` — SUCCESS.
+- Real GitHub Release online-update E2E (`2207 -> 2401`) — SUCCESS.
+- Production follow-up exposed the `open_basedir` probe issue fixed by 2402.
 
 ## 2026-09-24 — Release 2026092207
 
@@ -43,7 +50,6 @@ Baseline: `source-v2026092207`.
 - Fixed framework `HttpResponseException` response-chain handling.
 - Clear parse preserves IPA discovery/OpenList/source/`fa_category`.
 - Online Update Gate `35929007415` and Source Release `35930081424` — SUCCESS.
-- Release `source-v2026092207` published; online-update E2E (`2206 -> 2207`) — SUCCESS.
 
 ## 2026-09-23 — Release 2026092206
 
