@@ -3,10 +3,11 @@
   "branch": "release/2026092405-dylib-lifecycle-integration",
   "baseline_branch": "release/2026092404-inline-parse-refresh-source-fix",
   "baseline_head": "c27ad2347e025dd0dda1e24afda65856691fef06",
-  "code_head_before_release_metadata": "36e9104f6fe6b26cd7809f4d064f4016114add1f",
+  "release_commit": "f2cb8536b2a5196b4dab1c135c74033f740ed398",
   "stable_release": {
-    "version": "2026092404",
-    "release": "source-v2026092404"
+    "version": "2026092405",
+    "release": "source-v2026092405",
+    "previous_release": "source-v2026092404"
   },
   "development": {
     "version": "2026092405",
@@ -32,9 +33,24 @@
     "mysql57": "passed",
     "dylib_contract": "passed",
     "ios_arm64_compile": "passed",
-    "source_release": "pending",
-    "github_release_e2e": "pending",
-    "online_update_gate": "pending"
+    "http_load_gate": "passed",
+    "source_release_run": 36021185414,
+    "source_release": "passed",
+    "github_release_e2e": "passed",
+    "online_update_gate_run": 36021185353,
+    "online_update_gate": "passed",
+    "artifact": {
+      "name": "zonoe-source-2026092405-online-update",
+      "id": 10816991706,
+      "size_bytes": 202158,
+      "digest": "sha256:91f2d63221448f9f858035c1672a17abe3082399db9b326d382a4ff7e2bb1a55"
+    },
+    "release_asset": {
+      "name": "zonoe-online-update.zip",
+      "id": 586260722,
+      "size_bytes": 208933,
+      "sha256": "abc851d4e63fd98b78eda7ce06ff9cac73b5909380efbef3511a529bc949e0f4"
+    }
   },
   "runtime": {
     "baota_2026092405_deployment": "not_verified",
@@ -48,7 +64,7 @@
     "Dylib hard deletion is intentionally unavailable after business/audit history exists; disable is the lifecycle operation.",
     "2404 IPA FPM production verification remains outstanding independently of the 2405 Dylib work."
   ],
-  "next_task": "Publish source-v2026092405, pass 2404->2405 GitHub Release online-update E2E and Final Gate, then verify the Dylib lifecycle UI on the real BaoTa host.",
+  "next_task": "Online-update a real BaoTa source-v2026092404 installation to source-v2026092405 and verify the Dylib lifecycle UI and production verifier behavior.",
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
   "handoff": "HANDOFF.md",

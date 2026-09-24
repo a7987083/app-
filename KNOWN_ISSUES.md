@@ -2,8 +2,8 @@
 
 ## P0 — 2026092405 real BaoTa Dylib lifecycle verification pending
 
-- 2405 code/PR CI is green on exact pre-release HEAD `36e9104f...`: PHP 7.0, MySQL 5.7, Dylib signing/lifecycle/security contracts and iPhoneOS arm64 compile passed.
-- Formal `source-v2026092405`, `2404 -> 2405` real GitHub Release online-update E2E and Final Gate are pending until the release commit completes.
+- `source-v2026092405` has been formally published from commit `f2cb8536...`.
+- Source Release `36021185414`, Final Gate `36021185353` and real GitHub Release online-update E2E `2404 -> 2405` all passed.
 - Required production checks: edit without changing Dylib Key, secret rotation semantics, disable/enable behavior, unused-item delete, referenced-item delete refusal, integration instructions and readable verification logs.
 
 ## P1 — Disabled Dylib intentionally resolves as unknown

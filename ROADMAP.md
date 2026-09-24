@@ -3,10 +3,10 @@
 ## 当前稳定基线
 
 - Repository: `a7987083/app-`
-- Stable release before this candidate: `source-v2026092404`
-- Active candidate branch: `release/2026092405-dylib-lifecycle-integration`
-- Candidate code HEAD before release metadata: `36e9104f6fe6b26cd7809f4d064f4016114add1f`
-- Candidate release: `source-v2026092405`
+- Previous stable release: `source-v2026092404`
+- Current release branch: `release/2026092405-dylib-lifecycle-integration`
+- Release commit: `f2cb8536b2a5196b4dab1c135c74033f740ed398`
+- Current release: `source-v2026092405`
 - Historical releases through 2026092404 must not be rewritten.
 
 ## 2026092405 — Dylib lifecycle / integration workflow
@@ -20,13 +20,15 @@
 - [x] 接入说明取自真实 `/index/dylib_verify/verify`、DylibVerificationService 和 ZONVerifyClient；未新增 endpoint。
 - [x] 日志列改为管理员可读显示，UDID 继续只显示哈希摘要。
 - [x] 删除二次确认、Backend 权限与 Fast.api.ajax/CSRF 链保持现状。
-- [x] PR #24 上 IPA Data Center CI Run `36020461657` — SUCCESS。
-- [x] Regression Checks Run `36020461082` — SUCCESS。
-- [x] Phase14 Production Hardening Run `36020461401` — SUCCESS。
+- [x] PR #24 pre-release IPA Data Center CI `36020461657` — SUCCESS。
+- [x] PR #24 Regression Checks `36020461082` — SUCCESS。
+- [x] PR #24 Phase14 Production Hardening `36020461401` — SUCCESS。
 - [x] PHP 7.0 / MySQL 5.7 / Dylib signing & lifecycle contract / iPhoneOS arm64 compile — SUCCESS。
-- [ ] ZONOE Source Release 2026092405。
-- [ ] Real GitHub Release online-update E2E (`2404 -> 2405`)。
-- [ ] Final IPA Online Update Release Gate 2026092405。
+- [x] ZONOE Source Release `36021185414` — SUCCESS。
+- [x] GitHub Release `source-v2026092405` 已发布，目标 Commit `f2cb8536...`。
+- [x] Real GitHub Release online-update E2E (`2404 -> 2405`) — SUCCESS。
+- [x] Final IPA Online Update Release Gate `36021185353` — SUCCESS。
+- [x] CI Artifact `zonoe-source-2026092405-online-update` ID `10816991706` 已生成。
 - [ ] 真实 BaoTa UI 验证编辑、启停、引用保护删除、接入说明和验证日志展示。
 
 ## 保留验证项
@@ -36,4 +38,4 @@
 
 ## Next Task
 
-完成 `source-v2026092405` 正式发布、`2404 -> 2405` GitHub Release 在线升级 E2E 和 Final Gate；随后在真实 BaoTa 后台逐项验证 Dylib 编辑、停用/启用、删除保护、接入说明及验证记录中文显示。
+在真实 BaoTa 的 `source-v2026092404` 环境通过现有在线更新入口升级到 `source-v2026092405`，随后逐项验证 Dylib 编辑、停用/启用、删除保护、接入说明及验证记录中文显示，并确认旧客户端协议、版本规则和 BundleID 绑定行为保持不变。

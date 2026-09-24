@@ -1,8 +1,8 @@
 # Development Changelog
 
-## 2026-09-24 — Candidate 2026092405
+## 2026-09-24 — Release 2026092405
 
-Baseline: `source-v2026092404`; development base HEAD `c27ad2347e025dd0dda1e24afda65856691fef06`.
+Baseline: `source-v2026092404`; release commit `f2cb8536b2a5196b4dab1c135c74033f740ed398`.
 
 ### Dylib lifecycle
 
@@ -12,34 +12,27 @@ Baseline: `source-v2026092404`; development base HEAD `c27ad2347e025dd0dda1e24af
 - 页面重排为注册 → 接入 → 游戏授权 → 版本控制 → 验证记录。
 - 接入说明来自真实 `/index/dylib_verify/verify` 与 `ZONVerifyClient`，未新增接口。
 - 状态、动作、result_code 仅做 UI 中文映射；底层枚举、版本规则和 BundleID 行为不变。
-- 删除使用既有 `Layer.confirm` + `Fast.api.ajax`；Backend 权限链保持 `$noNeedRight=[]`。
+- 删除使用既有 `Layer.confirm` + `Fast.api.ajax`；Backend 权限/CSRF 链保持不变。
 
-### Tests and CI
+### Verification and release
 
-- 新增 `tests/phase2405_dylib_lifecycle_contract_test.php`，并接入原 `tests/dylib_signing_contract.php`。
-- 早期 Run `36020297000` 的测试实现暴露 PHP 字符串插值问题；已修复测试，不涉及业务代码。
-- Latest code HEAD `36e9104f6fe6b26cd7809f4d064f4016114add1f`:
+- Pre-release exact-code HEAD `36e9104f6fe6b26cd7809f4d064f4016114add1f`:
   - IPA Data Center CI `36020461657` — SUCCESS。
   - Regression Checks `36020461082` — SUCCESS。
   - Phase14 Production Hardening `36020461401` — SUCCESS。
-  - PHP 7.0 syntax/contracts、MySQL 5.7 schema/worker/scale、Dylib security/signing/lifecycle、iPhoneOS arm64 compile 全部通过。
-
-### Release
-
-- 2026092405 release metadata and Final Gate prepared in one atomic commit to avoid any intermediate commit refreshing historical `source-v2026092404`.
-- Formal Release / online-update E2E / Final Gate: PENDING at the time of this candidate record.
-- Real BaoTa runtime/UI validation: NOT YET VERIFIED.
+  - PHP 7.0、MySQL 5.7、Dylib signing/lifecycle/security、iPhoneOS arm64 compile 全部通过。
+- Release metadata was committed atomically as `f2cb8536...` so no intermediate commit could refresh historical `source-v2026092404`.
+- Final IPA Online Update Release Gate `36021185353` — SUCCESS。
+- ZONOE Source Release `36021185414` — SUCCESS。
+- Package/Release — SUCCESS。
+- Real GitHub Release online-update E2E (`source-v2026092404 -> source-v2026092405`) — SUCCESS。
+- Release `source-v2026092405` targets `f2cb8536b2a5196b4dab1c135c74033f740ed398`.
+- Release ZIP `zonoe-online-update.zip`: 208933 bytes, SHA256 `abc851d4e63fd98b78eda7ce06ff9cac73b5909380efbef3511a529bc949e0f4`, asset ID `586260722`.
+- CI Artifact `zonoe-source-2026092405-online-update`: ID `10816991706`, 202158 bytes, digest `sha256:91f2d63221448f9f858035c1672a17abe3082399db9b326d382a4ff7e2bb1a55`.
+- Real BaoTa Dylib lifecycle/UI validation: NOT YET VERIFIED.
 
 ## 2026-09-24 — Release 2026092404
 
 - FPM inline scan/parse, live refresh and software-source response fix released as `source-v2026092404`.
 - Source Release `35964382173`, Final Gate `35964464124` and real `2403 -> 2404` GitHub Release E2E all passed.
-- Real BaoTa 2404 verification remained pending when 2405 development started.
-
-## Historical
-
-- 2026092403: FPM inline scan release.
-- 2026092402: open_basedir/management hotfix.
-- 2026092401: initial Web-side worker launcher experiment.
-- 2026092207: scan/parse controls regression fix.
-- Historical releases are immutable.
+- Historical release remains immutable.
