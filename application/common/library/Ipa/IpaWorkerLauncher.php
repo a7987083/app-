@@ -7,9 +7,9 @@ use think\Db;
 /**
  * Schedule IPA scan queue consumption inside the current PHP-FPM process.
  *
- * This class intentionally does NOT spawn php/think child processes. The HTTP
- * request creates the scan job as usual; after the response is flushed, the
- * current FPM worker continues consuming the existing database queue.
+ * This class intentionally does not spawn a separate php/think process. The
+ * HTTP request creates the scan job as usual; after the response is flushed,
+ * the current FPM worker continues consuming the existing database queue.
  */
 class IpaWorkerLauncher
 {
@@ -37,7 +37,7 @@ class IpaWorkerLauncher
         register_shutdown_function(function () use ($workerId) {
             // Under PHP-FPM this flushes the HTTP response first, matching the
             // existing Node/OpenList project's "return now, continue in API process"
-            // behavior without proc_open/nohup/CLI child processes.
+            // behavior without launching a child process.
             if (function_exists('fastcgi_finish_request')) {
                 @fastcgi_finish_request();
             }
