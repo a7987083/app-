@@ -1,22 +1,22 @@
 # Known Issues and Refactor Backlog
 
-## P0 — 2026092402 real BaoTa runtime verification pending
+## P0 — 2026092403 real BaoTa runtime verification pending
 
-- `source-v2026092402` 已正式发布；Online Update Gate、Source Release、PHP 7.0、MySQL 5.7、HTTP load gate 和 `2401 -> 2402` GitHub Release 在线升级 E2E 均通过。
-- 2401 在真实 BaoTa 点击全量扫描时复现：FPM `open_basedir` 阻止 `is_file(/www/server/php/70/bin/php)`；请求已先创建 pending Job，因此后续增量扫描被活动任务互斥正确阻止。
-- 2402 已移除站点目录外 PHP CLI 的文件系统探测，并把 Worker preflight 前移到 Job 插入之前。
-- Required check: 真实服务器更新到 2402 后先“清理全部扫描任务”，再点全量扫描；不得再出现 open_basedir，任务应进入 running/completed。
+- `source-v2026092403` 已正式发布；PHP 7.0、MySQL 5.7、HTTP load gate、Source Release、最终 Online Update Gate 和 `2402 -> 2403` GitHub Release 在线升级 E2E 均通过。
+- 2401/2402 在真实 BaoTa 上暴露了同一架构问题的两个阶段：先是站点 `open_basedir` 阻止外部 PHP CLI 路径探测，随后是 Web 请求无法创建扫描子进程。
+- 2403 已把 UI 扫描执行改为当前 PHP-FPM 进程在响应结束后继续消费现有数据库队列；不再要求 Web 请求创建 CLI Worker。
+- Required check: 真实服务器更新到 2403 后先“清理全部扫描任务”，再点全量扫描；任务应无需 SSH/CLI Worker 即进入 `running/completed`。
 
-## P1 — PHP-FPM may disable proc_open
+## P1 — PHP-FPM worker occupancy during in-process scan
 
-- `IpaWorkerLauncher` 仍使用 `proc_open` 拉起 `PHP_BINDIR/php think ipa:worker`。
-- 如果生产 PHP 7.0 的 `disable_functions` 禁止 `proc_open`，后台会明确报告该问题。
-- 若真实服务器命中此限制，再采用宝塔/Supervisor/systemd 守护；不要放宽 open_basedir，也不要回退到 `/usr/bin/php`。
+- 2403 在 `fastcgi_finish_request()` 后由当前 FPM worker 继续消费扫描队列，因此浏览器可先收到响应，但该 FPM worker 在扫描完成前仍被占用。
+- 当前设计避免了生产环境的子进程/open_basedir/CLI secret 分裂问题，但大型 OpenList 树在高并发站点上的 FPM 容量影响仍需真实负载观察。
+- 不应为了规避该风险直接恢复 2401/2402 的 Web -> CLI launcher；若未来需要完全独立执行器，应作为明确的部署级守护架构设计，而不是由 Web 请求临时拉起。
 
-## P1 — Clearing active scan jobs is cooperative with an already-running worker
+## P1 — Clearing active scan jobs is cooperative with an already-running consumer
 
 - “清理全部扫描任务”先将活动 Job/Item 标记 cancelled，再删除扫描队列历史。
-- 已经进入一个 OpenList 目录批次的 Worker 会在下一次 `assertJobActive()` 时停止；与原 full-scan cooperative cancellation 一样，极小窗口内可能已有部分 asset upsert 完成。
+- 已经进入一个 OpenList 目录批次的 consumer 会在下一次 `assertJobActive()` 时停止；极小窗口内可能已有部分 asset upsert 完成。
 - 清理扫描任务不会删除 IPA 资产，也不会执行 cancelled full job 的最终 mark-missing reconciliation。
 
 ## P1 — Full-scan cancellation is cooperative during row consumption
