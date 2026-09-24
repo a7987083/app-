@@ -40,12 +40,18 @@ class IpaCenter extends Backend
         $limit=max(20,min(500,(int)$this->request->get('limit',100)));
         $search=trim((string)$this->request->get('search',''));
         $query=Db::name('ipa_asset');
-        if ($search!=='') $query->where(function($q) use($search){$q->whereLike('name','%'.$search.'%')->whereOr('bundle_id','like','%'.$search.'%');});
+        if($search!=='')$query->where(function($q)use($search){$q->whereLike('name','%'.$search.'%')->whereOr('bundle_id','like','%'.$search.'%');});
         $total=(clone $query)->count();
         $rows=$query->field('id,source_id,name,path,size_bytes,status,bundle_id,app_name,app_version,build_version,last_error,last_seen_at,parsed_at,updated_at')->order('id desc')->limit($offset,$limit)->select();
-        $ids=[];foreach($rows as $r)$ids[]=(int)$r['id'];
+        $ids=[];$sourceIds=[];
+        foreach($rows as $r){$ids[]=(int)$r['id'];$sourceIds[(int)$r['source_id']]=(int)$r['source_id'];}
+        $sourceNames=[];
+        if($sourceIds){foreach(Db::name('ipa_source')->field('id,name')->where('id','in',array_values($sourceIds))->select() as $s)$sourceNames[(int)$s['id']]=(string)$s['name'];}
         $summaries=[];try{$summaries=IpaCompareService::summaryForAssets($ids);}catch(\Exception $e){}
-        foreach($rows as &$row){$row['compare_summary']=isset($summaries[(int)$row['id']])?$summaries[(int)$row['id']]:['sources'=>0,'anomalies'=>0,'unmatched'=>0,'errors'=>0];}
+        foreach($rows as &$row){
+            $row['source_name']=isset($sourceNames[(int)$row['source_id']])?$sourceNames[(int)$row['source_id']]:'已删除数据源';
+            $row['compare_summary']=isset($summaries[(int)$row['id']])?$summaries[(int)$row['id']]:['sources'=>0,'anomalies'=>0,'unmatched'=>0,'errors'=>0];
+        }
         unset($row);
         return json(['total'=>(int)$total,'rows'=>$rows]);
     }
@@ -56,6 +62,69 @@ class IpaCenter extends Backend
         $total=Db::name('ipa_scan_job')->count();
         $rows=Db::name('ipa_scan_job')->field('id,source_id,mode,status,root_path,discovered_count,processed_count,failed_count,worker_id,started_at,finished_at,created_at')->order('id desc')->limit($offset,$limit)->select();
         return json(['total'=>(int)$total,'rows'=>$rows]);
+    }
+
+    public function clearScanJobs()
+    {
+        if(!$this->request->isPost())$this->error('仅支持 POST');
+        $now=time();$count=(int)Db::name('ipa_scan_job')->count();
+        Db::startTrans();
+        try{
+            $activeIds=Db::name('ipa_scan_job')->where('status','in',['pending','running'])->column('id');
+            if($activeIds){
+                Db::name('ipa_scan_job')->where('id','in',$activeIds)->update(['status'=>'cancelled','finished_at'=>$now,'updated_at'=>$now]);
+                Db::name('ipa_scan_item')->where('job_id','in',$activeIds)->where('status','in',['pending','processing'])->update(['status'=>'cancelled','worker_id'=>'','locked_at'=>0,'updated_at'=>$now]);
+            }
+            Db::name('ipa_scan_item')->delete(true);
+            Db::name('ipa_scan_job')->delete(true);
+            Db::commit();
+        }catch(\Throwable $e){Db::rollback();$this->error($this->errorMessage($e,'清理扫描任务失败'));return;}
+        $this->success('已清理 '.$count.' 个扫描任务；IPA 资产、OpenList 数据源和 fa_category 均未删除');
+    }
+
+    public function deleteAsset()
+    {
+        if(!$this->request->isPost())$this->error('仅支持 POST');
+        $id=(int)$this->request->post('asset_id',0);$asset=Db::name('ipa_asset')->where('id',$id)->find();
+        if(!$asset)$this->error('IPA 资产不存在');
+        if((string)$asset['status']==='parsing')$this->error('IPA 正在解析，暂不能删除');
+        Db::startTrans();
+        try{
+            $this->deleteAssetDerivedRows([$id]);
+            Db::name('ipa_asset')->where('id',$id)->delete();
+            Db::commit();
+        }catch(\Throwable $e){Db::rollback();$this->error($this->errorMessage($e,'删除 IPA 资产失败'));return;}
+        $this->success('IPA 资产已删除；OpenList 文件本身和 fa_category 未修改');
+    }
+
+    public function clearAssets()
+    {
+        if(!$this->request->isPost())$this->error('仅支持 POST');
+        $this->reclaimOrphanedParsing();
+        $parsing=(int)Db::name('ipa_asset')->where('status','parsing')->count();
+        if($parsing>0)$this->error('仍有 '.$parsing.' 个 IPA 正在解析，请等待完成后再清空');
+        $count=(int)Db::name('ipa_asset')->count();
+        Db::startTrans();
+        try{
+            while(true){
+                $rows=Db::name('ipa_asset')->field('id')->limit(500)->select();
+                if(!$rows)break;
+                $ids=[];foreach($rows as $row)$ids[]=(int)$row['id'];
+                $this->deleteAssetDerivedRows($ids);
+                Db::name('ipa_asset')->where('id','in',$ids)->delete();
+            }
+            Db::commit();
+        }catch(\Throwable $e){Db::rollback();$this->error($this->errorMessage($e,'清空 IPA 资产失败'));return;}
+        $this->success('已清空 '.$count.' 个 IPA 资产及其解析/比对派生数据；OpenList 数据源、扫描任务历史和 fa_category 均未删除');
+    }
+
+    protected function deleteAssetDerivedRows(array $ids)
+    {
+        if(!$ids)return;
+        Db::name('ipa_compare_result')->where('asset_id','in',$ids)->delete();
+        Db::name('ipa_binary')->where('asset_id','in',$ids)->delete();
+        Db::name('ipa_category_binding')->where('asset_id','in',$ids)->delete();
+        Db::name('ipa_parse_attempt')->where('asset_id','in',$ids)->delete();
     }
 
     public function saveParseSettings()
@@ -136,7 +205,7 @@ class IpaCenter extends Backend
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
         $fields=$this->request->post('fields/a',[]);
-        try{$r=IpaCompareService::applyWriteback((int)$this->request->post('compare_id',0),is_array($fields)?$fields:[]);$this->success('所选字段已写回数据库',null,$r);}catch(\Exception $e){$this->error($e->getMessage());}
+        try{$r=IpaCompareService::applyWriteback((int)$this->request->post('compare_id',0),is_array($fields)?$fields:[]);$this->success('所选字段已写回数据库',null,['rows'=>$r]);}catch(\Exception $e){$this->error($e->getMessage());}
     }
 
     public function categorySearch()
@@ -195,7 +264,10 @@ class IpaCenter extends Backend
     protected function deleteSourceRows($id)
     {
         Db::startTrans();try{
-            while(true){$rows=Db::name('ipa_asset')->field('id')->where('source_id',$id)->limit(500)->select();if(!$rows)break;$ids=[];foreach($rows as $r)$ids[]=(int)$r['id'];Db::name('ipa_compare_result')->where('asset_id','in',$ids)->delete();Db::name('ipa_binary')->where('asset_id','in',$ids)->delete();Db::name('ipa_category_binding')->where('asset_id','in',$ids)->delete();Db::name('ipa_asset')->where('id','in',$ids)->delete();}
+            while(true){
+                $rows=Db::name('ipa_asset')->field('id')->where('source_id',$id)->limit(500)->select();if(!$rows)break;
+                $ids=[];foreach($rows as $r)$ids[]=(int)$r['id'];$this->deleteAssetDerivedRows($ids);Db::name('ipa_asset')->where('id','in',$ids)->delete();
+            }
             Db::name('ipa_scan_item')->where('source_id',$id)->delete();Db::name('ipa_scan_job')->where('source_id',$id)->delete();Db::name('ipa_source')->where('id',$id)->delete();Db::commit();
         }catch(\Exception $e){Db::rollback();$this->error($e->getMessage());}
     }
