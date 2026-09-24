@@ -2,12 +2,6 @@
 
 namespace app\common\library\Ipa;
 
-/**
- * Starts the scan worker from the same PHP installation/environment as PHP-FPM.
- * This avoids two production-only failures we observed:
- * - shell `php` may point to PHP 8 while the site runs PHP 7.0;
- * - CLI started manually may not inherit PHP_IPA_SERVER_SECRET from php-fpm.conf.
- */
 class IpaWorkerLauncher
 {
     public static function ensureScanWorker()
@@ -34,7 +28,6 @@ class IpaWorkerLauncher
         }
         $log = $logDir . DIRECTORY_SEPARATOR . 'ipa_scan_worker.log';
 
-        // Mark as starting before spawning so rapid repeated clicks do not fan out workers.
         $launcherId = 'launcher:' . gethostname() . ':' . getmypid();
         WorkerState::heartbeat('scan', $launcherId, 'starting', 0);
 
@@ -48,7 +41,6 @@ class IpaWorkerLauncher
             1 => ['file', '/dev/null', 'a'],
             2 => ['file', '/dev/null', 'a'],
         ];
-        // String form is required for PHP 7.0; array commands are only supported by newer PHP.
         $process = @proc_open($cmd, $descriptors, $pipes, $root, null);
         if (!is_resource($process)) {
             WorkerState::heartbeat('scan', $launcherId, 'stopped', 0);
@@ -57,7 +49,7 @@ class IpaWorkerLauncher
         $exit = proc_close($process);
         if ($exit !== 0) {
             WorkerState::heartbeat('scan', $launcherId, 'stopped', 0);
-            throw new \RuntimeException('IPA 扫描 Worker 启动命令失败，exit=' . (int)$exit);
+            throw new \RuntimeException('IPA 扫描 Worker 启动命令失败，exit=' . (int)$exit . '；请查看 ' . $log);
         }
 
         return ['started' => true, 'status' => 'starting', 'worker_id' => $launcherId, 'php' => $php, 'log' => $log];
@@ -67,19 +59,17 @@ class IpaWorkerLauncher
     {
         $override = trim((string)getenv('PHP_IPA_WORKER_BINARY'));
         if ($override !== '') {
-            if (!is_file($override) || !is_executable($override)) {
-                throw new \RuntimeException('PHP_IPA_WORKER_BINARY 不可执行：' . $override);
-            }
             return $override;
         }
 
-        // PHP_BINDIR belongs to the running FPM installation. On BaoTa PHP 7.0 this resolves
-        // to /www/server/php/70/bin and therefore avoids /usr/bin/php -> PHP 8.x.
-        $candidate = rtrim(PHP_BINDIR, '/\\') . DIRECTORY_SEPARATOR . 'php';
-        if (is_file($candidate) && is_executable($candidate)) {
-            return $candidate;
+        // Do not call is_file()/is_executable() here. BaoTa open_basedir usually allows
+        // only the site root and /tmp, while PHP_BINDIR is /www/server/php/<ver>/bin.
+        // The path is supplied by the currently running PHP-FPM binary itself, so use it
+        // directly and let the shell report an execution failure if it is actually invalid.
+        $bindir = trim((string)PHP_BINDIR);
+        if ($bindir === '') {
+            throw new \RuntimeException('无法确定站点 PHP-FPM 的 PHP_BINDIR');
         }
-
-        throw new \RuntimeException('未找到与站点 PHP-FPM 同版本的 PHP CLI；可设置 PHP_IPA_WORKER_BINARY');
+        return rtrim($bindir, '/\\') . DIRECTORY_SEPARATOR . 'php';
     }
 }
