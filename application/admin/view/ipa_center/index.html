@@ -30,7 +30,10 @@
         </div>
 
         <div class="panel panel-default">
-            <div class="panel-heading"><strong>OpenList 数据源</strong></div>
+            <div class="panel-heading">
+                <strong>OpenList 数据源</strong>
+                <button type="button" class="btn btn-xs btn-default pull-right btn-toggle-disabled-sources" data-show="0"><i class="fa fa-eye"></i> 显示已停用</button>
+            </div>
             <div class="panel-body">
                 <form id="source-form" class="form-inline" role="form" data-toggle="validator" method="POST" action="{:url('ipa_center/saveSource')}">
                     <input type="hidden" name="id" value="0">
@@ -44,21 +47,27 @@
                     <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> <span id="source-save-label">保存</span></button>
                     <button type="button" class="btn btn-default hide" id="source-edit-cancel">取消编辑</button>
                 </form>
-                <div class="text-muted" style="margin-top:8px">扫描优先使用 OpenList 缓存（refresh=false）和单目录完整清单；不兼容 per_page=0 时自动回退分页。</div>
+                <div class="text-muted" style="margin-top:8px">停用只停止该数据源参与后续扫描/解析，配置仍保留；列表默认隐藏已停用项，可用右上角按钮显示。扫描优先使用 OpenList 缓存（refresh=false）和单目录完整清单。</div>
                 <hr>
                 <table class="table table-bordered table-striped"><thead><tr><th>ID</th><th>名称</th><th>URL</th><th>根目录</th><th>状态</th><th>操作</th></tr></thead><tbody>
-                {foreach name="sources" item="source"}<tr><td>{$source.id}</td><td>{$source.name|htmlentities}</td><td>{$source.base_url|htmlentities}</td><td>{$source.root_path|htmlentities}</td><td>{if condition="$source.enabled"}<span class="label label-success">启用</span>{else/}<span class="label label-default">停用</span>{/if}</td><td>
+                {foreach name="sources" item="source"}<tr class="source-row {if condition="!$source.enabled"}source-disabled hide{/if}" data-enabled="{$source.enabled}"><td>{$source.id}</td><td>{$source.name|htmlentities}</td><td>{$source.base_url|htmlentities}</td><td>{$source.root_path|htmlentities}</td><td>{if condition="$source.enabled"}<span class="label label-success">启用</span>{else/}<span class="label label-default">停用</span>{/if}</td><td>
                     <button type="button" class="btn btn-xs btn-primary btn-source-edit" data-id="{$source.id}" data-name="{$source.name|htmlentities}" data-base-url="{$source.base_url|htmlentities}" data-root-path="{$source.root_path|htmlentities}" data-enabled="{$source.enabled}" data-scan-page-size="{$source.scan_page_size}" data-request-timeout="{$source.request_timeout}">编辑</button>
-                    <button type="button" class="btn btn-xs btn-success btn-scan" data-id="{$source.id}" data-mode="incremental">增量扫描</button>
-                    <button type="button" class="btn btn-xs btn-warning btn-scan" data-id="{$source.id}" data-mode="full">全量扫描</button>
+                    {if condition="$source.enabled"}<button type="button" class="btn btn-xs btn-success btn-scan" data-id="{$source.id}" data-mode="incremental">增量扫描</button>
+                    <button type="button" class="btn btn-xs btn-warning btn-scan" data-id="{$source.id}" data-mode="full">全量扫描</button>{/if}
                     <button type="button" class="btn btn-xs btn-danger btn-source-delete" data-id="{$source.id}" data-name="{$source.name|htmlentities}">删除</button>
                 </td></tr>{/foreach}
                 </tbody></table>
             </div>
         </div>
 
-        <div class="panel panel-default"><div class="panel-heading"><strong>扫描任务</strong></div><div class="panel-body"><table id="job-table"></table></div></div>
-        <div class="panel panel-default"><div class="panel-heading"><strong>IPA 资产</strong> <span class="text-muted">解析完成后自动与“软件源”中的 MySQL 数据库比对；只生成异常，不自动写数据库。</span></div><div class="panel-body"><table id="asset-table"></table></div></div>
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>扫描任务</strong><button type="button" class="btn btn-xs btn-danger pull-right btn-clear-scan-jobs"><i class="fa fa-trash"></i> 清理全部扫描任务</button></div>
+            <div class="panel-body"><div class="help-block">清理扫描任务会先取消 pending/running 任务，再删除扫描 Job/队列历史；不会删除 IPA 资产、OpenList 数据源或 fa_category。</div><table id="job-table"></table></div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>IPA 资产</strong><button type="button" class="btn btn-xs btn-danger pull-right btn-clear-assets"><i class="fa fa-trash"></i> 清空全部 IPA 资产</button></div>
+            <div class="panel-body"><div class="help-block">这里的资产来自上方 OpenList 数据源扫描发现的 <code>.ipa</code> 文件，不是从“软件源 MySQL”读取。解析完成后才会与“软件源”的 MySQL 数据库比对；默认只生成异常，不自动写数据库。删除资产不会删除 OpenList 上的 IPA 文件，也不会修改 fa_category；以后重新扫描仍可再次发现。</div><table id="asset-table"></table></div>
+        </div>
     </div>
 </div>
 
