@@ -47,4 +47,6 @@ foreach (['bundleID', 'dylibKey', 'dylibVersion', 'dylibBuild', 'dylib_sha256', 
     }
 }
 
+require __DIR__ . '/phase2405_dylib_lifecycle_contract_test.php';
+
 echo "dylib signing contract ok\n";
