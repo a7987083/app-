@@ -17,6 +17,7 @@ on:
       - 'release/sql/2026092203_ipa_ops_controls.sql'
       - 'release/sql/2026092204_worker_source_hotfix.sql'
       - 'release/sql/2026092205_ipa_ui_controls_hotfix.sql'
+      - 'release/sql/2026092402_ipa_cleanup_controls.sql'
       - 'application/command.php'
       - 'application/admin/command/Ipa*.php'
       - 'application/admin/controller/Ipa*.php'
@@ -61,7 +62,7 @@ jobs:
           VERSION="$(tr -d '\r\n ' < VERSION)"
           test "$VERSION" = "$(tr -d '\r\n ' < public/update/ver.txt)"
           test "$VERSION" = "$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo $j["version"];')"
-          test "$VERSION" = "2026092401"
+          test "$VERSION" = "2026092402"
           grep -F "ZONOE 软件源 ${VERSION}" release/RELEASE_NOTES.md
           grep -F "版本：${VERSION}" PHASE13_RELEASE.txt
 
@@ -74,7 +75,7 @@ jobs:
           ACTUAL="$(sha256sum zonoe-online-update.zip | awk '{print $1}')"
           test "$EXPECTED" = "$ACTUAL"
 
-      - name: Verify 2026092401 payload
+      - name: Verify 2026092402 payload
         run: |
           set -euo pipefail
           ZIP=zonoe-online-update.zip
@@ -92,7 +93,8 @@ jobs:
             program/public/assets/js/backend/ipa_center.js \
             program/public/assets/js/backend/ipa_source_center.js \
             mysql/2026092204_worker_source_hotfix.sql \
-            mysql/2026092205_ipa_ui_controls_hotfix.sql; do
+            mysql/2026092205_ipa_ui_controls_hotfix.sql \
+            mysql/2026092402_ipa_cleanup_controls.sql; do
               unzip -Z1 "$ZIP" | grep -Fx "$f"
           done
 
@@ -132,11 +134,13 @@ jobs:
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_source_center/add'")" = "1"
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_source_center/del'")" = "1"
 
-      - name: Apply 2026092205 migration twice on MySQL 5.7
+      - name: Apply IPA UI migrations twice on MySQL 5.7
         run: |
           set -euo pipefail
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092205_ipa_ui_controls_hotfix.sql
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092205_ipa_ui_controls_hotfix.sql
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092402_ipa_cleanup_controls.sql
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092402_ipa_cleanup_controls.sql
           for rule in \
             ipa_center/saveParseSettings \
             ipa_center/pauseParse \
@@ -147,7 +151,10 @@ jobs:
             ipa_center/retryParse \
             ipa_center/assetDetail \
             ipa_center/compareAsset \
-            ipa_center/applyCompareWriteback; do
+            ipa_center/applyCompareWriteback \
+            ipa_center/clearScanJobs \
+            ipa_center/deleteAsset \
+            ipa_center/clearAssets; do
             test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='$rule'")" = "1"
           done
 
@@ -171,10 +178,15 @@ jobs:
           php tests/macho_inspector_parser_contract.php
           grep -q 'btn-parse-toggle' application/admin/view/ipa_center/index.html
           grep -q 'btn-clear-parse-results' application/admin/view/ipa_center/index.html
-          grep -q 'pauseParse' application/admin/controller/IpaCenter.php
-          grep -q 'clearParseResults' application/admin/controller/IpaCenter.php
-          grep -q 'IpaWorkerLauncher::ensureScanWorker' application/admin/controller/IpaCenter.php
+          grep -q 'btn-clear-scan-jobs' application/admin/view/ipa_center/index.html
+          grep -q 'btn-clear-assets' application/admin/view/ipa_center/index.html
+          grep -q 'source-disabled' application/admin/view/ipa_center/index.html
+          grep -q 'clearScanJobs' application/admin/controller/IpaCenter.php
+          grep -q 'deleteAsset' application/admin/controller/IpaCenter.php
+          grep -q 'clearAssets' application/admin/controller/IpaCenter.php
+          grep -q 'IpaWorkerLauncher::ensureScanWorker' application/common/library/Ipa/IpaScanService.php
           grep -q 'PHP_BINDIR' application/common/library/Ipa/IpaWorkerLauncher.php
+          if grep -q 'is_file($candidate)' application/common/library/Ipa/IpaWorkerLauncher.php; then exit 1; fi
           grep -q 'stopPropagation' public/assets/js/backend/ipa_source_center.js
           php think list | grep -q 'ipa:worker'
           php think list | grep -q 'ipa:parse-worker'
