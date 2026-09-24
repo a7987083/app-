@@ -1,20 +1,21 @@
-ZONOE 软件源 Release 2026092401
-版本：2026092401
-基线：source-v2026092207
-阶段：IPA Scan Worker 生产运行链修复
-发布分支：release/2026092401-ipa-worker-autostart-hotfix
+ZONOE 软件源 Release 2026092402
+版本：2026092402
+基线：source-v2026092401
+阶段：IPA Worker open_basedir / 管理控制热修复
+发布分支：release/2026092402-openbasedir-worker-hotfix
 发布状态：候选（正式发布 CI 验证中）
 
 更新内容：
-1. 修复后台点击全量/增量扫描后任务长期停留 pending、无人领取的问题：创建扫描任务后会检查 Scan Worker，缺失时自动启动。
-2. 自动启动 Worker 使用当前 PHP-FPM 安装对应的 PHP CLI（PHP_BINDIR/php），避免服务器 /usr/bin/php 指向 PHP 8.2 导致旧 ThinkPHP Fatal。
-3. 自动启动的 Worker 继承 PHP-FPM 运行环境，包括生产已有的 PHP_IPA_SERVER_SECRET，因此可继续解密既有 OpenList token_ciphertext，无需重新保存 Token。
-4. Worker 启动前写入 starting 心跳，降低短时间重复点击导致并发拉起多个 Worker 的概率。
-5. 新增 IpaWorkerLauncher，并纳入在线更新文件清单；IpaCenter::startScan() 在成功创建任务后确保扫描 Worker 可运行。
-6. 本版本不新增数据库迁移；继续沿用 2026092205 数据库结构和 2026092207 的扫描/解析控制语义。
-7. PHP 7.0 兼容、MySQL 5.7 队列竞争、扫描安全契约、回归检查已通过候选分支 CI；正式在线更新流程继续由现有 Gate/Source Release 验证。
+1. 修复宝塔站点 open_basedir 阻止 is_file(/www/server/php/70/bin/php) 导致扫描 Worker 自动启动失败的问题；不放宽服务器 open_basedir。
+2. Worker CLI 继续由当前 PHP-FPM 的 PHP_BINDIR/php 确定，但不再对站点目录外 PHP 二进制做 is_file/is_executable 探测。
+3. 创建扫描 Job 前先完成 Worker 启动预检；Worker 启动失败时不再遗留 pending Job，避免后续增量扫描被“已有扫描任务正在运行”永久阻断。
+4. 新增“清理全部扫描任务”：活动任务先取消，再清理扫描 Job/Item；保留 IPA 资产、OpenList 配置与 fa_category。
+5. IPA 资产新增单条删除和全部清空；同步清理 ipa_parse_attempt、ipa_binary、ipa_compare_result、ipa_category_binding 等派生记录，不删除 OpenList 实际文件和 fa_category。
+6. IPA 资产列表新增 OpenList 来源名称/Source ID，明确资产由 OpenList 扫描发现，不由“软件源 MySQL”生成。
+7. OpenList 默认隐藏已停用项，提供“显示已停用”切换；停用继续保留配置，不等同于删除。
+8. 新增 MySQL 5.7 幂等权限迁移 2026092402_ipa_cleanup_controls.sql，为 clearScanJobs/deleteAsset/clearAssets 补充 FastAdmin 权限规则。
 
 在线更新：
-- 目标升级：source-v2026092207 -> source-v2026092401。
-- 本版本无新增 SQL；数据库状态沿用 source-v2026092207。
-- 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、既有 SQL、文件覆盖、版本写入和失败回滚逻辑。
+- 目标升级：source-v2026092401 -> source-v2026092402。
+- 不新增业务表结构；仅新增 FastAdmin 权限数据迁移。
+- 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、SQL 执行、文件覆盖、版本写入和失败回滚逻辑。
