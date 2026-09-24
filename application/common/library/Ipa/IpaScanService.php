@@ -10,10 +10,20 @@ class IpaScanService
 
     public static function createJob($sourceId,$mode='incremental')
     {
-        $mode=in_array($mode,['incremental','full'],true)?$mode:'incremental';$now=time();
+        $sourceId=(int)$sourceId;
+        $mode=in_array($mode,['incremental','full'],true)?$mode:'incremental';
+
+        // Production safety: verify the source first, then make sure the scan worker can be
+        // started before inserting a pending job. If Worker launch fails (PHP/open_basedir/
+        // proc_open/etc.), the source is not left permanently locked by an orphan pending job.
+        $enabledSource=Db::name('ipa_source')->where('id',$sourceId)->where('enabled',1)->find();
+        if(!$enabledSource)throw new \InvalidArgumentException('OpenList 数据源不存在或已停用');
+        IpaWorkerLauncher::ensureScanWorker();
+
+        $now=time();
         Db::startTrans();
         try{
-            $source=Db::name('ipa_source')->where('id',(int)$sourceId)->where('enabled',1)->lock(true)->find();
+            $source=Db::name('ipa_source')->where('id',$sourceId)->where('enabled',1)->lock(true)->find();
             if(!$source)throw new \InvalidArgumentException('OpenList 数据源不存在或已停用');
 
             $activeJobIds=Db::name('ipa_scan_job')
