@@ -6,6 +6,7 @@ use app\common\controller\Backend;
 use app\common\library\Ipa\IpaCompareService;
 use app\common\library\Ipa\IpaOpsSettings;
 use app\common\library\Ipa\IpaScanService;
+use app\common\library\Ipa\IpaWorkerLauncher;
 use app\common\library\Ipa\IpaWritebackService;
 use app\common\library\Ipa\SecretBox;
 use app\common\library\Ipa\WorkerState;
@@ -208,9 +209,12 @@ class IpaCenter extends Backend
     public function startScan()
     {
         if(!$this->request->isPost())$this->error('仅支持 POST');
-        try{$jobId=IpaScanService::createJob((int)$this->request->post('source_id'),(string)$this->request->post('mode','incremental'));}
-        catch(\Exception $e){$this->error($e->getMessage());return;}
-        $this->success('扫描任务已加入队列',null,['job_id'=>(int)$jobId]);
+        try{
+            $jobId=IpaScanService::createJob((int)$this->request->post('source_id'),(string)$this->request->post('mode','incremental'));
+            $worker=IpaWorkerLauncher::ensureScanWorker();
+        }catch(\Throwable $e){$this->error($this->errorMessage($e,'扫描任务启动失败'));return;}
+        $message=!empty($worker['started'])?'扫描任务已加入队列，扫描 Worker 已自动启动':'扫描任务已加入队列，扫描 Worker 正在运行';
+        $this->success($message,null,['job_id'=>(int)$jobId,'worker'=>$worker]);
     }
 
     protected function reclaimOrphanedParsing()
