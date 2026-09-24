@@ -1,21 +1,20 @@
-ZONOE 软件源 Release 2026092402
-版本：2026092402
-基线：source-v2026092401
-阶段：IPA Worker open_basedir / 管理控制热修复
-发布分支：release/2026092402-openbasedir-worker-hotfix
+ZONOE 软件源 Release 2026092403
+版本：2026092403
+基线：source-v2026092402
+阶段：IPA OpenList FPM 内联扫描热修复
+发布分支：release/2026092403-openlist-inline-scan
 发布状态：候选（正式发布 CI 验证中）
 
 更新内容：
-1. 修复宝塔站点 open_basedir 阻止 is_file(/www/server/php/70/bin/php) 导致扫描 Worker 自动启动失败的问题；不放宽服务器 open_basedir。
-2. Worker CLI 继续由当前 PHP-FPM 的 PHP_BINDIR/php 确定，但不再对站点目录外 PHP 二进制做 is_file/is_executable 探测。
-3. 创建扫描 Job 前先完成 Worker 启动预检；Worker 启动失败时不再遗留 pending Job，避免后续增量扫描被“已有扫描任务正在运行”永久阻断。
-4. 新增“清理全部扫描任务”：活动任务先取消，再清理扫描 Job/Item；保留 IPA 资产、OpenList 配置与 fa_category。
-5. IPA 资产新增单条删除和全部清空；同步清理 ipa_parse_attempt、ipa_binary、ipa_compare_result、ipa_category_binding 等派生记录，不删除 OpenList 实际文件和 fa_category。
-6. IPA 资产列表新增 OpenList 来源名称/Source ID，明确资产由 OpenList 扫描发现，不由“软件源 MySQL”生成。
-7. OpenList 默认隐藏已停用项，提供“显示已停用”切换；停用继续保留配置，不等同于删除。
-8. 新增 MySQL 5.7 幂等权限迁移 2026092402_ipa_cleanup_controls.sql，为 clearScanJobs/deleteAsset/clearAssets 补充 FastAdmin 权限规则。
+1. 撤销 2026092401/2026092402 中 Web 请求通过 proc_open/nohup 启动 PHP CLI 扫描 Worker 的运行方式。
+2. IpaWorkerLauncher 改为在当前 PHP-FPM 请求结束后继续消费既有 ipa_scan_job / ipa_scan_item 队列，不创建任何子进程。
+3. PHP-FPM 环境下优先 fastcgi_finish_request() 返回页面，再在同一 FPM 进程中执行 claimOne/processItem；OpenList 扫描本身只通过 HTTP API 完成。
+4. 扫描继续直接使用当前 FPM 环境中的 PHP_IPA_SERVER_SECRET 解密 OpenList Token，不再依赖 CLI 环境变量继承。
+5. 保留全量扫描重启同源活动任务、增量扫描互斥、失败指数退避、扫描进度和现有 CLI ipa:worker 兼容能力。
+6. 保留 2026092402 的清理全部扫描任务、IPA 资产单条删除/全部清空、OpenList 来源显示和停用数据源筛选。
+7. 删除/清理仍不修改 fa_category，也不会删除 OpenList 上的实际 IPA 文件。
 
 在线更新：
-- 目标升级：source-v2026092401 -> source-v2026092402。
-- 不新增业务表结构；仅新增 FastAdmin 权限数据迁移。
+- 目标升级：source-v2026092402 -> source-v2026092403。
+- 不新增业务表结构或 SQL 迁移。
 - 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、SQL 执行、文件覆盖、版本写入和失败回滚逻辑。
