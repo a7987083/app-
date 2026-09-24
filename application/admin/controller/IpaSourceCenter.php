@@ -26,10 +26,11 @@ class IpaSourceCenter extends Backend
             $row = (array)$this->request->post('row/a', []);
             try {
                 $id = IpaSoftwareSourceService::save($row);
-                $this->success('软件源已保存', null, ['id' => $id]);
             } catch (\Throwable $e) {
                 $this->error($this->errorMessage($e, '软件源保存失败，请检查字段、数据库结构和服务器日志'));
+                return;
             }
+            $this->success('软件源已保存', null, ['id' => $id]);
         }
         return $this->view->fetch();
     }
@@ -45,15 +46,17 @@ class IpaSourceCenter extends Backend
             $row['id'] = $id;
             try {
                 IpaSoftwareSourceService::save($row);
-                $this->success('软件源已保存');
             } catch (\Throwable $e) {
                 $this->error($this->errorMessage($e, '软件源保存失败，请检查字段、数据库结构和服务器日志'));
+                return;
             }
+            $this->success('软件源已保存');
         }
         try {
             $row = IpaSoftwareSourceService::get($id, false);
         } catch (\Throwable $e) {
             $this->error($this->errorMessage($e, '软件源读取失败'));
+            return;
         }
         $this->view->assign('row', $row);
         return $this->view->fetch();
@@ -81,6 +84,7 @@ class IpaSourceCenter extends Backend
             }
         } catch (\Throwable $e) {
             $this->error($this->errorMessage($e, '软件源删除失败'));
+            return;
         }
         if ($deleted < 1) {
             $this->error('未选择软件源');
@@ -95,11 +99,12 @@ class IpaSourceCenter extends Backend
         }
         try {
             $data = IpaSoftwareSourceService::test((int)$this->request->post('id', 0));
-            $this->success('连接成功，共 ' . $data['rows'] . ' 条记录', null, $data);
         } catch (\Throwable $e) {
             $message = trim((string)$e->getMessage());
             $this->error('连接失败' . ($message !== '' ? '：' . $message : '；请检查 PHP PDO MySQL、地址、端口、账号、密码和数据库权限'));
+            return;
         }
+        $this->success('连接成功，共 ' . $data['rows'] . ' 条记录', null, $data);
     }
 
     // 兼容 2026092203 已发布前端；2026092204 前端改走 add/edit/del。
@@ -110,10 +115,11 @@ class IpaSourceCenter extends Backend
         }
         try {
             $id = IpaSoftwareSourceService::save((array)$this->request->post());
-            $this->success('软件源已保存', null, ['id' => $id]);
         } catch (\Throwable $e) {
             $this->error($this->errorMessage($e, '软件源保存失败，请检查字段、数据库结构和服务器日志'));
+            return;
         }
+        $this->success('软件源已保存', null, ['id' => $id]);
     }
 
     public function deleteSource()
@@ -123,10 +129,11 @@ class IpaSourceCenter extends Backend
         }
         try {
             IpaSoftwareSourceService::delete((int)$this->request->post('id', 0));
-            $this->success('软件源已删除');
         } catch (\Throwable $e) {
             $this->error($this->errorMessage($e, '软件源删除失败'));
+            return;
         }
+        $this->success('软件源已删除');
     }
 
     protected function errorMessage($e, $fallback)
