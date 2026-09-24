@@ -1,20 +1,22 @@
-ZONOE 软件源 Release 2026092403
-版本：2026092403
-基线：source-v2026092402
-阶段：IPA OpenList FPM 内联扫描热修复
-发布分支：release/2026092403-openlist-inline-scan
+ZONOE 软件源 Release 2026092404
+版本：2026092404
+基线：source-v2026092403
+阶段：IPA FPM 统一解析 / 状态刷新 / 软件源响应修复
+发布分支：release/2026092404-inline-parse-refresh-source-fix
 发布状态：候选（正式发布 CI 验证中）
 
 更新内容：
-1. 撤销 2026092401/2026092402 中 Web 请求通过 proc_open/nohup 启动 PHP CLI 扫描 Worker 的运行方式。
-2. IpaWorkerLauncher 改为在当前 PHP-FPM 请求结束后继续消费既有 ipa_scan_job / ipa_scan_item 队列，不创建任何子进程。
-3. PHP-FPM 环境下优先 fastcgi_finish_request() 返回页面，再在同一 FPM 进程中执行 claimOne/processItem；OpenList 扫描本身只通过 HTTP API 完成。
-4. 扫描继续直接使用当前 FPM 环境中的 PHP_IPA_SERVER_SECRET 解密 OpenList Token，不再依赖 CLI 环境变量继承。
-5. 保留全量扫描重启同源活动任务、增量扫描互斥、失败指数退避、扫描进度和现有 CLI ipa:worker 兼容能力。
-6. 保留 2026092402 的清理全部扫描任务、IPA 资产单条删除/全部清空、OpenList 来源显示和停用数据源筛选。
-7. 删除/清理仍不修改 fa_category，也不会删除 OpenList 上的实际 IPA 文件。
+1. 扫描与解析统一为 PHP-FPM 同进程后台消费模型；开启自动解析后不再要求 CLI ipa:parse-worker 常驻，也不依赖 proc_open/nohup。
+2. 扫描完成且自动解析开启时，同一 FPM 执行链继续领取 discovered IPA，完成 IPA 元数据解析、二进制索引和软件源数据库比对。
+3. “继续解析/开启解析”保存 parse_enabled=1 后会立即调度 FPM Parse consumer；暂停解析阻止继续领取新 IPA，当前已领取项允许完成。
+4. “重试解析/重新解析”在自动解析开启时会立即唤醒解析 consumer；暂停状态下只回到待解析，不擅自恢复自动解析。
+5. IPA 中心新增手动“刷新”按钮，并每 5 秒轻量刷新扫描任务与 IPA 资产状态，不再需要浏览器整页刷新才能看到进度。
+6. 修复软件源 add/edit/saveSource/testSource/deleteSource 将正常 success() 的 HttpResponseException 错误捕获为失败的问题；数据已保存时不再误报“软件源保存失败”。
+7. 软件源继续保持“配置可先保存、连接正确性由单独测试连接判断”的原语义；测试连接失败时返回 PDO/MySQL 原始错误用于诊断。
+8. 保留 2026092403 的 OpenList FPM 内联扫描，以及 2026092402 的扫描任务清理、IPA 资产删除/清空、来源显示和停用数据源筛选。
 
 在线更新：
-- 目标升级：source-v2026092402 -> source-v2026092403。
+- 目标升级：source-v2026092403 -> source-v2026092404。
 - 不新增业务表结构或 SQL 迁移。
+- PHP 7.0 / MySQL 5.7 兼容要求不变。
 - 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、SQL 执行、文件覆盖、版本写入和失败回滚逻辑。
