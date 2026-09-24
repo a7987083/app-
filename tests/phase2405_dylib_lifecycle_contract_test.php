@@ -42,11 +42,11 @@ foreach ([$controller, $service, $publicController, $view, $js, $client, $readme
 requireContains($service, "->where('enabled', 1)->find()", 'verification rejects disabled dylib');
 requireContains($service, "'dylib_unknown', 'block'", 'disabled/unknown response remains fail-closed');
 requireContains($controller, 'public function setDylibEnabled()', 'admin toggle endpoint');
-requireContains($controller, "'enabled' => $enabled", 'toggle persists enabled flag');
+requireContains($controller, "'enabled' => \$enabled", 'toggle persists enabled flag');
 
 // Delete policy: preserve any registration that already owns business/audit history.
-requireContains($controller, "Db::name('dylib_version')->where('dylib_id', $id)->count()", 'version reference check');
-requireContains($controller, "Db::name('dylib_app_binding')->where('dylib_id', $id)->count()", 'BundleID reference check');
+requireContains($controller, "Db::name('dylib_version')->where('dylib_id', \$id)->count()", 'version reference check');
+requireContains($controller, "Db::name('dylib_app_binding')->where('dylib_id', \$id)->count()", 'BundleID reference check');
 requireContains($controller, "Db::name('dylib_verify_log')->where('dylib_key'", 'verification history reference check');
 requireContains($controller, '为保留历史禁止删除，请改为停用', 'referenced delete blocked');
 requireContains($js, 'Layer.confirm(', 'delete second confirmation');
@@ -71,8 +71,8 @@ requireContains($view, 'POST /index/dylib_verify/verify', 'admin integration end
 requireContains($view, 'udid\\nbundle_id\\ndylib_key\\ndylib_version\\ndylib_build\\ndylib_sha256\\ntimestamp\\nnonce', 'canonical signing order');
 requireContains($client, '@"dylib_key": self.configuration.dylibKey', 'legacy/current client dylib_key payload');
 requireContains($client, '@"bundle_id": bundleID', 'legacy/current client BundleID payload');
-requireContains($service, "->where('dylib_id', (int)$dylib['id'])", 'BundleID/version remain scoped to dylib id');
-requireContains($service, "->where('bundle_id', $bundleId)", 'BundleID binding behavior unchanged');
+requireContains($service, "->where('dylib_id', (int)\$dylib['id'])", 'BundleID/version remain scoped to dylib id');
+requireContains($service, "->where('bundle_id', \$bundleId)", 'BundleID binding behavior unchanged');
 
 // Chinese UI is presentation-only; raw protocol/storage enums remain present unchanged.
 foreach (['active', 'testing', 'deprecated', 'blocked', 'revoked'] as $state) {
