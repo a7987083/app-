@@ -2,74 +2,115 @@
 
 namespace app\common\library\Ipa;
 
+use think\Db;
+
+/**
+ * Schedule IPA scan queue consumption inside the current PHP-FPM process.
+ *
+ * This class intentionally does NOT spawn php/think child processes. The HTTP
+ * request creates the scan job as usual; after the response is flushed, the
+ * current FPM worker continues consuming the existing database queue.
+ */
 class IpaWorkerLauncher
 {
+    protected static $scheduled = false;
+
     public static function ensureScanWorker()
     {
         $snapshot = WorkerState::snapshot(15);
         if (isset($snapshot['scan']) && !empty($snapshot['scan']['alive'])) {
-            return ['started' => false, 'status' => 'alive', 'worker_id' => (string)$snapshot['scan']['worker_id']];
+            return [
+                'started' => false,
+                'status' => 'alive',
+                'worker_id' => (string)$snapshot['scan']['worker_id'],
+            ];
         }
 
-        $php = self::phpCli();
-        $root = rtrim(dirname(rtrim(APP_PATH, '/\\')), '/\\');
-        $think = $root . DIRECTORY_SEPARATOR . 'think';
-        if (!is_file($think)) {
-            throw new \RuntimeException('未找到 ThinkPHP CLI 入口：' . $think);
-        }
-        if (!function_exists('proc_open')) {
-            throw new \RuntimeException('服务器已禁用 proc_open，无法自动启动 IPA 扫描 Worker');
+        if (self::$scheduled) {
+            return ['started' => false, 'status' => 'scheduled', 'worker_id' => ''];
         }
 
-        $runtime = defined('RUNTIME_PATH') ? RUNTIME_PATH : ($root . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR);
-        $logDir = rtrim($runtime, '/\\') . DIRECTORY_SEPARATOR . 'log';
-        if (!is_dir($logDir) && !@mkdir($logDir, 0755, true) && !is_dir($logDir)) {
-            throw new \RuntimeException('无法创建 IPA Worker 日志目录');
-        }
-        $log = $logDir . DIRECTORY_SEPARATOR . 'ipa_scan_worker.log';
+        $workerId = 'fpm:' . gethostname() . ':' . getmypid() . ':' . substr(md5(uniqid('', true)), 0, 8);
+        self::$scheduled = true;
+        WorkerState::heartbeat('scan', $workerId, 'scheduled', 0);
 
-        $launcherId = 'launcher:' . gethostname() . ':' . getmypid();
-        WorkerState::heartbeat('scan', $launcherId, 'starting', 0);
+        register_shutdown_function(function () use ($workerId) {
+            // Under PHP-FPM this flushes the HTTP response first, matching the
+            // existing Node/OpenList project's "return now, continue in API process"
+            // behavior without proc_open/nohup/CLI child processes.
+            if (function_exists('fastcgi_finish_request')) {
+                @fastcgi_finish_request();
+            }
+            @ignore_user_abort(true);
+            @set_time_limit(0);
+            self::drainQueue($workerId);
+        });
 
-        $cmd = 'nohup ' . escapeshellarg($php)
-            . ' ' . escapeshellarg($think)
-            . ' ipa:worker --sleep=2 >> ' . escapeshellarg($log)
-            . ' 2>&1 < /dev/null &';
-
-        $descriptors = [
-            0 => ['file', '/dev/null', 'r'],
-            1 => ['file', '/dev/null', 'a'],
-            2 => ['file', '/dev/null', 'a'],
-        ];
-        $process = @proc_open($cmd, $descriptors, $pipes, $root, null);
-        if (!is_resource($process)) {
-            WorkerState::heartbeat('scan', $launcherId, 'stopped', 0);
-            throw new \RuntimeException('无法创建 IPA 扫描 Worker 进程');
-        }
-        $exit = proc_close($process);
-        if ($exit !== 0) {
-            WorkerState::heartbeat('scan', $launcherId, 'stopped', 0);
-            throw new \RuntimeException('IPA 扫描 Worker 启动命令失败，exit=' . (int)$exit . '；请查看 ' . $log);
-        }
-
-        return ['started' => true, 'status' => 'starting', 'worker_id' => $launcherId, 'php' => $php, 'log' => $log];
+        return ['started' => true, 'status' => 'scheduled', 'worker_id' => $workerId];
     }
 
-    protected static function phpCli()
+    /**
+     * Consume queued scan items in-process. $maxItems is mainly useful for
+     * regression tests; 0 means drain until the queue is empty or owned by
+     * another worker.
+     */
+    public static function drainQueue($workerId = '', $maxItems = 0)
     {
-        $override = trim((string)getenv('PHP_IPA_WORKER_BINARY'));
-        if ($override !== '') {
-            return $override;
+        $workerId = trim((string)$workerId);
+        if ($workerId === '') {
+            $workerId = 'fpm:' . gethostname() . ':' . getmypid();
+        }
+        $maxItems = max(0, (int)$maxItems);
+        $processed = 0;
+
+        try {
+            WorkerState::heartbeat('scan', $workerId, 'idle', 0);
+            while (true) {
+                $item = IpaScanService::claimOne($workerId);
+                if (!$item) {
+                    // Failed items use a short retry backoff. Stay alive while
+                    // pending work still exists so a transient OpenList error
+                    // does not leave the job stranded until another click.
+                    $nextAt = (int)Db::name('ipa_scan_item')
+                        ->where('status', 'pending')
+                        ->min('available_at');
+                    if ($nextAt <= 0) {
+                        break;
+                    }
+                    $sleep = max(1, min(5, $nextAt - time()));
+                    WorkerState::heartbeat('scan', $workerId, 'idle', 0);
+                    sleep($sleep);
+                    continue;
+                }
+
+                WorkerState::heartbeat('scan', $workerId, 'working', (int)$item['id']);
+                IpaScanService::setJobContext((int)$item['job_id']);
+                try {
+                    IpaScanService::processItem($item, function (array $source) {
+                        return empty($source['token_ciphertext'])
+                            ? ''
+                            : SecretBox::decrypt($source['token_ciphertext']);
+                    });
+                } catch (\Exception $e) {
+                    IpaScanService::failItem($item, $e);
+                }
+
+                $processed++;
+                WorkerState::heartbeat('scan', $workerId, 'idle', 0);
+                if ($maxItems > 0 && $processed >= $maxItems) {
+                    break;
+                }
+            }
+        } catch (\Exception $e) {
+            // Do not throw from a shutdown handler. Queue/item state already
+            // records per-item failures; an unexpected outer failure simply
+            // marks this in-process consumer stopped so a later request can resume.
         }
 
-        // Do not call is_file()/is_executable() here. BaoTa open_basedir usually allows
-        // only the site root and /tmp, while PHP_BINDIR is /www/server/php/<ver>/bin.
-        // The path is supplied by the currently running PHP-FPM binary itself, so use it
-        // directly and let the shell report an execution failure if it is actually invalid.
-        $bindir = trim((string)PHP_BINDIR);
-        if ($bindir === '') {
-            throw new \RuntimeException('无法确定站点 PHP-FPM 的 PHP_BINDIR');
+        try {
+            WorkerState::heartbeat('scan', $workerId, 'stopped', 0);
+        } catch (\Exception $ignored) {
         }
-        return rtrim($bindir, '/\\') . DIRECTORY_SEPARATOR . 'php';
+        return $processed;
     }
 }
