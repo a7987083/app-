@@ -60,6 +60,15 @@ foreach (['protocol_version', 'app_executable', 'app_macho_uuid', 'app_version',
 requireContains($clientM, 'canonicalV2UDID', 'client v2 canonical signing method');
 requireContains($clientM, 'currentAppMachOUUID', 'client reads running main Mach-O UUID');
 
+// scope=3 app_plus offline grace must keep the same identity strength as online verification.
+requireContains($clientM, '[accessLevel isEqualToString:@"app_plus"]', 'app_plus offline cache has a dedicated identity gate');
+requireContains($clientM, 'cachedIdentity[@"bundle_id"]', 'app_plus offline cache binds BundleID');
+requireContains($clientM, 'cachedIdentity[@"executable"]', 'app_plus offline cache binds executable');
+requireContains($clientM, 'cachedIdentity[@"macho_uuid"]', 'app_plus offline cache binds Mach-O UUID');
+requireContains($clientM, '[cachedBundleID isEqualToString:bundleID]', 'offline app_plus requires current BundleID match');
+requireContains($clientM, '[cachedExecutable isEqualToString:currentExecutable]', 'offline app_plus requires current executable match');
+requireContains($clientM, '[cachedUUID caseInsensitiveCompare:currentUUID] == NSOrderedSame', 'offline app_plus requires current Mach-O UUID match');
+
 // Update/notice data are independent additive response fields.
 requireContains($service, "'app_update' => \$appUpdate", 'verification returns App update info');
 requireContains($service, "'notice' => \$notice", 'verification returns remote notice');
