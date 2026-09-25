@@ -10,6 +10,7 @@ on:
       - 'application/common/library/codegen/**'
       - 'application/admin/controller/general/Occodegen.php'
       - 'application/admin/controller/DylibCenter.php'
+      - 'application/admin/controller/DylibCodegen.php'
       - 'public/assets/js/backend/dylib_center.js'
       - 'public/assets/js/backend/dylib_codegen_inline.js'
       - 'clients/ios/ZONDylibVerify/**'
@@ -34,6 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           php -l application/common/library/codegen/ObjectiveCGenerator.php
+          php -l application/admin/controller/DylibCodegen.php
           php -l application/admin/controller/general/Occodegen.php
           php -l tests/oc_codegen_contract_test.php
           node --check public/assets/js/backend/dylib_center.js
@@ -46,6 +48,7 @@ jobs:
           php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
           unzip -t zonoe-online-update.zip >/dev/null
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/codegen/ObjectiveCGenerator.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/DylibCodegen.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Occodegen.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/dylib_center.js'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/dylib_codegen_inline.js'

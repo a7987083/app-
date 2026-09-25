@@ -95,4 +95,15 @@ assert_true($manifest['config_sha256'] === $generator->configHash($config), 'con
 assert_true(isset($manifest['files']['ZONDylibVerify.m']), 'manifest Verify.m hash missing');
 assert_true(isset($manifest['files']['ZONDylibConfig.m']), 'manifest Config.m hash missing');
 
-fwrite(STDOUT, "OK oc_codegen_contract files=" . count($first) . " hash=" . $generator->configHash($config) . "\n");
+$dylibCodegen = @file_get_contents(dirname(__DIR__) . '/application/admin/controller/DylibCodegen.php');
+assert_true($dylibCodegen !== false, 'DylibCodegen controller missing');
+assert_true(strpos($dylibCodegen, "dylib_center/index") !== false, 'DylibCodegen must bind access to Dylib Center permission');
+assert_true(strpos($dylibCodegen, "\$this->auth->check") !== false, 'DylibCodegen must explicitly check Dylib Center permission');
+assert_true(strpos($dylibCodegen, "protected \$noNeedRight") !== false, 'DylibCodegen compatibility routes must skip route-specific rights after login');
+
+$legacyController = @file_get_contents(dirname(__DIR__) . '/application/admin/controller/general/Occodegen.php');
+assert_true($legacyController !== false, 'legacy Occodegen compatibility controller missing');
+assert_true(strpos($legacyController, 'extends \\app\\admin\\controller\\DylibCodegen') !== false, 'legacy Occodegen must delegate to DylibCodegen');
+assert_true(strpos($legacyController, 'ObjectiveCGenerator') === false, 'legacy Occodegen must not keep a second generator implementation');
+
+fwrite(STDOUT, "OK oc_codegen_contract files=" . count($first) . " permission=dylib_center/index hash=" . $generator->configHash($config) . "\n");

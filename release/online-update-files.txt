@@ -67,6 +67,7 @@ application/admin/command/IpaMaintenance.php
 application/admin/controller/IpaCenter.php
 application/admin/controller/IpaSourceCenter.php
 application/admin/controller/DylibCenter.php
+application/admin/controller/DylibCodegen.php
 application/admin/view/ipa_center/index.html
 application/admin/view/ipa_source_center/index.html
 application/admin/view/ipa_source_center/add.html
