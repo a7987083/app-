@@ -13,6 +13,7 @@ class MachOInspector
     const FAT_MAGIC_64 = 0xcafebabf;
     const FAT_CIGAM_64 = 0xbfbafeca;
     const LC_ID_DYLIB = 0x0d;
+    const LC_UUID = 0x1b;
 
     public function inspect($bytes)
     {
@@ -48,6 +49,7 @@ class MachOInspector
 
         $architectures = [];
         $installName = '';
+        $uuids = [];
         for ($i = 0; $i < $count; $i++) {
             $pos = 8 + ($i * $entrySize);
             $cpu = $littleEndian ? $this->u32le($bytes, $pos) : $this->u32be($bytes, $pos);
@@ -61,15 +63,21 @@ class MachOInspector
                     if ($installName === '' && !empty($thin['install_name'])) {
                         $installName = $thin['install_name'];
                     }
+                    if (!empty($thin['macho_uuid'])) {
+                        $uuids[] = $thin['macho_uuid'];
+                    }
                 } catch (\Exception $e) {
                     // Architecture name from FAT table is still useful if slice bytes are not present.
                 }
             }
         }
 
+        $uuids = array_values(array_unique(array_filter($uuids)));
         return [
             'architectures' => array_values(array_unique(array_filter($architectures))),
             'install_name' => $installName,
+            'macho_uuid' => count($uuids) === 1 ? $uuids[0] : '',
+            'macho_uuids' => $uuids,
             'is_fat' => true,
         ];
     }
@@ -110,6 +118,7 @@ class MachOInspector
             $cmdEnd = strlen($bytes);
         }
         $installName = '';
+        $machoUuid = '';
         for ($i = 0; $i < $ncmds && $cmdPos + 8 <= $cmdEnd; $i++) {
             $cmd = $read32($cmdPos);
             $cmdSize = $read32($cmdPos + 4);
@@ -129,14 +138,28 @@ class MachOInspector
                     $installName = trim($name);
                 }
             }
+            if (($cmd & 0x7fffffff) === self::LC_UUID && $cmdSize >= 24 && $cmdPos + 24 <= strlen($bytes)) {
+                $machoUuid = $this->formatUuid(substr($bytes, $cmdPos + 8, 16));
+            }
             $cmdPos += $cmdSize;
         }
 
         return [
             'architectures' => [$this->cpuName($cpu)],
             'install_name' => $installName,
+            'macho_uuid' => $machoUuid,
+            'macho_uuids' => $machoUuid !== '' ? [$machoUuid] : [],
             'is_fat' => false,
         ];
+    }
+
+    protected function formatUuid($bytes)
+    {
+        if (!is_string($bytes) || strlen($bytes) !== 16) {
+            return '';
+        }
+        $hex = strtoupper(bin2hex($bytes));
+        return substr($hex, 0, 8) . '-' . substr($hex, 8, 4) . '-' . substr($hex, 12, 4) . '-' . substr($hex, 16, 4) . '-' . substr($hex, 20, 12);
     }
 
     protected function cpuName($cpu)
