@@ -15,7 +15,7 @@
     "verification_hardening_checkpoint": "f713e449e3a2a6ec0a0aa4405984063093cb23b1",
     "final_pre_release_code_checkpoint": "38405039baf83de0e1bcb5ae2db4f4645c349bed",
     "acceptance_package_workflow_checkpoint": "39bfab3629b3997d1fdbe13c754ace088bbac689",
-    "state_sync_checkpoint": "2ff681a8a8cbcd23dd1c34f9e77d736d2c36a6d3",
+    "state_sync_checkpoint": "1f9eb29aa8918f889980ad25fdeb6126f11b16d9",
     "pr": 25,
     "pr_state": "draft",
     "phase": "Dylib runtime authorization, parsed App identity, runtime notices and migratable endpoints"
