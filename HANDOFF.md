@@ -3,49 +3,73 @@
 ## Current state
 
 - Repository: `a7987083/app-`
-- Previous stable release: `source-v2026092404`
-- Active release branch: `release/2026092405-dylib-lifecycle-integration`
-- Release commit: `f2cb8536b2a5196b4dab1c135c74033f740ed398`
-- Current release: `source-v2026092405`
-- Draft PR: `#24`
-- Historical releases through 2404 must not be rewritten.
+- Stable release: `source-v2026092405`
+- Stable branch: `release/2026092405-dylib-lifecycle-integration`
+- Stable release commit: `f2cb8536b2a5196b4dab1c135c74033f740ed398`
+- Active development branch: `release/2026092406-dylib-global-app-support`
+- Validated 2406 code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`
+- Draft PR: `#25`
+- 2406 is NOT tagged/released yet.
 
-## 2026092405 implementation
+## 2026092406 implementation
 
-1. `DylibCenter` supports edit, enable, disable and guarded delete. Dylib Key is immutable after registration because it is part of the existing signed lookup contract.
-2. Disable preserves the row and all version/binding/log history. `DylibVerificationService` still queries `enabled=1`; disabled entries therefore fail closed using the existing `dylib_unknown / block` response.
-3. The schema has no Dylib soft-delete column or foreign keys. Hard delete is allowed only when there are no `dylib_version`, `dylib_app_binding` or `dylib_verify_log` references; otherwise the admin must disable the Dylib.
-4. Admin workflow is Register → Integration → Game authorization → Version control → Verification records.
-5. Integration documentation is extracted from the real `DylibVerify` controller, `DylibVerificationService` and Objective-C `ZONVerifyClient`; endpoint remains `POST /index/dylib_verify/verify` and canonical HMAC order is unchanged.
-6. Chinese labels are presentation-only. Raw protocol/storage enums and result codes remain unchanged.
-7. Verification log keeps stored fields unchanged; UI translates result/action and labels the truncated UDID hash clearly.
-8. Delete keeps the existing `Layer.confirm`, `Fast.api.ajax`, Backend authorization and CSRF path.
+1. Dylib validity and user feature entitlement are now separate decisions. The active verifier no longer uses per-Dylib BundleID binding as the App allow-list.
+2. Card scopes map to runtime access levels:
+   - `scope=2` -> `basic`
+   - `scope=3` + server-recognized current App -> `app_plus`
+   - `scope=1` -> `global_plus`
+   When the UDID has multiple valid cards, the service computes the highest access level applicable to the current App.
+3. `scope=3` does not trust client-provided `app_id` and does not rely on BundleID alone. The runtime supplies App identity material; the server recognizes the App using BundleID + executable + Mach-O `LC_UUID`, then resolves through active `ipa_asset -> ipa_category_binding -> fa_category.id`.
+4. `MachOInspector` now reads `LC_UUID`; `IpaParserService` persists the main executable identity in `fa_ipa_app_identity`. Only `parsed` assets with an active IPA→category binding participate in App-specific authorization.
+5. Protocol v1 canonical HMAC order is unchanged. Protocol v2 appends protocol/App identity/version fields after the complete v1 canonical payload.
+6. Existing response fields stay compatible. New response data includes `access_level`, `permissions`, `app_identity`, `app_update` and `notice`.
+7. v2 session tokens bind recognized App ID, access level and Mach-O UUID so an App-specific high-privilege session cannot simply be reused in another App.
+8. Parsed IPA version data powers game-update detection. Update title/body/button labels/actions are server-controlled.
+9. Runtime notices support global/specific-App targeting, minimum access level, revision, priority, time windows and button actions.
+10. `/index/dylib_verify/config` provides runtime endpoint discovery. The iOS client supports multiple Bootstrap URLs, multiple API endpoints, signed configuration validation, Last-Known-Good cache, legacy direct endpoint fallback and offline authorization fallback.
+11. Admin workflow is now Register → Integration → Permission Model → Runtime Config & Notices → Version Control → Verification Records. The old binding data/API remains for compatibility/history but is no longer presented as the main authorization workflow.
+12. 2406 includes an idempotent MySQL 5.7 migration, clean-install schema updates, contract tests and online-update payload inclusion.
 
-## Release evidence
+## Validation evidence
 
-- Pre-release IPA Data Center CI `36020461657`: SUCCESS.
-- Regression Checks `36020461082`: SUCCESS.
-- Phase14 Production Hardening `36020461401`: SUCCESS.
-- Final IPA Online Update Release Gate `36021185353`: SUCCESS on release commit `f2cb8536...`.
-- ZONOE Source Release `36021185414`: SUCCESS.
-- PHP 7.0 / MySQL 5.7 / HTTP load / package publication: SUCCESS.
-- Real GitHub Release online-update E2E `2404 -> 2405`: SUCCESS.
-- GitHub Release `source-v2026092405` targets `f2cb8536b2a5196b4dab1c135c74033f740ed398`.
-- Release ZIP: `zonoe-online-update.zip`, size `208933`, SHA256 `abc851d4e63fd98b78eda7ce06ff9cac73b5909380efbef3511a529bc949e0f4`, asset ID `586260722`.
-- CI Artifact: `zonoe-source-2026092405-online-update`, ID `10816991706`, size `202158`, digest `sha256:91f2d63221448f9f858035c1672a17abe3082399db9b326d382a4ff7e2bb1a55`.
+- IPA Online Update Release Gate `36088476047`: SUCCESS on validated code checkpoint `b5c3c00...`.
+  - 2406 runtime files present in the real online-update ZIP.
+  - PHP 7.0 checks passed.
+  - 2406 migration applied twice on MySQL 5.7 successfully.
+  - 2406 runtime contract passed.
+- Draft PR #25 checks on docs head `f7f043542a17dcae92217b7d84466c60014a53c4`:
+  - IPA Data Center CI `36088861999`: SUCCESS.
+  - Regression Checks `36088862017`: SUCCESS.
+  - Phase14 Production Hardening `36088862090`: SUCCESS.
+  - Phase 17.2 Authorization Integrity `36088861990`: SUCCESS.
+- IPA Data Center CI successfully ran PHP 7.0, MySQL 5.7, 100k scale contracts and a real iPhoneOS SDK arm64 compile of `clients/ios/ZONDylibVerify/ZONVerifyClient.m`.
 
-## Verification boundary
+## Compatibility boundary
 
-Verified: source/contract CI, PHP 7.0, MySQL 5.7, Dylib signing/lifecycle contracts, iPhoneOS arm64 client compile, HTTP load gate, real GitHub Release publication, `2404 -> 2405` online-update E2E, final release gate.
+- Published `source-v2026092405` remains immutable and is still the stable release.
+- Historical `dylib_app_binding` records/endpoints are retained; 2406 simply removes them from the active runtime allow/block decision.
+- v1 signing remains accepted using the original canonical order.
+- Cloud-save or other separately purchased entitlement must remain independent from `basic/app_plus/global_plus` unless explicitly designed otherwise.
 
-Not yet verified on the user's BaoTa host: actual admin UI interactions and a real production-client verify call after enable/disable.
+## Not yet production-verified
 
-## Production verification sequence
+- Real BaoTa application of the 2406 migration / online-update payload.
+- Real iOS device behavior for `scope=2`, `scope=3`, `scope=1`, and multiple valid cards on one UDID.
+- Negative test: another game with only a modified BundleID must not receive `scope=3 app_plus`.
+- Game-update notice rendering and arbitrary server-controlled title/body/button text.
+- Runtime notice targeting and button actions.
+- API-domain migration, Bootstrap failover, Last-Known-Good config and offline-grace behavior under real network failures.
 
-1. Use the existing updater on a real `source-v2026092404` BaoTa installation; expect `source-v2026092405`.
-2. Edit Dylib name/policy; confirm Dylib Key remains immutable and blank secret does not rotate it.
-3. Disable and call the existing verifier; expect `dylib_unknown / block`; re-enable and confirm existing version/BundleID rules resume.
-4. Delete a never-used registration; it should succeed after second confirmation.
-5. Attempt to delete a registration with version/binding/log history; it must refuse and instruct using disable.
-6. Compare the Integration panel against the existing Objective-C client fields/signing order.
-7. Confirm logs show readable Chinese labels while stored enum/result values remain unchanged.
+## Next production verification sequence
+
+1. Deploy the 2406 migration in a test/BaoTa environment; run it twice and confirm no duplicate/DDL failure.
+2. Re-parse at least one IPA already actively bound to `fa_category` so `fa_ipa_app_identity` is populated.
+3. With one real Dylib/UDID, test `scope=2`: expect `basic`, normal menu true, extra menu/features false.
+4. Test `scope=3` in the bound App: expect `app_plus`; test the same card in another App: it must not obtain App-specific high privilege.
+5. Modify only BundleID on a different App and repeat: server identity recognition must reject the App-specific match.
+6. Test `scope=1`: expect `global_plus` without App-specific restriction.
+7. Test multiple cards on one UDID and verify highest applicable access is selected for the current App.
+8. Publish a game-update message and a generic runtime notice; verify server-supplied title/body/buttons render correctly.
+9. Change the primary API endpoint in runtime config, break one Bootstrap endpoint, and verify failover/LKG behavior without recompiling the Dylib.
+10. Test temporary total network failure within offline grace, then after expiry.
+11. Only after these real checks pass should `source-v2026092406` release metadata/tag be prepared.
