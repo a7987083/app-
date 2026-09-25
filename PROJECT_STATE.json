@@ -11,7 +11,8 @@
   "development": {
     "version": "2026092406",
     "status": "development_validated_not_released",
-    "validated_code_checkpoint": "b5c3c00bf774583aed0879c6524d3ece1f1151e0",
+    "runtime_code_checkpoint": "b5c3c00bf774583aed0879c6524d3ece1f1151e0",
+    "verification_hardening_checkpoint": "f713e449e3a2a6ec0a0aa4405984063093cb23b1",
     "pr": 25,
     "pr_state": "draft",
     "phase": "Dylib runtime authorization, parsed App identity, runtime notices and migratable endpoints",
@@ -29,7 +30,8 @@
       "server-controlled update text and runtime notices",
       "multiple Bootstrap and API endpoints with signed runtime config and Last-Known-Good cache",
       "reorganized Dylib Center integration documentation",
-      "idempotent MySQL 5.7 migration and clean-install schema"
+      "idempotent MySQL 5.7 migration and clean-install schema",
+      "real MySQL integration matrix for card scopes and App identity spoof-negative behavior"
     ]
   },
   "build": {
@@ -39,17 +41,28 @@
     "mysql57_2406_migration_twice": "passed",
     "php70": "passed",
     "dylib_runtime_contract": "passed",
-    "latest_pr_checks_head": "f7f043542a17dcae92217b7d84466c60014a53c4",
-    "ipa_data_center_ci_run": 36088861999,
+    "latest_behavior_validation_head": "f713e449e3a2a6ec0a0aa4405984063093cb23b1",
+    "ipa_data_center_ci_run": 36095035822,
     "ipa_data_center_ci": "passed",
+    "runtime_access_mysql_integration": "passed",
+    "runtime_access_mysql_matrix": [
+      "no_card_block",
+      "scope2_basic",
+      "scope3_match_app_plus",
+      "scope3_mismatch_block",
+      "bundleid_only_spoof_block",
+      "scope1_global_plus",
+      "multi_card_highest_applicable_access",
+      "stale_identity_rejected"
+    ],
     "ios_arm64_compile": "passed",
     "mysql57": "passed",
     "mysql_100k_scale": "passed",
-    "regression_run": 36088862017,
+    "regression_run": 36095035702,
     "regression": "passed",
-    "phase14_run": 36088862090,
+    "phase14_run": 36095035738,
     "phase14": "passed",
-    "phase17_2_run": 36088861990,
+    "phase17_2_run": 36095035839,
     "phase17_2": "passed"
   },
   "runtime": {
@@ -57,8 +70,8 @@
     "scope2_basic": "not_verified_on_device",
     "scope3_app_plus": "not_verified_on_device",
     "scope1_global_plus": "not_verified_on_device",
-    "multi_card_access_merge": "not_verified_on_device",
-    "scope3_bundleid_spoof_negative_test": "not_verified_on_device",
+    "multi_card_access_merge": "validated_in_mysql_ci_not_verified_on_device",
+    "scope3_bundleid_spoof_negative_test": "validated_in_mysql_ci_not_verified_on_device",
     "game_update_notice": "not_verified_on_device",
     "runtime_notice": "not_verified_on_device",
     "bootstrap_failover": "not_verified_on_production_network",
@@ -75,7 +88,7 @@
     "BundleID is not a sufficient App identity; runtime matching also uses executable and Mach-O UUID resolved against server-side parsed data",
     "changing the server/domain is resilient only while at least one Bootstrap, legacy endpoint, or valid Last-Known-Good configuration remains reachable/usable",
     "separately purchased entitlements such as cloud save must not be inferred from basic/app_plus/global_plus",
-    "real BaoTa and real-device behavior remains unverified despite full CI success"
+    "real BaoTa and real-device behavior remains unverified despite contract and MySQL behavior CI success"
   ],
   "next_task": "Deploy 2406 in a test/BaoTa environment, re-parse an actively bound App, then execute the real-device matrix for scope=2/scope=3/scope=1, BundleID-spoof negative testing, updates/notices, API-domain migration, Bootstrap failover, Last-Known-Good and offline grace before preparing source-v2026092406.",
   "roadmap": "ROADMAP.md",
