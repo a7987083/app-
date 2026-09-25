@@ -18,6 +18,8 @@ on:
       - 'release/sql/2026092204_worker_source_hotfix.sql'
       - 'release/sql/2026092205_ipa_ui_controls_hotfix.sql'
       - 'release/sql/2026092402_ipa_cleanup_controls.sql'
+      - 'release/sql/2026092406_dylib_runtime_access.sql'
+      - 'database/ipa_data_center_v1_3_dylib_runtime_access.sql'
       - 'application/command.php'
       - 'application/admin/command/Ipa*.php'
       - 'application/admin/controller/Ipa*.php'
@@ -33,6 +35,7 @@ on:
       - 'clients/ios/ZONDylibVerify/**'
       - 'tests/dylib_signing_contract.php'
       - 'tests/phase2405_dylib_lifecycle_contract_test.php'
+      - 'tests/phase2406_dylib_runtime_access_contract_test.php'
       - 'deploy/systemd/zonoe-ipa-parse-worker.service'
       - 'deploy/systemd/zonoe-ipa-parse-worker.timer'
       - 'tools/build_online_update.php'
@@ -69,6 +72,7 @@ jobs:
           VERSION="$(tr -d '\r\n ' < VERSION)"
           test "$VERSION" = "$(tr -d '\r\n ' < public/update/ver.txt)"
           test "$VERSION" = "$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo $j["version"];')"
+          # 2406 is still a development branch; formal release metadata remains the immutable 2405 release until promotion.
           test "$VERSION" = "2026092405"
           grep -F "ZONOE 软件源 ${VERSION}" release/RELEASE_NOTES.md
           grep -F "版本：${VERSION}" PHASE13_RELEASE.txt
@@ -82,7 +86,7 @@ jobs:
           ACTUAL="$(sha256sum zonoe-online-update.zip | awk '{print $1}')"
           test "$EXPECTED" = "$ACTUAL"
 
-      - name: Verify 2026092405 payload
+      - name: Verify current IPA payload including 2406 runtime files
         run: |
           set -euo pipefail
           ZIP=zonoe-online-update.zip
@@ -100,13 +104,18 @@ jobs:
             program/application/common/library/Ipa/IpaCompareService.php \
             program/application/common/library/Ipa/IpaWorkerLauncher.php \
             program/application/common/library/Ipa/DylibVerificationService.php \
+            program/application/common/library/Ipa/DylibRuntimeAccessService.php \
+            program/application/common/library/Ipa/DylibRuntimeConfigService.php \
+            program/application/common/library/Ipa/IpaParserService.php \
+            program/application/common/library/Ipa/MachOInspector.php \
             program/application/index/controller/DylibVerify.php \
             program/public/assets/js/backend/ipa_center.js \
             program/public/assets/js/backend/ipa_source_center.js \
             program/public/assets/js/backend/dylib_center.js \
             mysql/2026092204_worker_source_hotfix.sql \
             mysql/2026092205_ipa_ui_controls_hotfix.sql \
-            mysql/2026092402_ipa_cleanup_controls.sql; do
+            mysql/2026092402_ipa_cleanup_controls.sql \
+            mysql/2026092406_dylib_runtime_access.sql; do
               unzip -Z1 "$ZIP" | grep -Fx "$f"
           done
 
@@ -146,13 +155,18 @@ jobs:
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_source_center/add'")" = "1"
           test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM fa_auth_rule WHERE name='ipa_source_center/del'")" = "1"
 
-      - name: Apply IPA UI migrations twice on MySQL 5.7
+      - name: Apply IPA and Dylib migrations twice on MySQL 5.7
         run: |
           set -euo pipefail
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092205_ipa_ui_controls_hotfix.sql
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092205_ipa_ui_controls_hotfix.sql
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092402_ipa_cleanup_controls.sql
           mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092402_ipa_cleanup_controls.sql
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092406_dylib_runtime_access.sql
+          mysql -h127.0.0.1 -uroot -proot ipa_release_gate < release/sql/2026092406_dylib_runtime_access.sql
+          for table in fa_ipa_app_identity fa_dylib_runtime_config fa_dylib_runtime_notice; do
+            test "$(mysql -N -B -h127.0.0.1 -uroot -proot ipa_release_gate -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='ipa_release_gate' AND table_name='$table'")" = "1"
+          done
           for rule in \
             ipa_center/saveParseSettings \
             ipa_center/pauseParse \
@@ -184,11 +198,15 @@ jobs:
           php -l application/common/library/Ipa/IpaScanService.php
           php -l application/common/library/Ipa/IpaWorkerLauncher.php
           php -l application/common/library/Ipa/DylibVerificationService.php
+          php -l application/common/library/Ipa/DylibRuntimeAccessService.php
+          php -l application/common/library/Ipa/DylibRuntimeConfigService.php
           php -l application/common/library/Ipa/OpenListClient.php
           php -l application/common/library/Ipa/IpaParserService.php
+          php -l application/common/library/Ipa/MachOInspector.php
           php -l application/common/library/Ipa/RemoteZipReader.php
           php -l application/index/controller/DylibVerify.php
           php -l tests/phase2405_dylib_lifecycle_contract_test.php
+          php -l tests/phase2406_dylib_runtime_access_contract_test.php
           php tests/dylib_signing_contract.php
           php tests/macho_inspector_contract.php
           php tests/macho_inspector_fat_contract.php
@@ -202,6 +220,8 @@ jobs:
           grep -q 'source-disabled' application/admin/view/ipa_center/index.html
           grep -q 'setDylibEnabled' application/admin/controller/DylibCenter.php
           grep -q 'deleteDylib' application/admin/controller/DylibCenter.php
+          grep -q 'saveRuntimeConfig' application/admin/controller/DylibCenter.php
+          grep -q 'saveNotice' application/admin/controller/DylibCenter.php
           grep -q 'Layer.confirm' public/assets/js/backend/dylib_center.js
           grep -q 'POST /index/dylib_verify/verify' application/admin/view/dylib_center/index.html
           grep -q 'clearScanJobs' application/admin/controller/IpaCenter.php
