@@ -1,26 +1,62 @@
 # Known Issues and Refactor Backlog
 
-## P0 — 2026092405 real BaoTa Dylib lifecycle verification pending
+## P0 — 2026092406 real BaoTa / device validation pending
 
-- `source-v2026092405` has been formally published from commit `f2cb8536...`.
-- Source Release `36021185414`, Final Gate `36021185353` and real GitHub Release online-update E2E `2404 -> 2405` all passed.
-- Required production checks: edit without changing Dylib Key, secret rotation semantics, disable/enable behavior, unused-item delete, referenced-item delete refusal, integration instructions and readable verification logs.
+- 2406 code and CI are complete, but `source-v2026092406` has NOT been published.
+- Required before release: real BaoTa migration/online-update, real iOS device card-scope matrix, App identity spoof-negative testing, update/notice rendering, and server/domain migration failover testing.
+- CI success is not treated as production runtime proof.
+
+## P0 — scope=3 App identity requires parsed + actively bound IPA data
+
+- App-specific `app_plus` is intentionally server-derived; the client does not get to declare `app_id`.
+- The server requires matching parsed App identity material and an active `ipa_asset -> ipa_category_binding -> fa_category.id` relationship.
+- If an App has not been parsed again after the 2406 identity schema is deployed, or has no active binding, scope=3 must not silently grant high privilege.
+- Production rollout therefore requires re-parsing at least the actively sold/authorized Apps before validating scope=3.
+
+## P0 — BundleID-only spoof must be tested on a real device
+
+- 2406 no longer treats BundleID as sufficient App identity. Matching also uses executable and Mach-O `LC_UUID` against server-side parsed identity.
+- CI contracts verify the model and implementation shape, but the negative case “different game with only BundleID changed” still needs a real-device test before release.
+
+## P1 — Runtime endpoint migration still has a physical discovery boundary
+
+- 2406 supports multiple Bootstrap endpoints, multiple API endpoints, signed runtime config, Last-Known-Good cache, legacy direct endpoint fallback and offline authorization grace.
+- This avoids tying the Dylib to one business domain, but it cannot provide impossible recovery: if all Bootstrap endpoints, all legacy endpoints and every usable local cached config are unavailable simultaneously, an old client cannot discover a future server from nothing.
+- Production migration tests must deliberately break one Bootstrap, rotate the primary API domain, then validate failover and LKG behavior.
+
+## P1 — Remote notices and update messages are server controlled
+
+- Update title/body/button text and generic runtime notices are intentionally server-driven.
+- Keep authorization and independent paid entitlements separate from notice/update rendering. A notice must never implicitly elevate `basic/app_plus/global_plus`.
+- Button actions/URLs require real-device validation so malformed or stale server content cannot degrade the menu flow.
+
+## P1 — Independent entitlements remain independent
+
+- `basic`, `app_plus` and `global_plus` describe Dylib/menu capability only.
+- Cloud-save or other separately purchased entitlement must continue to use its own validation and expiry rules.
+- Do not infer cloud-save ownership from a full-source or App-specific menu card unless that business rule is explicitly changed later.
+
+## P1 — Historical Dylib App bindings are retained intentionally
+
+- 2405 `dylib_app_binding` records and admin endpoints remain for compatibility/audit/history.
+- 2406 active verification no longer reads them as the App allow-list.
+- Do not delete historical rows merely because the new runtime model no longer uses them for allow/block.
 
 ## P1 — Disabled Dylib intentionally resolves as unknown
 
-- The existing verification service selects `dylib_key` with `enabled=1` and returns `dylib_unknown / block` when absent.
-- 2405 keeps this protocol behavior unchanged. The admin UI describes it as “未注册或已停用”; no new disabled-specific protocol code is introduced.
+- The verification service selects `dylib_key` with `enabled=1` and returns `dylib_unknown / block` when absent.
+- This remains an intentional fail-closed protocol behavior; the admin UI describes it as “未注册或已停用”.
 
 ## P1 — Dylib deletion is history-protected
 
 - The schema has no Dylib soft-delete column and no foreign keys.
-- A registration with any version, BundleID binding or verification log is not hard-deleted; the admin must disable it so audit and policy history remain intact.
+- A registration with any version, historical BundleID binding or verification log is not hard-deleted; the admin must disable it so audit and policy history remain intact.
 - A completely unused registration may be hard-deleted after the existing second-confirmation flow.
 
-## P0 — 2026092404 real BaoTa runtime verification remains pending
+## P0 — 2026092405 / 2026092404 real BaoTa runtime verification remains pending
 
-- 2404 FPM scan/parse, live refresh and software-source response fixes passed release CI/E2E but still require real BaoTa validation.
-- Validate `discovered -> parsing -> parsed/parse_failed`, pause/resume/retry, manual/5-second refresh and software-source save/test behavior.
+- `source-v2026092405` was formally released and its CI/E2E succeeded, but the user's real BaoTa Dylib lifecycle/UI verification remains outstanding.
+- 2404 FPM scan/parse, live refresh and software-source response fixes also still require real BaoTa observation.
 
 ## P1 — PHP-FPM worker occupancy during in-process scan/parse
 
@@ -40,5 +76,5 @@
 ## Stable announcement contract
 
 - Public announcement authorization time remains single-clock only.
-- Do not reintroduce separate full-source / partial-App / verify-only expiry buttons.
+- Do not reintroduce separate full-source / partial-App / verify-only expiry buttons into the public announcement UI.
 - Internal authorization scopes remain independent for permission enforcement.
