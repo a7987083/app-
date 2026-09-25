@@ -1,0 +1,69 @@
+<style>
+    .zonoe-codegen-wrap {padding:0 4px;}
+    .zonoe-codegen-card {border:1px solid #e7eaec;background:#fff;border-radius:4px;margin-bottom:14px;}
+    .zonoe-codegen-card .card-head {padding:12px 15px;border-bottom:1px solid #eee;font-weight:600;}
+    .zonoe-codegen-card .card-body {padding:15px;}
+    .zonoe-codegen-endpoints td {vertical-align:middle!important;}
+    .zonoe-codegen-endpoints input,.zonoe-codegen-endpoints select {min-width:90px;}
+    .zonoe-codegen-code {width:100%;height:520px;font-family:Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre;overflow:auto;background:#101419;color:#e8edf2;border:0;border-radius:4px;padding:14px;}
+    .zonoe-codegen-config {width:100%;height:320px;font-family:Menlo,Monaco,Consolas,monospace;font-size:12px;}
+    .zonoe-codegen-files {max-height:520px;overflow:auto;border-right:1px solid #eee;}
+    .zonoe-codegen-files a {display:block;padding:8px 10px;border-bottom:1px solid #f4f4f4;word-break:break-all;}
+    .zonoe-codegen-files a.active {background:#f0f7ff;font-weight:600;}
+    .zonoe-codegen-status {margin-left:10px;}
+    .zonoe-codegen-warning {white-space:pre-wrap;word-break:break-word;}
+</style>
+<div class="panel panel-default panel-intro zonoe-codegen-wrap">
+    <div class="panel-heading">
+        <div class="panel-lead"><em>Objective-C 工程生成</em>从当前软件源 API 配置生成可预览、可校验的 OC 客户端文件和接口说明。生成前的修改只影响本次 Draft，不会写回线上 API 配置。</div>
+    </div>
+    <div class="panel-body">
+        <div class="zonoe-codegen-card">
+            <div class="card-head"><i class="fa fa-sliders"></i> 生成配置</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-3 form-group"><label>工程名称</label><input id="cg-project" class="form-control" maxlength="64"></div>
+                    <div class="col-sm-2 form-group"><label>类前缀</label><input id="cg-prefix" class="form-control" maxlength="8"></div>
+                    <div class="col-sm-2 form-group"><label>最低 iOS</label><input id="cg-ios" class="form-control" value="13.0"></div>
+                    <div class="col-sm-2 form-group"><label>超时（秒）</label><input id="cg-timeout" type="number" min="1" max="120" class="form-control"></div>
+                    <div class="col-sm-3 form-group"><label>User-Agent</label><input id="cg-user-agent" class="form-control" maxlength="120"></div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-10 form-group"><label>API Base URL</label><input id="cg-base-url" class="form-control" maxlength="512"></div>
+                    <div class="col-sm-2 form-group"><label>包含停用接口</label><div><label class="checkbox-inline"><input id="cg-include-disabled" type="checkbox"> 是</label></div></div>
+                </div>
+            </div>
+        </div>
+        <div class="zonoe-codegen-card">
+            <div class="card-head"><i class="fa fa-plug"></i> 当前接口 <span class="text-muted">（本次 Draft 可改，不回写线上配置）</span></div>
+            <div class="card-body table-responsive">
+                <table class="table table-bordered table-striped zonoe-codegen-endpoints">
+                    <thead><tr><th style="width:55px;">生成</th><th style="width:130px;">Key</th><th style="width:150px;">名称</th><th>Path</th><th style="width:90px;">Method</th><th style="width:140px;">Auth</th><th>说明</th></tr></thead>
+                    <tbody id="cg-endpoints"><tr><td colspan="7" class="text-muted">正在读取当前配置...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="form-group">
+            <button type="button" id="cg-preview" class="btn btn-primary"><i class="fa fa-eye"></i> 生成预览</button>
+            <button type="button" id="cg-generate" class="btn btn-success" disabled><i class="fa fa-download"></i> 最终生成 ZIP</button>
+            <button type="button" id="cg-reset" class="btn btn-default"><i class="fa fa-refresh"></i> 重新读取当前配置</button>
+            <span id="cg-status" class="zonoe-codegen-status text-muted">尚未预览</span>
+        </div>
+        <div id="cg-validation"></div>
+        <ul class="nav nav-tabs" id="cg-tabs">
+            <li class="active"><a href="#cg-tab-files" data-toggle="tab">OC / 文档预览</a></li>
+            <li><a href="#cg-tab-config" data-toggle="tab">最终配置 JSON</a></li>
+        </ul>
+        <div class="tab-content" style="padding-top:12px;">
+            <div class="tab-pane active" id="cg-tab-files">
+                <div class="row" style="margin:0;border:1px solid #eee;">
+                    <div class="col-sm-3 zonoe-codegen-files" id="cg-files"><div class="text-muted" style="padding:12px;">点击“生成预览”后显示文件。</div></div>
+                    <div class="col-sm-9" style="padding:10px;"><pre id="cg-code" class="zonoe-codegen-code">// preview</pre></div>
+                </div>
+            </div>
+            <div class="tab-pane" id="cg-tab-config">
+                <textarea id="cg-config-json" class="zonoe-codegen-config form-control" readonly></textarea>
+            </div>
+        </div>
+    </div>
+</div>
