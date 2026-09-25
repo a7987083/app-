@@ -2,45 +2,7 @@
 
 require dirname(__DIR__) . '/application/common/library/codegen/ObjectiveCGenerator.php';
 
-class ObjectiveCGeneratorFixture extends \app\common\library\codegen\ObjectiveCGenerator
-{
-    public function currentConfig($domain = '')
-    {
-        return [
-            'project_name' => 'FixtureAPI',
-            'class_prefix' => 'ZON',
-            'base_url' => $domain ?: 'https://example.invalid',
-            'deployment_target' => '13.0',
-            'timeout' => 15,
-            'user_agent' => 'Fixture/1.0',
-            'include_disabled' => false,
-            'endpoints' => [
-                [
-                    'key' => 'appstore',
-                    'name' => '软件源接口',
-                    'path' => '/appstore',
-                    'method' => 'GET',
-                    'auth' => 'UDID/卡密',
-                    'description' => 'fixture',
-                    'enabled' => true,
-                    'fields' => [
-                        ['name' => 'udid', 'label' => 'UDID', 'required' => true, 'placeholder' => '设备 UDID'],
-                    ],
-                ],
-                [
-                    'key' => 'disabled_api',
-                    'name' => '停用接口',
-                    'path' => '/disabled',
-                    'method' => 'POST',
-                    'auth' => '',
-                    'description' => '',
-                    'enabled' => false,
-                    'fields' => [],
-                ],
-            ],
-        ];
-    }
-}
+use app\common\library\codegen\ObjectiveCGenerator;
 
 function assert_true($value, $message)
 {
@@ -50,22 +12,46 @@ function assert_true($value, $message)
     }
 }
 
-$generator = new ObjectiveCGeneratorFixture();
-$config = $generator->normalize([
-    'project_name' => 'Fixture API!',
+$generator = new ObjectiveCGenerator();
+$dylib = [
+    'id' => 7,
+    'dylib_key' => 'zonoe.fixture',
+    'name' => 'Fixture Dylib',
+    'enabled' => 1,
+    'verify_secret' => str_repeat('a', 64),
+    'default_offline_grace' => 900,
+    'default_fail_action' => 'disable_feature',
+];
+$runtime = [
+    'config_version' => 3,
+    'api_endpoints_json' => json_encode(['https://api-a.example.invalid', 'https://api-b.example.invalid']),
+    'bootstrap_urls_json' => json_encode(['https://bootstrap-a.example.invalid/index/dylib_verify/config', 'https://bootstrap-b.example.invalid/index/dylib_verify/config']),
+    'verify_path' => '/index/dylib_verify/verify',
+];
+$version = [
+    'id' => 11,
+    'version' => '2.4.8',
+    'build' => '248',
+    'state' => 'active',
+    'sha256' => str_repeat('b', 64),
+    'offline_grace' => 1200,
+    'fail_action' => 'show_message',
+    'notice' => 'fixture notice',
+];
+
+$config = $generator->buildConfig($dylib, $runtime, $version, [
     'class_prefix' => 'zon',
-    'base_url' => 'https://api.example.invalid/',
     'deployment_target' => '13.0',
     'timeout' => 500,
-    'user_agent' => 'Fixture Test',
-    'include_disabled' => false,
-    'endpoints' => $generator->currentConfig()['endpoints'],
-], 'https://fallback.invalid');
+], 'https://fallback.example.invalid');
 
-assert_true($config['project_name'] === 'FixtureAPI', 'project name normalization failed');
 assert_true($config['class_prefix'] === 'ZON', 'class prefix normalization failed');
-assert_true($config['base_url'] === 'https://api.example.invalid', 'base URL normalization failed');
+assert_true($config['deployment_target'] === '13.0', 'deployment target normalization failed');
 assert_true($config['timeout'] === 120, 'timeout clamp failed');
+assert_true($config['dylib_key'] === 'zonoe.fixture', 'dylib key missing');
+assert_true($config['dylib_version'] === '2.4.8', 'version missing');
+assert_true(count($config['bootstrap_urls']) === 2, 'bootstrap list missing');
+assert_true(count($config['api_endpoints']) === 2, 'api endpoint list missing');
 
 $validation = $generator->validate($config);
 assert_true($validation['valid'] === true, 'fixture config should be valid');
@@ -74,18 +60,39 @@ $first = $generator->generate($config);
 $second = $generator->generate($config);
 assert_true($first === $second, 'generation must be deterministic');
 
-$expected = ['ZONAPIConfig.h','ZONAPIConfig.m','ZONAPIEndpoints.h','ZONAPIEndpoints.m','ZONAPIClient.h','ZONAPIClient.m','GeneratedConfig.json','API_REFERENCE.md','INTEGRATION.md','generation-manifest.json'];
-foreach ($expected as $path) {
-    assert_true(isset($first[$path]), 'missing generated file ' . $path);
-}
-assert_true(strpos($first['ZONAPIEndpoints.m'], 'appstore') !== false, 'enabled endpoint missing');
-assert_true(strpos($first['ZONAPIEndpoints.m'], 'disabled_api') === false, 'disabled endpoint should be excluded');
-assert_true(strpos($first['API_REFERENCE.md'], 'Response Schema') !== false, 'response schema limitation must be documented');
-assert_true(strpos($first['INTEGRATION.md'], '不要写死') !== false, 'secret handling guidance missing');
+$expected = [
+    'ZONDylibConfig.h',
+    'ZONDylibConfig.m',
+    'ZONDylibVerify.h',
+    'ZONDylibVerify.m',
+    'GeneratedConfig.json',
+    'INTEGRATION.md',
+    'generation-manifest.json',
+];
+assert_true(count($first) === count($expected), 'unexpected generated file count');
+foreach ($expected as $path) assert_true(isset($first[$path]), 'missing generated file ' . $path);
+
+assert_true(strpos($first['ZONDylibConfig.m'], 'zonoe.fixture') !== false, 'dylib key not embedded');
+assert_true(strpos($first['ZONDylibConfig.m'], '2.4.8') !== false, 'dylib version not embedded');
+assert_true(strpos($first['ZONDylibConfig.m'], 'bootstrap-a.example.invalid') !== false, 'bootstrap URL not embedded');
+assert_true(strpos($first['ZONDylibConfig.m'], str_repeat('a', 64)) !== false, 'client verification secret not embedded');
+
+assert_true(strpos($first['ZONDylibVerify.m'], 'canonicalV2UDID') !== false, 'v2 HMAC implementation missing');
+assert_true(strpos($first['ZONDylibVerify.m'], 'currentAppMachOUUID') !== false, 'App identity implementation missing');
+assert_true(strpos($first['ZONDylibVerify.m'], 'validateRuntimeConfig') !== false, 'runtime config validation missing');
+assert_true(strpos($first['ZONDylibVerify.m'], 'permissions') !== false, 'permissions parsing missing');
+assert_true(strpos($first['ZONDylibVerify.m'], 'appUpdate') !== false, 'app update parsing missing');
+
+$public = json_decode($first['GeneratedConfig.json'], true);
+assert_true(is_array($public), 'GeneratedConfig JSON invalid');
+assert_true($public['verify_secret_present'] === true, 'secret presence flag missing');
+assert_true($public['verify_secret'] !== str_repeat('a', 64), 'GeneratedConfig must mask verification secret');
+assert_true(strpos($public['verify_secret'], '*') !== false, 'masked secret should contain asterisks');
 
 $manifest = json_decode($first['generation-manifest.json'], true);
 assert_true(is_array($manifest), 'manifest JSON invalid');
-assert_true(isset($manifest['config_sha256']) && $manifest['config_sha256'] === $generator->configHash($config), 'config hash mismatch');
-assert_true(isset($manifest['files']['ZONAPIClient.m']), 'manifest file hash missing');
+assert_true($manifest['config_sha256'] === $generator->configHash($config), 'config hash mismatch');
+assert_true(isset($manifest['files']['ZONDylibVerify.m']), 'manifest Verify.m hash missing');
+assert_true(isset($manifest['files']['ZONDylibConfig.m']), 'manifest Config.m hash missing');
 
 fwrite(STDOUT, "OK oc_codegen_contract files=" . count($first) . " hash=" . $generator->configHash($config) . "\n");

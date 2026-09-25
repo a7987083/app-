@@ -94,5 +94,8 @@ application/index/controller/DylibVerify.php
 public/assets/js/backend/ipa_center.js
 public/assets/js/backend/ipa_source_center.js
 public/assets/js/backend/dylib_center.js
+public/assets/js/backend/dylib_codegen_inline.js
+clients/ios/ZONDylibVerify/ZONVerifyClient.h
+clients/ios/ZONDylibVerify/ZONVerifyClient.m
 deploy/systemd/zonoe-ipa-parse-worker.service
 deploy/systemd/zonoe-ipa-parse-worker.timer

@@ -1,6 +1,7 @@
 define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefined, Backend, Table, Form) {
     var Controller = {
         index: function () {
+            require(['backend/dylib_codegen_inline'], function (Codegen) { Codegen.init(); });
             var stateLabels = {
                 active: '正式启用',
                 testing: '测试中',

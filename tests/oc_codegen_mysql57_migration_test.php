@@ -34,52 +34,59 @@ if (!$mysqli->query($create)) {
     exit(1);
 }
 
-$sqlFile = dirname(__DIR__) . '/release/sql/2026092407_oc_codegen.sql';
-$sql = @file_get_contents($sqlFile);
-if ($sql === false) {
-    fwrite(STDERR, "FAIL oc_codegen_mysql57: migration missing\n");
-    exit(1);
-}
-
 function run_sql($mysqli, $sql)
 {
-    if (!$mysqli->multi_query($sql)) {
-        return false;
-    }
+    if (!$mysqli->multi_query($sql)) return false;
     do {
-        if ($result = $mysqli->store_result()) {
-            $result->free();
-        }
-        if (!$mysqli->more_results()) {
-            break;
-        }
+        if ($result = $mysqli->store_result()) $result->free();
+        if (!$mysqli->more_results()) break;
     } while ($mysqli->next_result());
     return $mysqli->errno === 0;
 }
 
-if (!run_sql($mysqli, $sql) || !run_sql($mysqli, $sql)) {
-    fwrite(STDERR, "FAIL oc_codegen_mysql57: migration execution " . $mysqli->error . "\n");
+$root = dirname(__DIR__) . '/release/sql/';
+$sql2407 = @file_get_contents($root . '2026092407_oc_codegen.sql');
+$sql2408 = @file_get_contents($root . '2026092408_oc_codegen_inline.sql');
+if ($sql2407 === false || $sql2408 === false) {
+    fwrite(STDERR, "FAIL oc_codegen_mysql57: migration missing\n");
     exit(1);
 }
 
-$res = $mysqli->query("SELECT id FROM fa_auth_rule WHERE name='general/occodegen' LIMIT 1");
+if (!run_sql($mysqli, $sql2407) || !run_sql($mysqli, $sql2407)) {
+    fwrite(STDERR, "FAIL oc_codegen_mysql57: 2407 migration execution " . $mysqli->error . "\n");
+    exit(1);
+}
+if (!run_sql($mysqli, $sql2408) || !run_sql($mysqli, $sql2408)) {
+    fwrite(STDERR, "FAIL oc_codegen_mysql57: 2408 migration execution " . $mysqli->error . "\n");
+    exit(1);
+}
+
+$res = $mysqli->query("SELECT id,ismenu,title,remark FROM fa_auth_rule WHERE name='general/occodegen' LIMIT 1");
 $parent = $res ? $res->fetch_assoc() : null;
 if (!$parent) {
-    fwrite(STDERR, "FAIL oc_codegen_mysql57: parent menu missing\n");
+    fwrite(STDERR, "FAIL oc_codegen_mysql57: codegen permission parent missing\n");
+    exit(1);
+}
+if ((int)$parent['ismenu'] !== 0) {
+    fwrite(STDERR, "FAIL oc_codegen_mysql57: standalone menu must be hidden in 2408\n");
+    exit(1);
+}
+if (strpos((string)$parent['title'], 'Dylib') === false) {
+    fwrite(STDERR, "FAIL oc_codegen_mysql57: hidden service title not migrated\n");
     exit(1);
 }
 $pid = (int)$parent['id'];
 $res = $mysqli->query("SELECT COUNT(*) AS c FROM fa_auth_rule WHERE pid={$pid}");
 $row = $res ? $res->fetch_assoc() : null;
 if (!$row || (int)$row['c'] !== 5) {
-    fwrite(STDERR, "FAIL oc_codegen_mysql57: expected 5 child permissions\n");
+    fwrite(STDERR, "FAIL oc_codegen_mysql57: expected 5 child permissions after 2408\n");
     exit(1);
 }
 $res = $mysqli->query("SELECT COUNT(*) AS c FROM fa_auth_rule WHERE name LIKE 'general/occodegen%'");
 $row = $res ? $res->fetch_assoc() : null;
 if (!$row || (int)$row['c'] !== 6) {
-    fwrite(STDERR, "FAIL oc_codegen_mysql57: migration is not idempotent\n");
+    fwrite(STDERR, "FAIL oc_codegen_mysql57: migrations are not idempotent\n");
     exit(1);
 }
 
-fwrite(STDOUT, "OK oc_codegen_mysql57 rules=6 parent_id={$pid}\n");
+fwrite(STDOUT, "OK oc_codegen_mysql57 rules=6 standalone_menu=hidden parent_id={$pid}\n");

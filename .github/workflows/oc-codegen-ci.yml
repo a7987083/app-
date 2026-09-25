@@ -4,14 +4,18 @@ on:
   push:
     branches:
       - feature/2026092406-oc-codegen-online-update
+      - feature/2026092408-dylib-center-codegen-inline
       - 'release/**'
     paths:
       - 'application/common/library/codegen/**'
       - 'application/admin/controller/general/Occodegen.php'
-      - 'application/admin/view/general/occodegen/**'
-      - 'public/assets/js/backend/general/occodegen.js'
+      - 'application/admin/controller/DylibCenter.php'
+      - 'public/assets/js/backend/dylib_center.js'
+      - 'public/assets/js/backend/dylib_codegen_inline.js'
+      - 'clients/ios/ZONDylibVerify/**'
       - 'release/online-update-files.txt'
       - 'release/sql/2026092407_oc_codegen.sql'
+      - 'release/sql/2026092408_oc_codegen_inline.sql'
       - 'tests/oc_codegen_*'
       - '.github/workflows/oc-codegen-ci.yml'
   workflow_dispatch:
@@ -26,25 +30,28 @@ jobs:
           php-version: '7.0'
           coverage: none
           extensions: zip
-      - name: Lint generator
+      - name: Lint generator and inline Dylib UI
         run: |
           set -euo pipefail
           php -l application/common/library/codegen/ObjectiveCGenerator.php
           php -l application/admin/controller/general/Occodegen.php
           php -l tests/oc_codegen_contract_test.php
-          node --check public/assets/js/backend/general/occodegen.js
-      - name: Run generator contract
+          node --check public/assets/js/backend/dylib_center.js
+          node --check public/assets/js/backend/dylib_codegen_inline.js
+      - name: Run Dylib codegen contract
         run: php tests/oc_codegen_contract_test.php
-      - name: Verify online-update package contains generator
+      - name: Verify online-update package contains 2408 codegen
         run: |
           set -euo pipefail
           php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
           unzip -t zonoe-online-update.zip >/dev/null
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/codegen/ObjectiveCGenerator.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Occodegen.php'
-          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/general/occodegen/index.html'
-          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/general/occodegen.js'
-          unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026092407_oc_codegen.sql'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/dylib_center.js'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/dylib_codegen_inline.js'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/clients/ios/ZONDylibVerify/ZONVerifyClient.h'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/clients/ios/ZONDylibVerify/ZONVerifyClient.m'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026092408_oc_codegen_inline.sql'
           test -s zonoe-online-update.zip.sha256
 
   mysql57-migration:
@@ -69,7 +76,7 @@ jobs:
           php-version: '7.0'
           coverage: none
           extensions: mysqli
-      - name: Run OC generator migration twice on MySQL 5.7
+      - name: Verify 2407 to 2408 menu migration on MySQL 5.7
         env:
           ZONOE_MYSQL_HOST: 127.0.0.1
           ZONOE_MYSQL_PORT: 3306
