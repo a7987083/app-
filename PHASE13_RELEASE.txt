@@ -1,23 +1,27 @@
-ZONOE 软件源 Release 2026092405
-版本：2026092405
-基线：source-v2026092404
-阶段：Dylib 生命周期管理 / 真实接入说明 / 管理 UI 中文化
-发布分支：release/2026092405-dylib-lifecycle-integration
-发布状态：候选（正式发布 CI 验证中）
+ZONOE 软件源 Release 2026092406
+版本：2026092406
+基线：source-v2026092405
+阶段：Dylib 运行时授权 / App 身份识别 / 更新通知 / 可迁移服务器发现
+发布分支：release/2026092406-dylib-global-app-support
+发布状态：正式发布候选（由 ZONOE Source Release CI 完成发布）
 
 更新内容：
-1. 已注册 Dylib 新增编辑、停用、启用、删除和接入说明入口；编辑时 Dylib Key 保持只读，避免破坏现有客户端签名/查找协议。
-2. 停用仅修改 enabled=0，保留配置、版本、BundleID 授权和验证历史；服务端验证链继续只读取 enabled=1，停用后按既有 dylib_unknown / block 语义拒绝。
-3. 删除采用引用保护：无版本、无 BundleID 授权、无验证历史时允许硬删；一旦产生业务历史则禁止删除并要求停用，避免审计记录和逻辑引用成为孤儿。
-4. Dylib 管理页重排为“注册 → 接入 → 游戏授权 → 版本控制 → 验证记录”。
-5. active/testing/deprecated/blocked/revoked、allow/disable_feature/show_message/block、result_code 等底层枚举保持不变，仅在 UI 做中文映射。
-6. 接入说明来自现有 DylibVerify 控制器、DylibVerificationService 和 Objective-C ZONVerifyClient，接口仍为 POST /index/dylib_verify/verify，HMAC 字段顺序不变。
-7. 验证记录将 result_code、action、UDID Hash、BundleID 等改为面向管理员的可读显示；底层日志字段和存储格式不变。
-8. 删除使用项目现有 Layer.confirm 二次确认，所有写操作继续走 Fast.api.ajax / Backend 权限与既有 CSRF 机制。
+1. Dylib 有效性与用户功能权限拆层；2406 主验证链不再使用 dylib_app_binding 作为运行 App 白名单，历史数据和接口继续保留用于兼容与审计。
+2. 三种卡密进入运行时权限模型：scope=2 -> basic；scope=3 + 服务器识别当前 App 命中 -> app_plus；scope=1 -> global_plus；同一 UDID 多张有效卡按当前 App 取最高适用权限。
+3. scope=3 不信任客户端声明 app_id，也不只依赖 BundleID；使用 BundleID + CFBundleExecutable + 主 Mach-O LC_UUID，并通过 active ipa_asset -> ipa_category_binding -> fa_category.id 由服务器识别 App。
+4. MachOInspector 增加 LC_UUID 解析；IpaParserService 将主程序身份写入 fa_ipa_app_identity；只有 parsed 且存在 active IPA→App 绑定的解析结果可参与 app_plus。
+5. 保持 v1 HMAC canonical 顺序不变；v2 为加法协议，追加 App identity / App 版本字段。响应继续兼容 ok/code/action/token，并新增 access_level、permissions、app_identity、app_update、notice。
+6. app_plus 在线 session 与离线 grace 都绑定服务器识别的 App 身份；离线恢复会再次核对 BundleID + Executable + Mach-O UUID，身份不匹配即清理缓存并拒绝高级权限。
+7. 复用 IPA 解析版本数据判断当前 App 是否存在新版本；更新标题、正文、按钮文字和按钮动作由服务器配置。
+8. 增加远程运行时通知，可按全部 App、指定 App、最低权限、revision、priority 和时间窗口投放。
+9. 新增 /index/dylib_verify/config；iOS SDK 支持多个 Bootstrap、多个 API Endpoint、签名运行配置、Last-Known-Good、旧 endpoint fallback 与 offline grace，为服务器/域名迁移提供容错。
+10. 后台 Dylib Center 重排为“注册 → 接入说明 → 权限模型 → 运行配置与通知 → 版本控制 → 验证记录”，接入说明同步为 v1/v2、权限响应、App 身份、更新通知和服务器迁移流程。
+11. 新增 MySQL 5.7 可重复执行迁移：fa_ipa_app_identity、fa_dylib_runtime_config、fa_dylib_runtime_notice；runtime identity 联合索引使用 64/64/36 前缀以提高旧 InnoDB/utf8mb4 兼容性。
+12. 增加真实 ThinkPHP Db + PHP 7.0 + MySQL 5.7 授权矩阵测试，覆盖 scope=2、scope=3 命中/不命中、BundleID-only 冒充失败、scope=1、多卡权限合并和 stale identity。
 
 在线更新：
-- 目标升级：source-v2026092404 -> source-v2026092405。
-- 不新增业务表结构或 SQL 迁移。
-- PHP 7.0 / MySQL 5.7 兼容要求不变。
-- 旧 Objective-C 客户端请求字段、签名顺序、版本规则和 BundleID 绑定行为不变。
-- 在线更新继续沿用原 UpdateManager / UpdateInstaller，不改变下载、SHA256、备份、SQL 执行、文件覆盖、版本写入和失败回滚逻辑。
+- 目标升级：source-v2026092405 -> source-v2026092406。
+- 继续沿用现有 UpdateManager / UpdateInstaller：GitHub Release 发现、SHA256、备份、SQL、文件覆盖、完整性校验、版本写入与失败回滚流程不变。
+- 正式 Release 必须包含 zonoe-online-update.zip 与 zonoe-online-update.zip.sha256。
+- PHP 7.0 / MySQL 5.7 兼容要求保持。
+- source-v2026092405 历史 Release 不改写。

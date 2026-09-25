@@ -1,6 +1,11 @@
 <div class="panel panel-default panel-intro">
     <div class="panel-heading">{:build_heading(null,FALSE)}</div>
     <div class="panel-body">
+        <div class="alert alert-info">
+            <strong>2406 授权模型：</strong>Dylib 默认支持所有 App；BundleID 不再作为 Dylib 白名单。服务器根据卡密用途和解析出的 App 身份返回
+            <code>basic</code> / <code>app_plus</code> / <code>global_plus</code>。指定 App 卡必须命中已解析且已绑定的软件源 App 身份。
+        </div>
+
         <div class="panel panel-default" id="section-register">
             <div class="panel-heading"><strong>1. Dylib 注册</strong></div>
             <div class="panel-body">
@@ -12,7 +17,7 @@
                             <div class="form-group">
                                 <label>Dylib Key</label>
                                 <input class="form-control" name="dylib_key" placeholder="zonoe.main" required>
-                                <p class="help-block">注册后不可修改。该值参与客户端查找和签名协议。</p>
+                                <p class="help-block">注册后不可修改；参与服务端查找、请求签名和运行配置发现。</p>
                             </div>
                             <div class="form-group"><label>名称</label><input class="form-control" name="name" required></div>
                             <div class="form-group">
@@ -21,7 +26,7 @@
                                     <input class="form-control" id="verify-secret" name="verify_secret" type="password" autocomplete="new-password" placeholder="至少32字符">
                                     <span class="input-group-btn"><button class="btn btn-default" type="button" id="generate-secret">生成</button></span>
                                 </div>
-                                <p class="help-block">仅在生成/轮换时提供给管理员；数据库只保存加密密文。轮换密钥会要求客户端同步更新。</p>
+                                <p class="help-block">用于 HMAC 请求认证和运行配置验签。轮换后客户端必须同步更新。</p>
                             </div>
                             <div class="form-group"><label>默认离线容错（秒）</label><input class="form-control" type="number" min="0" max="86400" name="default_offline_grace" value="900"></div>
                             <div class="form-group"><label>默认失败动作</label>
@@ -73,7 +78,8 @@
                             </table>
                         </div>
                         <div class="alert alert-info" style="margin-bottom:0">
-                            停用只改变 <code>enabled</code>，配置、版本、游戏授权和验证历史全部保留。验证服务只读取 <code>enabled=1</code> 的 Dylib，停用后现有客户端会收到 <code>dylib_unknown / block</code>。
+                            停用只改变 <code>enabled</code>，注册信息、版本和验证历史全部保留。停用后验证服务返回 <code>dylib_unknown / block</code>。
+                            2405 的旧 BundleID 绑定数据仍保留作历史兼容，但 2406 主验证链已不再读取它。
                         </div>
                     </div>
                 </div>
@@ -81,55 +87,172 @@
         </div>
 
         <div class="panel panel-info" id="section-integration">
-            <div class="panel-heading"><strong>2. 接入说明</strong> <span class="text-muted">（来自现有服务端控制器与 Objective-C 客户端协议）</span></div>
+            <div class="panel-heading"><strong>2. 接入说明</strong> <span class="text-muted">按顺序完成即可</span></div>
             <div class="panel-body">
                 <p>当前选择：<strong id="integration-name">请选择已注册 Dylib</strong> <code id="integration-key"></code></p>
                 <div class="row">
                     <div class="col-md-6">
-                        <h5><strong>请求</strong></h5>
-                        <p><code>POST /index/dylib_verify/verify</code>，<code>Content-Type: application/json</code></p>
-                        <p>必填：<code>udid</code>、<code>bundle_id</code>、<code>dylib_key</code>、<code>dylib_version</code>、<code>timestamp</code>、<code>nonce</code>、<code>signature</code></p>
-                        <p>可选：<code>dylib_build</code>、<code>dylib_sha256</code></p>
-                        <h5><strong>HMAC-SHA256 原文顺序</strong></h5>
-                        <pre>udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce</pre>
-                        <p class="help-block">使用该 Dylib 的验证密钥计算 HMAC-SHA256，发送小写 64 位十六进制 <code>signature</code>。</p>
+                        <h5><strong>A. 客户端接入</strong></h5>
+                        <ol style="padding-left:20px">
+                            <li>把 <code>clients/ios/ZONDylibVerify/ZONVerifyClient.h/.m</code> 加入 Dylib 工程。</li>
+                            <li>填写 <code>dylibKey</code>、<code>dylibVersion</code>、<code>dylibBuild</code>、验证密钥和现有 UDID Provider。</li>
+                            <li>配置至少 2 个独立 <code>bootstrapURLs</code>；保留 <code>endpointURL</code> 作为旧/最后兜底地址。</li>
+                            <li>调用 <code>verifyWithCompletion:</code>，按 <code>permissions</code> 显示普通/额外菜单；按 <code>app_update</code>、<code>notice</code> 渲染服务器下发提示。</li>
+                        </ol>
+                        <pre>ZONVerifyConfiguration *cfg = [ZONVerifyConfiguration new];
+cfg.bootstrapURLs = @[
+  [NSURL URLWithString:@"https://bootstrap-a.example.com/index/dylib_verify/config"],
+  [NSURL URLWithString:@"https://bootstrap-b.example.net/index/dylib_verify/config"]
+];
+cfg.endpointURL = [NSURL URLWithString:@"https://api.example.com/index/dylib_verify/verify"];
+cfg.dylibKey = @"zonoe.main";
+cfg.dylibVersion = @"1.0.0";
+cfg.dylibBuild = @"1";
+cfg.verifySecret = @"...";
+cfg.udidProvider = ^NSString *{ return ExistingProjectUDID(); };</pre>
+                        <div class="alert alert-warning" style="margin-bottom:0">
+                            <strong>服务器迁移：</strong>业务 API 域名不要当作唯一长期锚点。Dylib 会依次尝试多个 Bootstrap、已验签的 Last-Known-Good 配置、多个 API 地址、旧 <code>endpointURL</code>，最后才使用离线授权缓存。
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <h5><strong>响应</strong></h5>
-                        <p><code>ok</code>、<code>code</code>、<code>action</code>、<code>offline_grace_seconds</code>、<code>token</code>、<code>message</code>、<code>server_time</code></p>
-                        <h5><strong>现有 iOS 客户端</strong></h5>
-                        <p><code>clients/ios/ZONDylibVerify/ZONVerifyClient.h/.m</code></p>
-                        <p>客户端明确使用上述 POST 接口；它不会替换旧的 <code>Index::dylib()</code> 或 <code>Index::apiface()</code>。</p>
-                        <div class="alert alert-warning" style="margin-bottom:0">
-                            后台无法读取明文验证密钥。首次注册或主动轮换后，应把当次显示的密钥同步到对应客户端配置；不要从数据库密文反推。
+                        <h5><strong>B. API</strong></h5>
+                        <p>运行配置：<code>GET /index/dylib_verify/config?dylib_key=...</code></p>
+                        <p>在线验证：<code>POST /index/dylib_verify/verify</code>，<code>Content-Type: application/json</code></p>
+                        <p>v2 客户端自动上报：<code>bundle_id</code>、<code>app_executable</code>、<code>app_macho_uuid</code>、<code>app_version</code>、<code>app_build</code>。其中 BundleID 只是证据之一，不能单独获得指定 App 权限。</p>
+
+                        <h5><strong>C. HMAC-SHA256 原文</strong></h5>
+                        <p class="text-muted">v1 旧客户端保持不变：</p>
+                        <pre>udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce</pre>
+                        <p class="text-muted">v2 在完整 v1 原文后追加：</p>
+                        <pre>protocol_version\napp_executable\napp_macho_uuid\napp_version\napp_build</pre>
+
+                        <h5><strong>D. 响应重点</strong></h5>
+                        <p>兼容旧字段：<code>ok</code>、<code>code</code>、<code>action</code>、<code>token</code>、<code>offline_grace_seconds</code>。</p>
+                        <p>2406 新字段：<code>access_level</code>、<code>permissions</code>、<code>app_identity</code>、<code>app_update</code>、<code>notice</code>。</p>
+                        <div class="alert alert-success" style="margin-bottom:0">
+                            客户端不需要自己判断卡密类型；直接读取 <code>permissions.normal_menu</code>、<code>permissions.extra_menu</code>、<code>permissions.extra_features</code>。SDK 不替换旧的 <code>Index::dylib()</code> / <code>Index::apiface()</code>。
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="panel panel-default" id="section-binding">
-            <div class="panel-heading"><strong>3. 游戏授权（BundleID）</strong></div>
+        <div class="panel panel-default" id="section-access-model">
+            <div class="panel-heading"><strong>3. 权限模型</strong></div>
             <div class="panel-body">
-                <form id="binding-form" class="form-inline" style="margin-bottom:10px">
-                    <select class="form-control" name="dylib_id" required><option value="">Dylib</option>{foreach name="dylibs" item="dylib"}<option value="{$dylib.id}">{$dylib.name|htmlentities}</option>{/foreach}</select>
-                    <input class="form-control" style="width:260px" name="bundle_id" placeholder="com.example.game" required>
-                    <select class="form-control" name="fail_action_override">
-                        <option value="">继承 Dylib 默认策略</option>
-                        <option value="disable_feature">停用受保护功能</option>
-                        <option value="show_message">显示提示</option>
-                        <option value="block">阻止使用</option>
-                    </select>
-                    <input class="form-control" style="width:125px" type="number" name="offline_grace_override" value="0" placeholder="离线覆盖秒">
-                    <input type="hidden" name="enabled" value="1">
-                    <button class="btn btn-primary" type="submit">添加游戏授权</button>
-                </form>
-                <table id="binding-table"></table>
+                <div class="table-responsive">
+                    <table class="table table-bordered" style="margin-bottom:10px">
+                        <thead><tr><th>卡密用途</th><th>适用范围</th><th>返回等级</th><th>普通菜单</th><th>额外菜单/功能</th></tr></thead>
+                        <tbody>
+                        <tr><td>仅验证 <code>scope=2</code></td><td>任意 App</td><td><code>basic</code></td><td>✓</td><td>—</td></tr>
+                        <tr><td>指定 App <code>scope=3</code></td><td>必须命中解析身份 + <code>fa_kami_app.app_id</code></td><td><code>app_plus</code></td><td>✓</td><td>✓</td></tr>
+                        <tr><td>全软件源 <code>scope=1</code></td><td>任意 App</td><td><code>global_plus</code></td><td>✓</td><td>✓</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="help-block" style="margin-bottom:0">
+                    同一 UDID 有多张有效卡时取当前 App 下最高适用权限：<code>global_plus &gt; app_plus &gt; basic &gt; block</code>。
+                    指定 App 身份由服务器根据已解析 IPA 的 BundleID + Executable + Mach-O UUID + active IPA→App 绑定识别；客户端不能通过声明 <code>app_id</code> 获权。
+                    云存档等独立购买权益不从这些等级自动继承。
+                </p>
+            </div>
+        </div>
+
+        <div class="panel panel-primary" id="section-runtime">
+            <div class="panel-heading"><strong>4. 运行配置与通知</strong></div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><strong>4.1 可迁移服务器配置</strong></h5>
+                        <form id="runtime-config-form">
+                            <div class="form-group">
+                                <label>配置版本</label>
+                                <input class="form-control" value="{$runtimeConfig.config_version}" readonly>
+                                <p class="help-block">每次保存自动 +1；客户端只接受通过验证密钥验签的配置。</p>
+                            </div>
+                            <div class="form-group">
+                                <label>业务 API Base URL <small class="text-muted">每行一个，按顺序故障转移</small></label>
+                                <textarea class="form-control" rows="4" name="api_endpoints" placeholder="https://api-a.example.com&#10;https://api-b.example.net">{$runtimeConfig.api_endpoints_text|htmlentities}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Bootstrap 完整 URL <small class="text-muted">建议不同域名/不同托管商</small></label>
+                                <textarea class="form-control" rows="4" name="bootstrap_urls" placeholder="https://bootstrap-a.example.com/index/dylib_verify/config&#10;https://bootstrap-b.example.net/index/dylib_verify/config">{$runtimeConfig.bootstrap_urls_text|htmlentities}</textarea>
+                            </div>
+                            <div class="form-group"><label>验证路径</label><input class="form-control" name="verify_path" value="{$runtimeConfig.verify_path|htmlentities}"></div>
+                            <hr>
+                            <h5><strong>游戏更新默认弹窗</strong></h5>
+                            <div class="form-group"><label>标题</label><input class="form-control" name="update_title" value="{$runtimeConfig.update_title|htmlentities}"></div>
+                            <div class="form-group">
+                                <label>正文</label>
+                                <textarea class="form-control" rows="4" name="update_message">{$runtimeConfig.update_message|htmlentities}</textarea>
+                                <p class="help-block">可用变量：<code>{app_name}</code>、<code>{current_version}</code>、<code>{current_build}</code>、<code>{latest_version}</code>、<code>{latest_build}</code></p>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-6 form-group"><label>主按钮文字</label><input class="form-control" name="update_primary_title" value="{$runtimeConfig.update_primary_title|htmlentities}"></div>
+                                <div class="col-sm-6 form-group"><label>副按钮文字</label><input class="form-control" name="update_secondary_title" value="{$runtimeConfig.update_secondary_title|htmlentities}"></div>
+                            </div>
+                            <button class="btn btn-primary" type="submit">保存运行配置</button>
+                        </form>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h5><strong>4.2 远程通知</strong></h5>
+                        <form id="notice-form">
+                            <input type="hidden" name="id" value="0">
+                            <div class="row">
+                                <div class="col-sm-6 form-group">
+                                    <label>通知 Key</label><input class="form-control" name="notice_key" placeholder="maintenance-20260925" required>
+                                </div>
+                                <div class="col-sm-3 form-group"><label>Revision</label><input class="form-control" type="number" min="1" name="revision" value="1"></div>
+                                <div class="col-sm-3 form-group"><label>优先级</label><input class="form-control" type="number" name="priority" value="0"></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-6 form-group">
+                                    <label>目标 App</label>
+                                    <select class="form-control" name="category_id">
+                                        <option value="0">全部 App</option>
+                                        {foreach name="appOptions" item="app"}<option value="{$app.id}">{$app.name|htmlentities} (#{$app.id})</option>{/foreach}
+                                    </select>
+                                </div>
+                                <div class="col-sm-6 form-group">
+                                    <label>最低权限</label>
+                                    <select class="form-control" name="min_access_level">
+                                        <option value="">不限</option>
+                                        <option value="basic">basic</option>
+                                        <option value="app_plus">app_plus</option>
+                                        <option value="global_plus">global_plus</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group"><label>标题</label><input class="form-control" name="title"></div>
+                            <div class="form-group"><label>正文</label><textarea class="form-control" rows="4" name="message"></textarea></div>
+                            <div class="row">
+                                <div class="col-sm-4 form-group"><label>主按钮</label><input class="form-control" name="primary_title" placeholder="查看详情"></div>
+                                <div class="col-sm-3 form-group"><label>动作</label><select class="form-control" name="primary_action"><option value="dismiss">关闭</option><option value="open_url">打开 URL</option></select></div>
+                                <div class="col-sm-5 form-group"><label>URL</label><input class="form-control" name="primary_url" placeholder="https://..."></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-4 form-group"><label>副按钮</label><input class="form-control" name="secondary_title" placeholder="稍后"></div>
+                                <div class="col-sm-3 form-group"><label>动作</label><select class="form-control" name="secondary_action"><option value="dismiss">关闭</option><option value="open_url">打开 URL</option></select></div>
+                                <div class="col-sm-5 form-group"><label>URL</label><input class="form-control" name="secondary_url" placeholder="https://..."></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-4 form-group"><label>开始时间（Unix，0=立即）</label><input class="form-control" type="number" min="0" name="starts_at" value="0"></div>
+                                <div class="col-sm-4 form-group"><label>结束时间（Unix，0=不限）</label><input class="form-control" type="number" min="0" name="ends_at" value="0"></div>
+                                <div class="col-sm-4 form-group"><label>状态</label><select class="form-control" name="enabled"><option value="1">启用</option><option value="0">停用</option></select></div>
+                            </div>
+                            <button class="btn btn-primary" type="submit">保存通知</button>
+                            <button class="btn btn-default" type="button" id="reset-notice-form">清空表单</button>
+                        </form>
+                        <hr>
+                        <table id="notice-table"></table>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="panel panel-default" id="section-version">
-            <div class="panel-heading"><strong>4. 版本控制</strong></div>
+            <div class="panel-heading"><strong>5. 版本控制</strong></div>
             <div class="panel-body">
                 <form id="version-form" class="form-inline" style="margin-bottom:10px">
                     <select class="form-control" name="dylib_id" required><option value="">Dylib</option>{foreach name="dylibs" item="dylib"}<option value="{$dylib.id}">{$dylib.name|htmlentities}</option>{/foreach}</select>
@@ -159,7 +282,7 @@
         </div>
 
         <div class="panel panel-default" id="section-logs">
-            <div class="panel-heading"><strong>5. 验证记录</strong></div>
+            <div class="panel-heading"><strong>6. 验证记录</strong></div>
             <div class="panel-body"><table id="verify-log-table"></table></div>
         </div>
     </div>
