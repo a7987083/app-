@@ -73,6 +73,7 @@ jobs:
           VERSION="$(tr -d '\r\n ' < VERSION)"
           test "$VERSION" = "$(tr -d '\r\n ' < public/update/ver.txt)"
           test "$VERSION" = "$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo $j["version"];')"
+          # Accept the repository date-version sequence; all release metadata must agree.
           [[ "$VERSION" =~ ^20[0-9]{6,12}$ ]]
           grep -F "ZONOE 软件源 ${VERSION}" release/RELEASE_NOTES.md
           grep -F "版本：${VERSION}" PHASE13_RELEASE.txt
