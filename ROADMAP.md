@@ -8,7 +8,8 @@
 - Stable release commit: `f2cb8536b2a5196b4dab1c135c74033f740ed398`
 - Current stable release: `source-v2026092405`
 - Current development branch: `release/2026092406-dylib-global-app-support`
-- 2406 validated code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`
+- 2406 runtime code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`
+- 2406 verification-hardening checkpoint: `f713e449e3a2a6ec0a0aa4405984063093cb23b1`
 - Draft PR: `#25`
 - 2406 has NOT been tagged/released yet. Historical releases through 2026092405 must not be rewritten.
 
@@ -35,6 +36,9 @@
 - [x] Regression Checks `36088568690` — SUCCESS。
 - [x] Phase14 Production Hardening `36088568743` — SUCCESS。
 - [x] Phase 17.2 Authorization Integrity `36088568735` — SUCCESS。
+- [x] 新增 `tests/dylib_runtime_access_mysql_test.php`，在真实 ThinkPHP Db + PHP 7.0 + MySQL 5.7 下直接调用 `DylibRuntimeAccessService`。
+- [x] IPA Data Center CI `36095035822` — SUCCESS；真实数据库授权矩阵覆盖无卡、scope=2、scope=3 命中/不命中、只改 BundleID 冒充失败、scope=1、同 UDID 多卡合并、解析状态 stale 失效。
+- [x] 同一轮 `36095035822` 的 contracts / PHP 7.0 / MySQL 5.7 / 100k / iPhoneOS arm64 全部 SUCCESS。
 - [ ] 真实 BaoTa 执行 2406 migration / 在线更新验证。
 - [ ] 真机分别验证 `scope=2`、`scope=3`、`scope=1` 以及同 UDID 多卡权限合并。
 - [ ] 真机验证“另一个游戏仅修改 BundleID”不能获得 scope=3 `app_plus`。
