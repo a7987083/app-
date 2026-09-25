@@ -34,6 +34,7 @@ on:
       - 'public/assets/js/backend/dylib_center.js'
       - 'clients/ios/ZONDylibVerify/**'
       - 'tests/dylib_signing_contract.php'
+      - 'tests/dylib_runtime_access_mysql_test.php'
       - 'tests/phase2405_dylib_lifecycle_contract_test.php'
       - 'tests/phase2406_dylib_runtime_access_contract_test.php'
       - 'deploy/systemd/zonoe-ipa-parse-worker.service'
@@ -185,6 +186,12 @@ jobs:
           done
 
       - name: Verify PHP 7.0 runtime contracts
+        env:
+          DYL_RUNTIME_DB: dylib_runtime_gate
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
         run: |
           set -euo pipefail
           php -l application/admin/controller/IpaCenter.php
@@ -207,10 +214,13 @@ jobs:
           php -l application/index/controller/DylibVerify.php
           php -l tests/phase2405_dylib_lifecycle_contract_test.php
           php -l tests/phase2406_dylib_runtime_access_contract_test.php
+          php -l tests/dylib_runtime_access_mysql_test.php
           php tests/dylib_signing_contract.php
           php tests/macho_inspector_contract.php
           php tests/macho_inspector_fat_contract.php
           php tests/macho_inspector_parser_contract.php
+          php -r '$pdo=new PDO("mysql:host=127.0.0.1;port=3306","root","root"); $pdo->exec("CREATE DATABASE IF NOT EXISTS dylib_runtime_gate CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");'
+          php tests/dylib_runtime_access_mysql_test.php
           node --check public/assets/js/backend/ipa_center.js
           node --check public/assets/js/backend/dylib_center.js
           grep -q 'btn-parse-toggle' application/admin/view/ipa_center/index.html
