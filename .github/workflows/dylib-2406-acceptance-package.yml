@@ -1,0 +1,78 @@
+name: Dylib 2406 Acceptance Package
+
+on:
+  push:
+    branches:
+      - release/2026092406-dylib-global-app-support
+    paths:
+      - '.github/workflows/dylib-2406-acceptance-package.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-acceptance-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: zip
+
+      - name: Build acceptance-only online-update package
+        run: |
+          set -euo pipefail
+          php -l tools/build_online_update.php
+          php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
+          unzip -t zonoe-online-update.zip >/dev/null
+          EXPECTED="$(awk '{print $1}' zonoe-online-update.zip.sha256)"
+          ACTUAL="$(sha256sum zonoe-online-update.zip | awk '{print $1}')"
+          test "$EXPECTED" = "$ACTUAL"
+
+      - name: Verify 2406 payload
+        run: |
+          set -euo pipefail
+          ZIP=zonoe-online-update.zip
+          for f in \
+            program/application/admin/controller/DylibCenter.php \
+            program/application/admin/view/dylib_center/index.html \
+            program/application/common/library/Ipa/DylibVerificationService.php \
+            program/application/common/library/Ipa/DylibRuntimeAccessService.php \
+            program/application/common/library/Ipa/DylibRuntimeConfigService.php \
+            program/application/common/library/Ipa/IpaParserService.php \
+            program/application/common/library/Ipa/MachOInspector.php \
+            program/application/index/controller/DylibVerify.php \
+            program/public/assets/js/backend/dylib_center.js \
+            mysql/2026092406_dylib_runtime_access.sql; do
+              unzip -Z1 "$ZIP" | grep -Fx "$f"
+          done
+
+      - name: Write acceptance build identity
+        run: |
+          set -euo pipefail
+          {
+            echo 'ACCEPTANCE ONLY - NOT A FORMAL RELEASE'
+            echo 'branch=release/2026092406-dylib-global-app-support'
+            echo "commit=${GITHUB_SHA}"
+            echo "stable_version=$(tr -d '\r\n ' < VERSION)"
+            echo 'target_acceptance_version=2026092406'
+            echo "package_sha256=$(awk '{print $1}' zonoe-online-update.zip.sha256)"
+            echo 'No tag or GitHub Release is created by this workflow.'
+            echo 'Use only for BaoTa/staging acceptance described in docs/DYLIB_2406_PRODUCTION_ACCEPTANCE.md.'
+          } > ACCEPTANCE_BUILD.txt
+
+      - name: Upload 2406 acceptance artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zonoe-2406-acceptance-${{ github.run_id }}
+          path: |
+            zonoe-online-update.zip
+            zonoe-online-update.zip.sha256
+            ACCEPTANCE_BUILD.txt
+            docs/DYLIB_2406_PRODUCTION_ACCEPTANCE.md
+          if-no-files-found: error
+          retention-days: 14
