@@ -25,7 +25,7 @@ Baseline: `source-v2026092405`; development branch `release/2026092406-dylib-glo
 
 - 复用 IPA 解析版本数据判断当前 App 是否存在新版本。
 - 更新弹窗标题、正文、按钮文字和按钮动作由服务器下发，不写死在 Dylib。
-- 增加远程通知能力，可按全部 App、指定 App、最低权限、时间窗口、priority、revision 投放。
+- 增加远程通知能力，可按全部 App、指定 App、最低权限、revision、priority 和时间窗口投放。
 - 菜单授权与独立 entitlement 继续分离；更新通知也不参与卡密权限提升。
 
 ### Infrastructure migration
@@ -43,15 +43,14 @@ Baseline: `source-v2026092405`; development branch `release/2026092406-dylib-glo
 
 ### Verification
 
-Validated code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`.
+Runtime code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`.
+Verification-hardening checkpoint: `f713e449e3a2a6ec0a0aa4405984063093cb23b1`.
 
 - IPA Online Update Release Gate `36088476047` — SUCCESS：2406 runtime 文件进入在线更新 ZIP；PHP 7.0；2406 SQL 在 MySQL 5.7 连续执行两次；2406 contract 通过。
-- Draft PR #25 latest full checks on docs head `f7f043542a17dcae92217b7d84466c60014a53c4`:
-  - IPA Data Center CI `36088861999` — SUCCESS。
-  - Regression Checks `36088862017` — SUCCESS。
-  - Phase14 Production Hardening `36088862090` — SUCCESS。
-  - Phase 17.2 Authorization Integrity `36088861990` — SUCCESS。
-- IPA Data Center CI 包含 contracts、PHP 7.0、MySQL 5.7、100k 数据规模测试以及 iPhoneOS SDK arm64 对 `ZONVerifyClient.m` 的真实编译。
+- IPA Data Center CI `36095035822` — SUCCESS：contracts / PHP 7.0 / MySQL 5.7 / 100k / iPhoneOS SDK arm64 全部通过。
+- 新增 `tests/dylib_runtime_access_mysql_test.php`，在真实 ThinkPHP Db + PHP 7.0 + MySQL 5.7 下直接调用 `DylibRuntimeAccessService`。
+- 真实数据库授权矩阵覆盖：无卡 block、scope=2 basic、scope=3 命中 app_plus、scope=3 不命中 block、仅改 BundleID 冒充失败、scope=1 global_plus、同 UDID 多卡按当前 App 取最高适用权限、解析状态离开 `parsed` 后身份 stale。
+- 同一 checkpoint 的 PR checks：Regression `36095035702` — SUCCESS；Phase14 `36095035738` — SUCCESS；Phase 17.2 `36095035839` — SUCCESS。
 
 ### Release boundary
 
