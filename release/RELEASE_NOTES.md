@@ -1,53 +1,103 @@
-# ZONOE 软件源 2026092407
+# ZONOE 软件源 2026092408
 
 ## 更新内容
 
-本版本以 `source-v2026092406` 为升级基线，在现有软件源后台中新增 Objective-C 工程在线生成能力，并完整接入既有软件源在线更新链路。
+本版本以 `source-v2026092407` 为升级基线，将 Objective-C 生成能力从独立后台页面迁入 **Dylib 验证中心**，并从“通用 API Client 生成器”收敛为“当前 Dylib 的验证接入代码生成器”。
 
-### Objective-C 在线工程生成
+### Dylib 验证中心内嵌生成
 
-- 后台新增“OC 工程生成”入口。
-- 直接读取当前 `ApiEndpointRegistry` 作为接口元数据来源，不维护第二套接口清单。
-- 生成前支持 Draft 编辑：工程名、类前缀、Base URL、最低 iOS、超时、User-Agent，以及接口启用状态、Path、Method、Auth、说明。
-- Draft 修改仅影响本次生成，不会回写线上 API 配置。
-- 预览阶段输出最终配置 JSON、OC/文档文件列表和每个文件内容。
-- 最终生成前必须携带预览返回的 `config_hash`；配置发生变化时拒绝生成并要求重新预览。
+后台页面顺序调整为：
 
-### 生成文件
+1. Dylib 注册
+2. 接入说明
+3. 权限模型
+4. 运行配置与通知
+5. OC 接入代码生成
+6. 版本控制
+7. 验证记录
 
-默认输出：
+2407 的独立“OC 工程生成”菜单在升级后隐藏，不再作为单独业务入口；已有权限节点保留用于升级兼容和历史角色数据。
 
-- `ZONAPIConfig.h/.m`
-- `ZONAPIEndpoints.h/.m`
-- `ZONAPIClient.h/.m`
+### 生成结果收敛为 2 个 .h + 2 个 .m
+
+真正加入现有 Objective-C / Dylib 工程并参与编译的文件固定为：
+
+- `ZONDylibConfig.h`
+- `ZONDylibConfig.m`
+- `ZONDylibVerify.h`
+- `ZONDylibVerify.m`
+
+ZIP 同时附带：
+
 - `GeneratedConfig.json`
-- `API_REFERENCE.md`
 - `INTEGRATION.md`
 - `generation-manifest.json`
 
-生成器会记录 config SHA256 与文件 SHA256，保证同一配置可追溯。
+后三个文件只用于配置快照、接入说明和 SHA256 审计，不要求加入 Xcode Target。
 
-### 接口与安全约束
+### 与当前 Dylib 验证配置绑定
 
-- UDID、卡密、Token、HMAC 等敏感值不会写死进生成源码；由请求参数或 `headerProvider` 在运行时注入。
-- v1/v2 HMAC、字段顺序等既有协议不由生成器擅自改写。
-- 当前 `ApiEndpointRegistry` 尚未结构化完整 Response Schema，因此本版不会猜测或伪造 Objective-C Model；后续补齐响应元数据后再生成 Models。
-- 最终 ZIP 存入 `runtime/codegen` 临时目录，使用随机下载 token、SHA256 与过期时间控制，不写入持久业务配置。
+生成时先选择已注册 Dylib，再选择该 Dylib 的版本。生成器读取真实后台数据，包括：
+
+- Dylib Key / 名称 / 启停状态
+- 客户端 HMAC 验证密钥
+- 默认离线容错与失败动作
+- Runtime Config 版本
+- API Endpoint 列表
+- Bootstrap URL 列表
+- Verify Path
+- Dylib Version / Build / State / SHA256
+- 版本级 offline grace / fail action / notice
+
+版本选择顺序为：显式选择 → active → testing → 最新记录。
+
+### 复用已验证的 Dylib 客户端协议实现
+
+2408 不重新实现一套验证协议，而是以仓库现有 `clients/ios/ZONDylibVerify/ZONVerifyClient.h/.m` 为唯一模板来源，生成时转换为当前类前缀对应的 `*DylibVerify.h/.m`。
+
+因此继续保留现有能力：
+
+- Protocol v2 App Identity
+- BundleID + Executable + Mach-O UUID + App Version/Build
+- HMAC-SHA256
+- 多 Bootstrap 配置发现
+- 已验签 Last-Known-Good
+- 多 API Endpoint 故障转移
+- 旧 endpointURL 最终 fallback
+- offline cache / offline grace
+- `access_level`
+- `permissions`
+- `app_identity`
+- `app_update`
+- `notice`
+
+### 配置与安全
+
+`*DylibConfig.m` 会写入当前 Dylib 客户端协议实际需要的共享验证密钥，因此该文件应仅进入受控客户端工程，不应提交到公开仓库。
+
+后台数据库凭据、后台管理 Token 等管理平面秘密不会写入生成结果。`GeneratedConfig.json` 中验证密钥只保留掩码形式；最终生成仍通过 `config_hash` 锁定预览状态，Dylib、版本、Runtime Config 或密钥变化时必须重新预览。
+
+### 权限模型
+
+新内部 `DylibCodegen` 服务的读取、预览、生成和下载动作都要求：
+
+- 后台用户已登录；
+- 显式拥有 `dylib_center/index` 权限。
+
+2407 的 `general/occodegen/*` 请求路径继续作为兼容代理，但实际权限边界统一归属 Dylib 验证中心，避免旧浏览器缓存或升级瞬间出现接口断裂。
 
 ### 软件源在线更新
 
-- 新增文件已加入 `release/online-update-files.txt`。
-- `release/sql/2026092407_oc_codegen.sql` 由现有更新包构建器自动收入 `mysql/`。
-- 继续沿用现有 `UpdateManager / UpdateInstaller`：GitHub Release 检测、SHA256、备份、SQL 执行、文件覆盖、版本写入和失败回滚逻辑均不另起一套。
-- 因此已有 `2026092406` 软件源可在后台现有“检查更新 / GitHub 在线更新”流程中升级到 `2026092407`。
+新增/调整文件已加入既有 `release/online-update-files.txt`，2408 migration 由现有更新包构建器收入 `mysql/`。升级继续沿用现有 `UpdateManager / UpdateInstaller`：GitHub Release 检测、SHA256、备份、SQL、文件覆盖、完整性校验、版本写入和失败回滚逻辑不变。
 
-### 兼容与验证
+### 已完成验证
 
-- PHP 7.0 语法检查通过。
-- JavaScript syntax check 通过。
-- Objective-C generator contract test 通过，验证 10 个生成文件与稳定 config hash。
-- 在线更新 ZIP 内容 Gate 通过，确认包含生成器核心、Controller、View、JS 与 2407 SQL。
-- MySQL 5.7 migration test 通过；同一迁移连续执行两次保持 1 个父菜单 + 5 个权限节点，不重复。
-- `OC Codegen CI #3` / Run `36132572050` 已成功完成。
+- `OC Codegen CI #5` / Run `36153250881`：成功。
+- PHP 7.0.33：生成器、DylibCodegen、兼容 Controller 语法检查通过。
+- JavaScript syntax check：Dylib Center 与内嵌 Codegen 通过。
+- Generator contract：`files=7`，即 4 个 OC 源文件 + 3 个文档文件。
+- Contract 明确验证 v2 HMAC、App Identity、Runtime Config、permissions、app_update，并验证权限边界为 `dylib_center/index`。
+- MySQL 5.7.44：2407 → 2408 migration 可重复执行；独立菜单隐藏，历史权限节点不重复、不丢失。
+- 在线更新包内容 Gate 已确认包含生成器、DylibCodegen、兼容 Controller、内嵌 JS、ZONVerifyClient.h/.m 与 2408 SQL。
 
-目标升级路径：`source-v2026092406 -> source-v2026092407`。
+目标升级路径：`source-v2026092407 -> source-v2026092408`。

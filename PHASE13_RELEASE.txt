@@ -1,32 +1,31 @@
-ZONOE 软件源 Release 2026092407
-版本：2026092407
-基线：source-v2026092406
-阶段：Objective-C 在线工程生成 / 软件源在线更新集成
-发布分支：release/2026092407-oc-codegen-online-update
+ZONOE 软件源 Release 2026092408
+版本：2026092408
+基线：source-v2026092407
+阶段：Dylib 验证中心内嵌 OC 接入代码生成
+发布分支：release/2026092408-dylib-center-codegen-inline
 发布状态：正式发布候选（由 ZONOE Source Release CI 完成发布）
 
 更新内容：
-1. 新增后台“OC 工程生成”模块，直接读取当前软件源 ApiEndpointRegistry 作为接口元数据来源。
-2. 支持生成前 Draft 编辑：工程名、类前缀、Base URL、最低 iOS、超时、User-Agent、接口启用状态、Path、Method、Auth 与说明均可在本次生成中调整，不回写线上 API 配置。
-3. 新增配置校验与 config_hash 锁定；最终生成必须使用最近一次预览得到的 hash，避免“预览配置”和“实际生成配置”不一致。
-4. 生成 Objective-C APIConfig、APIEndpoints、APIClient、GeneratedConfig.json、API_REFERENCE.md、INTEGRATION.md 与 generation-manifest.json。
-5. 当前 ApiEndpointRegistry 未提供完整 Response Schema，因此 2407 不伪造 Objective-C Model；后续在响应结构元数据化后再生成 Models。
-6. UDID、卡密、Token、HMAC 等敏感值不写死进生成源码，保留运行时参数/headerProvider 注入机制。
-7. 最终 ZIP 写入 runtime/codegen 临时目录，使用随机下载 token、SHA256 和 1 小时过期时间，不写入持久业务配置。
-8. 新增后台菜单与权限 SQL：release/sql/2026092407_oc_codegen.sql，支持 MySQL 5.7 重复执行。
-9. 在线更新 manifest 已包含生成器核心、Controller、View 和 JS；SQL 继续由现有 build_online_update.php 自动收入 mysql/。
-10. 新增 PHP 7.0 生成器 contract、Node JS syntax check、在线更新 ZIP 内容检查、MySQL 5.7 双迁移验证。
+1. “OC 工程生成”不再作为独立后台业务入口；生成能力迁入 Dylib 验证中心，插入“4. 运行配置与通知”和“6. 版本控制”之间，作为“5. OC 接入代码生成”。
+2. 原“5. 版本控制”顺延为“6. 版本控制”，原“6. 验证记录”顺延为“7. 验证记录”。
+3. 生成目标从通用 API Client 收敛为当前 Dylib 的验证接入代码；生成时必须选择真实 Dylib，并绑定其注册信息、Runtime Config 与版本记录。
+4. 参与工程编译的生成文件固定为 4 个：ZONDylibConfig.h/.m、ZONDylibVerify.h/.m；另附 GeneratedConfig.json、INTEGRATION.md、generation-manifest.json 用于审计和接入说明。
+5. 复用 clients/ios/ZONDylibVerify/ZONVerifyClient.h/.m 作为唯一验证协议模板，继续覆盖 v2 App Identity、HMAC-SHA256、Bootstrap、Last-Known-Good、Endpoint fallback、离线缓存、permissions、app_update、notice。
+6. Config.m 自动写入所选 Dylib Key、版本/Build、Bootstrap、直连 Verify 地址、请求超时和现有客户端协议要求的验证密钥；GeneratedConfig.json 只保留掩码后的密钥信息。
+7. 最终生成仍使用 config_hash 锁定预览配置；Dylib、版本、Runtime Config 或密钥变化后旧预览不能直接生成。
+8. 新增内部 DylibCodegen 服务；所有生成/下载动作要求已登录且显式具备 dylib_center/index 权限。2407 的 general/occodegen/* 路径保留兼容代理，避免旧浏览器缓存或旧入口升级瞬间失效。
+9. 2408 migration 将 general/occodegen 独立菜单设为 ismenu=0，但保留历史权限节点，避免破坏已有角色数据和升级兼容。
+10. 在线更新包新增 DylibCodegen、内嵌 JS 和已验证的 iOS Dylib Verify 模板，继续使用原有 UpdateManager / UpdateInstaller 流程。
 
 验证：
-- OC Codegen CI #3（Run 36132572050）已通过。
-- PHP 7.0：ObjectiveCGenerator.php、Occodegen.php、contract test 语法检查通过。
-- 生成器 contract：10 个输出文件、确定性 config hash 校验通过。
-- 在线更新包：确认包含 ObjectiveCGenerator.php、Occodegen.php、occodegen/index.html、occodegen.js 与 2026092407_oc_codegen.sql。
-- MySQL 5.7：菜单/权限迁移连续执行两次通过，验证 1 个父菜单 + 5 个权限节点且不重复。
+- OC Codegen CI #5 / Run 36153250881：success。
+- PHP 7.0.33：生成器、DylibCodegen、兼容 Controller 语法检查通过。
+- JavaScript syntax check：dylib_center.js、dylib_codegen_inline.js 通过。
+- 生成 contract：files=7，即 4 个 OC 源文件 + 3 个文档文件；权限契约绑定 dylib_center/index。
+- MySQL 5.7.44：2407 + 2408 migration 重复执行通过，独立菜单隐藏，历史 5 个子权限保留。
+- 候选在线更新包内容 Gate：DylibCodegen、生成器、内嵌 JS、ZONVerifyClient.h/.m 与 2408 SQL 均已包含。
 
 在线更新：
-- 目标升级：source-v2026092406 -> source-v2026092407。
-- 继续沿用现有 UpdateManager / UpdateInstaller：GitHub Release 发现、SHA256、备份、SQL、文件覆盖、版本写入与失败回滚流程不变。
+- 目标升级：source-v2026092407 -> source-v2026092408。
 - 正式 Release 必须包含 zonoe-online-update.zip 与 zonoe-online-update.zip.sha256。
-- PHP 7.0 / MySQL 5.7 兼容要求保持。
-- source-v2026092406 历史 Release 不改写。
+- 继续执行 GitHub Release 检测、SHA256、备份、SQL、文件覆盖、版本写入、完整性校验与失败回滚。
