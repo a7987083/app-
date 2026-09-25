@@ -168,23 +168,45 @@ jobs:
 
   php70-compat:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - name: Setup PHP 7.0
         uses: shivammathur/setup-php@v2
         with:
           php-version: '7.0'
-          extensions: curl, openssl, mbstring
+          extensions: curl, openssl, mbstring, pdo_mysql
           coverage: none
       - name: PHP 7.0 syntax and contracts
         run: |
           php -v
-          for f in application/admin/controller/IpaCenter.php application/admin/controller/DylibCenter.php application/admin/command/IpaWorker.php application/admin/command/IpaParseWorker.php application/admin/command/IpaMaintenance.php application/common/library/Ipa/*.php application/index/controller/DylibVerify.php application/extra/ipa_data_center.php tests/ipa_range_parser_contract.php tests/macho_inspector_contract.php tests/macho_inspector_fat_contract.php tests/macho_inspector_parser_contract.php tests/dylib_signing_contract.php tests/openlist_client_integration.php tests/openlist_mock_router.php; do php -l "$f"; done
+          for f in application/admin/controller/IpaCenter.php application/admin/controller/DylibCenter.php application/admin/command/IpaWorker.php application/admin/command/IpaParseWorker.php application/admin/command/IpaMaintenance.php application/common/library/Ipa/*.php application/index/controller/DylibVerify.php application/extra/ipa_data_center.php tests/ipa_range_parser_contract.php tests/macho_inspector_contract.php tests/macho_inspector_fat_contract.php tests/macho_inspector_parser_contract.php tests/dylib_signing_contract.php tests/dylib_runtime_access_mysql_test.php tests/openlist_client_integration.php tests/openlist_mock_router.php; do php -l "$f"; done
           php -r 'exit(function_exists("inflate_init") && function_exists("inflate_add") ? 0 : 1);'
           php tests/dylib_signing_contract.php
           php tests/macho_inspector_contract.php
           php tests/macho_inspector_fat_contract.php
           php tests/macho_inspector_parser_contract.php
+      - name: Dylib runtime access MySQL 5.7 integration
+        env:
+          DYL_RUNTIME_DB: dylib_runtime_ci
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+        run: |
+          php -r '$pdo=new PDO("mysql:host=127.0.0.1;port=3306","root","root"); $pdo->exec("CREATE DATABASE IF NOT EXISTS dylib_runtime_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");'
+          php tests/dylib_runtime_access_mysql_test.php
       - name: ThinkPHP CLI command registration on target runtime
         run: |
           chmod +x think
