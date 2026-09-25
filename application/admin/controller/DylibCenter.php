@@ -269,6 +269,7 @@ class DylibCenter extends Backend
         $bootstrapUrls = $this->parseUrlLines((string)$this->request->post('bootstrap_urls', ''));
         $verifyPath = trim((string)$this->request->post('verify_path', '/index/dylib_verify/verify'));
         if ($verifyPath === '' || $verifyPath[0] !== '/') $this->error('验证路径必须以 / 开头');
+        if ($bootstrapUrls && !$apiEndpoints) $this->error('启用 Bootstrap 时至少需要配置一个 API Endpoint');
         $current = Db::name('dylib_runtime_config')->where('id', 1)->find();
         $data = [
             'config_version' => max(1, (int)(isset($current['config_version']) ? $current['config_version'] : 0) + 1),
