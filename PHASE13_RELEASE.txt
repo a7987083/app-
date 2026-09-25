@@ -1,27 +1,32 @@
-ZONOE 软件源 Release 2026092406
-版本：2026092406
-基线：source-v2026092405
-阶段：Dylib 运行时授权 / App 身份识别 / 更新通知 / 可迁移服务器发现
-发布分支：release/2026092406-dylib-global-app-support
+ZONOE 软件源 Release 2026092407
+版本：2026092407
+基线：source-v2026092406
+阶段：Objective-C 在线工程生成 / 软件源在线更新集成
+发布分支：release/2026092407-oc-codegen-online-update
 发布状态：正式发布候选（由 ZONOE Source Release CI 完成发布）
 
 更新内容：
-1. Dylib 有效性与用户功能权限拆层；2406 主验证链不再使用 dylib_app_binding 作为运行 App 白名单，历史数据和接口继续保留用于兼容与审计。
-2. 三种卡密进入运行时权限模型：scope=2 -> basic；scope=3 + 服务器识别当前 App 命中 -> app_plus；scope=1 -> global_plus；同一 UDID 多张有效卡按当前 App 取最高适用权限。
-3. scope=3 不信任客户端声明 app_id，也不只依赖 BundleID；使用 BundleID + CFBundleExecutable + 主 Mach-O LC_UUID，并通过 active ipa_asset -> ipa_category_binding -> fa_category.id 由服务器识别 App。
-4. MachOInspector 增加 LC_UUID 解析；IpaParserService 将主程序身份写入 fa_ipa_app_identity；只有 parsed 且存在 active IPA→App 绑定的解析结果可参与 app_plus。
-5. 保持 v1 HMAC canonical 顺序不变；v2 为加法协议，追加 App identity / App 版本字段。响应继续兼容 ok/code/action/token，并新增 access_level、permissions、app_identity、app_update、notice。
-6. app_plus 在线 session 与离线 grace 都绑定服务器识别的 App 身份；离线恢复会再次核对 BundleID + Executable + Mach-O UUID，身份不匹配即清理缓存并拒绝高级权限。
-7. 复用 IPA 解析版本数据判断当前 App 是否存在新版本；更新标题、正文、按钮文字和按钮动作由服务器配置。
-8. 增加远程运行时通知，可按全部 App、指定 App、最低权限、revision、priority 和时间窗口投放。
-9. 新增 /index/dylib_verify/config；iOS SDK 支持多个 Bootstrap、多个 API Endpoint、签名运行配置、Last-Known-Good、旧 endpoint fallback 与 offline grace，为服务器/域名迁移提供容错。
-10. 后台 Dylib Center 重排为“注册 → 接入说明 → 权限模型 → 运行配置与通知 → 版本控制 → 验证记录”，接入说明同步为 v1/v2、权限响应、App 身份、更新通知和服务器迁移流程。
-11. 新增 MySQL 5.7 可重复执行迁移：fa_ipa_app_identity、fa_dylib_runtime_config、fa_dylib_runtime_notice；runtime identity 联合索引使用 64/64/36 前缀以提高旧 InnoDB/utf8mb4 兼容性。
-12. 增加真实 ThinkPHP Db + PHP 7.0 + MySQL 5.7 授权矩阵测试，覆盖 scope=2、scope=3 命中/不命中、BundleID-only 冒充失败、scope=1、多卡权限合并和 stale identity。
+1. 新增后台“OC 工程生成”模块，直接读取当前软件源 ApiEndpointRegistry 作为接口元数据来源。
+2. 支持生成前 Draft 编辑：工程名、类前缀、Base URL、最低 iOS、超时、User-Agent、接口启用状态、Path、Method、Auth 与说明均可在本次生成中调整，不回写线上 API 配置。
+3. 新增配置校验与 config_hash 锁定；最终生成必须使用最近一次预览得到的 hash，避免“预览配置”和“实际生成配置”不一致。
+4. 生成 Objective-C APIConfig、APIEndpoints、APIClient、GeneratedConfig.json、API_REFERENCE.md、INTEGRATION.md 与 generation-manifest.json。
+5. 当前 ApiEndpointRegistry 未提供完整 Response Schema，因此 2407 不伪造 Objective-C Model；后续在响应结构元数据化后再生成 Models。
+6. UDID、卡密、Token、HMAC 等敏感值不写死进生成源码，保留运行时参数/headerProvider 注入机制。
+7. 最终 ZIP 写入 runtime/codegen 临时目录，使用随机下载 token、SHA256 和 1 小时过期时间，不写入持久业务配置。
+8. 新增后台菜单与权限 SQL：release/sql/2026092407_oc_codegen.sql，支持 MySQL 5.7 重复执行。
+9. 在线更新 manifest 已包含生成器核心、Controller、View 和 JS；SQL 继续由现有 build_online_update.php 自动收入 mysql/。
+10. 新增 PHP 7.0 生成器 contract、Node JS syntax check、在线更新 ZIP 内容检查、MySQL 5.7 双迁移验证。
+
+验证：
+- OC Codegen CI #3（Run 36132572050）已通过。
+- PHP 7.0：ObjectiveCGenerator.php、Occodegen.php、contract test 语法检查通过。
+- 生成器 contract：10 个输出文件、确定性 config hash 校验通过。
+- 在线更新包：确认包含 ObjectiveCGenerator.php、Occodegen.php、occodegen/index.html、occodegen.js 与 2026092407_oc_codegen.sql。
+- MySQL 5.7：菜单/权限迁移连续执行两次通过，验证 1 个父菜单 + 5 个权限节点且不重复。
 
 在线更新：
-- 目标升级：source-v2026092405 -> source-v2026092406。
-- 继续沿用现有 UpdateManager / UpdateInstaller：GitHub Release 发现、SHA256、备份、SQL、文件覆盖、完整性校验、版本写入与失败回滚流程不变。
+- 目标升级：source-v2026092406 -> source-v2026092407。
+- 继续沿用现有 UpdateManager / UpdateInstaller：GitHub Release 发现、SHA256、备份、SQL、文件覆盖、版本写入与失败回滚流程不变。
 - 正式 Release 必须包含 zonoe-online-update.zip 与 zonoe-online-update.zip.sha256。
 - PHP 7.0 / MySQL 5.7 兼容要求保持。
-- source-v2026092405 历史 Release 不改写。
+- source-v2026092406 历史 Release 不改写。
