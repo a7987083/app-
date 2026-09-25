@@ -3,6 +3,7 @@
 namespace app\index\controller;
 
 use app\common\controller\Frontend;
+use app\common\library\Ipa\DylibRuntimeConfigService;
 use app\common\library\Ipa\DylibVerificationService;
 
 class DylibVerify extends Frontend
@@ -10,6 +11,26 @@ class DylibVerify extends Frontend
     protected $noNeedLogin = '*';
     protected $noNeedRight = '*';
     protected $layout = '';
+
+    /**
+     * Lightweight discovery endpoint used by independently hosted bootstrap
+     * anchors. The returned runtime endpoint list is signed per Dylib.
+     */
+    public function config()
+    {
+        $dylibKey = trim((string)$this->request->request('dylib_key', ''));
+        try {
+            return json(DylibRuntimeConfigService::bootstrap($dylibKey));
+        } catch (\Exception $e) {
+            error_log('[DylibVerify/config] ' . $e->getMessage());
+            return json([
+                'ok' => false,
+                'code' => 'config_unavailable',
+                'message' => 'runtime configuration unavailable',
+                'server_time' => time(),
+            ], 503);
+        }
+    }
 
     public function verify()
     {
