@@ -14,6 +14,11 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 show_message: '显示提示',
                 block: '阻止使用'
             };
+            var accessLabels = {
+                basic: '普通菜单',
+                app_plus: '指定 App 高级权限',
+                global_plus: '全软件源高级权限'
+            };
             var resultLabels = {
                 ok: '验证通过',
                 ok_testing: '验证通过（测试版本）',
@@ -28,7 +33,14 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 dylib_key_unavailable: 'Dylib 验证密钥不可用',
                 license_invalid: '设备授权无效或已过期',
                 blacklisted: '设备已被封禁',
-                bundle_not_allowed: 'BundleID 未授权',
+                bundle_not_allowed: '旧版 BundleID 授权未命中',
+                app_identity_incomplete: 'App 身份参数不完整',
+                app_identity_unknown: '未识别当前 App 身份',
+                app_identity_unbound: '解析 IPA 尚未绑定软件源 App',
+                app_identity_ambiguous: 'App 身份匹配到多个软件源 App',
+                app_identity_inactive: '对应 App 已停用或不可锁定',
+                app_identity_required: '指定 App 卡需要 v2 App 身份',
+                app_not_authorized: '指定 App 卡不适用于当前 App',
                 version_unknown: 'Dylib 版本未登记',
                 version_blocked: 'Dylib 版本已阻止',
                 version_revoked: 'Dylib 版本已撤销',
@@ -43,7 +55,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
 
             function refreshAll() {
                 $('#version-table').bootstrapTable('refresh');
-                $('#binding-table').bootstrapTable('refresh');
+                $('#notice-table').bootstrapTable('refresh');
                 $('#verify-log-table').bootstrapTable('refresh');
             }
 
@@ -56,6 +68,18 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 $('#verify-secret').attr('type', 'password').val('');
                 $('.js-dylib-submit-label').text('注册 Dylib');
                 $('#cancel-dylib-edit').addClass('hidden');
+            }
+
+            function resetNoticeForm() {
+                var $form = $('#notice-form');
+                $form[0].reset();
+                $form.find('[name=id]').val('0');
+                $form.find('[name=revision]').val('1');
+                $form.find('[name=priority]').val('0');
+                $form.find('[name=category_id]').val('0');
+                $form.find('[name=enabled]').val('1');
+                $form.find('[name=starts_at]').val('0');
+                $form.find('[name=ends_at]').val('0');
             }
 
             $('#version-table').bootstrapTable({
@@ -77,19 +101,37 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 ]]
             });
 
-            $('#binding-table').bootstrapTable({
-                url: 'dylib_center/bindings',
+            $('#notice-table').bootstrapTable({
+                url: 'dylib_center/notices',
                 sidePagination: 'server',
                 pagination: true,
-                pageSize: 50,
-                pageList: [20, 50, 100, 200],
+                pageSize: 20,
+                pageList: [20, 50, 100],
                 columns: [[
                     {field: 'id', title: 'ID'},
-                    {field: 'dylib_id', title: 'Dylib ID'},
-                    {field: 'bundle_id', title: 'BundleID'},
-                    {field: 'enabled', title: '授权状态', formatter: function (v) { return parseInt(v, 10) ? '已启用' : '已停用'; }},
-                    {field: 'fail_action_override', title: '失败动作覆盖', formatter: function (v) { return v ? label(actionLabels, v) : '继承 Dylib'; }},
-                    {field: 'offline_grace_override', title: '离线覆盖（秒）', formatter: function (v) { return parseInt(v, 10) > 0 ? v : '继承'; }}
+                    {field: 'notice_key', title: '通知 Key'},
+                    {field: 'app_name', title: '目标 App'},
+                    {field: 'min_access_level', title: '最低权限', formatter: function (v) { return v ? label(accessLabels, v) : '不限'; }},
+                    {field: 'revision', title: 'Rev'},
+                    {field: 'priority', title: '优先级'},
+                    {field: 'title', title: '标题'},
+                    {field: 'enabled', title: '状态', formatter: function (v) { return parseInt(v, 10) ? '启用' : '停用'; }},
+                    {
+                        field: 'operate', title: '操作', formatter: function () {
+                            return '<button type="button" class="btn btn-xs btn-primary js-notice-edit">编辑</button>';
+                        },
+                        events: {
+                            'click .js-notice-edit': function (e, value, row) {
+                                var $form = $('#notice-form');
+                                $.each(['id', 'notice_key', 'revision', 'priority', 'category_id', 'min_access_level', 'title', 'message',
+                                    'primary_title', 'primary_action', 'primary_url', 'secondary_title', 'secondary_action', 'secondary_url',
+                                    'starts_at', 'ends_at', 'enabled'], function (i, field) {
+                                    $form.find('[name=' + field + ']').val(row[field] === null || typeof row[field] === 'undefined' ? '' : row[field]);
+                                });
+                                $('html,body').animate({scrollTop: $('#notice-form').offset().top - 20}, 150);
+                            }
+                        }
+                    }
                 ]]
             });
 
@@ -103,7 +145,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 columns: [[
                     {field: 'id', title: 'ID'},
                     {field: 'udid_hash', title: '设备标识哈希（前12位）'},
-                    {field: 'bundle_id', title: '游戏 BundleID'},
+                    {field: 'bundle_id', title: '运行 App BundleID'},
                     {field: 'dylib_key', title: 'Dylib Key'},
                     {field: 'dylib_version', title: 'Dylib 版本'},
                     {field: 'result_code', title: '验证结果', formatter: function (v) { return label(resultLabels, v); }},
@@ -131,9 +173,27 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 });
             });
 
-            $('#cancel-dylib-edit').on('click', function () {
-                resetDylibForm();
+            $('#runtime-config-form').on('submit', function (e) {
+                e.preventDefault();
+                Fast.api.ajax({url: 'dylib_center/saveRuntimeConfig', type: 'POST', data: $(this).serialize()}, function (data) {
+                    Toastr.success('运行配置已保存，旧 Dylib 将在下一次发现配置时自动采用新地址/文案。');
+                    location.reload();
+                    return false;
+                });
             });
+
+            $('#notice-form').on('submit', function (e) {
+                e.preventDefault();
+                Fast.api.ajax({url: 'dylib_center/saveNotice', type: 'POST', data: $(this).serialize()}, function () {
+                    Toastr.success('远程通知已保存');
+                    resetNoticeForm();
+                    $('#notice-table').bootstrapTable('refresh');
+                    return false;
+                });
+            });
+
+            $('#reset-notice-form').on('click', resetNoticeForm);
+            $('#cancel-dylib-edit').on('click', resetDylibForm);
 
             $('#dylib-list').on('click', '.js-dylib-edit', function () {
                 var $row = $(this).closest('tr');
@@ -154,11 +214,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 var $row = $(this).closest('tr');
                 var enabled = String($(this).data('enabled'));
                 var verb = enabled === '1' ? '启用' : '停用';
-                Fast.api.ajax({
-                    url: 'dylib_center/setDylibEnabled',
-                    type: 'POST',
-                    data: {id: $row.data('id'), enabled: enabled}
-                }, function () {
+                Fast.api.ajax({url: 'dylib_center/setDylibEnabled', type: 'POST', data: {id: $row.data('id'), enabled: enabled}}, function () {
                     Toastr.success('Dylib 已' + verb);
                     location.reload();
                     return false;
@@ -169,15 +225,11 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 var $row = $(this).closest('tr');
                 var name = $row.attr('data-name');
                 Layer.confirm(
-                    '确定删除“' + name + '”吗？只有从未产生版本、游戏授权或验证记录的 Dylib 才允许删除；已有历史的 Dylib 必须使用“停用”。',
+                    '确定删除“' + name + '”吗？只有从未产生版本、旧授权历史或验证记录的 Dylib 才允许删除；已有历史必须使用“停用”。',
                     {title: '删除 Dylib（二次确认）'},
                     function (index) {
                         Layer.close(index);
-                        Fast.api.ajax({
-                            url: 'dylib_center/deleteDylib',
-                            type: 'POST',
-                            data: {id: $row.data('id')}
-                        }, function () {
+                        Fast.api.ajax({url: 'dylib_center/deleteDylib', type: 'POST', data: {id: $row.data('id')}}, function () {
                             Toastr.success('Dylib 已删除');
                             location.reload();
                             return false;
@@ -201,18 +253,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 });
             });
 
-            $('#binding-form').on('submit', function (e) {
-                e.preventDefault();
-                Fast.api.ajax({url: 'dylib_center/saveBinding', type: 'POST', data: $(this).serialize()}, function () {
-                    $('#binding-table').bootstrapTable('refresh');
-                    return false;
-                });
-            });
-
             setInterval(function () {
-                if (document.visibilityState === 'visible') {
-                    refreshAll();
-                }
+                if (document.visibilityState === 'visible') refreshAll();
             }, 60000);
         }
     };
