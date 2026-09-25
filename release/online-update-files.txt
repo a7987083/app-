@@ -5,9 +5,13 @@ application/common/library/update/UpdateManager.php
 application/common/library/update/UpdateOps.php
 application/admin/controller/general/Config.php
 application/admin/controller/general/Updatemaintenance.php
+application/admin/controller/general/Occodegen.php
 application/admin/view/general/updatemaintenance/panel.html
+application/admin/view/general/occodegen/index.html
 public/assets/js/backend/general/config.js
 public/assets/js/backend/general/updatemaintenance.js
+public/assets/js/backend/general/occodegen.js
+application/common/library/codegen/ObjectiveCGenerator.php
 application/route.php
 application/index/controller/App.php
 application/index/controller/SourceV3.php
