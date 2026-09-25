@@ -69,7 +69,8 @@ class IpaParserService
             ]);
 
             Db::name('ipa_binary')->where('asset_id', (int)$asset['id'])->delete();
-            self::indexBinaries((int)$asset['id'], $zip, $entries, $executable, $now);
+            Db::name('ipa_app_identity')->where('asset_id', (int)$asset['id'])->delete();
+            self::indexBinaries((int)$asset['id'], $zip, $entries, $bundleId, $executable, $now);
             Db::commit();
         } catch (\Exception $e) {
             Db::rollback();
@@ -87,7 +88,7 @@ class IpaParserService
         ];
     }
 
-    protected static function indexBinaries($assetId, RemoteZipReader $zip, array $entries, $executable, $now)
+    protected static function indexBinaries($assetId, RemoteZipReader $zip, array $entries, $bundleId, $executable, $now)
     {
         $inspector = new MachOInspector();
         $fullHashLimit = self::binaryHashLimit();
@@ -102,6 +103,7 @@ class IpaParserService
             $sha256 = '';
             $architectures = '';
             $installName = '';
+            $machoUuid = '';
             $uncompressedSize = (int)$entry['uncompressed_size'];
             $compressedSize = isset($entry['compressed_size']) ? (int)$entry['compressed_size'] : $uncompressedSize;
 
@@ -117,6 +119,9 @@ class IpaParserService
                         }
                         if (!empty($meta['install_name'])) {
                             $installName = (string)$meta['install_name'];
+                        }
+                        if (!empty($meta['macho_uuid'])) {
+                            $machoUuid = strtoupper((string)$meta['macho_uuid']);
                         }
                     }
                     unset($prefix, $meta);
@@ -151,6 +156,17 @@ class IpaParserService
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
+
+            if ($type === 'main') {
+                Db::name('ipa_app_identity')->insert([
+                    'asset_id' => (int)$assetId,
+                    'bundle_id' => (string)$bundleId,
+                    'executable' => (string)$executable,
+                    'macho_uuid' => $machoUuid,
+                    'created_at' => (int)$now,
+                    'updated_at' => (int)$now,
+                ]);
+            }
         }
     }
 
