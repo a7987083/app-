@@ -533,15 +533,34 @@ static NSTimeInterval const ZONRuntimeConfigMaxStale = 30.0 * 24.0 * 60.0 * 60.0
         [self clearOfflineCacheForBundleID:bundleID];
         return nil;
     }
+
+    NSString *accessLevel = [cache[@"access_level"] isKindOfClass:NSString.class] ? cache[@"access_level"] : @"basic";
+    NSDictionary *cachedIdentity = [cache[@"app_identity"] isKindOfClass:NSDictionary.class] ? cache[@"app_identity"] : @{};
+    if ([accessLevel isEqualToString:@"app_plus"]) {
+        NSString *currentExecutable = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleExecutable"] ?: @"";
+        NSString *currentUUID = [ZONVerifyClient currentAppMachOUUID] ?: @"";
+        NSString *cachedBundleID = [cachedIdentity[@"bundle_id"] isKindOfClass:NSString.class] ? cachedIdentity[@"bundle_id"] : @"";
+        NSString *cachedExecutable = [cachedIdentity[@"executable"] isKindOfClass:NSString.class] ? cachedIdentity[@"executable"] : @"";
+        NSString *cachedUUID = [cachedIdentity[@"macho_uuid"] isKindOfClass:NSString.class] ? cachedIdentity[@"macho_uuid"] : @"";
+        BOOL identityMatches = [cachedIdentity[@"resolved"] boolValue] &&
+            cachedBundleID.length > 0 && [cachedBundleID isEqualToString:bundleID] &&
+            cachedExecutable.length > 0 && [cachedExecutable isEqualToString:currentExecutable] &&
+            cachedUUID.length > 0 && [cachedUUID caseInsensitiveCompare:currentUUID] == NSOrderedSame;
+        if (!identityMatches) {
+            [self clearOfflineCacheForBundleID:bundleID];
+            return nil;
+        }
+    }
+
     ZONVerifyResult *result = [ZONVerifyResult new];
     result.allowed = YES;
     result.code = @"offline_grace";
     result.action = @"allow";
     result.message = [cache[@"message"] isKindOfClass:NSString.class] ? cache[@"message"] : @"Offline grace active";
     result.token = [cache[@"token"] isKindOfClass:NSString.class] ? cache[@"token"] : @"";
-    result.accessLevel = [cache[@"access_level"] isKindOfClass:NSString.class] ? cache[@"access_level"] : @"basic";
+    result.accessLevel = accessLevel;
     result.permissions = [cache[@"permissions"] isKindOfClass:NSDictionary.class] ? cache[@"permissions"] : @{};
-    result.appIdentity = [cache[@"app_identity"] isKindOfClass:NSDictionary.class] ? cache[@"app_identity"] : @{};
+    result.appIdentity = cachedIdentity;
     result.appUpdate = [cache[@"app_update"] isKindOfClass:NSDictionary.class] ? cache[@"app_update"] : @{ @"available": @NO };
     result.offlineGraceSeconds = grace;
     result.offlineCache = YES;
