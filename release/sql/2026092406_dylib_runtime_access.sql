@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `fa_ipa_app_identity` (
   `updated_at` int unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_asset_identity` (`asset_id`),
-  KEY `idx_runtime_identity` (`bundle_id`(191),`executable`(191),`macho_uuid`)
+  KEY `idx_runtime_identity` (`bundle_id`(64),`executable`(64),`macho_uuid`(36))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Parsed main executable runtime identity';
 
 CREATE TABLE IF NOT EXISTS `fa_dylib_runtime_config` (
