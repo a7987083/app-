@@ -76,6 +76,7 @@ requireContains($service, "'notice' => \$notice", 'verification returns remote n
 requireContains($runtime, 'update_message', 'server-controlled update message');
 requireContains($adminController, 'public function saveNotice()', 'admin notice save endpoint');
 requireContains($adminController, 'public function saveRuntimeConfig()', 'admin runtime config save endpoint');
+requireContains($adminController, 'if ($bootstrapUrls && !$apiEndpoints)', 'bootstrap config cannot be saved without a verification API endpoint');
 
 // Server/domain migration uses signed discovery + multiple endpoints + Last-Known-Good cache.
 requireContains($publicController, 'DylibRuntimeConfigService::bootstrap', 'public config discovery endpoint');
