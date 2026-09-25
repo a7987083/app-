@@ -13,10 +13,11 @@
 - If an App has not been parsed again after the 2406 identity schema is deployed, or has no active binding, scope=3 must not silently grant high privilege.
 - Production rollout therefore requires re-parsing at least the actively sold/authorized Apps before validating scope=3.
 
-## P0 — BundleID-only spoof must be tested on a real device
+## P0 — BundleID-only spoof still needs real-device confirmation
 
 - 2406 no longer treats BundleID as sufficient App identity. Matching also uses executable and Mach-O `LC_UUID` against server-side parsed identity.
-- CI contracts verify the model and implementation shape, but the negative case “different game with only BundleID changed” still needs a real-device test before release.
+- `tests/dylib_runtime_access_mysql_test.php` now validates the negative case on PHP 7.0 + MySQL 5.7 + real ThinkPHP `Db`: changing only BundleID does not resolve the spoofed App and does not grant `app_plus`.
+- The same negative case still needs a real-device test because runtime collection/hooking behavior cannot be fully proven by server-side CI.
 
 ## P1 — Runtime endpoint migration still has a physical discovery boundary
 
