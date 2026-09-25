@@ -4,10 +4,42 @@
 
 - Repository: `a7987083/app-`
 - Previous stable release: `source-v2026092404`
-- Current release branch: `release/2026092405-dylib-lifecycle-integration`
-- Release commit: `f2cb8536b2a5196b4dab1c135c74033f740ed398`
-- Current release: `source-v2026092405`
-- Historical releases through 2026092404 must not be rewritten.
+- Stable release branch: `release/2026092405-dylib-lifecycle-integration`
+- Stable release commit: `f2cb8536b2a5196b4dab1c135c74033f740ed398`
+- Current stable release: `source-v2026092405`
+- Current development branch: `release/2026092406-dylib-global-app-support`
+- 2406 validated code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`
+- Draft PR: `#25`
+- 2406 has NOT been tagged/released yet. Historical releases through 2026092405 must not be rewritten.
+
+## 2026092406 — Dylib runtime authorization / App identity / infrastructure migration
+
+- [x] 将 Dylib 是否有效与用户功能权限拆层；Dylib 不再使用自身 BundleID 白名单决定是否可运行。
+- [x] 三种卡密进入真实运行时权限模型：`scope=2 -> basic`、`scope=3 + App命中 -> app_plus`、`scope=1 -> global_plus`，同一 UDID 取当前 App 下最高适用权限。
+- [x] scope=3 不信任客户端声明的 `app_id`，也不只依赖 BundleID；使用 BundleID + Executable + Mach-O `LC_UUID`，再由服务器通过 active `ipa_asset -> ipa_category_binding -> fa_category.id` 识别 App。
+- [x] `MachOInspector` 增加 `LC_UUID` 解析；`IpaParserService` 将主程序身份写入 `fa_ipa_app_identity`。
+- [x] 只有仍处于 `parsed` 状态且存在 active IPA→App 绑定的解析结果可参与指定 App 高级授权。
+- [x] 2405 `dylib_app_binding` 数据和接口保留作历史兼容/审计，但 2406 主验证链不再读取它。
+- [x] v1 HMAC 原文顺序保持不变；v2 仅在完整 v1 原文后追加 protocol/App identity/version 字段。
+- [x] 验证响应保留旧 `ok/code/action/token/offline_grace_seconds`，新增 `access_level`、`permissions`、`app_identity`、`app_update`、`notice`。
+- [x] session token v2 绑定服务器识别的 App ID、access level 和 Mach-O UUID，避免 scope=3 高级 session 跨 App 复用。
+- [x] 复用 IPA 解析结果判断当前 App 是否存在新版本；更新标题、正文、按钮文字由服务器配置。
+- [x] 增加按全部 App/指定 App/最低权限投放的远程通知，支持 notice key、revision、priority、时间窗口和按钮动作。
+- [x] 增加 `/index/dylib_verify/config` 运行配置发现；支持多个 Bootstrap、多个 API endpoint、HMAC 验签 Last-Known-Good、旧 endpoint fallback、离线授权 fallback。
+- [x] 后台页面整理为：注册 → 接入说明 → 权限模型 → 运行配置与通知 → 版本控制 → 验证记录。
+- [x] 接入说明重写为可直接照做的客户端配置、v1/v2 HMAC、权限响应、服务器迁移与离线行为说明。
+- [x] 新增 MySQL 5.7 可重复执行迁移和 clean-install schema；在线更新包包含 2406 runtime 文件和 SQL。
+- [x] Draft PR #25 已建立，base 为 2405 开发分支；未创建 2406 tag/release。
+- [x] IPA Online Update Release Gate `36088476047` — SUCCESS；包含 2406 ZIP payload、PHP 7.0、新 SQL MySQL 5.7 双执行和 contract。
+- [x] IPA Data Center CI `36088568733` — SUCCESS；contracts / PHP 7.0 / iPhoneOS SDK arm64 真编译全部成功。
+- [x] Regression Checks `36088568690` — SUCCESS。
+- [x] Phase14 Production Hardening `36088568743` — SUCCESS。
+- [x] Phase 17.2 Authorization Integrity `36088568735` — SUCCESS。
+- [ ] 真实 BaoTa 执行 2406 migration / 在线更新验证。
+- [ ] 真机分别验证 `scope=2`、`scope=3`、`scope=1` 以及同 UDID 多卡权限合并。
+- [ ] 真机验证“另一个游戏仅修改 BundleID”不能获得 scope=3 `app_plus`。
+- [ ] 真机验证服务器更新弹窗/自定义通知及按钮 URL。
+- [ ] 真机演练 API 域名切换、Bootstrap 故障转移、Last-Known-Good 和离线 grace。
 
 ## 2026092405 — Dylib lifecycle / integration workflow
 
@@ -38,4 +70,4 @@
 
 ## Next Task
 
-在真实 BaoTa 的 `source-v2026092404` 环境通过现有在线更新入口升级到 `source-v2026092405`，随后逐项验证 Dylib 编辑、停用/启用、删除保护、接入说明及验证记录中文显示，并确认旧客户端协议、版本规则和 BundleID 绑定行为保持不变。
+在测试/BaoTa 环境部署 2406 migration，并重新解析至少一个已绑定 App 生成 `fa_ipa_app_identity`；随后用真实 Dylib/UDID 逐项验证三种卡密权限、scope=3 App 身份防伪、游戏更新/远程通知，以及 Bootstrap/API 域名切换与离线容错。所有真机结果通过前不创建 `source-v2026092406` 正式发布。
