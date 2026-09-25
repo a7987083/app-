@@ -15,9 +15,10 @@ $clientH = file_get_contents($root . '/clients/ios/ZONDylibVerify/ZONVerifyClien
 $clientM = file_get_contents($root . '/clients/ios/ZONDylibVerify/ZONVerifyClient.m');
 $readme = file_get_contents($root . '/clients/ios/ZONDylibVerify/README.md');
 $sql = file_get_contents($root . '/release/sql/2026092406_dylib_runtime_access.sql');
+$cleanSql = file_get_contents($root . '/database/ipa_data_center_v1_3_dylib_runtime_access.sql');
 $manifest = file_get_contents($root . '/release/online-update-files.txt');
 
-foreach ([$service,$runtime,$configService,$parser,$inspector,$publicController,$adminController,$view,$js,$clientH,$clientM,$readme,$sql,$manifest] as $index => $content) {
+foreach ([$service,$runtime,$configService,$parser,$inspector,$publicController,$adminController,$view,$js,$clientH,$clientM,$readme,$sql,$cleanSql,$manifest] as $index => $content) {
     if ($content === false) {
         fwrite(STDERR, "unable to load 2406 contract source {$index}\n");
         exit(1);
@@ -104,6 +105,11 @@ requireNotContains($js, "url: 'dylib_center/saveBinding'", 'frontend no longer w
 foreach (['fa_ipa_app_identity', 'fa_dylib_runtime_config', 'fa_dylib_runtime_notice'] as $table) {
     requireContains($sql, $table, "2406 schema {$table}");
 }
+$safeRuntimeIndex = 'KEY `idx_runtime_identity` (`bundle_id`(64),`executable`(64),`macho_uuid`(36))';
+requireContains($sql, $safeRuntimeIndex, 'online migration uses legacy-safe utf8mb4 identity index prefixes');
+requireContains($cleanSql, $safeRuntimeIndex, 'clean schema mirrors legacy-safe identity index prefixes');
+requireNotContains($sql, '`bundle_id`(191),`executable`(191),`macho_uuid`', 'online migration must not restore oversized composite index');
+requireNotContains($cleanSql, '`bundle_id`(191),`executable`(191),`macho_uuid`', 'clean schema must not restore oversized composite index');
 requireContains($manifest, 'application/common/library/Ipa/DylibRuntimeAccessService.php', 'runtime access service packaged');
 requireContains($manifest, 'application/common/library/Ipa/DylibRuntimeConfigService.php', 'runtime config service packaged');
 requireContains($readme, 'Last-Known-Good', 'integration guide documents migration fallback');
