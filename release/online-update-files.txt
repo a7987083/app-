@@ -69,6 +69,8 @@ application/admin/view/ipa_source_center/add.html
 application/admin/view/ipa_source_center/edit.html
 application/admin/view/dylib_center/index.html
 application/common/library/Ipa/DylibVerificationService.php
+application/common/library/Ipa/DylibRuntimeAccessService.php
+application/common/library/Ipa/DylibRuntimeConfigService.php
 application/common/library/Ipa/HttpRangeClient.php
 application/common/library/Ipa/IpaParserService.php
 application/common/library/Ipa/IpaScanService.php
