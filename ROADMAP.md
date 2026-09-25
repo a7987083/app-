@@ -10,6 +10,7 @@
 - Current development branch: `release/2026092406-dylib-global-app-support`
 - 2406 runtime code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`
 - 2406 verification-hardening checkpoint: `f713e449e3a2a6ec0a0aa4405984063093cb23b1`
+- 2406 final pre-release code checkpoint: `38405039baf83de0e1bcb5ae2db4f4645c349bed`
 - Draft PR: `#25`
 - 2406 has NOT been tagged/released yet. Historical releases through 2026092405 must not be rewritten.
 
@@ -24,24 +25,27 @@
 - [x] v1 HMAC 原文顺序保持不变；v2 仅在完整 v1 原文后追加 protocol/App identity/version 字段。
 - [x] 验证响应保留旧 `ok/code/action/token/offline_grace_seconds`，新增 `access_level`、`permissions`、`app_identity`、`app_update`、`notice`。
 - [x] session token v2 绑定服务器识别的 App ID、access level 和 Mach-O UUID，避免 scope=3 高级 session 跨 App 复用。
+- [x] scope=3 `app_plus` 离线 grace 缓存再次核对 BundleID + Executable + Mach-O UUID；身份不匹配时清除缓存并拒绝离线高级权限。
 - [x] 复用 IPA 解析结果判断当前 App 是否存在新版本；更新标题、正文、按钮文字由服务器配置。
 - [x] 增加按全部 App/指定 App/最低权限投放的远程通知，支持 notice key、revision、priority、时间窗口和按钮动作。
 - [x] 增加 `/index/dylib_verify/config` 运行配置发现；支持多个 Bootstrap、多个 API endpoint、HMAC 验签 Last-Known-Good、旧 endpoint fallback、离线授权 fallback。
+- [x] 后台保存运行配置时，Bootstrap 非空但 API Endpoint 为空会被拒绝，避免 Bootstrap-only 客户端被误配置为无验证出口；两者都空仍保留旧 endpoint 兼容模式。
 - [x] 后台页面整理为：注册 → 接入说明 → 权限模型 → 运行配置与通知 → 版本控制 → 验证记录。
 - [x] 接入说明重写为可直接照做的客户端配置、v1/v2 HMAC、权限响应、服务器迁移与离线行为说明。
 - [x] 新增 MySQL 5.7 可重复执行迁移和 clean-install schema；在线更新包包含 2406 runtime 文件和 SQL。
+- [x] `fa_ipa_app_identity.idx_runtime_identity` 使用 `64/64/36` 前缀索引，字段长度不变，降低旧 BaoTa/InnoDB `utf8mb4` 联合索引长度兼容风险。
 - [x] Draft PR #25 已建立，base 为 2405 开发分支；未创建 2406 tag/release。
-- [x] IPA Online Update Release Gate `36088476047` — SUCCESS；包含 2406 ZIP payload、PHP 7.0、新 SQL MySQL 5.7 双执行和 contract。
-- [x] IPA Data Center CI `36088568733` — SUCCESS；contracts / PHP 7.0 / iPhoneOS SDK arm64 真编译全部成功。
-- [x] Regression Checks `36088568690` — SUCCESS。
-- [x] Phase14 Production Hardening `36088568743` — SUCCESS。
-- [x] Phase 17.2 Authorization Integrity `36088568735` — SUCCESS。
 - [x] 新增 `tests/dylib_runtime_access_mysql_test.php`，在真实 ThinkPHP Db + PHP 7.0 + MySQL 5.7 下直接调用 `DylibRuntimeAccessService`。
-- [x] IPA Data Center CI `36095035822` — SUCCESS；真实数据库授权矩阵覆盖无卡、scope=2、scope=3 命中/不命中、只改 BundleID 冒充失败、scope=1、同 UDID 多卡合并、解析状态 stale 失效。
-- [x] 同一轮 `36095035822` 的 contracts / PHP 7.0 / MySQL 5.7 / 100k / iPhoneOS arm64 全部 SUCCESS。
+- [x] 真实数据库授权矩阵覆盖无卡、scope=2、scope=3 命中/不命中、只改 BundleID 冒充失败、scope=1、同 UDID 多卡合并、解析状态 stale 失效。
+- [x] 最终 pre-release code checkpoint `38405039...`：IPA Online Update Release Gate `36097524318` — SUCCESS；真实更新 ZIP、PHP 7.0、2406 SQL MySQL 5.7 双执行、runtime MySQL 行为测试全部通过。
+- [x] IPA Data Center CI `36097528583` — SUCCESS；contracts / PHP 7.0 / MySQL 5.7 / 100k / iPhoneOS SDK arm64 真编译全部成功。
+- [x] Regression Checks `36097528593` — SUCCESS。
+- [x] Phase14 Production Hardening `36097528557` — SUCCESS。
+- [x] Phase 17.2 Authorization Integrity `36097528546` — SUCCESS。
 - [ ] 真实 BaoTa 执行 2406 migration / 在线更新验证。
 - [ ] 真机分别验证 `scope=2`、`scope=3`、`scope=1` 以及同 UDID 多卡权限合并。
 - [ ] 真机验证“另一个游戏仅修改 BundleID”不能获得 scope=3 `app_plus`。
+- [ ] 真机验证 scope=3 `app_plus` 离线缓存不能跨 Executable/Mach-O UUID 复用。
 - [ ] 真机验证服务器更新弹窗/自定义通知及按钮 URL。
 - [ ] 真机演练 API 域名切换、Bootstrap 故障转移、Last-Known-Good 和离线 grace。
 
@@ -74,4 +78,4 @@
 
 ## Next Task
 
-在测试/BaoTa 环境部署 2406 migration，并重新解析至少一个已绑定 App 生成 `fa_ipa_app_identity`；随后用真实 Dylib/UDID 逐项验证三种卡密权限、scope=3 App 身份防伪、游戏更新/远程通知，以及 Bootstrap/API 域名切换与离线容错。所有真机结果通过前不创建 `source-v2026092406` 正式发布。
+在测试/BaoTa 环境部署 2406 migration，并重新解析至少一个已绑定 App 生成 `fa_ipa_app_identity`；随后用真实 Dylib/UDID 逐项验证三种卡密权限、scope=3 App 身份防伪与离线缓存身份绑定、游戏更新/远程通知，以及 Bootstrap/API 域名切换与离线容错。所有真机结果通过前不创建 `source-v2026092406` 正式发布。

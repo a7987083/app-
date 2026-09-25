@@ -18,12 +18,14 @@ Expected:
 - [ ] First run succeeds.
 - [ ] Second run succeeds without duplicate-table/duplicate-row failure.
 - [ ] `fa_ipa_app_identity` exists.
+- [ ] `fa_ipa_app_identity.idx_runtime_identity` exists with conservative `bundle_id(64), executable(64), macho_uuid(36)` prefixes on the real BaoTa/MySQL installation.
+- [ ] No `Specified key was too long` or other InnoDB DDL error occurs.
 - [ ] `fa_dylib_runtime_config` exists and contains `id=1`.
 - [ ] `fa_dylib_runtime_notice` exists.
 - [ ] Existing `fa_dylib_app_binding` history is preserved.
 - [ ] Existing 2405 Dylib registrations/versions/logs remain intact.
 
-Release blocker: any destructive schema side effect or second-run failure.
+Release blocker: any destructive schema side effect, index-creation failure or second-run failure.
 
 ## 3. Parsed App identity preparation
 
@@ -169,7 +171,13 @@ Verify:
 
 ## 11. Server / domain migration — P0
 
-Configure at least two Bootstrap URLs and at least two API endpoints where practical.
+Before failover testing, verify the admin safety boundary:
+
+- [ ] Bootstrap URLs empty + API endpoints empty can still be saved for the legacy direct-`endpointURL` mode.
+- [ ] Bootstrap URLs non-empty + API endpoints empty is rejected by the server and does not increment/persist an unusable runtime configuration.
+- [ ] Bootstrap URLs non-empty + at least one API endpoint saves successfully.
+
+Then configure at least two Bootstrap URLs and at least two API endpoints where practical.
 
 ### Normal discovery
 
@@ -198,14 +206,19 @@ Temporarily make Bootstrap endpoints unavailable while the previously discovered
 - [ ] Client uses cached signed config.
 - [ ] Normal verify still succeeds.
 
-## 12. Offline grace
+## 12. Offline grace — P0
 
 After a successful online verification:
 
 - [ ] Temporarily disconnect verification infrastructure within configured grace.
 - [ ] Allowed offline behavior uses the last valid authorization token/cache.
-- [ ] scope=3 cached authorization cannot be reused in a different App identity.
+- [ ] scope=2 `basic` remains usable across Apps according to its all-App semantics.
+- [ ] scope=1 `global_plus` remains usable across Apps according to its all-App semantics.
+- [ ] After App A obtains `scope=3 app_plus`, make verification unavailable and launch App B: the App A cached high privilege must not be reused.
+- [ ] Negative variant: keep/forge the same BundleID but use a different executable or Mach-O UUID; cached `app_plus` must be cleared/rejected.
 - [ ] After grace/token expiry, access fails according to policy rather than remaining permanently unlocked.
+
+Release blocker: cached `app_plus` survives an executable/Mach-O UUID identity mismatch.
 
 ## 13. 2405 compatibility regression
 
@@ -220,15 +233,17 @@ After a successful online verification:
 
 All conditions must be true before preparing `source-v2026092406`:
 
-- [ ] BaoTa migration verified.
+- [ ] BaoTa migration verified, including the real InnoDB identity index.
 - [ ] scope=2 device test passed.
 - [ ] scope=3 matching App device test passed.
 - [ ] scope=3 different-App device test passed.
 - [ ] BundleID-only spoof negative test passed.
+- [ ] scope=3 offline full-identity cache negative test passed.
 - [ ] scope=1 device test passed.
 - [ ] Multi-card merge test passed.
 - [ ] Game update notification passed.
 - [ ] Runtime notice passed.
+- [ ] Bootstrap/API admin misconfiguration guard passed.
 - [ ] API domain rotation passed.
 - [ ] Bootstrap failover passed.
 - [ ] Last-Known-Good passed.

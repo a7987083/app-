@@ -35,6 +35,13 @@ Baseline: `source-v2026092405`; development branch `release/2026092406-dylib-glo
 - 业务 API 域名不再作为唯一固定入口；服务器/域名迁移可通过运行配置完成。
 - 保留物理边界：如果所有 Bootstrap、旧 endpoint 和本地有效缓存同时失效，旧客户端无法凭空发现未来服务器。
 
+### Pre-release hardening
+
+- `app_plus` 离线 grace 不再只按 BundleID 复用缓存：离线恢复时重新比对当前 BundleID、`CFBundleExecutable` 和主 Mach-O UUID；不匹配即清除缓存并拒绝高级权限。`basic/global_plus` 的跨 App 语义保持不变。
+- `fa_ipa_app_identity.idx_runtime_identity` 从较长的 `utf8mb4` 联合前缀收敛为 `bundle_id(64) + executable(64) + macho_uuid(36)`；字段本身长度不变，降低旧 BaoTa/InnoDB 索引长度限制风险。
+- 后台运行配置增加防自锁校验：Bootstrap URL 非空时至少需要一个 API Endpoint；Bootstrap/API 同时为空仍允许，用于 2405/legacy `endpointURL` 兼容。
+- 对上述三项均增加 contract 保护，防止后续回退。
+
 ### Admin / integration documentation
 
 - Dylib Center 主页面调整为：注册 → 接入说明 → 权限模型 → 运行配置与通知 → 版本控制 → 验证记录。
@@ -45,17 +52,19 @@ Baseline: `source-v2026092405`; development branch `release/2026092406-dylib-glo
 
 Runtime code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`.
 Verification-hardening checkpoint: `f713e449e3a2a6ec0a0aa4405984063093cb23b1`.
+Final pre-release code checkpoint: `38405039baf83de0e1bcb5ae2db4f4645c349bed`.
 
-- IPA Online Update Release Gate `36088476047` — SUCCESS：2406 runtime 文件进入在线更新 ZIP；PHP 7.0；2406 SQL 在 MySQL 5.7 连续执行两次；2406 contract 通过。
-- IPA Data Center CI `36095035822` — SUCCESS：contracts / PHP 7.0 / MySQL 5.7 / 100k / iPhoneOS SDK arm64 全部通过。
-- 新增 `tests/dylib_runtime_access_mysql_test.php`，在真实 ThinkPHP Db + PHP 7.0 + MySQL 5.7 下直接调用 `DylibRuntimeAccessService`。
+- 最终 IPA Online Update Release Gate `36097524318` — SUCCESS：真实 online-update ZIP 构建和 payload 校验通过；PHP 7.0；2406 migration 在 MySQL 5.7 连续执行两次；2406 contract 与真实 runtime MySQL 行为测试通过。
+- IPA Data Center CI `36097528583` — SUCCESS：contracts / PHP 7.0 / MySQL 5.7 / 100k / iPhoneOS SDK arm64 真编译全部通过。
 - 真实数据库授权矩阵覆盖：无卡 block、scope=2 basic、scope=3 命中 app_plus、scope=3 不命中 block、仅改 BundleID 冒充失败、scope=1 global_plus、同 UDID 多卡按当前 App 取最高适用权限、解析状态离开 `parsed` 后身份 stale。
-- 同一 checkpoint 的 PR checks：Regression `36095035702` — SUCCESS；Phase14 `36095035738` — SUCCESS；Phase 17.2 `36095035839` — SUCCESS。
+- Regression Checks `36097528593` — SUCCESS。
+- Phase14 Production Hardening `36097528557` — SUCCESS。
+- Phase 17.2 Authorization Integrity `36097528546` — SUCCESS。
 
 ### Release boundary
 
 - `source-v2026092405` 仍是当前正式稳定版。
-- 2406 尚未创建 tag/release，也尚未在真实 BaoTa/真机完成三种卡密、scope=3 App 防伪、更新通知和服务器迁移容错验收。
+- 2406 尚未创建 tag/release，也尚未在真实 BaoTa/真机完成三种卡密、scope=3 App 防伪、scope=3 离线缓存身份绑定、更新通知和服务器迁移容错验收。
 - 真机/生产验收完成前，不将 2406 记录为正式发布。
 
 ## 2026-09-24 — Release 2026092405

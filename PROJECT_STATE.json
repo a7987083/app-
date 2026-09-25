@@ -10,9 +10,10 @@
   },
   "development": {
     "version": "2026092406",
-    "status": "development_validated_not_released",
+    "status": "pre_release_code_validated_production_acceptance_pending",
     "runtime_code_checkpoint": "b5c3c00bf774583aed0879c6524d3ece1f1151e0",
     "verification_hardening_checkpoint": "f713e449e3a2a6ec0a0aa4405984063093cb23b1",
+    "final_pre_release_code_checkpoint": "38405039baf83de0e1bcb5ae2db4f4645c349bed",
     "pr": 25,
     "pr_state": "draft",
     "phase": "Dylib runtime authorization, parsed App identity, runtime notices and migratable endpoints",
@@ -26,23 +27,26 @@
       "protocol v2 additive signing fields while preserving v1 canonical order",
       "access_level and permissions response fields",
       "App-bound v2 session token claims",
+      "app_plus offline cache revalidates BundleID, executable and Mach-O UUID",
       "parsed-IPA game update detection",
       "server-controlled update text and runtime notices",
       "multiple Bootstrap and API endpoints with signed runtime config and Last-Known-Good cache",
+      "reject Bootstrap-enabled runtime config when API endpoint list is empty while preserving both-empty legacy mode",
+      "legacy-safe 64/64/36 utf8mb4 runtime identity index prefixes without truncating stored fields",
       "reorganized Dylib Center integration documentation",
       "idempotent MySQL 5.7 migration and clean-install schema",
       "real MySQL integration matrix for card scopes and App identity spoof-negative behavior"
     ]
   },
   "build": {
-    "online_update_gate_run": 36088476047,
+    "latest_validated_code_head": "38405039baf83de0e1bcb5ae2db4f4645c349bed",
+    "online_update_gate_run": 36097524318,
     "online_update_gate": "passed",
     "online_update_payload_2406": "passed",
     "mysql57_2406_migration_twice": "passed",
     "php70": "passed",
     "dylib_runtime_contract": "passed",
-    "latest_behavior_validation_head": "f713e449e3a2a6ec0a0aa4405984063093cb23b1",
-    "ipa_data_center_ci_run": 36095035822,
+    "ipa_data_center_ci_run": 36097528583,
     "ipa_data_center_ci": "passed",
     "runtime_access_mysql_integration": "passed",
     "runtime_access_mysql_matrix": [
@@ -55,14 +59,17 @@
       "multi_card_highest_applicable_access",
       "stale_identity_rejected"
     ],
+    "offline_app_plus_identity_contract": "passed",
+    "legacy_safe_runtime_identity_index_contract": "passed",
+    "bootstrap_endpoint_config_guard_contract": "passed",
     "ios_arm64_compile": "passed",
     "mysql57": "passed",
     "mysql_100k_scale": "passed",
-    "regression_run": 36095035702,
+    "regression_run": 36097528593,
     "regression": "passed",
-    "phase14_run": 36095035738,
+    "phase14_run": 36097528557,
     "phase14": "passed",
-    "phase17_2_run": 36095035839,
+    "phase17_2_run": 36097528546,
     "phase17_2": "passed"
   },
   "runtime": {
@@ -72,8 +79,10 @@
     "scope1_global_plus": "not_verified_on_device",
     "multi_card_access_merge": "validated_in_mysql_ci_not_verified_on_device",
     "scope3_bundleid_spoof_negative_test": "validated_in_mysql_ci_not_verified_on_device",
+    "offline_app_plus_full_identity_binding": "validated_by_contract_and_ios_compile_not_verified_on_device",
     "game_update_notice": "not_verified_on_device",
     "runtime_notice": "not_verified_on_device",
+    "bootstrap_config_guard": "validated_by_contract_not_verified_in_real_admin_ui",
     "bootstrap_failover": "not_verified_on_production_network",
     "last_known_good": "not_verified_on_production_network",
     "offline_grace": "not_verified_on_production_network"
@@ -81,16 +90,18 @@
   "release": {
     "version_2026092406_tag_created": false,
     "version_2026092406_published": false,
-    "release_blocker": "Complete BaoTa migration and real-device authorization/identity/update/notice/failover validation first"
+    "release_blocker": "Complete BaoTa migration and real-device authorization/identity/offline-cache/update/notice/failover validation first"
   },
   "known_risks": [
     "scope=3 requires a parsed IPA identity and an active ipa_asset -> ipa_category_binding mapping; unparsed or unbound apps intentionally cannot receive app_plus",
     "BundleID is not a sufficient App identity; runtime matching also uses executable and Mach-O UUID resolved against server-side parsed data",
+    "app_plus offline grace is code-bound to BundleID + executable + Mach-O UUID but still requires real-device negative validation",
+    "the runtime identity index was shortened for old InnoDB compatibility but the actual BaoTa MySQL configuration still requires migration verification",
     "changing the server/domain is resilient only while at least one Bootstrap, legacy endpoint, or valid Last-Known-Good configuration remains reachable/usable",
     "separately purchased entitlements such as cloud save must not be inferred from basic/app_plus/global_plus",
     "real BaoTa and real-device behavior remains unverified despite contract and MySQL behavior CI success"
   ],
-  "next_task": "Deploy 2406 in a test/BaoTa environment, re-parse an actively bound App, then execute the real-device matrix for scope=2/scope=3/scope=1, BundleID-spoof negative testing, updates/notices, API-domain migration, Bootstrap failover, Last-Known-Good and offline grace before preparing source-v2026092406.",
+  "next_task": "Deploy 2406 in a test/BaoTa environment, re-parse an actively bound App, then execute the real-device matrix for scope=2/scope=3/scope=1, BundleID-spoof and offline app_plus identity negative testing, updates/notices, API-domain migration, Bootstrap failover, Last-Known-Good and offline grace before preparing source-v2026092406.",
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
   "handoff": "HANDOFF.md",

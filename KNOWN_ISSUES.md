@@ -2,8 +2,8 @@
 
 ## P0 — 2026092406 real BaoTa / device validation pending
 
-- 2406 code and CI are complete, but `source-v2026092406` has NOT been published.
-- Required before release: real BaoTa migration/online-update, real iOS device card-scope matrix, App identity spoof-negative testing, update/notice rendering, and server/domain migration failover testing.
+- 2406 pre-release code checkpoint `38405039baf83de0e1bcb5ae2db4f4645c349bed` and all automated gates are green, but `source-v2026092406` has NOT been published.
+- Required before release: real BaoTa migration/online-update, real iOS device card-scope matrix, App identity spoof-negative testing, offline app_plus identity-cache negative testing, update/notice rendering, and server/domain migration failover testing.
 - CI success is not treated as production runtime proof.
 
 ## P0 — scope=3 App identity requires parsed + actively bound IPA data
@@ -16,14 +16,26 @@
 ## P0 — BundleID-only spoof still needs real-device confirmation
 
 - 2406 no longer treats BundleID as sufficient App identity. Matching also uses executable and Mach-O `LC_UUID` against server-side parsed identity.
-- `tests/dylib_runtime_access_mysql_test.php` now validates the negative case on PHP 7.0 + MySQL 5.7 + real ThinkPHP `Db`: changing only BundleID does not resolve the spoofed App and does not grant `app_plus`.
+- `tests/dylib_runtime_access_mysql_test.php` validates the negative case on PHP 7.0 + MySQL 5.7 + real ThinkPHP `Db`: changing only BundleID does not resolve the spoofed App and does not grant `app_plus`.
 - The same negative case still needs a real-device test because runtime collection/hooking behavior cannot be fully proven by server-side CI.
+
+## P0 — app_plus offline cache identity still needs real-device confirmation
+
+- Online `scope=3 -> app_plus` and its offline grace now use the same identity boundary: BundleID + `CFBundleExecutable` + main Mach-O UUID.
+- The iOS client clears the cached authorization and refuses offline `app_plus` if the current executable or UUID does not match the cached resolved App identity.
+- Contract coverage and real iPhoneOS arm64 compilation are green, but a real-device offline negative test is still required before release.
 
 ## P1 — Runtime endpoint migration still has a physical discovery boundary
 
 - 2406 supports multiple Bootstrap endpoints, multiple API endpoints, signed runtime config, Last-Known-Good cache, legacy direct endpoint fallback and offline authorization grace.
-- This avoids tying the Dylib to one business domain, but it cannot provide impossible recovery: if all Bootstrap endpoints, all legacy endpoints and every usable local cached config are unavailable simultaneously, an old client cannot discover a future server from nothing.
+- Admin now rejects the known unsafe state “Bootstrap configured but zero API endpoints”; Bootstrap/API both empty remains a valid legacy direct-endpoint configuration.
+- This cannot provide impossible recovery: if all Bootstrap endpoints, all legacy endpoints and every usable local cached config are unavailable simultaneously, an old client cannot discover a future server from nothing.
 - Production migration tests must deliberately break one Bootstrap, rotate the primary API domain, then validate failover and LKG behavior.
+
+## P1 — BaoTa / old InnoDB runtime-identity index still needs real migration proof
+
+- The runtime identity lookup fields remain full length, while `idx_runtime_identity` uses `bundle_id(64), executable(64), macho_uuid(36)` prefixes to reduce utf8mb4 composite-key pressure on conservative MySQL 5.7/InnoDB installations.
+- GitHub MySQL 5.7 applies the 2406 migration twice successfully, but the user's actual BaoTa/MySQL settings can differ and must still be verified before release.
 
 ## P1 — Remote notices and update messages are server controlled
 
