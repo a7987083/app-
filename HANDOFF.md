@@ -7,13 +7,14 @@
 - Stable branch: `release/2026092405-dylib-lifecycle-integration`
 - Stable release commit: `f2cb8536b2a5196b4dab1c135c74033f740ed398`
 - Active development branch: `release/2026092406-dylib-global-app-support`
-- Validated 2406 code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`
+- Runtime code checkpoint: `b5c3c00bf774583aed0879c6524d3ece1f1151e0`
+- Verification-hardening checkpoint: `f713e449e3a2a6ec0a0aa4405984063093cb23b1`
 - Draft PR: `#25`
 - 2406 is NOT tagged/released yet.
 
 ## 2026092406 implementation
 
-1. Dylib validity and user feature entitlement are now separate decisions. The active verifier no longer uses per-Dylib BundleID binding as the App allow-list.
+1. Dylib validity and user feature entitlement are separate decisions. The active verifier no longer uses per-Dylib BundleID binding as the App allow-list.
 2. Card scopes map to runtime access levels:
    - `scope=2` -> `basic`
    - `scope=3` + server-recognized current App -> `app_plus`
@@ -32,17 +33,19 @@
 
 ## Validation evidence
 
-- IPA Online Update Release Gate `36088476047`: SUCCESS on validated code checkpoint `b5c3c00...`.
+- IPA Online Update Release Gate `36088476047`: SUCCESS on runtime code checkpoint `b5c3c00...`.
   - 2406 runtime files present in the real online-update ZIP.
   - PHP 7.0 checks passed.
   - 2406 migration applied twice on MySQL 5.7 successfully.
   - 2406 runtime contract passed.
-- Draft PR #25 checks on docs head `f7f043542a17dcae92217b7d84466c60014a53c4`:
-  - IPA Data Center CI `36088861999`: SUCCESS.
-  - Regression Checks `36088862017`: SUCCESS.
-  - Phase14 Production Hardening `36088862090`: SUCCESS.
-  - Phase 17.2 Authorization Integrity `36088861990`: SUCCESS.
-- IPA Data Center CI successfully ran PHP 7.0, MySQL 5.7, 100k scale contracts and a real iPhoneOS SDK arm64 compile of `clients/ios/ZONDylibVerify/ZONVerifyClient.m`.
+- Verification-hardening checkpoint `f713e449...` adds `tests/dylib_runtime_access_mysql_test.php` and runs it under PHP 7.0 + MySQL 5.7 against the real ThinkPHP `Db` layer and `DylibRuntimeAccessService`.
+- IPA Data Center CI `36095035822`: SUCCESS.
+  - Real runtime-access matrix: no card -> block; scope=2 -> basic; matching scope=3 -> app_plus; non-matching scope=3 -> block; BundleID-only spoof -> block; scope=1 -> global_plus; scope=2 + scope=3 multi-card merge -> app_plus on matching App / basic elsewhere; stale parsed identity -> rejected.
+  - PHP 7.0, MySQL 5.7, 100k scale contracts and real iPhoneOS SDK arm64 compile all succeeded in the same CI run.
+- Same checkpoint PR checks:
+  - Regression Checks `36095035702`: SUCCESS.
+  - Phase14 Production Hardening `36095035738`: SUCCESS.
+  - Phase 17.2 Authorization Integrity `36095035839`: SUCCESS.
 
 ## Compatibility boundary
 
@@ -55,7 +58,7 @@
 
 - Real BaoTa application of the 2406 migration / online-update payload.
 - Real iOS device behavior for `scope=2`, `scope=3`, `scope=1`, and multiple valid cards on one UDID.
-- Negative test: another game with only a modified BundleID must not receive `scope=3 app_plus`.
+- Negative device test: another game with only a modified BundleID must not receive `scope=3 app_plus`.
 - Game-update notice rendering and arbitrary server-controlled title/body/button text.
 - Runtime notice targeting and button actions.
 - API-domain migration, Bootstrap failover, Last-Known-Good config and offline-grace behavior under real network failures.
