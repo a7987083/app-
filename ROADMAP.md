@@ -42,6 +42,8 @@
 - [x] Regression Checks `36097528593` — SUCCESS。
 - [x] Phase14 Production Hardening `36097528557` — SUCCESS。
 - [x] Phase 17.2 Authorization Integrity `36097528546` — SUCCESS。
+- [x] 新增非正式 `Dylib 2406 Acceptance Package` workflow；Run `36100165394` — SUCCESS，仅上传验收 artifact，不创建 tag/GitHub Release、不修改正式版本 metadata。
+- [x] 验收 Artifact `zonoe-2406-acceptance-36100165394`，ID `10849162793`；artifact digest `sha256:c4245424062f5a893bd6791dee119b8e72a7341a43f608ecec5d94a743cee20f`；内层 `zonoe-online-update.zip` SHA256 `ae2e6b34ce5675b76afafe8f96711d81d866cf66770ffefc0c393fecf0ad3bf0`。
 - [ ] 真实 BaoTa 执行 2406 migration / 在线更新验证。
 - [ ] 真机分别验证 `scope=2`、`scope=3`、`scope=1` 以及同 UDID 多卡权限合并。
 - [ ] 真机验证“另一个游戏仅修改 BundleID”不能获得 scope=3 `app_plus`。
@@ -78,4 +80,4 @@
 
 ## Next Task
 
-在测试/BaoTa 环境部署 2406 migration，并重新解析至少一个已绑定 App 生成 `fa_ipa_app_identity`；随后用真实 Dylib/UDID 逐项验证三种卡密权限、scope=3 App 身份防伪与离线缓存身份绑定、游戏更新/远程通知，以及 Bootstrap/API 域名切换与离线容错。所有真机结果通过前不创建 `source-v2026092406` 正式发布。
+使用验收 Artifact `10849162793` 在测试/BaoTa 环境部署 2406 migration，并重新解析至少一个已绑定 App 生成 `fa_ipa_app_identity`；随后用真实 Dylib/UDID 逐项验证三种卡密权限、scope=3 App 身份防伪与离线缓存身份绑定、游戏更新/远程通知，以及 Bootstrap/API 域名切换与离线容错。所有真机结果通过前不创建 `source-v2026092406` 正式发布。

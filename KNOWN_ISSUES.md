@@ -3,8 +3,15 @@
 ## P0 — 2026092406 real BaoTa / device validation pending
 
 - 2406 pre-release code checkpoint `38405039baf83de0e1bcb5ae2db4f4645c349bed` and all automated gates are green, but `source-v2026092406` has NOT been published.
+- A non-release BaoTa/staging artifact is now available from Acceptance Package Run `36100165394`, Artifact ID `10849162793`; inner online-update ZIP SHA256 is `ae2e6b34ce5675b76afafe8f96711d81d866cf66770ffefc0c393fecf0ad3bf0`.
 - Required before release: real BaoTa migration/online-update, real iOS device card-scope matrix, App identity spoof-negative testing, offline app_plus identity-cache negative testing, update/notice rendering, and server/domain migration failover testing.
 - CI success is not treated as production runtime proof.
+
+## P0 — Acceptance artifact is not a formal release
+
+- `zonoe-2406-acceptance-36100165394` is explicitly marked `ACCEPTANCE ONLY - NOT A FORMAL RELEASE`.
+- It does not create a GitHub tag or Release and does not change formal `VERSION`, `public/update/ver.txt`, or `ver.json`; stable metadata remains `2026092405` until production acceptance completes.
+- Do not expose this artifact as the normal production update feed before all P0 BaoTa/device checks pass.
 
 ## P0 — scope=3 App identity requires parsed + actively bound IPA data
 

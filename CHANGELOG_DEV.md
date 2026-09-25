@@ -60,10 +60,14 @@ Final pre-release code checkpoint: `38405039baf83de0e1bcb5ae2db4f4645c349bed`.
 - Regression Checks `36097528593` — SUCCESS。
 - Phase14 Production Hardening `36097528557` — SUCCESS。
 - Phase 17.2 Authorization Integrity `36097528546` — SUCCESS。
+- 新增 `.github/workflows/dylib-2406-acceptance-package.yml`：只构建/上传验收包，不创建 tag、GitHub Release，也不修改正式 `VERSION/ver.json/ver.txt`。
+- Dylib 2406 Acceptance Package Run `36100165394` — SUCCESS；Artifact `zonoe-2406-acceptance-36100165394` / ID `10849162793`；artifact digest `sha256:c4245424062f5a893bd6791dee119b8e72a7341a43f608ecec5d94a743cee20f`。
+- 验收包内层 `zonoe-online-update.zip` 已再次本地校验，SHA256 `ae2e6b34ce5675b76afafe8f96711d81d866cf66770ffefc0c393fecf0ad3bf0`，并确认 2406 Dylib runtime services、DylibVerify、后台 UI/JS 与 `2026092406_dylib_runtime_access.sql` 均在 payload 中。
 
 ### Release boundary
 
 - `source-v2026092405` 仍是当前正式稳定版。
+- Acceptance artifact 明确标记 `ACCEPTANCE ONLY - NOT A FORMAL RELEASE`；其中 `stable_version=2026092405`，目标验收版本为 2026092406。
 - 2406 尚未创建 tag/release，也尚未在真实 BaoTa/真机完成三种卡密、scope=3 App 防伪、scope=3 离线缓存身份绑定、更新通知和服务器迁移容错验收。
 - 真机/生产验收完成前，不将 2406 记录为正式发布。
 
@@ -78,7 +82,7 @@ Baseline: `source-v2026092404`; release commit `f2cb8536b2a5196b4dab1c135c74033f
 - 编辑时 `dylib_key` 不可修改，避免破坏旧客户端查找/HMAC 契约；验证密钥留空表示不轮换。
 - 页面重排为注册 → 接入 → 游戏授权 → 版本控制 → 验证记录。
 - 接入说明来自真实 `/index/dylib_verify/verify` 与 `ZONVerifyClient`，未新增接口。
-- 状态、动作、result_code 仅做 UI 中文映射；底层枚举、版本规则和 BundleID 行为不变。
+- 状态、动作和 result_code 仅做 UI 中文映射；底层枚举、版本规则和 BundleID 行为不变。
 - 删除使用既有 `Layer.confirm` + `Fast.api.ajax`；Backend 权限/CSRF 链保持不变。
 
 ### Verification and release
