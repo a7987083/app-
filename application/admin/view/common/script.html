@@ -1,1 +1,51 @@
 <script src="__CDN__/assets/js/require{$Think.config.app_debug?'':'.min'}.js" data-main="__CDN__/assets/js/require-backend{$Think.config.app_debug?'':'.min'}.js?v={$site.version|htmlentities}"></script>
+<script>
+require(['jquery'], function ($) {
+    function ensureApiLogClearButton() {
+        var refresh = $('#project-api-logs-refresh');
+        if (!refresh.length || $('#project-api-logs-clear-all').length) return;
+        $('<button type="button" class="btn btn-danger" id="project-api-logs-clear-all" style="margin-left:8px;"><i class="fa fa-trash"></i> 删除全部日志</button>').insertAfter(refresh);
+    }
+
+    $(document).ready(function () {
+        ensureApiLogClearButton();
+        setTimeout(ensureApiLogClearButton, 300);
+    });
+    $(document).on('shown.bs.tab.zonoeApiLogMaintenance', 'a[data-toggle="tab"]', ensureApiLogClearButton);
+
+    $(document).off('click.zonoeApiLogClearAll').on('click.zonoeApiLogClearAll', '#project-api-logs-clear-all', function () {
+        var button = $(this);
+        var ui = window.Layer || window.layer;
+        if (!ui || typeof ui.confirm !== 'function') return;
+        ui.confirm('这会永久删除 fa_api_request_log 中的全部 API 请求日志，且无法恢复。确定继续吗？', {icon:3,title:'第一次确认'}, function (first) {
+            ui.close(first);
+            ui.confirm('请再次确认：只删除 API 请求日志，不会删除 API 配置、Dylib 验证日志或其他业务数据。', {icon:3,title:'第二次确认'}, function (second) {
+                ui.close(second);
+                button.prop('disabled', true);
+                $.ajax({
+                    type: 'POST',
+                    url: 'general/apilogmaintenance/clear',
+                    dataType: 'json',
+                    data: {confirm: 'DELETE_ALL_API_LOGS'},
+                    success: function (ret) {
+                        if (!ret || ret.code !== 1) {
+                            ui.alert((ret && ret.msg) || '删除全部请求日志失败', {icon:2});
+                            return;
+                        }
+                        var deleted = ret.data && ret.data.deleted ? ret.data.deleted : 0;
+                        $('#project-api-log-body').html('<tr><td colspan="8" class="text-muted text-center">暂无API请求日志</td></tr>');
+                        $('#project-api-logs-status').text('已删除 ' + deleted + ' 条日志');
+                        ui.msg('已删除 ' + deleted + ' 条 API 请求日志', {icon:1});
+                    },
+                    error: function (xhr) {
+                        ui.alert('删除全部请求日志失败 HTTP ' + xhr.status, {icon:2});
+                    },
+                    complete: function () {
+                        button.prop('disabled', false);
+                    }
+                });
+            });
+        });
+    });
+});
+</script>
