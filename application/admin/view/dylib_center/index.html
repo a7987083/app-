@@ -208,7 +208,7 @@
                     <div class="panel-heading">
                         <strong>API 接入说明</strong> <span class="label label-info">8 个入口</span>
                         <span class="pull-right">
-                            <a href="javascript:void(0)" class="btn btn-xs btn-success" style="margin-right:10px;color:#fff" onclick="var s=document.getElementById('global-dylib-select');if(!s||!s.value){alert('请先选择 Dylib');return false;}window.location='{:url(\"dylib_api_docs/download\")}?dylib_id='+encodeURIComponent(s.value);return false;"><i class="fa fa-download"></i> 全部下载 ZIP</a>
+                            <a href="javascript:void(0)" class="btn btn-xs btn-success" style="margin-right:10px;color:#fff" onclick="var s=document.getElementById('global-dylib-select');if(!s||!s.value){alert('请先选择 Dylib');return false;}var p=window.location.pathname.replace(/\/dylib_center(?:\/index)?\/?$/,'/dylib_api_docs/download');window.location=p+'?dylib_id='+encodeURIComponent(s.value);return false;"><i class="fa fa-download"></i> 全部下载 ZIP</a>
                             <a data-toggle="collapse" href="#integration-detail" aria-expanded="false" style="color:#fff">展开 / 收起</a>
                         </span>
                     </div>
