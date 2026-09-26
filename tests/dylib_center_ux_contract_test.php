@@ -13,11 +13,15 @@ $view = file_get_contents($root . '/application/admin/view/dylib_center/index.ht
 $js = file_get_contents($root . '/public/assets/js/backend/dylib_center.js');
 $codegen = file_get_contents($root . '/public/assets/js/backend/dylib_codegen_inline.js');
 $controller = file_get_contents($root . '/application/admin/controller/DylibCenter.php');
+$docsController = file_get_contents($root . '/application/admin/controller/DylibApiDocs.php');
+$docs = file_get_contents($root . '/application/common/library/Ipa/DylibApiDocumentation.php');
 
 ux_assert($view !== false, 'Dylib Center view missing');
 ux_assert($js !== false, 'Dylib Center JS missing');
 ux_assert($codegen !== false, 'inline codegen JS missing');
 ux_assert($controller !== false, 'Dylib Center controller missing');
+ux_assert($docsController !== false, 'API docs download controller missing');
+ux_assert($docs !== false, 'API documentation catalog missing');
 
 foreach (['#tab-overview', '#tab-versions', '#tab-notices', '#tab-logs', '#tab-advanced'] as $tab) {
     ux_assert(strpos($view, 'href="' . $tab . '"') !== false, 'missing navigation tab ' . $tab);
@@ -30,6 +34,36 @@ ux_assert(strpos($view, 'id="integration-detail" class="panel-collapse collapse"
 ux_assert(strpos($view, 'id="access-model-detail" class="panel-collapse collapse"') !== false, 'access model must be collapsed by default');
 ux_assert(strpos($view, '<strong>1. Dylib 注册</strong>') === false, 'legacy numbered flat section remains');
 ux_assert(strpos($view, '<strong>4. 运行配置与通知</strong>') === false, 'runtime and notices must no longer be one flat section');
+
+// 2413: the exact Advanced/API page must expose the complete catalog, not only
+// Runtime Config + Verify + signing. Signing is its own protocol tab.
+ux_assert(strpos($view, '8 个入口') !== false, 'full API count missing');
+ux_assert(strpos($view, '全部下载 ZIP') !== false, 'download-all control missing');
+ux_assert(strpos($view, 'href="#api-doc-signature"') !== false, 'signature must be a separate protocol tab');
+foreach ([
+    '/authorization',
+    '/appstore',
+    '/index/index/apiface',
+    '/index/index/dylib',
+    '/unbind',
+    '/unbind/query',
+    '/index/dylib_verify/config',
+] as $path) {
+    ux_assert(strpos($view, $path) !== false, 'full API catalog missing ' . $path);
+}
+ux_assert(strpos($view, '{$runtimeConfig.verify_path|htmlentities}') !== false, 'verify path must remain dynamic');
+ux_assert(strpos($view, 'HTML 页面兼容入口') !== false || strpos($view, 'HTML 页面') !== false, 'page routes must not be mislabeled as JSON APIs');
+
+foreach (['README.md', 'API_OVERVIEW.md', 'API_REFERENCE.md', 'ERROR_CODES.md', 'SIGNATURE.md', 'RESPONSE_MODEL.md', 'FLOW.md', 'schemas/api.json', 'schemas/error_codes.json'] as $name) {
+    ux_assert(strpos($docs, $name) !== false, 'download bundle missing ' . $name);
+}
+foreach (['Objective-C.md', 'Swift.md', 'curl.md', 'Python.md'] as $name) {
+    ux_assert(strpos($docs, $name) !== false, 'example bundle missing ' . $name);
+}
+ux_assert(strpos($docs, '<VERIFY_SECRET>') !== false, 'download bundle must use secret placeholder');
+ux_assert(strpos($docsController, 'verify_secret_ciphertext') === false, 'download controller must never read encrypted Verify Secret');
+ux_assert(strpos($docsController, 'DylibApiDocumentation::exportFiles') !== false, 'download controller must use canonical docs exporter');
+ux_assert(strpos($docsController, "header('Content-Type: application/zip')") !== false, 'download response must be a ZIP');
 
 ux_assert(strpos($codegen, "$('#codegen-slot').html(panelHtml())") !== false, 'codegen must render into overview slot');
 ux_assert(strpos($codegen, 'id="dcg-options" class="collapse"') !== false, 'codegen advanced options should be collapsed');
@@ -55,4 +89,4 @@ foreach (["param('dylib_key'", "param('bundle_id'", "param('result_code'", "para
 }
 ux_assert(strpos($controller, 'min(1000') !== false, 'server pagination must allow 1000 rows');
 
-fwrite(STDOUT, "OK dylib_center_ux_contract 2411 shared-dylib version-help notice-crud log-filter-delete\n");
+fwrite(STDOUT, "OK dylib_center_ux_contract 2413 full-api-catalog docs-zip shared-dylib version-help notice-crud log-filter-delete\n");
