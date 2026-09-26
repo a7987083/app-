@@ -1,63 +1,90 @@
-# ZONOE 软件源 2026092411
+# ZONOE 软件源 2026092412
 
-## 更新内容
+## Dylib API 接入中心
 
-本版本以 `source-v2026092410` 为升级基线，重点整理 Dylib 验证中心的日常使用体验，并补齐远程通知与验证记录管理能力。
+本版本以 `source-v2026092411` 为升级基线，将 Dylib 验证中心的职责明确收敛为 **API 验证服务与接入文档中心**。
 
-### 当前 Dylib 统一
+### 职责边界
 
-- 页面增加统一“当前 Dylib”上下文。
-- OC 接入代码、版本管理、接入说明和验证记录跟随同一 Dylib。
-- 修复在“OC 接入代码”中已经选择 Dylib，但“接入说明”仍显示“请选择已注册 Dylib”的问题。
-- 接入说明中的运行配置 URL 会直接显示实际 `dylib_key`。
+验证中心负责：
 
-### 版本管理易用性
+- Dylib 注册与允许版本；
+- `/index/dylib_verify/config` 运行配置发现；
+- `/index/dylib_verify/verify` 在线验证；
+- Protocol v1 / v2 HMAC-SHA256 canonical；
+- Verify Secret；
+- 稳定字符串 `code`、`action`、`message` 与返回字段；
+- `permissions`、`access_level`、`notice`、`app_update` 等 API 数据；
+- 验证日志和 API 接入说明。
 
-- `Build` 在后台显示为“内部构建号”，并解释其用于同一版本多次重新编译的区分。
-- SHA256 明确说明：留空表示不校验文件指纹；填写后客户端 Dylib 文件必须与登记值一致。
-- 离线容错改为“离线可用”语义，说明服务端暂时不可访问时缓存验证结果的可用时长。
-- 验证失败动作全面中文化：允许继续使用、禁用受保护功能、只显示提示、完全阻止使用。
-- 客户端提示改称“用户提示”，说明用于版本/校验异常时给客户端显示。
-- SHA256、离线容错、失败动作、用户提示归入默认折叠的“高级校验设置”。
+验证中心不负责：UDID 输入/采集界面、卡密输入窗口、公告弹窗、悬浮窗、授权信息页或其它客户端产品 UI。这些由实际 OC/Swift 客户端工程自行实现。
 
-### 远程通知
+### Canonical API contract
 
-- 通知列表新增“启用 / 停用 / 删除”。
-- 删除操作增加二次确认。
-- 最低权限不再直接显示英文枚举：
-  - `basic` -> 普通授权
-  - `app_plus` -> 指定 App 高级授权
-  - `global_plus` -> 全软件源高级授权
-- 通知表单增加用途说明，明确通知 Key、Revision、优先级属于低频高级字段。
+新增 `application/common/library/Ipa/DylibApiContract.php`，集中记录当前真实协议：
 
-### 验证记录
+- v1/v2 请求字段；
+- 返回字段；
+- HMAC canonical 字段顺序；
+- `allow / disable_feature / show_message / block` action；
+- 当前真实 success/error string codes 及客户端建议。
 
-- 默认每页 `1000` 条，可切换 `100 / 500 / 1000`。
-- 新增组合筛选：Dylib、验证结果、BundleID、Dylib 版本、UDID Hash 前缀、开始/结束时间。
-- 新增单条删除、勾选批量删除、删除当前筛选结果。
-- “删除当前筛选结果”要求前端至少存在一个筛选条件，降低误清空风险。
+2412 不引入新的数字错误码，继续使用现有字符串 `code`，避免破坏已经存在的客户端协议。
+
+### API 接入说明
+
+后台的“接入说明”升级成详细 API 文档页，直接提供：
+
+- Endpoint 与请求方式；
+- 请求字段、类型、必填条件和 v1/v2 差异；
+- 返回字段与用途；
+- Protocol v1/v2 canonical；
+- HMAC-SHA256 规则；
+- 错误码与客户端建议；
+- 推荐接入顺序和职责边界。
+
+客户端程序逻辑应使用 `ok + code`；`message` 是服务器返回的可展示文字，可原样显示，但不应解析 message 文本判断业务状态。
+
+### API 接入示例生成器 2.2.0
+
+原 OC Codegen 重新定位为测试/参考工具，而非完整客户端生成器。
+
+生成包现在包含：
+
+- `*DylibConfig.h/.m`
+- `*DylibVerify.h/.m`
+- `GeneratedConfig.json`
+- `INTEGRATION.md`
+- `API_REFERENCE.md`
+- `ERROR_CODES.md`
+- `EXAMPLES.md`
+- `generation-manifest.json`
+
+实际客户端可以完全不使用这些生成 OC 文件，直接按照 API 文档自行搭建。
 
 ### 兼容性
 
-2411 不修改：
+2412 不改变：
 
-- `/index/dylib_verify/config`
-- `/index/dylib_verify/verify`
-- v1 / v2 HMAC canonical
-- Runtime Config 签名协议
-- Objective-C Generator 2.1.0 的协议输出
-- 现有数据库表结构
+- v1 canonical；
+- v2 canonical；
+- `/index/dylib_verify/config`；
+- `/index/dylib_verify/verify`；
+- 当前字符串 result code wire protocol；
+- Runtime Config 签名逻辑；
+- 数据库表结构；
+- 旧 `Index::dylib()` / `Index::apiface()` 兼容接口。
 
-因此从 2410 升级不需要调整现有客户端协议或新增数据库 migration。
+Legacy `Index::apiface()` 的签名协议仍与新的 per-Dylib Verify Secret 验证协议分离，不得混用。
 
-### 已完成验证
+### 开发验证
 
-- `OC Codegen CI #10` / Run `36232452762`：success。
-- PHP 7.0 lint：success。
-- JavaScript syntax check：success。
-- OC Codegen contract：success。
+- OC Codegen CI #14 / Run `36239192712`：success。
+- PHP 7.0 lint/contracts：success。
+- JavaScript syntax：success。
+- API reference / error-code generation contract：success。
 - Dylib Center UX contract：success。
-- 在线更新包内容检查：success。
+- Online-update package content gate：success。
 - MySQL 5.7 migration regression：success。
 
-目标升级路径：`source-v2026092410 -> source-v2026092411`。
+目标升级路径：`source-v2026092411 -> source-v2026092412`。

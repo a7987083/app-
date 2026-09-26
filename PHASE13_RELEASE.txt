@@ -1,30 +1,29 @@
-ZONOE 软件源 Release 2026092411
-版本：2026092411
-基线：source-v2026092410
-阶段：Dylib Center UX 整理与验证记录管理
-发布分支：release/2026092411-dylib-center-ux
+ZONOE 软件源 Release 2026092412
+版本：2026092412
+基线：source-v2026092411
+阶段：Dylib API 接入中心
+发布分支：release/2026092412-api-integration-center
 发布状态：正式发布候选（由 ZONOE Source Release CI 完成发布）
 
 更新内容：
-1. 新增全局“当前 Dylib”上下文；OC 接入代码、版本管理、接入说明和验证记录可同步切换当前 Dylib。
-2. 修复“OC 接入代码已选择 Dylib，但接入说明仍显示请选择已注册 Dylib”的前端状态脱节。
-3. 版本管理改为更易理解的中文：Build 改称内部构建号；解释 SHA256、离线可用时间、验证失败动作与用户提示用途。
-4. 版本高级校验设置默认折叠，日常只保留版本号、内部构建号、状态等高频字段。
-5. 远程通知增加启用、停用和删除；最低权限 basic/app_plus/global_plus 全部以中文展示。
-6. 验证记录支持 Dylib、结果、BundleID、版本、UDID Hash、时间范围组合筛选。
-7. 验证记录支持每页 100/500/1000，默认 1000；支持单条删除、勾选批量删除、按当前筛选结果删除。
-8. 2411 不修改客户端验证协议、v1/v2 HMAC canonical、Runtime Config 签名、OC Codegen 生成协议或数据库表结构。
+1. Dylib 验证中心职责收敛为 API 提供方：验证接口、HMAC、错误码、运行配置、通知/更新数据与验证日志；客户端 UI 不属于验证中心。
+2. 新增 DylibApiContract，集中记录真实请求字段、返回字段、v1/v2 canonical、action 和 result code。
+3. 保持既有字符串 code 协议，不新增破坏兼容性的数字错误码。
+4. Objective-C Generator 升级到 2.2.0，明确定位为 API 测试/参考代码生成器。
+5. 生成包新增 API_REFERENCE.md、ERROR_CODES.md、EXAMPLES.md；实际客户端可以不使用生成 OC，直接按 API 文档自行实现。
+6. 后台“API 接入说明”增加接口、请求参数、返回字段、错误码、签名和接入原则。
+7. 客户端业务判断应使用 ok + code；message 可作为服务器提示展示，但不得依赖 message 文本判断业务状态。
+8. notice / app_update / permissions / access_level 均为 API 返回数据，如何显示由客户端工程自行决定。
+9. 在线更新 manifest 新增 application/common/library/Ipa/DylibApiContract.php。
+10. 现有 v1/v2 HMAC wire contract、数据库结构和 legacy Index API 均保持兼容。
 
-验证：
-- OC Codegen CI #10 / Run 36232452762：success。
-- PHP 7.0 lint：success。
+开发验证：
+- OC Codegen CI #14 / Run 36239192712：success。
+- PHP 7.0 lint/contracts：success。
 - JavaScript syntax：success。
-- OC Codegen contract：success。
-- Dylib Center UX contract：success，覆盖全局 Dylib、版本说明、通知 CRUD、日志筛选/删除。
-- 在线更新包内容检查：success。
-- MySQL 5.7 migration regression：success；2411 无新增数据库表结构 migration。
+- API reference/error-code codegen contract：success。
+- Dylib Center UX contract：success。
+- Online-update package content gate：success。
+- MySQL 5.7 migration regression：success。
 
-在线更新：
-- 目标升级：source-v2026092410 -> source-v2026092411。
-- 正式 Release 必须包含 zonoe-online-update.zip 与 zonoe-online-update.zip.sha256。
-- 继续执行 GitHub Release 检测、SHA256、备份、文件覆盖、版本写入、完整性校验与失败回滚。
+在线更新目标：source-v2026092411 -> source-v2026092412。
