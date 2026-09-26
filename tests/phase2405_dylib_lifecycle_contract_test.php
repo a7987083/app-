@@ -80,11 +80,12 @@ requireContains($jsCompact, ".prop('readonly',true)", 'edit UI keeps dylib key r
 
 // Legacy v1 signing contract and endpoint remain present for already shipped clients.
 // 2412 replaces the old one-line compatibility sentence with a detailed API guide,
-// so assert the actual documented protocol rather than stale copy text.
+// so assert protocol semantics rather than exact Chinese copy.
 requireContains($readme, 'Protocol v1', 'legacy protocol documented');
 requireContains($view, 'Protocol v1 canonical', 'legacy protocol visible in API integration guide');
 requireContains($view, 'udid\\nbundle_id\\ndylib_key\\ndylib_version\\ndylib_build\\ndylib_sha256\\ntimestamp\\nnonce', 'v1 canonical ordering visible in API integration guide');
-requireContains($view, '业务判断使用 <code>ok</code> + <code>code</code>', '2412 result-code handling visible in API integration guide');
+requireContains($view, '<code>ok</code> + <code>code</code>', '2412 result-code handling visible in API integration guide');
+requireContains($view, '<code>message</code>', '2412 message field visible in API integration guide');
 requireContains($client, '@"dylib_key": self.configuration.dylibKey', 'client dylib_key payload');
 requireContains($client, '@"bundle_id": bundleID', 'client BundleID payload');
 requireContains($publicController, 'if (!$this->request->isPost())', 'verification POST-only contract');
