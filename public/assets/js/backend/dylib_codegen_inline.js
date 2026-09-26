@@ -7,26 +7,35 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
     function panelHtml() {
         return ''
             + '<div class="panel panel-success" id="section-codegen">'
-            + '  <div class="panel-heading"><strong>5. OC 接入代码生成</strong> <span class="text-muted">从当前 Dylib 验证配置生成 2 个 .h + 2 个 .m</span></div>'
+            + '  <div class="panel-heading"><strong>OC 接入代码</strong> <span class="text-muted">自动读取 Dylib、版本、Bootstrap、API 和验证密钥</span></div>'
             + '  <div class="panel-body">'
-            + '    <div class="alert alert-warning"><strong>注意：</strong>生成的 <code>*DylibConfig.m</code> 会包含当前 Dylib 客户端协议所需的验证密钥。仅用于受控工程，不要提交到公开仓库。后台管理密钥、数据库凭据和管理 Token 不会写入。</div>'
             + '    <div class="row">'
-            + '      <div class="col-sm-3 form-group"><label>目标 Dylib</label><select id="dcg-dylib" class="form-control"><option value="">请选择 Dylib</option></select></div>'
-            + '      <div class="col-sm-3 form-group"><label>版本</label><select id="dcg-version" class="form-control"><option value="">先选择 Dylib</option></select></div>'
-            + '      <div class="col-sm-2 form-group"><label>类前缀</label><input id="dcg-prefix" class="form-control" value="ZON" maxlength="8"></div>'
-            + '      <div class="col-sm-2 form-group"><label>最低 iOS</label><input id="dcg-ios" class="form-control" value="13.0"></div>'
-            + '      <div class="col-sm-2 form-group"><label>超时（秒）</label><input id="dcg-timeout" type="number" min="3" max="120" class="form-control" value="10"></div>'
+            + '      <div class="col-sm-5 form-group"><label>目标 Dylib</label><select id="dcg-dylib" class="form-control"><option value="">请选择 Dylib</option></select></div>'
+            + '      <div class="col-sm-5 form-group"><label>版本</label><select id="dcg-version" class="form-control"><option value="">先选择 Dylib</option></select></div>'
+            + '      <div class="col-sm-2 form-group"><label>&nbsp;</label><button type="button" class="btn btn-default btn-block" data-toggle="collapse" data-target="#dcg-options"><i class="fa fa-sliders"></i> 选项</button></div>'
+            + '    </div>'
+            + '    <div id="dcg-options" class="collapse">'
+            + '      <div class="well well-sm" style="margin-bottom:12px">'
+            + '        <div class="row" style="margin-bottom:-15px">'
+            + '          <div class="col-sm-4 form-group"><label>类前缀</label><input id="dcg-prefix" class="form-control" value="ZON" maxlength="8"></div>'
+            + '          <div class="col-sm-4 form-group"><label>最低 iOS</label><input id="dcg-ios" class="form-control" value="13.0"></div>'
+            + '          <div class="col-sm-4 form-group"><label>超时（秒）</label><input id="dcg-timeout" type="number" min="3" max="120" class="form-control" value="10"></div>'
+            + '        </div>'
+            + '      </div>'
             + '    </div>'
             + '    <div id="dcg-summary" class="well well-sm text-muted">请选择一个已注册 Dylib。</div>'
-            + '    <div class="form-group">'
-            + '      <button type="button" id="dcg-preview" class="btn btn-primary"><i class="fa fa-eye"></i> 生成预览</button> '
-            + '      <button type="button" id="dcg-generate" class="btn btn-success" disabled><i class="fa fa-download"></i> 生成 ZIP</button> '
+            + '    <div class="form-group" style="margin-bottom:8px">'
+            + '      <button type="button" id="dcg-preview" class="btn btn-primary"><i class="fa fa-eye"></i> 预览</button> '
+            + '      <button type="button" id="dcg-generate" class="btn btn-success" disabled><i class="fa fa-download"></i> 生成并下载 ZIP</button> '
             + '      <span id="dcg-status" class="text-muted" style="margin-left:10px">尚未预览</span>'
             + '    </div>'
+            + '    <div class="alert alert-warning" style="padding:8px 12px;margin-bottom:10px"><strong>安全：</strong><code>*DylibConfig.m</code> 会包含客户端验证密钥，只用于受控工程；不要提交到公开仓库。</div>'
             + '    <div id="dcg-validation"></div>'
-            + '    <div class="row" style="margin:0;border:1px solid #e5e5e5;">'
-            + '      <div class="col-sm-3" id="dcg-files" style="padding:0;max-height:460px;overflow:auto;border-right:1px solid #eee;"><div class="text-muted" style="padding:12px">预览后显示文件。</div></div>'
-            + '      <div class="col-sm-9" style="padding:10px"><pre id="dcg-code" style="height:440px;overflow:auto;background:#101419;color:#e8edf2;border:0;padding:14px;font-family:Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre;">// preview</pre></div>'
+            + '    <div id="dcg-preview-area" class="hidden">'
+            + '      <div class="row" style="margin:0;border:1px solid #e5e5e5;">'
+            + '        <div class="col-sm-3" id="dcg-files" style="padding:0;max-height:420px;overflow:auto;border-right:1px solid #eee;"><div class="text-muted" style="padding:12px">预览后显示文件。</div></div>'
+            + '        <div class="col-sm-9" style="padding:10px"><pre id="dcg-code" style="height:400px;overflow:auto;background:#101419;color:#e8edf2;border:0;padding:14px;font-family:Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre;">// preview</pre></div>'
+            + '      </div>'
             + '    </div>'
             + '  </div>'
             + '</div>';
@@ -34,9 +43,8 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
 
     function installPanel() {
         if ($('#section-codegen').length) return;
-        $('#section-version').before(panelHtml());
-        $('#section-version .panel-heading strong').text('6. 版本控制');
-        $('#section-logs .panel-heading strong').text('7. 验证记录');
+        if ($('#codegen-slot').length) $('#codegen-slot').html(panelHtml());
+        else $('#section-register').after(panelHtml());
 
         $('#dylib-list tbody tr').each(function () {
             var $row = $(this);
@@ -74,12 +82,10 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
         var apis = (c.api_endpoints || []).length;
         $('#dcg-summary').html(
             '<strong>' + esc(c.dylib_name || '') + '</strong> <code>' + esc(c.dylib_key || '') + '</code>'
-            + '　版本：<code>' + esc(c.dylib_version || '未登记') + '</code> / Build <code>' + esc(c.dylib_build || '') + '</code>'
-            + '　Runtime Config：<code>v' + esc(c.runtime_config_version || 1) + '</code>'
-            + '　Bootstrap：<code>' + boot + '</code>'
-            + '　API Endpoint：<code>' + apis + '</code>'
-            + '　Verify：<code>' + esc(c.verify_path || '') + '</code>'
-            + '　密钥：' + (c.verify_secret_present ? '<span class="label label-success">已配置</span>' : '<span class="label label-danger">缺失</span>')
+            + '　版本 <code>' + esc(c.dylib_version || '未登记') + (c.dylib_build ? ' (' + esc(c.dylib_build) + ')' : '') + '</code>'
+            + '　Bootstrap <code>' + boot + '</code>'
+            + '　API <code>' + apis + '</code>'
+            + '　密钥 ' + (c.verify_secret_present ? '<span class="label label-success">已配置</span>' : '<span class="label label-danger">缺失</span>')
         );
     }
 
@@ -92,14 +98,24 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
         $('#dcg-version').html(html || '<option value="">尚未登记版本</option>');
     }
 
+    function clearPreview(message) {
+        state.preview = null;
+        state.files = [];
+        $('#dcg-preview-area').addClass('hidden');
+        $('#dcg-files').html('<div class="text-muted" style="padding:12px">预览后显示文件。</div>');
+        $('#dcg-code').text('// preview');
+        $('#dcg-generate').prop('disabled', true);
+        if (message) $('#dcg-status').attr('class', 'text-muted').text(message);
+    }
+
     function loadCurrent(keepVersion) {
         var dylibId = parseInt($('#dcg-dylib').val() || '0', 10);
         if (!dylibId) {
-            state.base = null; state.preview = null; state.files = [];
+            state.base = null;
             $('#dcg-version').html('<option value="">先选择 Dylib</option>');
             $('#dcg-summary').text('请选择一个已注册 Dylib。');
-            $('#dcg-files').html('<div class="text-muted" style="padding:12px">预览后显示文件。</div>');
-            $('#dcg-code').text('// preview'); $('#dcg-generate').prop('disabled', true); $('#dcg-validation').empty();
+            $('#dcg-validation').empty();
+            clearPreview('尚未预览');
             return;
         }
         var params = draft();
@@ -108,18 +124,18 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
         $.getJSON(url('general/occodegen/current'), params, function (ret) {
             layer.closeAll('loading');
             if (!ret || ret.code !== 200 || !ret.data) { layer.alert((ret && ret.msg) || '读取 Dylib 生成配置失败', {icon: 2}); return; }
-            state.base = ret.data.config; state.preview = null; state.files = [];
+            state.base = ret.data.config;
             renderVersions(ret.data.versions || [], ret.data.selected_version_id);
-            renderSummary(ret.data.config); renderValidation(ret.data.validation);
-            $('#dcg-generate').prop('disabled', true); $('#dcg-status').attr('class', 'text-muted').text('已读取当前 Dylib 配置，尚未预览');
-            $('#dcg-files').html('<div class="text-muted" style="padding:12px">预览后显示文件。</div>'); $('#dcg-code').text('// preview');
+            renderSummary(ret.data.config);
+            renderValidation(ret.data.validation);
+            clearPreview('已读取当前配置，尚未预览');
         }).fail(function () { layer.closeAll('loading'); layer.alert('读取 Dylib 生成配置失败', {icon: 2}); });
     }
 
     function showFile(index) {
         index = parseInt(index, 10);
         if (!state.files[index]) return;
-        $('#dcg-files a').removeClass('active');
+        $('#dcg-files a').removeClass('active').css({'background':'','font-weight':''});
         $('#dcg-files a[data-index="' + index + '"]').addClass('active').css({'background':'#f0f7ff','font-weight':'600'});
         $('#dcg-code').text(state.files[index].content || '');
     }
@@ -131,6 +147,7 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
             html += '<a href="javascript:;" data-index="' + i + '" style="display:block;padding:8px 10px;border-bottom:1px solid #f4f4f4;word-break:break-all"><i class="fa fa-file-code-o"></i> ' + esc(f.path) + '</a>';
         });
         $('#dcg-files').html(html || '<div class="text-muted" style="padding:12px">没有生成文件。</div>');
+        $('#dcg-preview-area').removeClass('hidden');
         if (state.files.length) showFile(0);
     }
 
@@ -158,7 +175,7 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
     }
 
     function generate() {
-        if (!state.preview) { layer.alert('请先生成预览并通过校验', {icon: 0}); return; }
+        if (!state.preview) { layer.alert('请先预览并通过校验', {icon: 0}); return; }
         var params = $.extend({}, state.preview.params, {config_hash: state.preview.hash});
         layer.load(1, {shade: 0.05});
         $.ajax({
