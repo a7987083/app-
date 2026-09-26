@@ -1,47 +1,56 @@
 # Software Source Development Handoff
 
-## Current state
+## Current stable state
 
 - Repository: `a7987083/app-`
-- Stable release: `source-v2026092411`
-- Stable release target: `b46da637df7c0c7918b4ec71b6fe2bdf2387a73c`
-- Latest tested 2411 branch head: `56f503c9eb094fe02cdc9987f25cd12edbf065f0`
-- Development branch: `feature/2026092412-api-integration-center`
-- Verified 2412 code checkpoint: `fc5a3d90398df60f2c651a113c253dce67e8d4db`
-- OC Codegen CI #14 / Run `36239192712`: SUCCESS.
+- Stable release: `source-v2026092412`
+- Release branch: `release/2026092412-api-integration-center`
+- Release target: `c03c2d7deb7bbac21918ef126f4c50c700f2d838`
+- Latest release-gate code head: `004de0dee04cf1c7ca21abf1e1ab693823c1ddd7`
+- OC Codegen CI #14 / Run `36239192712`: SUCCESS
+- ZONOE Source Release #253 / Run `36239620864`: SUCCESS
+- IPA Online Update Release Gate #152 / Run `36239878997`: SUCCESS
 
-## 2412 product boundary
+## Product boundary
 
-The Dylib verification center is an API provider. It owns verification endpoints, HMAC rules, result codes, runtime configuration, API-returned notice/update data, logs, and integration documentation. It does not own UDID collection UI, license/card input UI, popup presentation, floating-window UI, or license-information pages. Those are client-project responsibilities.
+The Dylib verification center is an API provider. It owns verification endpoints, HMAC rules, result codes, runtime configuration, API-returned notice/update/permission data, logs, and integration documentation. It does not own UDID collection UI, license/card input UI, popup presentation, floating-window UI, or license-information pages.
 
 ## 2412 implementation
 
-1. Added `DylibApiContract` as the canonical documentation model for the existing wire protocol.
-2. Kept existing string `code` values instead of adding an incompatible numeric-code protocol.
-3. Documented exact v1/v2 request fields and canonical HMAC-SHA256 ordering.
-4. Documented actual response fields including `ok`, `code`, `action`, `offline_grace_seconds`, `token`, `message`, and v2/extras.
-5. Objective-C Generator 2.2.0 is now explicitly a test/reference API integration generator.
-6. Generated package adds `API_REFERENCE.md`, `ERROR_CODES.md`, and `EXAMPLES.md` while retaining existing OC sample/config files.
-7. Admin integration guide now exposes endpoint, request, response, error-code and signature documentation directly in the Dylib Center.
+1. `DylibApiContract` is the canonical documentation model for the existing wire protocol.
+2. Existing string `code` values remain the protocol; no incompatible numeric code layer was added.
+3. Protocol v1/v2 request fields and exact HMAC-SHA256 canonical ordering are documented.
+4. Actual response fields include `ok`, `code`, `action`, `offline_grace_seconds`, `token`, `message`, `server_time` and v2 extras.
+5. Objective-C Generator 2.2.0 is explicitly a test/reference API integration generator.
+6. Generated package contains `API_REFERENCE.md`, `ERROR_CODES.md`, and `EXAMPLES.md` plus the existing sample/config files.
+7. Admin API guide exposes endpoint, request, response, result-code and signature documentation directly.
 8. Client guidance: branch on `ok + code`; show `message` if desired; never parse message text to infer business state.
-9. Online-update manifest includes `application/common/library/Ipa/DylibApiContract.php`.
+9. Release Gate validates the configurable `runtimeConfig.verify_path`, not a hard-coded verify URL.
 
 ## Verified
 
 - PHP 7.0 syntax/contracts: passed.
 - JavaScript syntax: passed.
-- Deterministic codegen contract with 10 generated files: passed.
+- Deterministic 10-file codegen contract: passed.
 - API reference/error-code assertions: passed.
 - Dylib Center UX contract: passed.
 - Online-update package content gate: passed.
 - MySQL 5.7 migration regression: passed.
+- Source Release packaging: passed.
+- Real GitHub Release online-update E2E: passed.
+- IPA Online Update Release Gate #152: passed.
 
-## Not yet verified / not claimed
+## Formal online-update asset
 
-- Formal 2412 Release Gate and GitHub Release are pending.
-- Real OC/Swift client integration against production API has not been manually accepted.
-- Generated OC is reference/test code; CI success does not prove a third-party client implementation.
+- `zonoe-online-update.zip`
+- Size: 258203 bytes
+- SHA256: `72c0f72d24aed3642c42f3f8e0f39ac05c14c83613eddab65df6f3ac8ec0b9e8`
 
-## Next task
+## Not claimed
 
-Create `release/2026092412-api-integration-center`, write 2412 release metadata, run the formal Source Release + IPA Online Update Release Gate, verify online-update E2E, and publish `source-v2026092412` with ZIP/SHA256 assets.
+- A separate production OC/Swift client has not been manually accepted against the API.
+- Generated OC is reference/test code and does not prove third-party client correctness.
+
+## Next work
+
+Use 2026092412 as the stable baseline. Future work should keep API/server responsibilities separate from client UI and should render more admin documentation directly from `DylibApiContract` to reduce protocol-documentation drift.
