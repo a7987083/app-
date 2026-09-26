@@ -1,52 +1,40 @@
 # Development Changelog
 
-## 2026-09-26 — 2026092412 API Integration Center
+## 2026-09-26 — 2026092413 Dylib API Full Catalog
 
-Stable release: `source-v2026092412`.
-Release branch: `release/2026092412-api-integration-center`.
-Release target: `c03c2d7deb7bbac21918ef126f4c50c700f2d838`.
-Latest release-gate code head: `004de0dee04cf1c7ca21abf1e1ab693823c1ddd7`.
+Stable release: `source-v2026092413`.
+Release branch: `release/2026092413-api-doc-full-catalog`.
+Release target: `acfe570bef7113ae3dcf94b33ce8258f75ad33d7`.
 
-### API contract
+### API catalog / documentation
 
-- Added `application/common/library/Ipa/DylibApiContract.php` as the canonical documentation contract for the existing Dylib verification APIs.
-- Documented the real request fields: `udid`, `bundle_id`, `dylib_key`, `dylib_version`, `dylib_build`, `dylib_sha256`, `timestamp`, `nonce`, `signature`, plus v2 App identity fields.
-- Documented the real response fields: `ok`, `code`, `action`, `offline_grace_seconds`, `token`, `message`, `server_time`, plus `access_level`, `permissions`, `app_identity`, `app_update`, and `notice`.
-- Kept the established string result-code protocol; no incompatible numeric error-code layer was introduced.
-- Added client guidance for current success/error codes and the four `action` values.
-
-### API documentation / generated examples
-
-- Objective-C Generator advanced to `2.2.0`.
-- Generated OC remains a test/reference implementation, not business UI code.
-- Generated package includes ten files, including `API_REFERENCE.md`, `ERROR_CODES.md`, and `EXAMPLES.md`.
-- API reference includes exact Protocol v1/v2 canonical ordering and HMAC-SHA256 rules.
-- Client logic is documented to branch on `ok + code`; `message` may be displayed but must not be parsed for business logic.
-- Admin “接入说明” is now a detailed API reference with endpoints, request/response fields, HMAC and error codes.
-
-### Release-gate fixes
-
-- Updated stale 2405 UI-copy contract to assert actual Protocol v1 canonical and result-code semantics.
-- Restored the `更新内容` Release Notes heading required by the real online-update E2E contract.
-- Updated IPA Online Update Release Gate to validate dynamic `runtimeConfig.verify_path` rather than hard-code `/index/dylib_verify/verify` in the admin page.
+- Expanded the Dylib Center API guide from verification-only documentation to an 8-entry catalog.
+- Explicitly labels JSON endpoints, HTML page compatibility endpoints, and Legacy APIs.
+- Moved Protocol v1/v2 HMAC rules into a dedicated signature section without changing the wire contract.
+- Added `DylibApiDocumentation.php` for generated integration material and `DylibApiDocs.php` for admin ZIP download.
+- Added “全部下载 ZIP” for the currently selected Dylib.
+- Export contains 13 files: README, API overview/reference, error codes, signature, response model, flow, cURL/Objective-C/Swift/Python examples, and two JSON schemas.
+- Real Verify Secret is never exported; examples use `<VERIFY_SECRET>`.
+- `/authorization` and `/unbind` are documented as HTML page compatibility entries rather than pure JSON APIs.
 
 ### Verification
 
-- OC Codegen CI #14 / Run `36239192712`: SUCCESS.
-- ZONOE Source Release #253 / Run `36239620864`: SUCCESS.
-- `php70-regression`: SUCCESS.
-- `mysql57-migration`: SUCCESS.
-- `phase19-3-1-http-load`: SUCCESS.
-- `package-and-release`: SUCCESS.
+- Feature CI: OC Codegen CI #17 / Run `36250685197`: SUCCESS.
+- Source Release #254 / Run `36251418295`: SUCCESS.
+- PHP 7.0 regression: SUCCESS.
+- MySQL 5.7 migration: SUCCESS.
+- Phase 19.3.1 HTTP load gate: SUCCESS.
+- Package and GitHub Release publication: SUCCESS.
 - Real GitHub Release online-update E2E: SUCCESS.
-- IPA Online Update Release Gate #152 / Run `36239878997`: SUCCESS.
+- IPA Online Update Release Gate #153 / Run `36251418307`: SUCCESS.
 
 ### Formal asset
 
-- `zonoe-online-update.zip`: 258203 bytes.
-- SHA256: `72c0f72d24aed3642c42f3f8e0f39ac05c14c83613eddab65df6f3ac8ec0b9e8`.
+- Release ID: `397283396`.
+- `zonoe-online-update.zip`: 266878 bytes.
+- SHA256: `eec0cb86dcf5143c0b272f2a143d1a38a2b685c62b76a4bb9d308ff4990a96a8`.
 
 ### Not claimed
 
-- No manual acceptance of an independent production OC/Swift client is claimed.
-- Generated OC remains reference/test code; actual client UX and integration are owned by the client project.
+- No manual third-party production OC/Swift client acceptance is claimed.
+- The admin page still contains some static explanatory markup; the exported docs are generated, but further consolidation can reduce documentation drift.

@@ -3,54 +3,53 @@
 ## Current stable state
 
 - Repository: `a7987083/app-`
-- Stable release: `source-v2026092412`
-- Release branch: `release/2026092412-api-integration-center`
-- Release target: `c03c2d7deb7bbac21918ef126f4c50c700f2d838`
-- Latest release-gate code head: `004de0dee04cf1c7ca21abf1e1ab693823c1ddd7`
-- OC Codegen CI #14 / Run `36239192712`: SUCCESS
-- ZONOE Source Release #253 / Run `36239620864`: SUCCESS
-- IPA Online Update Release Gate #152 / Run `36239878997`: SUCCESS
+- Stable release: `source-v2026092413`
+- Release branch: `release/2026092413-api-doc-full-catalog`
+- Release target / tested release head: `acfe570bef7113ae3dcf94b33ce8258f75ad33d7`
+- OC Codegen CI #17 / Run `36250685197`: SUCCESS
+- ZONOE Source Release #254 / Run `36251418295`: SUCCESS
+- IPA Online Update Release Gate #153 / Run `36251418307`: SUCCESS
+- Real GitHub Release online-update E2E: SUCCESS
 
 ## Product boundary
 
-The Dylib verification center is an API provider. It owns verification endpoints, HMAC rules, result codes, runtime configuration, API-returned notice/update/permission data, logs, and integration documentation. It does not own UDID collection UI, license/card input UI, popup presentation, floating-window UI, or license-information pages.
+The Dylib verification center is an API provider. It owns server-side API contracts, verification, signing rules, runtime configuration, returned permission/notice/update data, logs, and integration documentation. Client-side UDID acquisition, card/license input UI, popups, floating menus and product UX remain outside this center.
 
-## 2412 implementation
+## 2413 implementation
 
-1. `DylibApiContract` is the canonical documentation model for the existing wire protocol.
-2. Existing string `code` values remain the protocol; no incompatible numeric code layer was added.
-3. Protocol v1/v2 request fields and exact HMAC-SHA256 canonical ordering are documented.
-4. Actual response fields include `ok`, `code`, `action`, `offline_grace_seconds`, `token`, `message`, `server_time` and v2 extras.
-5. Objective-C Generator 2.2.0 is explicitly a test/reference API integration generator.
-6. Generated package contains `API_REFERENCE.md`, `ERROR_CODES.md`, and `EXAMPLES.md` plus the existing sample/config files.
-7. Admin API guide exposes endpoint, request, response, result-code and signature documentation directly.
-8. Client guidance: branch on `ok + code`; show `message` if desired; never parse message text to infer business state.
-9. Release Gate validates the configurable `runtimeConfig.verify_path`, not a hard-coded verify URL.
-
-## Verified
-
-- PHP 7.0 syntax/contracts: passed.
-- JavaScript syntax: passed.
-- Deterministic 10-file codegen contract: passed.
-- API reference/error-code assertions: passed.
-- Dylib Center UX contract: passed.
-- Online-update package content gate: passed.
-- MySQL 5.7 migration regression: passed.
-- Source Release packaging: passed.
-- Real GitHub Release online-update E2E: passed.
-- IPA Online Update Release Gate #152: passed.
+1. Admin API guide lists 8 existing entries and distinguishes JSON, HTML compatibility, and Legacy entry types.
+2. `/authorization` and `/unbind` are not documented as pure JSON APIs.
+3. Protocol v1/v2 HMAC-SHA256 canonical remains unchanged and has a dedicated documentation section.
+4. `DylibApiDocumentation` generates the downloadable documentation package.
+5. `DylibApiDocs` exposes the authenticated admin ZIP download.
+6. ZIP export contains exactly 13 integration files and uses current Dylib/runtime `verify_path` context.
+7. Export never includes the real Verify Secret; examples use `<VERIFY_SECRET>`.
+8. New contract tests execute the document generator and validate endpoint count, file count, JSON schemas, dynamic verify path and secret hygiene.
 
 ## Formal online-update asset
 
-- `zonoe-online-update.zip`
-- Size: 258203 bytes
-- SHA256: `72c0f72d24aed3642c42f3f8e0f39ac05c14c83613eddab65df6f3ac8ec0b9e8`
+- Release: `source-v2026092413`
+- Release ID: `397283396`
+- Asset: `zonoe-online-update.zip`
+- Size: 266878 bytes
+- SHA256: `eec0cb86dcf5143c0b272f2a143d1a38a2b685c62b76a4bb9d308ff4990a96a8`
+
+## Verified
+
+- Feature CI #17: passed.
+- PHP 7.0 regression: passed.
+- MySQL 5.7 migration: passed.
+- HTTP concurrency/load gate: passed.
+- Online-update package: passed.
+- Source Release packaging/publication: passed.
+- Real GitHub Release online-update E2E: passed.
+- IPA Online Update Release Gate #153: passed.
 
 ## Not claimed
 
-- A separate production OC/Swift client has not been manually accepted against the API.
-- Generated OC is reference/test code and does not prove third-party client correctness.
+- A separate production OC/Swift client has not been manually accepted against the APIs.
+- Browser/manual admin UI click-through is not claimed by CI alone.
 
 ## Next work
 
-Use 2026092412 as the stable baseline. Future work should keep API/server responsibilities separate from client UI and should render more admin documentation directly from `DylibApiContract` to reduce protocol-documentation drift.
+Use `source-v2026092413` as the stable baseline. Preserve the existing wire protocols and keep client UX outside the Dylib verification center. If API documentation is changed again, update the generated documentation model and the admin presentation together.
