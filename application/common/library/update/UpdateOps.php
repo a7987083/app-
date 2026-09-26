@@ -3,13 +3,14 @@
 namespace app\common\library\update;
 
 /**
- * Phase 14.3 update-operations diagnostics and conservative cleanup.
+ * Phase 14.3 update-operations diagnostics and retention cleanup.
  *
- * Cleanup rules are intentionally defensive:
+ * Cleanup rules:
  * - never delete a running/stale-running job status;
- * - never delete successful update history that still references backups;
- * - never delete a backup referenced by any retained history entry;
- * - only delete terminal status/history files after the configured age.
+ * - terminal status/history files are eligible after their retention age;
+ * - backup directories are eligible after their retention age even when old
+ *   history still references them. A later rollback may therefore report that
+ *   its backup no longer exists.
  */
 class UpdateOps
 {
@@ -102,23 +103,6 @@ class UpdateOps
         $deleted = ['status' => 0, 'history' => 0, 'backups' => 0, 'bytes' => 0];
         $candidates = ['status' => [], 'history' => [], 'backups' => []];
 
-        $historyFiles = $this->jsonFiles($this->historyDir);
-        $referencedBackups = [];
-        foreach ($historyFiles as $file) {
-            $row = $this->readJson($file);
-            if (!is_array($row)) {
-                continue;
-            }
-            if (isset($row['backups']) && is_array($row['backups'])) {
-                foreach ($row['backups'] as $backup) {
-                    $id = basename(rtrim(str_replace('\\', '/', (string)$backup), '/'));
-                    if ($id !== '') {
-                        $referencedBackups[$id] = true;
-                    }
-                }
-            }
-        }
-
         foreach ($this->jsonFiles($this->statusDir) as $file) {
             $row = $this->readJson($file);
             if (!is_array($row) || (isset($row['status']) && $row['status'] === 'running')) {
@@ -130,16 +114,9 @@ class UpdateOps
             }
         }
 
-        foreach ($historyFiles as $file) {
+        foreach ($this->jsonFiles($this->historyDir) as $file) {
             $row = $this->readJson($file);
             if (!is_array($row)) {
-                continue;
-            }
-            $protected = isset($row['type'], $row['status'])
-                && $row['type'] === 'update'
-                && $row['status'] === 'success'
-                && !empty($row['backups']);
-            if ($protected) {
                 continue;
             }
             if (@filemtime($file) > 0 && @filemtime($file) < $historyCutoff) {
@@ -156,7 +133,7 @@ class UpdateOps
                         continue;
                     }
                     $path = $this->backupDir . $item;
-                    if (!is_dir($path) || isset($referencedBackups[$item])) {
+                    if (!is_dir($path)) {
                         continue;
                     }
                     $mtime = @filemtime($path);

@@ -4,28 +4,23 @@ namespace app\common\library\update;
 
 /**
  * Read/delete updater-owned rollback backups without exposing filesystem paths
- * to the browser. Backups referenced by retained update history are protected.
+ * to the browser. History references do not protect a backup from deletion.
  */
 class UpdateBackupManager
 {
     protected $root;
     protected $backupDir;
-    protected $historyDir;
 
     public function __construct($root)
     {
         $this->root = rtrim($root, '/\\') . DIRECTORY_SEPARATOR;
         $this->backupDir = $this->root . 'runtime' . DIRECTORY_SEPARATOR . 'update_backup' . DIRECTORY_SEPARATOR;
-        $this->historyDir = $this->root . 'runtime' . DIRECTORY_SEPARATOR . 'update' . DIRECTORY_SEPARATOR . 'history' . DIRECTORY_SEPARATOR;
     }
 
     public function snapshot()
     {
-        $protected = $this->protectedBackupIds();
         $items = [];
         $totalBytes = 0;
-        $deletableBytes = 0;
-        $deletableCount = 0;
 
         if (is_dir($this->backupDir)) {
             $names = @scandir($this->backupDir, SCANDIR_SORT_DESCENDING);
@@ -40,7 +35,6 @@ class UpdateBackupManager
                     }
                     $stats = $this->pathStats($path);
                     $mtime = (int)@filemtime($path);
-                    $isProtected = isset($protected[$name]);
                     $row = [
                         'id' => $name,
                         'created_at' => $mtime > 0 ? date('Y-m-d H:i:s', $mtime) : '',
@@ -49,15 +43,12 @@ class UpdateBackupManager
                         'files' => $stats['files'],
                         'database_bytes' => is_file($path . DIRECTORY_SEPARATOR . 'database.sql')
                             ? (int)@filesize($path . DIRECTORY_SEPARATOR . 'database.sql') : 0,
-                        'protected' => $isProtected,
-                        'protected_reason' => $isProtected ? '仍被更新历史引用，可用于回滚' : '',
+                        // Keep response keys for UI/backward compatibility. Protection is intentionally disabled.
+                        'protected' => false,
+                        'protected_reason' => '',
                     ];
                     $items[] = $row;
                     $totalBytes += $row['bytes'];
-                    if (!$isProtected) {
-                        $deletableCount++;
-                        $deletableBytes += $row['bytes'];
-                    }
                 }
             }
         }
@@ -76,16 +67,16 @@ class UpdateBackupManager
             'items' => $items,
             'count' => count($items),
             'bytes' => $totalBytes,
-            'deletable_count' => $deletableCount,
-            'deletable_bytes' => $deletableBytes,
+            'deletable_count' => count($items),
+            'deletable_bytes' => $totalBytes,
             'disk_free_bytes' => $diskFree === false ? null : (float)$diskFree,
             'disk_total_bytes' => $diskTotal === false ? null : (float)$diskTotal,
         ];
     }
 
     /**
-     * Delete selected backup IDs. dryRun performs the same validation/protection
-     * checks and reports what would be removed.
+     * Delete selected backup IDs. dryRun performs the same path/safety checks
+     * and reports what would be removed. Update history never blocks deletion.
      */
     public function deleteSelected(array $ids, $dryRun = false)
     {
@@ -97,7 +88,6 @@ class UpdateBackupManager
             throw new \InvalidArgumentException('单次最多处理 500 个备份');
         }
 
-        $protected = $this->protectedBackupIds();
         $deleted = [];
         $skipped = [];
         $bytes = 0;
@@ -106,10 +96,6 @@ class UpdateBackupManager
             $id = trim($id);
             if (!$this->isSafeId($id)) {
                 $skipped[] = ['id' => $id, 'reason' => '非法备份标识'];
-                continue;
-            }
-            if (isset($protected[$id])) {
-                $skipped[] = ['id' => $id, 'reason' => '仍被更新历史引用，禁止删除'];
                 continue;
             }
 
@@ -140,35 +126,6 @@ class UpdateBackupManager
             'skipped' => $skipped,
             'bytes' => $bytes,
         ];
-    }
-
-    protected function protectedBackupIds()
-    {
-        $result = [];
-        if (!is_dir($this->historyDir)) {
-            return $result;
-        }
-        $files = @glob($this->historyDir . '*.json');
-        if (!is_array($files)) {
-            return $result;
-        }
-        foreach ($files as $file) {
-            $raw = @file_get_contents($file);
-            if ($raw === false) {
-                continue;
-            }
-            $row = json_decode($raw, true);
-            if (!is_array($row) || empty($row['backups']) || !is_array($row['backups'])) {
-                continue;
-            }
-            foreach ($row['backups'] as $backup) {
-                $id = basename(rtrim(str_replace('\\', '/', (string)$backup), '/'));
-                if ($this->isSafeId($id)) {
-                    $result[$id] = true;
-                }
-            }
-        }
-        return $result;
     }
 
     protected function isSafeId($id)
