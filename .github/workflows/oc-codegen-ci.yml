@@ -28,6 +28,7 @@ on:
       - 'release/sql/2026092408_oc_codegen_inline.sql'
       - 'tests/oc_codegen_*'
       - 'tests/dylib_center_ux_contract_test.php'
+      - 'tests/dylib_api_documentation_contract_test.php'
       - '.github/workflows/oc-codegen-ci.yml'
   workflow_dispatch:
 
@@ -53,12 +54,15 @@ jobs:
           php -l application/admin/controller/DylibCenter.php
           php -l tests/oc_codegen_contract_test.php
           php -l tests/dylib_center_ux_contract_test.php
+          php -l tests/dylib_api_documentation_contract_test.php
           node --check public/assets/js/backend/dylib_center.js
           node --check public/assets/js/backend/dylib_codegen_inline.js
       - name: Run Dylib codegen contract
         run: php tests/oc_codegen_contract_test.php
       - name: Run Dylib Center UX contract
         run: php tests/dylib_center_ux_contract_test.php
+      - name: Run Dylib API documentation contract
+        run: php tests/dylib_api_documentation_contract_test.php
       - name: Verify online-update package contains Dylib Center and codegen
         run: |
           set -euo pipefail
