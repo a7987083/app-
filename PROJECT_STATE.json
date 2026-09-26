@@ -1,46 +1,47 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "version": "2026092411",
-    "release": "source-v2026092411",
-    "branch": "release/2026092411-dylib-center-ux",
-    "tag_target": "b46da637df7c0c7918b4ec71b6fe2bdf2387a73c",
-    "latest_tested_release_branch_head": "56f503c9eb094fe02cdc9987f25cd12edbf065f0"
+    "version": "2026092412",
+    "release": "source-v2026092412",
+    "branch": "release/2026092412-api-integration-center",
+    "tag_target": "c03c2d7deb7bbac21918ef126f4c50c700f2d838",
+    "latest_tested_release_branch_head": "004de0dee04cf1c7ca21abf1e1ab693823c1ddd7"
   },
   "development": {
     "version": "2026092412",
-    "branch": "feature/2026092412-api-integration-center",
-    "verified_checkpoint": "fc5a3d90398df60f2c651a113c253dce67e8d4db",
-    "status": "feature_ci_green_release_pending",
+    "feature_branch": "feature/2026092412-api-integration-center",
+    "release_branch": "release/2026092412-api-integration-center",
+    "status": "released",
     "focus": "Dylib verification center as API provider only",
-    "features": [
-      "canonical Dylib API contract source with real request/response fields",
-      "documented string result codes and client handling guidance",
-      "Objective-C Generator 2.2.0 repositioned as test/reference API integration generator",
-      "generated API_REFERENCE.md ERROR_CODES.md and EXAMPLES.md",
-      "admin API integration guide with request response HMAC and error-code documentation",
-      "explicit separation between verification API and client UI workflows"
-    ]
+    "generator_version": "2.2.0"
   },
   "ci": {
-    "workflow": "OC Codegen CI",
-    "run": 36239192712,
-    "run_number": 14,
-    "conclusion": "success",
-    "php70_contract": "passed",
-    "javascript_syntax": "passed",
-    "oc_codegen_contract": "passed",
-    "dylib_center_ux_contract": "passed",
-    "online_update_package_gate": "passed",
-    "mysql57_migration_regression": "passed"
+    "feature_ci_run": 36239192712,
+    "feature_ci_run_number": 14,
+    "feature_ci_conclusion": "success",
+    "source_release_run": 36239620864,
+    "source_release_run_number": 253,
+    "source_release_conclusion": "success",
+    "online_update_gate_run": 36239878997,
+    "online_update_gate_run_number": 152,
+    "online_update_gate_conclusion": "success",
+    "real_github_release_online_update_e2e": "passed",
+    "mysql57_migration": "passed",
+    "php70_runtime_contracts": "passed"
+  },
+  "release_asset": {
+    "name": "zonoe-online-update.zip",
+    "size": 258203,
+    "sha256": "72c0f72d24aed3642c42f3f8e0f39ac05c14c83613eddab65df6f3ac8ec0b9e8"
   },
   "verification": {
-    "formal_2412_release_gate": "not_run",
-    "formal_2412_release": "not_published",
+    "formal_2412_release_gate": "passed",
+    "formal_2412_release": "published",
+    "online_update_e2e": "passed",
     "real_client_manual_api_integration": "not_verified",
     "generated_reference_zip_real_project": "not_verified"
   },
-  "next_task": "Prepare 2026092412 release metadata from the latest green feature checkpoint, run formal release gates and publish source-v2026092412 with online-update assets.",
+  "next_task": "Use 2026092412 as the stable baseline. Future API work should preserve the existing string result-code protocol and keep client UI outside the verification center.",
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
   "handoff": "HANDOFF.md",
