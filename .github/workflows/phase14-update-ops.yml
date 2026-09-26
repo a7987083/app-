@@ -5,6 +5,7 @@ on:
     branches:
       - feature/phase14-3-update-ops-v2
       - feature/2026092414-ops-backup-log-cleanup
+      - feature/2026092415-remove-rollback-protection
   pull_request:
     paths:
       - 'application/common/library/update/UpdateOps.php'
