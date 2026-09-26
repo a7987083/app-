@@ -8,9 +8,11 @@ on:
       - feature/2026092409-dylib-center-ux-simplification
       - feature/2026092410-dylib-crud-legacy-codegen
       - feature/2026092411-dylib-center-ux
+      - feature/2026092412-api-integration-center
       - 'release/**'
     paths:
       - 'application/common/library/codegen/**'
+      - 'application/common/library/Ipa/DylibApiContract.php'
       - 'application/admin/controller/general/Occodegen.php'
       - 'application/admin/controller/DylibCenter.php'
       - 'application/admin/controller/DylibCodegen.php'
@@ -39,6 +41,7 @@ jobs:
       - name: Lint generator and Dylib UI
         run: |
           set -euo pipefail
+          php -l application/common/library/Ipa/DylibApiContract.php
           php -l application/common/library/codegen/ObjectiveCGenerator.php
           php -l application/admin/controller/DylibCodegen.php
           php -l application/admin/controller/general/Occodegen.php
@@ -56,6 +59,7 @@ jobs:
           set -euo pipefail
           php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
           unzip -t zonoe-online-update.zip >/dev/null
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/Ipa/DylibApiContract.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/codegen/ObjectiveCGenerator.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/DylibCodegen.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Occodegen.php'
