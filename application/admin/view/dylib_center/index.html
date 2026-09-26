@@ -2,8 +2,8 @@
     <div class="panel-heading">{:build_heading(null,FALSE)}</div>
     <div class="panel-body">
         <div class="alert alert-info" style="margin-bottom:15px">
-            <strong>Dylib 验证中心 · 2409 简化界面</strong>
-            <span class="text-muted">验证协议、HMAC、Bootstrap、权限模型和数据库规则保持不变；这里只收敛日常操作入口。</span>
+            <strong>Dylib 验证中心 · 2412 API 接入中心</strong>
+            <span class="text-muted">这里只负责提供验证 API、签名规则、错误码、运行配置和验证记录；UDID 获取、卡密输入、公告弹窗、悬浮窗等客户端 UI 由实际 OC/Swift 工程自行实现。</span>
         </div>
 
         <ul class="nav nav-tabs" id="dylib-center-tabs" style="margin-bottom:15px">
@@ -11,7 +11,7 @@
             <li><a href="#tab-versions" data-toggle="tab"><i class="fa fa-code-fork"></i> 版本</a></li>
             <li><a href="#tab-notices" data-toggle="tab"><i class="fa fa-bell"></i> 通知</a></li>
             <li><a href="#tab-logs" data-toggle="tab"><i class="fa fa-list-alt"></i> 验证记录</a></li>
-            <li><a href="#tab-advanced" data-toggle="tab"><i class="fa fa-cogs"></i> 高级</a></li>
+            <li><a href="#tab-advanced" data-toggle="tab"><i class="fa fa-cogs"></i> API / 高级</a></li>
         </ul>
 
         <div class="tab-content">
@@ -27,31 +27,31 @@
                                     <div class="form-group">
                                         <label>Dylib Key</label>
                                         <input class="form-control" name="dylib_key" placeholder="zonoe.main" required>
-                                        <p class="help-block">唯一标识；注册后不可修改。</p>
+                                        <p class="help-block">验证 API 中的唯一标识；注册后不可修改。</p>
                                     </div>
                                     <div class="form-group">
                                         <label>名称</label>
                                         <input class="form-control" name="name" placeholder="主验证 Dylib" required>
                                     </div>
                                     <div class="form-group">
-                                        <label>验证密钥</label>
+                                        <label>Verify Secret</label>
                                         <div class="input-group">
                                             <input class="form-control" id="verify-secret" name="verify_secret" type="password" autocomplete="new-password" placeholder="新建时生成；编辑留空=不轮换">
                                             <span class="input-group-btn"><button class="btn btn-default" type="button" id="generate-secret">自动生成</button></span>
                                         </div>
-                                        <p class="help-block">用于 HMAC 与运行配置验签。已有 Dylib 编辑时留空即可。</p>
+                                        <p class="help-block">客户端按 API 文档的 canonical 顺序做 HMAC-SHA256；Secret 只提供给受控客户端工程。</p>
                                     </div>
                                     <div class="row">
                                         <div class="col-sm-6 form-group">
-                                            <label>离线容错</label>
+                                            <label>默认离线可用</label>
                                             <div class="input-group"><input class="form-control" type="number" min="0" max="86400" name="default_offline_grace" value="900"><span class="input-group-addon">秒</span></div>
                                         </div>
                                         <div class="col-sm-6 form-group">
-                                            <label>失败动作</label>
+                                            <label>默认失败动作</label>
                                             <select class="form-control" name="default_fail_action">
-                                                <option value="disable_feature">停用受保护功能</option>
-                                                <option value="show_message">显示提示</option>
-                                                <option value="block">阻止使用</option>
+                                                <option value="disable_feature">禁用受保护功能</option>
+                                                <option value="show_message">只显示提示</option>
+                                                <option value="block">完全阻止使用</option>
                                             </select>
                                         </div>
                                     </div>
@@ -66,7 +66,7 @@
                         <div class="panel panel-default">
                             <div class="panel-heading">
                                 <strong>Dylib 列表</strong>
-                                <span class="text-muted">高频操作集中在这里</span>
+                                <span class="text-muted">选择 Dylib 后，版本、API 接入说明、示例代码和验证记录同步切换</span>
                             </div>
                             <div class="panel-body" style="padding-bottom:8px">
                                 <div class="table-responsive">
@@ -85,9 +85,9 @@
                                             <td>{$dylib.name|htmlentities}</td>
                                             <td>{$dylib.default_offline_grace}s</td>
                                             <td>
-                                                {if condition="$dylib.default_fail_action=='block'"}阻止使用
-                                                {elseif condition="$dylib.default_fail_action=='show_message'"/}显示提示
-                                                {else/}停用受保护功能{/if}
+                                                {if condition="$dylib.default_fail_action=='block'"}完全阻止使用
+                                                {elseif condition="$dylib.default_fail_action=='show_message'"/}只显示提示
+                                                {else/}禁用受保护功能{/if}
                                             </td>
                                             <td>{if condition="$dylib.enabled"}<span class="label label-success">已启用</span>{else/}<span class="label label-default">已停用</span>{/if}</td>
                                             <td>
@@ -97,7 +97,7 @@
                                                 {else/}
                                                 <button type="button" class="btn btn-xs btn-success js-dylib-toggle" data-enabled="1">启用</button>
                                                 {/if}
-                                                <button type="button" class="btn btn-xs btn-info js-dylib-integration">接入说明</button>
+                                                <button type="button" class="btn btn-xs btn-info js-dylib-integration">API 接入</button>
                                                 <button type="button" class="btn btn-xs btn-danger js-dylib-delete">删除</button>
                                             </td>
                                         </tr>
@@ -105,7 +105,7 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <p class="help-block" style="margin-bottom:0">已有版本或验证历史的 Dylib 不允许物理删除，请使用“停用”。</p>
+                                <p class="help-block" style="margin-bottom:0">删除 Dylib 会同时删除其版本、旧游戏授权和验证记录；此操作不可恢复。</p>
                             </div>
                         </div>
                     </div>
@@ -116,29 +116,29 @@
 
             <div class="tab-pane" id="tab-versions">
                 <div class="panel panel-default" id="section-version">
-                    <div class="panel-heading"><strong>版本管理</strong> <span class="text-muted">登记、启用、阻止和完整性约束</span></div>
+                    <div class="panel-heading"><strong>版本管理</strong> <span class="text-muted">定义验证 API 允许、测试、阻止或撤销的 Dylib 版本</span></div>
                     <div class="panel-body">
                         <form id="version-form" class="form-inline" style="margin-bottom:10px">
                             <select class="form-control" name="dylib_id" required><option value="">Dylib</option>{foreach name="dylibs" item="dylib"}<option value="{$dylib.id}">{$dylib.name|htmlentities}</option>{/foreach}</select>
-                            <input class="form-control" name="version" placeholder="版本号" required>
-                            <input class="form-control" name="build" placeholder="Build">
+                            <input class="form-control" name="version" placeholder="版本号，如 1.2.3" required>
+                            <input class="form-control" name="build" placeholder="内部构建号，如 45">
                             <select class="form-control" name="state">
                                 <option value="testing" selected>测试中</option>
-                                <option value="active">正式启用</option>
+                                <option value="active">正式使用</option>
                                 <option value="deprecated">已弃用（仍允许）</option>
                                 <option value="blocked">已阻止</option>
                                 <option value="revoked">已撤销</option>
                             </select>
                             <button class="btn btn-primary" type="submit">添加版本</button>
                             <div style="margin-top:8px">
-                                <input class="form-control" style="width:360px" name="sha256" placeholder="SHA256（可留空）">
+                                <input class="form-control" style="width:360px" name="sha256" placeholder="文件 SHA256（留空=不校验）">
                                 <input class="form-control" style="width:125px" type="number" name="offline_grace" value="900" placeholder="离线秒">
                                 <select class="form-control" name="fail_action">
-                                    <option value="disable_feature">停用受保护功能</option>
-                                    <option value="show_message">显示提示</option>
-                                    <option value="block">阻止使用</option>
+                                    <option value="disable_feature">禁用受保护功能</option>
+                                    <option value="show_message">只显示提示</option>
+                                    <option value="block">完全阻止使用</option>
                                 </select>
-                                <input class="form-control" style="width:240px" name="notice" placeholder="客户端提示信息">
+                                <input class="form-control" style="width:240px" name="notice" placeholder="服务端返回给客户端的 message（可选）">
                             </div>
                         </form>
                         <table id="version-table"></table>
@@ -148,7 +148,7 @@
 
             <div class="tab-pane" id="tab-notices">
                 <div class="panel panel-default" id="section-notices">
-                    <div class="panel-heading"><strong>远程通知</strong> <span class="text-muted">仅在需要公告时创建；不用可保持为空</span></div>
+                    <div class="panel-heading"><strong>远程通知数据</strong> <span class="text-muted">验证 API 可返回 notice 数据；如何弹窗由客户端决定</span></div>
                     <div class="panel-body">
                         <div class="row">
                             <div class="col-md-6">
@@ -166,7 +166,7 @@
                                         </div>
                                         <div class="col-sm-6 form-group">
                                             <label>最低权限</label>
-                                            <select class="form-control" name="min_access_level"><option value="">不限</option><option value="basic">basic</option><option value="app_plus">app_plus</option><option value="global_plus">global_plus</option></select>
+                                            <select class="form-control" name="min_access_level"><option value="">所有授权</option><option value="basic">普通授权</option><option value="app_plus">指定 App 高级授权</option><option value="global_plus">全软件源高级授权</option></select>
                                         </div>
                                     </div>
                                     <div class="form-group"><label>标题</label><input class="form-control" name="title"></div>
@@ -198,13 +198,138 @@
 
             <div class="tab-pane" id="tab-logs">
                 <div class="panel panel-default" id="section-logs">
-                    <div class="panel-heading"><strong>验证记录</strong> <span class="text-muted">按 BundleID / Dylib Key / 结果搜索</span></div>
+                    <div class="panel-heading"><strong>验证记录</strong> <span class="text-muted">按 Dylib / code / BundleID / 版本 / UDID Hash / 时间筛选</span></div>
                     <div class="panel-body"><table id="verify-log-table"></table></div>
                 </div>
             </div>
 
             <div class="tab-pane" id="tab-advanced">
-                <div class="panel panel-primary" id="section-runtime">
+                <div class="panel panel-primary" id="section-integration">
+                    <div class="panel-heading">
+                        <strong>API 接入说明</strong>
+                        <a class="pull-right" data-toggle="collapse" href="#integration-detail" aria-expanded="false" style="color:#fff">展开 / 收起</a>
+                    </div>
+                    <div id="integration-detail" class="panel-collapse collapse">
+                        <div class="panel-body">
+                            <div class="alert alert-info">
+                                <strong>职责边界：</strong>这里给实际客户端提供 API 契约。生成的 OC 代码仅用于测试/参考；实际项目应按下面的 API、HMAC、错误码自己接入。客户端如何取得 UDID、输入卡密、显示公告或授权信息，不属于本验证中心。
+                            </div>
+                            <p>当前选择：<strong id="integration-name">请选择已注册 Dylib</strong> <code id="integration-key"></code></p>
+
+                            <ul class="nav nav-pills" style="margin-bottom:15px">
+                                <li class="active"><a href="#api-doc-overview" data-toggle="tab">接口</a></li>
+                                <li><a href="#api-doc-request" data-toggle="tab">请求参数</a></li>
+                                <li><a href="#api-doc-response" data-toggle="tab">返回字段</a></li>
+                                <li><a href="#api-doc-errors" data-toggle="tab">错误码</a></li>
+                                <li><a href="#api-doc-examples" data-toggle="tab">接入原则</a></li>
+                            </ul>
+                            <div class="tab-content">
+                                <div class="tab-pane active" id="api-doc-overview">
+                                    <h5><strong>1. 获取运行配置</strong></h5>
+                                    <p><code id="integration-config-url">GET /index/dylib_verify/config?dylib_key=...</code></p>
+                                    <p class="text-muted">用于发现最新 API Endpoint、运行配置及签名后的服务端配置。客户端可缓存 Last-Known-Good；Bootstrap 不可用时再使用已有 endpointURL 兜底。</p>
+                                    <h5><strong>2. 在线验证</strong></h5>
+                                    <p><code>POST {$runtimeConfig.verify_path|htmlentities}</code></p>
+                                    <p>支持 <code>application/x-www-form-urlencoded</code> 或 <code>application/json</code>。</p>
+                                    <h5><strong>3. 签名</strong></h5>
+                                    <p><code>hex_lowercase(HMAC-SHA256(canonical, verify_secret))</code></p>
+                                    <div class="row">
+                                        <div class="col-md-6"><strong>Protocol v1 canonical</strong><pre>udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce</pre></div>
+                                        <div class="col-md-6"><strong>Protocol v2 canonical</strong><pre>udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce\nprotocol_version\napp_executable\napp_macho_uuid\napp_version\napp_build</pre></div>
+                                    </div>
+                                    <p class="help-block">字段之间是真实换行符。不要把 JSON 字典排序后直接签名，也不要自行改变 canonical 顺序。</p>
+                                </div>
+
+                                <div class="tab-pane" id="api-doc-request">
+                                    <div class="table-responsive"><table class="table table-bordered table-condensed">
+                                        <thead><tr><th>字段</th><th>类型</th><th>必填</th><th>协议</th><th>说明</th></tr></thead>
+                                        <tbody>
+                                        <tr><td><code>udid</code></td><td>string</td><td>是</td><td>v1+</td><td>客户端自己取得的设备标识；验证中心不负责采集。</td></tr>
+                                        <tr><td><code>bundle_id</code></td><td>string</td><td>是</td><td>v1+</td><td>当前 App Bundle Identifier。</td></tr>
+                                        <tr><td><code>dylib_key</code></td><td>string</td><td>是</td><td>v1+</td><td>当前选择的 Dylib Key：<code class="js-current-dylib-key">...</code></td></tr>
+                                        <tr><td><code>dylib_version</code></td><td>string</td><td>是</td><td>v1+</td><td>必须与后台登记版本一致。</td></tr>
+                                        <tr><td><code>dylib_build</code></td><td>string</td><td>否</td><td>v1+</td><td>填写后按 version + build 精确匹配。</td></tr>
+                                        <tr><td><code>dylib_sha256</code></td><td>string</td><td>按配置</td><td>v1+</td><td>后台登记 SHA256 时必须匹配。</td></tr>
+                                        <tr><td><code>timestamp</code></td><td>int</td><td>是</td><td>v1+</td><td>Unix 秒级时间戳。</td></tr>
+                                        <tr><td><code>nonce</code></td><td>string</td><td>是</td><td>v1+</td><td>16~128 字符随机串，每次请求使用新值。</td></tr>
+                                        <tr><td><code>signature</code></td><td>string</td><td>是</td><td>v1+</td><td>64 位小写 hex HMAC-SHA256。</td></tr>
+                                        <tr><td><code>protocol_version</code></td><td>int</td><td>v2</td><td>v2</td><td>当前 v2 使用 2。</td></tr>
+                                        <tr><td><code>app_executable</code></td><td>string</td><td>v2</td><td>v2</td><td>当前主程序可执行文件名。</td></tr>
+                                        <tr><td><code>app_macho_uuid</code></td><td>string</td><td>v2</td><td>v2</td><td>当前主程序 Mach-O UUID。</td></tr>
+                                        <tr><td><code>app_version</code></td><td>string</td><td>否</td><td>v2</td><td>用于 app_update 判断。</td></tr>
+                                        <tr><td><code>app_build</code></td><td>string</td><td>否</td><td>v2</td><td>用于 app_update 判断。</td></tr>
+                                        </tbody>
+                                    </table></div>
+                                </div>
+
+                                <div class="tab-pane" id="api-doc-response">
+                                    <div class="alert alert-warning" style="padding:8px 12px"><strong>客户端逻辑判断使用 <code>ok</code> + <code>code</code>。</strong> <code>message</code> 是服务器可展示文字，可以原样显示，但不要靠 message 文本判断业务状态。</div>
+                                    <div class="table-responsive"><table class="table table-bordered table-condensed">
+                                        <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+                                        <tbody>
+                                        <tr><td><code>ok</code></td><td>bool</td><td>验证是否通过。</td></tr>
+                                        <tr><td><code>code</code></td><td>string</td><td>稳定业务结果码，客户端应按它处理对应状态。</td></tr>
+                                        <tr><td><code>action</code></td><td>string</td><td><code>allow</code> / <code>disable_feature</code> / <code>show_message</code> / <code>block</code>。</td></tr>
+                                        <tr><td><code>offline_grace_seconds</code></td><td>int</td><td>允许离线使用缓存验证结果的秒数。</td></tr>
+                                        <tr><td><code>token</code></td><td>string</td><td>验证通过时的短期签名会话 token。</td></tr>
+                                        <tr><td><code>message</code></td><td>string</td><td>服务器返回的可展示消息；客户端可直接显示。</td></tr>
+                                        <tr><td><code>server_time</code></td><td>int</td><td>服务端 Unix 时间。</td></tr>
+                                        <tr><td><code>access_level</code></td><td>string</td><td>服务端解析后的授权等级。</td></tr>
+                                        <tr><td><code>permissions</code></td><td>object</td><td>最终权限集合；客户端只消费结果，不自行推导授权类型。</td></tr>
+                                        <tr><td><code>app_identity</code></td><td>object</td><td>服务端解析出的 App 身份。</td></tr>
+                                        <tr><td><code>app_update</code></td><td>object</td><td>App 更新数据；是否弹窗由客户端决定。</td></tr>
+                                        <tr><td><code>notice</code></td><td>object/null</td><td>远程通知数据；验证中心不负责客户端弹窗。</td></tr>
+                                        </tbody>
+                                    </table></div>
+                                </div>
+
+                                <div class="tab-pane" id="api-doc-errors">
+                                    <p class="text-muted">以下是当前服务端实际使用的字符串结果码。客户端可对需要特殊行为的 code 做分支；未识别的新 code 应按 <code>action</code> 处理，并可直接显示 <code>message</code>。</p>
+                                    <div class="table-responsive"><table class="table table-bordered table-condensed">
+                                        <thead><tr><th>code</th><th>含义</th><th>客户端建议</th></tr></thead>
+                                        <tbody>
+                                        <tr><td><code>ok</code> / <code>ok_testing</code> / <code>ok_deprecated</code></td><td>验证通过</td><td>消费 permissions/token/notice/app_update。</td></tr>
+                                        <tr><td><code>bad_request</code></td><td>必填字段缺失</td><td>检查请求字段；message 可直接显示。</td></tr>
+                                        <tr><td><code>method_not_allowed</code></td><td>请求方式错误</td><td>verify 必须 POST。</td></tr>
+                                        <tr><td><code>timestamp_invalid</code></td><td>请求时间过期</td><td>校准时间后重新生成签名。</td></tr>
+                                        <tr><td><code>nonce_invalid</code></td><td>Nonce 无效</td><td>重新生成 16~128 字符随机 nonce。</td></tr>
+                                        <tr><td><code>signature_invalid</code></td><td>签名格式无效</td><td>检查是否为 64 位小写 hex。</td></tr>
+                                        <tr><td><code>signature_mismatch</code></td><td>HMAC 不一致</td><td>检查 canonical 顺序、字段值和 Verify Secret。</td></tr>
+                                        <tr><td><code>replay_detected</code></td><td>检测到重放</td><td>生成新 nonce/timestamp 后重新签名。</td></tr>
+                                        <tr><td><code>dylib_unknown</code></td><td>Dylib 不存在或已停用</td><td>按 action 停止受保护能力并显示 message。</td></tr>
+                                        <tr><td><code>dylib_key_unconfigured</code> / <code>dylib_key_unavailable</code></td><td>服务端 Verify Secret 配置异常</td><td>服务端问题，不要无限重试。</td></tr>
+                                        <tr><td><code>blacklisted</code></td><td>设备被封禁</td><td>按 action 处理并显示 message。</td></tr>
+                                        <tr><td><code>app_identity_incomplete</code></td><td>v2 App 身份字段不完整</td><td>补齐 executable / Mach-O UUID 后重新签名。</td></tr>
+                                        <tr><td><code>app_identity_unknown</code> / <code>app_identity_unbound</code> / <code>app_identity_ambiguous</code> / <code>app_identity_inactive</code></td><td>App 身份解析失败</td><td>检查身份字段或后台解析/绑定数据。</td></tr>
+                                        <tr><td><code>app_identity_required</code></td><td>当前授权要求 v2 App 身份</td><td>使用 Protocol v2。</td></tr>
+                                        <tr><td><code>app_not_authorized</code> / <code>license_invalid</code></td><td>授权不适用或无效/过期</td><td>显示 message；实际授权 UI 由客户端负责。</td></tr>
+                                        <tr><td><code>version_unknown</code></td><td>Dylib 版本未登记</td><td>检查 version/build 与后台登记是否一致。</td></tr>
+                                        <tr><td><code>version_blocked</code> / <code>version_revoked</code></td><td>版本被阻止/撤销</td><td>按 action 处理并显示版本 notice/message。</td></tr>
+                                        <tr><td><code>integrity_mismatch</code></td><td>Dylib SHA256 不一致</td><td>停止受保护能力并检查实际加载文件。</td></tr>
+                                        <tr><td><code>server_error</code></td><td>验证服务异常</td><td>按 action + offline_grace_seconds 处理临时故障。</td></tr>
+                                        <tr><td><code>config_unavailable</code></td><td>运行配置暂不可用</td><td>使用 Last-Known-Good / endpointURL 兜底。</td></tr>
+                                        </tbody>
+                                    </table></div>
+                                </div>
+
+                                <div class="tab-pane" id="api-doc-examples">
+                                    <h5><strong>推荐接入顺序</strong></h5>
+                                    <ol>
+                                        <li>客户端工程自行取得 UDID、BundleID、版本等业务输入。</li>
+                                        <li>准备请求字段，生成 timestamp + 每次唯一 nonce。</li>
+                                        <li>按 v1/v2 canonical 固定顺序拼接，使用当前 Dylib Verify Secret 做 HMAC-SHA256。</li>
+                                        <li>POST 到 verify API。</li>
+                                        <li>先看 <code>ok</code>，再看 <code>code</code> 和 <code>action</code>；<code>message</code> 可直接用于提示。</li>
+                                        <li>验证成功后，客户端自行决定菜单、弹窗、悬浮窗、公告显示等产品行为。</li>
+                                    </ol>
+                                    <p><strong>生成代码：</strong>概览里的“API 接入示例”会生成测试用 OC 文件，同时生成 <code>API_REFERENCE.md</code>、<code>ERROR_CODES.md</code>、<code>EXAMPLES.md</code>。实际项目可以不用生成 OC，直接按 API 文档自行实现。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel panel-default" id="section-runtime">
                     <div class="panel-heading"><strong>服务器与运行配置</strong> <span class="text-muted">低频设置；正常情况下配置一次即可</span></div>
                     <div class="panel-body">
                         <form id="runtime-config-form">
@@ -222,12 +347,12 @@
                                     <p class="help-block">配置版本：<code>v{$runtimeConfig.config_version}</code>，每次保存自动递增并重新签名。</p>
                                 </div>
                                 <div class="col-md-6">
-                                    <h5><strong>游戏更新默认弹窗</strong></h5>
-                                    <div class="form-group"><label>标题</label><input class="form-control" name="update_title" value="{$runtimeConfig.update_title|htmlentities}"></div>
-                                    <div class="form-group"><label>正文</label><textarea class="form-control" rows="4" name="update_message">{$runtimeConfig.update_message|htmlentities}</textarea><p class="help-block">变量：<code>{app_name}</code> <code>{current_version}</code> <code>{current_build}</code> <code>{latest_version}</code> <code>{latest_build}</code></p></div>
+                                    <h5><strong>验证结果附加数据默认文案</strong></h5>
+                                    <div class="form-group"><label>更新标题</label><input class="form-control" name="update_title" value="{$runtimeConfig.update_title|htmlentities}"></div>
+                                    <div class="form-group"><label>更新正文</label><textarea class="form-control" rows="4" name="update_message">{$runtimeConfig.update_message|htmlentities}</textarea><p class="help-block">API 返回 <code>app_update</code> 数据；客户端是否弹窗由调用方决定。变量：<code>{app_name}</code> <code>{current_version}</code> <code>{current_build}</code> <code>{latest_version}</code> <code>{latest_build}</code></p></div>
                                     <div class="row">
-                                        <div class="col-sm-6 form-group"><label>主按钮</label><input class="form-control" name="update_primary_title" value="{$runtimeConfig.update_primary_title|htmlentities}"></div>
-                                        <div class="col-sm-6 form-group"><label>副按钮</label><input class="form-control" name="update_secondary_title" value="{$runtimeConfig.update_secondary_title|htmlentities}"></div>
+                                        <div class="col-sm-6 form-group"><label>主按钮文案</label><input class="form-control" name="update_primary_title" value="{$runtimeConfig.update_primary_title|htmlentities}"></div>
+                                        <div class="col-sm-6 form-group"><label>副按钮文案</label><input class="form-control" name="update_secondary_title" value="{$runtimeConfig.update_secondary_title|htmlentities}"></div>
                                     </div>
                                 </div>
                             </div>
@@ -236,47 +361,16 @@
                     </div>
                 </div>
 
-                <div class="panel panel-default" id="section-integration">
-                    <div class="panel-heading">
-                        <strong>接入说明</strong>
-                        <a class="pull-right" data-toggle="collapse" href="#integration-detail" aria-expanded="false">展开 / 收起</a>
-                    </div>
-                    <div id="integration-detail" class="panel-collapse collapse">
-                        <div class="panel-body">
-                            <p>当前选择：<strong id="integration-name">请选择已注册 Dylib</strong> <code id="integration-key"></code></p>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h5><strong>客户端接入</strong></h5>
-                                    <ol style="padding-left:20px">
-                                        <li>优先使用“概览 → OC 接入代码”自动生成配置。</li>
-                                        <li>客户端按 <code>permissions</code>、<code>app_update</code>、<code>notice</code> 消费服务端结果。</li>
-                                        <li>Bootstrap 只负责发现最新 API；旧 <code>endpointURL</code> 保留为最终兜底。</li>
-                                    </ol>
-                                    <p>运行配置：<code>GET /index/dylib_verify/config?dylib_key=...</code></p>
-                                    <p>在线验证：<code>POST /index/dylib_verify/verify</code></p>
-                                </div>
-                                <div class="col-md-6">
-                                    <h5><strong>Protocol v1 HMAC 原文</strong> <small class="text-muted">v1 旧客户端保持不变</small></h5>
-                                    <pre>udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce</pre>
-                                    <h5><strong>Protocol v2 HMAC 原文</strong></h5>
-                                    <pre>udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce\nprotocol_version\napp_executable\napp_macho_uuid\napp_version\napp_build</pre>
-                                    <p class="help-block">协议说明仅用于调试和人工审计；日常生成 OC 代码无需手工填写这些字段。</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="panel panel-default" id="section-access-model">
                     <div class="panel-heading">
-                        <strong>权限模型</strong>
+                        <strong>API 返回的权限模型</strong>
                         <a class="pull-right" data-toggle="collapse" href="#access-model-detail" aria-expanded="false">展开 / 收起</a>
                     </div>
                     <div id="access-model-detail" class="panel-collapse collapse">
                         <div class="panel-body">
                             <div class="table-responsive">
                                 <table class="table table-bordered" style="margin-bottom:8px">
-                                    <thead><tr><th>卡密用途</th><th>适用范围</th><th>返回等级</th><th>普通菜单</th><th>额外菜单/功能</th></tr></thead>
+                                    <thead><tr><th>授权用途</th><th>适用范围</th><th>access_level</th><th>普通权限</th><th>额外权限</th></tr></thead>
                                     <tbody>
                                     <tr><td>仅验证 <code>scope=2</code></td><td>任意 App</td><td><code>basic</code></td><td>✓</td><td>—</td></tr>
                                     <tr><td>指定 App <code>scope=3</code></td><td>命中解析身份 + App 绑定</td><td><code>app_plus</code></td><td>✓</td><td>✓</td></tr>
@@ -284,7 +378,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <p class="help-block" style="margin-bottom:0">优先级：<code>global_plus &gt; app_plus &gt; basic &gt; block</code>。客户端只消费服务端返回结果，不自行推导卡密类型。</p>
+                            <p class="help-block" style="margin-bottom:0">优先级：<code>global_plus &gt; app_plus &gt; basic &gt; block</code>。客户端只消费服务器返回的 <code>access_level</code> / <code>permissions</code>，不要自行推导卡密类型。</p>
                         </div>
                     </div>
                 </div>
