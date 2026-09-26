@@ -4,14 +4,14 @@ namespace app\admin\controller\general;
 
 use app\common\controller\Backend;
 use app\common\library\UpdateIntegrity;
+use app\common\library\update\UpdateBackupManager;
 use app\common\library\update\UpdateOps;
 
 /**
  * Update operations center.
  *
- * Phase 15.4 deliberately removes whole-site file scanning/storage search.
- * This controller now only manages data created by the online-update subsystem:
- * status, history, rollback backups, update cache and update lock diagnostics.
+ * Only manages data created by the online-update subsystem: status, history,
+ * rollback backups, update cache and update lock diagnostics.
  */
 class Updatemaintenance extends Backend
 {
@@ -21,6 +21,7 @@ class Updatemaintenance extends Backend
     {
         $ops = new UpdateOps(ROOT_PATH);
         $data = $ops->snapshot();
+        $data['backup_manager'] = (new UpdateBackupManager(ROOT_PATH))->snapshot();
 
         $manifest = $this->localManifest();
         $version = is_array($manifest) ? $manifest['version'] : '';
@@ -43,8 +44,11 @@ class Updatemaintenance extends Backend
     }
 
     /**
-     * Cleanup is intentionally limited to updater-owned data.
-     * apply=0 previews; apply=1 applies the same conservative retention rules.
+     * Cleanup updater-owned data only.
+     *
+     * mode=retention: existing conservative retention cleanup.
+     * mode=backup_selected: delete only selected, non-protected rollback backups.
+     * apply=0 previews, apply=1 performs the operation.
      */
     public function cleanup()
     {
@@ -53,6 +57,29 @@ class Updatemaintenance extends Backend
         }
 
         $apply = intval($this->request->param('apply', 0)) === 1;
+        $mode = trim((string)$this->request->param('mode', 'retention'));
+
+        if ($mode === 'backup_selected') {
+            $ids = $this->request->post('backup_ids/a', []);
+            if (!is_array($ids)) {
+                $ids = [];
+            }
+            try {
+                $result = (new UpdateBackupManager(ROOT_PATH))->deleteSelected($ids, !$apply);
+            } catch (\Exception $e) {
+                return json(['code' => 400, 'msg' => $e->getMessage(), 'data' => '']);
+            }
+            return json([
+                'code' => 200,
+                'msg' => $apply ? '指定更新备份清理完成' : '指定更新备份清理预览完成',
+                'data' => $result,
+            ]);
+        }
+
+        if ($mode !== 'retention') {
+            return json(['code' => 400, 'msg' => '未知清理模式', 'data' => '']);
+        }
+
         $ops = new UpdateOps(ROOT_PATH);
         $result = $ops->cleanup($apply ? false : true);
 
