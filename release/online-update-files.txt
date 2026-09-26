@@ -3,11 +3,14 @@ application/common/library/update/UpdateRuntimeStore.php
 application/common/library/update/UpdateInstaller.php
 application/common/library/update/UpdateManager.php
 application/common/library/update/UpdateOps.php
+application/common/library/update/UpdateBackupManager.php
 application/admin/controller/general/Config.php
 application/admin/controller/general/Updatemaintenance.php
+application/admin/controller/general/Apilogmaintenance.php
 application/admin/controller/general/Occodegen.php
 application/admin/view/general/updatemaintenance/panel.html
 application/admin/view/general/occodegen/index.html
+application/admin/view/common/script.html
 public/assets/js/backend/general/config.js
 public/assets/js/backend/general/updatemaintenance.js
 public/assets/js/backend/general/occodegen.js

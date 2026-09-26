@@ -1,28 +1,27 @@
-ZONOE 软件源 Release 2026092413
-版本：2026092413
-基线：source-v2026092412
-阶段：Dylib API 完整目录与文档下载
-发布分支：release/2026092413-api-doc-full-catalog
-发布状态：正式发布候选（由 ZONOE Source Release CI 完成发布）
+ZONOE 软件源 Release 2026092414
+版本：2026092414
+基线：source-v2026092413
+阶段：运维中心备份管理 + API 请求日志清理 + 自动在线发布
+发布分支：feature/2026092414-ops-backup-log-cleanup
+发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. Dylib 验证中心“API 接入说明”由 2412 的局部说明升级为完整 API 目录。
-2. 页面明确列出 8 个现有入口，并区分 JSON API、HTML 页面兼容入口与 Legacy 接口，避免客户端误按 JSON 解析页面入口。
-3. 新增独立“签名协议”分页，继续使用现有 Protocol v1/v2 HMAC-SHA256 canonical，不改变 wire contract。
-4. 新增“一键全部下载 ZIP”，按当前选择的 Dylib 与 runtime verify_path 生成完整接入资料。
-5. 下载包固定包含 13 个文件：README、API 总览/参考、错误码、签名、返回模型、流程、cURL/Objective-C/Swift/Python 示例及 JSON schema。
-6. 下载资料不导出真实 Verify Secret，示例统一使用 <VERIFY_SECRET> 占位符。
-7. 新增 DylibApiDocumentation 统一文档数据源，网页与下载资料共用真实协议信息，降低文档漂移风险。
-8. 新增 DylibApiDocs 下载 Controller，并纳入在线更新包。
-9. 新增真实生成契约测试：校验 8 个入口、13 个文件、动态 verify_path、可解析 JSON schema 及 Secret 不泄漏。
-10. 不改变数据库结构、现有 Dylib verify 协议、Runtime Config 签名及 legacy API 行为。
+1. 更新运维中心新增备份明细管理：显示备份时间、文件数、数据库备份大小、总占用与回滚保护状态。
+2. 新增备份总量、可删除占用、磁盘总容量与剩余容量统计。
+3. 支持单个删除、勾选批量删除、删除全部未保护备份。
+4. 仍被成功更新历史引用的备份保持回滚保护；前端禁止选择，后端再次校验拒绝删除。
+5. 备份删除仅接受内部备份 ID，并进行 realpath 与根目录边界校验。
+6. API 请求日志新增“删除全部日志”，前端两次确认，后端固定确认值；只清空 fa_api_request_log。
+7. 新增仓库级 Auto Online Release Gate：同 commit 其他 CI 全绿后自动检查版本并触发正式 ZONOE Source Release。
+8. 同版本 source-v<VERSION> 已存在时幂等跳过；任意 CI 失败时禁止发布。
+9. 自动发布规则写入 RELEASE_POLICY.md 与 release/auto-release.env，作为后续版本长期规则。
+10. 不改变 Dylib verify、Runtime Config、卡密授权协议与数据库结构。
 
 开发验证：
-- OC Codegen CI #17 / Run 36250685197：SUCCESS。
-- PHP 7.0 lint/contracts：SUCCESS。
-- Dylib Center UX contract：SUCCESS。
-- Dylib API documentation generation contract：SUCCESS。
-- Online-update package content gate：SUCCESS。
-- MySQL 5.7 migration regression：SUCCESS。
+- Phase14.3 Update Operations #32 / Run 36256318869：SUCCESS。
+- PHP 7.0 lint：SUCCESS。
+- 2414 backup/log cleanup contract：SUCCESS。
+- updater failure injection/runtime/atomicity regressions：SUCCESS。
+- Auto Online Release Gate 幂等验证：SUCCESS。
 
-在线更新目标：source-v2026092412 -> source-v2026092413。
+在线更新目标：source-v2026092413 -> source-v2026092414。
