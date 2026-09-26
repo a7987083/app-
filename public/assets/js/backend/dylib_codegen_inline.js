@@ -7,33 +7,34 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
     function panelHtml() {
         return ''
             + '<div class="panel panel-success" id="section-codegen">'
-            + '  <div class="panel-heading"><strong>OC 接入代码</strong> <span class="text-muted">自动读取 Dylib、版本、Bootstrap、API 和验证密钥</span></div>'
+            + '  <div class="panel-heading"><strong>API 接入示例</strong> <span class="text-muted">自动读取 Dylib、版本、Bootstrap、API 和 Verify Secret；生成内容用于测试/参考，不负责业务客户端 UI</span></div>'
             + '  <div class="panel-body">'
+            + '    <div class="alert alert-info" style="padding:8px 12px"><strong>怎么用：</strong>实际客户端可以完全不使用这些 OC 文件，直接按“API / 高级 → API 接入说明”自行实现。这里的生成器主要用于验证签名、请求、返回解析是否接对，并附带完整 API 文档。</div>'
             + '    <div class="row">'
             + '      <div class="col-sm-5 form-group"><label>目标 Dylib</label><select id="dcg-dylib" class="form-control"><option value="">请选择 Dylib</option></select></div>'
             + '      <div class="col-sm-5 form-group"><label>版本</label><select id="dcg-version" class="form-control"><option value="">先选择 Dylib</option></select></div>'
-            + '      <div class="col-sm-2 form-group"><label>&nbsp;</label><button type="button" class="btn btn-default btn-block" data-toggle="collapse" data-target="#dcg-options"><i class="fa fa-sliders"></i> 选项</button></div>'
+            + '      <div class="col-sm-2 form-group"><label>&nbsp;</label><button type="button" class="btn btn-default btn-block" data-toggle="collapse" data-target="#dcg-options"><i class="fa fa-sliders"></i> 示例选项</button></div>'
             + '    </div>'
             + '    <div id="dcg-options" class="collapse">'
             + '      <div class="well well-sm" style="margin-bottom:12px">'
             + '        <div class="row" style="margin-bottom:-15px">'
-            + '          <div class="col-sm-4 form-group"><label>类前缀</label><input id="dcg-prefix" class="form-control" value="ZON" maxlength="8"></div>'
-            + '          <div class="col-sm-4 form-group"><label>最低 iOS</label><input id="dcg-ios" class="form-control" value="13.0"></div>'
-            + '          <div class="col-sm-4 form-group"><label>超时（秒）</label><input id="dcg-timeout" type="number" min="3" max="120" class="form-control" value="10"></div>'
+            + '          <div class="col-sm-4 form-group"><label>OC 类前缀</label><input id="dcg-prefix" class="form-control" value="ZON" maxlength="8"></div>'
+            + '          <div class="col-sm-4 form-group"><label>示例最低 iOS</label><input id="dcg-ios" class="form-control" value="13.0"></div>'
+            + '          <div class="col-sm-4 form-group"><label>请求超时（秒）</label><input id="dcg-timeout" type="number" min="3" max="120" class="form-control" value="10"></div>'
             + '        </div>'
             + '      </div>'
             + '    </div>'
             + '    <div id="dcg-summary" class="well well-sm text-muted">请选择一个已注册 Dylib。</div>'
             + '    <div class="form-group" style="margin-bottom:8px">'
-            + '      <button type="button" id="dcg-preview" class="btn btn-primary"><i class="fa fa-eye"></i> 预览</button> '
-            + '      <button type="button" id="dcg-generate" class="btn btn-success" disabled><i class="fa fa-download"></i> 生成并下载 ZIP</button> '
+            + '      <button type="button" id="dcg-preview" class="btn btn-primary"><i class="fa fa-eye"></i> 预览示例与文档</button> '
+            + '      <button type="button" id="dcg-generate" class="btn btn-success" disabled><i class="fa fa-download"></i> 生成 API 接入包</button> '
             + '      <span id="dcg-status" class="text-muted" style="margin-left:10px">尚未预览</span>'
             + '    </div>'
-            + '    <div class="alert alert-warning" style="padding:8px 12px;margin-bottom:10px"><strong>安全：</strong><code>*DylibConfig.m</code> 会包含客户端验证密钥，只用于受控工程；不要提交到公开仓库。</div>'
+            + '    <div class="alert alert-warning" style="padding:8px 12px;margin-bottom:10px"><strong>安全：</strong><code>*DylibConfig.m</code> 会包含当前 Dylib Verify Secret，仅供受控测试/接入工程；不要提交到公开仓库。正式客户端也必须自行保护该 Secret。</div>'
             + '    <div id="dcg-validation"></div>'
             + '    <div id="dcg-preview-area" class="hidden">'
             + '      <div class="row" style="margin:0;border:1px solid #e5e5e5;">'
-            + '        <div class="col-sm-3" id="dcg-files" style="padding:0;max-height:420px;overflow:auto;border-right:1px solid #eee;"><div class="text-muted" style="padding:12px">预览后显示文件。</div></div>'
+            + '        <div class="col-sm-3" id="dcg-files" style="padding:0;max-height:420px;overflow:auto;border-right:1px solid #eee;"><div class="text-muted" style="padding:12px">预览后显示 OC 示例和 API 文档。</div></div>'
             + '        <div class="col-sm-9" style="padding:10px"><pre id="dcg-code" style="height:400px;overflow:auto;background:#101419;color:#e8edf2;border:0;padding:14px;font-family:Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre;">// preview</pre></div>'
             + '      </div>'
             + '    </div>'
@@ -85,7 +86,8 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
             + '　版本 <code>' + esc(c.dylib_version || '未登记') + (c.dylib_build ? ' (' + esc(c.dylib_build) + ')' : '') + '</code>'
             + '　Bootstrap <code>' + boot + '</code>'
             + '　API <code>' + apis + '</code>'
-            + '　密钥 ' + (c.verify_secret_present ? '<span class="label label-success">已配置</span>' : '<span class="label label-danger">缺失</span>')
+            + '　Verify Secret ' + (c.verify_secret_present ? '<span class="label label-success">已配置</span>' : '<span class="label label-danger">缺失</span>')
+            + '　Generator <code>' + esc(c.generator_version || '') + '</code>'
         );
     }
 
@@ -102,7 +104,7 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
         state.preview = null;
         state.files = [];
         $('#dcg-preview-area').addClass('hidden');
-        $('#dcg-files').html('<div class="text-muted" style="padding:12px">预览后显示文件。</div>');
+        $('#dcg-files').html('<div class="text-muted" style="padding:12px">预览后显示 OC 示例和 API 文档。</div>');
         $('#dcg-code').text('// preview');
         $('#dcg-generate').prop('disabled', true);
         if (message) $('#dcg-status').attr('class', 'text-muted').text(message);
@@ -123,13 +125,13 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
         layer.load(1, {shade: 0.05});
         $.getJSON(url('general/occodegen/current'), params, function (ret) {
             layer.closeAll('loading');
-            if (!ret || ret.code !== 200 || !ret.data) { layer.alert((ret && ret.msg) || '读取 Dylib 生成配置失败', {icon: 2}); return; }
+            if (!ret || ret.code !== 200 || !ret.data) { layer.alert((ret && ret.msg) || '读取 API 示例配置失败', {icon: 2}); return; }
             state.base = ret.data.config;
             renderVersions(ret.data.versions || [], ret.data.selected_version_id);
             renderSummary(ret.data.config);
             renderValidation(ret.data.validation);
-            clearPreview('已读取当前配置，尚未预览');
-        }).fail(function () { layer.closeAll('loading'); layer.alert('读取 Dylib 生成配置失败', {icon: 2}); });
+            clearPreview('已读取 API 配置，尚未预览');
+        }).fail(function () { layer.closeAll('loading'); layer.alert('读取 API 示例配置失败', {icon: 2}); });
     }
 
     function showFile(index) {
@@ -144,7 +146,8 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
         state.files = files || [];
         var html = '';
         $.each(state.files, function (i, f) {
-            html += '<a href="javascript:;" data-index="' + i + '" style="display:block;padding:8px 10px;border-bottom:1px solid #f4f4f4;word-break:break-all"><i class="fa fa-file-code-o"></i> ' + esc(f.path) + '</a>';
+            var icon = /\.md$/i.test(f.path) ? 'fa-file-text-o' : 'fa-file-code-o';
+            html += '<a href="javascript:;" data-index="' + i + '" style="display:block;padding:8px 10px;border-bottom:1px solid #f4f4f4;word-break:break-all"><i class="fa ' + icon + '"></i> ' + esc(f.path) + '</a>';
         });
         $('#dcg-files').html(html || '<div class="text-muted" style="padding:12px">没有生成文件。</div>');
         $('#dcg-preview-area').removeClass('hidden');
@@ -183,7 +186,7 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
             success: function (ret) {
                 layer.closeAll('loading');
                 if (!ret || ret.code !== 200 || !ret.data) { layer.alert((ret && ret.msg) || '生成失败', {icon: 2}); return; }
-                $('#dcg-status').attr('class', 'text-success').text('已生成 · SHA256 ' + String(ret.data.sha256 || '').substr(0, 16));
+                $('#dcg-status').attr('class', 'text-success').text('API 接入包已生成 · SHA256 ' + String(ret.data.sha256 || '').substr(0, 16));
                 window.location.href = url(ret.data.download_url);
             },
             error: function () { layer.closeAll('loading'); layer.alert('生成 ZIP 请求失败', {icon: 2}); }
