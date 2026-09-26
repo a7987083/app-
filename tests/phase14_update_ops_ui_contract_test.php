@@ -29,8 +29,10 @@ p143ui_assert(strpos($js, "general/updatemaintenance/index") !== false, 'panel s
 p143ui_assert(strpos($js, "general/updatemaintenance/scan") === false, 'removed scan endpoint is still wired');
 p143ui_assert(strpos($js, "general/updatemaintenance/cleanup") !== false, 'panel cleanup endpoint is not wired');
 p143ui_assert(strpos($js, "type:'POST'") !== false || strpos($js, "type: 'POST'") !== false, 'destructive request must use POST');
-p143ui_assert(strpos($js, 'cleanup(false)') !== false, 'dry-run preview action missing');
-p143ui_assert(strpos($js, 'cleanup(true)') !== false, 'confirmed cleanup action missing');
+$previewWired = strpos($js, 'cleanup(false)') !== false || strpos($js, 'retentionCleanup(false)') !== false;
+$applyWired = strpos($js, 'cleanup(true)') !== false || strpos($js, 'retentionCleanup(true)') !== false;
+p143ui_assert($previewWired, 'dry-run preview action missing');
+p143ui_assert($applyWired, 'confirmed cleanup action missing');
 p143ui_assert(strpos($js, 'apply:apply ? 1 : 0') !== false || strpos($js, 'apply: apply ? 1 : 0') !== false, 'cleanup apply flag mapping missing');
 p143ui_assert(strpos($js, "layer.confirm") !== false, 'destructive cleanup must require confirmation');
 
