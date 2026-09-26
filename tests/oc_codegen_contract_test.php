@@ -52,6 +52,8 @@ assert_true($config['dylib_key'] === 'zonoe.fixture', 'dylib key missing');
 assert_true($config['dylib_version'] === '2.4.8', 'version missing');
 assert_true(count($config['bootstrap_urls']) === 2, 'bootstrap list missing');
 assert_true(count($config['api_endpoints']) === 2, 'api endpoint list missing');
+assert_true($config['legacy_dylib_urls'][0] === 'https://api-a.example.invalid/index/index/dylib', 'legacy Index::dylib URL missing');
+assert_true($config['legacy_apiface_urls'][0] === 'https://api-a.example.invalid/index/index/apiface', 'legacy Index::apiface URL missing');
 
 $validation = $generator->validate($config);
 assert_true($validation['valid'] === true, 'fixture config should be valid');
@@ -76,6 +78,12 @@ assert_true(strpos($first['ZONDylibConfig.m'], 'zonoe.fixture') !== false, 'dyli
 assert_true(strpos($first['ZONDylibConfig.m'], '2.4.8') !== false, 'dylib version not embedded');
 assert_true(strpos($first['ZONDylibConfig.m'], 'bootstrap-a.example.invalid') !== false, 'bootstrap URL not embedded');
 assert_true(strpos($first['ZONDylibConfig.m'], str_repeat('a', 64)) !== false, 'client verification secret not embedded');
+assert_true(strpos($first['ZONDylibConfig.h'], 'legacyDylibURLs') !== false, 'legacy dylib helper missing');
+assert_true(strpos($first['ZONDylibConfig.h'], 'legacyApiFaceURLs') !== false, 'legacy apiface helper missing');
+assert_true(strpos($first['ZONDylibConfig.m'], '/index/index/dylib') !== false, 'legacy dylib URL not embedded');
+assert_true(strpos($first['ZONDylibConfig.m'], '/index/index/apiface') !== false, 'legacy apiface URL not embedded');
+assert_true(strpos($first['INTEGRATION.md'], 'Index::dylib()') !== false, 'legacy dylib integration guide missing');
+assert_true(strpos($first['INTEGRATION.md'], 'Index::apiface()') !== false, 'legacy apiface integration guide missing');
 
 assert_true(strpos($first['ZONDylibVerify.m'], 'canonicalV2UDID') !== false, 'v2 HMAC implementation missing');
 assert_true(strpos($first['ZONDylibVerify.m'], 'currentAppMachOUUID') !== false, 'App identity implementation missing');
@@ -88,6 +96,8 @@ assert_true(is_array($public), 'GeneratedConfig JSON invalid');
 assert_true($public['verify_secret_present'] === true, 'secret presence flag missing');
 assert_true($public['verify_secret'] !== str_repeat('a', 64), 'GeneratedConfig must mask verification secret');
 assert_true(strpos($public['verify_secret'], '*') !== false, 'masked secret should contain asterisks');
+assert_true(isset($public['legacy_dylib_urls'][0]), 'GeneratedConfig legacy dylib URLs missing');
+assert_true(isset($public['legacy_apiface_urls'][0]), 'GeneratedConfig legacy apiface URLs missing');
 
 $manifest = json_decode($first['generation-manifest.json'], true);
 assert_true(is_array($manifest), 'manifest JSON invalid');
@@ -101,9 +111,28 @@ assert_true(strpos($dylibCodegen, "dylib_center/index") !== false, 'DylibCodegen
 assert_true(strpos($dylibCodegen, "\$this->auth->check") !== false, 'DylibCodegen must explicitly check Dylib Center permission');
 assert_true(strpos($dylibCodegen, "protected \$noNeedRight") !== false, 'DylibCodegen compatibility routes must skip route-specific rights after login');
 
+$dylibCenter = @file_get_contents(dirname(__DIR__) . '/application/admin/controller/DylibCenter.php');
+assert_true($dylibCenter !== false, 'DylibCenter controller missing');
+assert_true(strpos($dylibCenter, 'public function deleteVersion()') !== false, 'version delete endpoint missing');
+assert_true(strpos($dylibCenter, "Db::startTrans()") !== false, 'destructive dylib delete must be transactional');
+assert_true(strpos($dylibCenter, "Db::name('dylib_version')->where('dylib_id', \$id)->delete()") !== false, 'dylib delete must cascade versions');
+assert_true(strpos($dylibCenter, "Db::name('dylib_app_binding')->where('dylib_id', \$id)->delete()") !== false, 'dylib delete must cascade legacy bindings');
+assert_true(strpos($dylibCenter, "Db::name('dylib_verify_log')->where('dylib_key'") !== false, 'dylib delete must cascade verification logs');
+
+$dylibCenterJs = @file_get_contents(dirname(__DIR__) . '/public/assets/js/backend/dylib_center.js');
+assert_true($dylibCenterJs !== false, 'Dylib Center JS missing');
+assert_true(strpos($dylibCenterJs, 'js-version-edit') !== false, 'version edit control missing');
+assert_true(strpos($dylibCenterJs, 'js-version-delete') !== false, 'version delete control missing');
+assert_true(strpos($dylibCenterJs, 'dylib_center/deleteVersion') !== false, 'version delete request missing');
+
+$legacyIndex = @file_get_contents(dirname(__DIR__) . '/application/index/controller/Index.php');
+assert_true($legacyIndex !== false, 'Index controller missing');
+assert_true(strpos($legacyIndex, 'public function dylib()') !== false, 'Index::dylib compatibility endpoint missing');
+assert_true(strpos($legacyIndex, 'public function apiface()') !== false, 'Index::apiface compatibility endpoint missing');
+
 $legacyController = @file_get_contents(dirname(__DIR__) . '/application/admin/controller/general/Occodegen.php');
 assert_true($legacyController !== false, 'legacy Occodegen compatibility controller missing');
 assert_true(strpos($legacyController, 'extends \\app\\admin\\controller\\DylibCodegen') !== false, 'legacy Occodegen must delegate to DylibCodegen');
 assert_true(strpos($legacyController, 'ObjectiveCGenerator') === false, 'legacy Occodegen must not keep a second generator implementation');
 
-fwrite(STDOUT, "OK oc_codegen_contract files=" . count($first) . " permission=dylib_center/index hash=" . $generator->configHash($config) . "\n");
+fwrite(STDOUT, "OK oc_codegen_contract files=" . count($first) . " permission=dylib_center/index legacy_api=yes hash=" . $generator->configHash($config) . "\n");
