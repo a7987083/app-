@@ -1,29 +1,30 @@
-ZONOE 软件源 Release 2026092410
-版本：2026092410
-基线：source-v2026092409
-阶段：Dylib CRUD 与 Legacy API Codegen 完善
-发布分支：release/2026092410-dylib-crud-legacy-codegen
+ZONOE 软件源 Release 2026092411
+版本：2026092411
+基线：source-v2026092410
+阶段：Dylib Center UX 整理与验证记录管理
+发布分支：release/2026092411-dylib-center-ux
 发布状态：正式发布候选（由 ZONOE Source Release CI 完成发布）
 
 更新内容：
-1. Dylib 列表取消“已有业务历史禁止删除”的限制；删除时事务清理版本、旧游戏授权、对应验证日志，再删除 Dylib 本体。
-2. 版本管理新增编辑与删除入口；编辑复用现有 saveVersion(id) 更新能力，新增 deleteVersion() 物理删除指定版本。
-3. OC Codegen 升级到 Generator 2.1.0；继续自动读取 Dylib、版本、Bootstrap、API Endpoint 与验证密钥。
-4. 恢复并显式输出旧接口兼容信息：Index::dylib() -> /index/index/dylib，Index::apiface() -> /index/index/apiface。
-5. 生成的 Config 与 GeneratedConfig/INTEGRATION 文档增加 legacyDylibURLs / legacyApiFaceURLs，方便旧工程继续接入。
-6. 不修改现有 DylibVerificationService、Runtime Config、v1/v2 HMAC canonical、权限模型和数据库结构。
-7. 2409 的 5 Tab Dylib Center UX 保持不变。
-8. 在线更新继续沿用现有 UpdateManager / UpdateInstaller；2410 无新增 SQL migration。
+1. 新增全局“当前 Dylib”上下文；OC 接入代码、版本管理、接入说明和验证记录可同步切换当前 Dylib。
+2. 修复“OC 接入代码已选择 Dylib，但接入说明仍显示请选择已注册 Dylib”的前端状态脱节。
+3. 版本管理改为更易理解的中文：Build 改称内部构建号；解释 SHA256、离线可用时间、验证失败动作与用户提示用途。
+4. 版本高级校验设置默认折叠，日常只保留版本号、内部构建号、状态等高频字段。
+5. 远程通知增加启用、停用和删除；最低权限 basic/app_plus/global_plus 全部以中文展示。
+6. 验证记录支持 Dylib、结果、BundleID、版本、UDID Hash、时间范围组合筛选。
+7. 验证记录支持每页 100/500/1000，默认 1000；支持单条删除、勾选批量删除、按当前筛选结果删除。
+8. 2411 不修改客户端验证协议、v1/v2 HMAC canonical、Runtime Config 签名、OC Codegen 生成协议或数据库表结构。
 
 验证：
-- OC Codegen CI #9 / Run 36230506336：success。
+- OC Codegen CI #10 / Run 36232452762：success。
 - PHP 7.0 lint：success。
 - JavaScript syntax：success。
-- OC Codegen contract：success，覆盖 legacy Index API URL 输出。
-- Dylib Center UX contract：success。
-- MySQL 5.7 migration regression：success；无新增 migration。
+- OC Codegen contract：success。
+- Dylib Center UX contract：success，覆盖全局 Dylib、版本说明、通知 CRUD、日志筛选/删除。
+- 在线更新包内容检查：success。
+- MySQL 5.7 migration regression：success；2411 无新增数据库表结构 migration。
 
 在线更新：
-- 目标升级：source-v2026092409 -> source-v2026092410。
+- 目标升级：source-v2026092410 -> source-v2026092411。
 - 正式 Release 必须包含 zonoe-online-update.zip 与 zonoe-online-update.zip.sha256。
 - 继续执行 GitHub Release 检测、SHA256、备份、文件覆盖、版本写入、完整性校验与失败回滚。
