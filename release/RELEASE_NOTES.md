@@ -57,10 +57,10 @@ OC Codegen 不再作为一个编号大区块动态插入页面，而是固定渲
 - Bootstrap URL
 - Verify Path
 - 游戏更新默认弹窗
-- Protocol v2 / HMAC 接入说明
+- Protocol v1 / v2 HMAC 接入说明
 - 权限模型说明
 
-接入协议和权限模型默认折叠，只有需要调试或审计时才展开。
+接入协议和权限模型默认折叠，只有需要调试或审计时才展开。2409 仍保留 v1 canonical 文档，确保已发布旧客户端的兼容契约在后台可审计；v2 App Identity/HMAC 说明同时保留。
 
 ### 通知与验证记录
 
@@ -75,17 +75,24 @@ OC Codegen 不再作为一个编号大区块动态插入页面，而是固定渲
 - `DylibRuntimeConfigService`
 - `/index/dylib_verify/config`
 - `/index/dylib_verify/verify`
-- HMAC canonical 格式
+- v1 / v2 HMAC canonical 格式
 - Runtime Config 签名格式
 - OC 生成结果协议
 - MySQL 表结构
 
 因此 2408 已接入的 Dylib 客户端不需要重新适配协议。
 
+### 发布前兼容收口
+
+- 恢复“高级 → 接入说明”中的 v1 HMAC canonical 文档，但仍保持默认折叠，不恢复旧版平铺页面。
+- 将 2406 历史测试中已经过时的“1～6 编号页面顺序”断言升级为 2409 的 5 Tab 顺序契约；App Identity、卡密 scope、Bootstrap、Last-Known-Good、HMAC、数据库和在线更新断言均保持不变。
+
 ### 已完成验证
 
-- `OC Codegen CI #6` / Run `36227164466`：success。
-- PHP 7.0：生成器、Dylib UI contract 语法检查通过。
+- `OC Codegen CI #6` / Run `36227164466`：success（2409 功能分支）。
+- `OC Codegen CI #7` / Run `36227565448`：success（v1 文档兼容修复复验）。
+- `IPA Online Update Release Gate #138` / Run `36227697213`：success。
+- PHP 7.0：生成器、Dylib UI、历史 Dylib signing/runtime contracts 通过。
 - JavaScript syntax check：`dylib_center.js`、`dylib_codegen_inline.js` 通过。
 - 原 OC Codegen contract：通过。
 - 新 `dylib_center_ux_contract_test.php`：通过，强制验证 5 Tab、Codegen 位于概览、接入说明/权限模型默认折叠。
@@ -93,4 +100,3 @@ OC Codegen 不再作为一个编号大区块动态插入页面，而是固定渲
 - MySQL 5.7 migration regression：success；2409 无新增数据库 migration。
 
 目标升级路径：`source-v2026092408 -> source-v2026092409`。
-
