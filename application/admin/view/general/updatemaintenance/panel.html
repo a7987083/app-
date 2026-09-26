@@ -24,6 +24,25 @@
         </div>
 
         <div class="panel panel-default">
+            <div class="panel-heading"><strong>备份管理</strong> <span class="text-muted">被更新历史引用的备份仍承担回滚职责，系统会锁定并禁止手动删除。</span></div>
+            <div class="panel-body">
+                <div class="form-inline" style="margin-bottom:10px;">
+                    <button type="button" id="ops-backup-refresh" class="btn btn-default"><i class="fa fa-refresh"></i> 刷新备份</button>
+                    <button type="button" id="ops-backup-delete-selected" class="btn btn-danger"><i class="fa fa-trash"></i> 删除选中</button>
+                    <button type="button" id="ops-backup-delete-all-free" class="btn btn-warning"><i class="fa fa-trash-o"></i> 删除全部未保护备份</button>
+                    <span id="ops-backup-summary" class="text-muted" style="margin-left:8px;"></span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped zonoe-ops-table">
+                        <thead><tr><th width="36"><input type="checkbox" id="ops-backup-check-all"></th><th>备份 ID</th><th>创建时间</th><th>文件</th><th>数据库</th><th>总占用</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody id="ops-backup-body"><tr><td colspan="8" class="text-muted text-center">正在读取备份...</td></tr></tbody>
+                    </table>
+                </div>
+                <div id="ops-disk-summary" class="text-muted"></div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
             <div class="panel-heading"><strong>安全清理更新数据</strong> <span class="text-muted">只按保留期清理更新器自身数据；运行中任务和仍被回滚记录引用的备份不会删除。</span></div>
             <div class="panel-body">
                 <button type="button" id="ops-preview" class="btn btn-default"><i class="fa fa-search"></i> 预览可清理项</button>
@@ -37,14 +56,7 @@
             <div class="col-sm-6"><div class="zonoe-ops-card"><h4>最近回滚</h4><div id="ops-latest-rollback" class="zonoe-ops-sub">暂无记录</div></div></div>
         </div>
 
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>运行中 / 疑似中断更新任务</strong></div>
-            <div class="panel-body" id="ops-jobs">暂无任务</div>
-        </div>
-
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>更新锁状态</strong></div>
-            <div class="panel-body" id="ops-lock">正在读取...</div>
-        </div>
+        <div class="panel panel-default"><div class="panel-heading"><strong>运行中 / 疑似中断更新任务</strong></div><div class="panel-body" id="ops-jobs">暂无任务</div></div>
+        <div class="panel panel-default"><div class="panel-heading"><strong>更新锁状态</strong></div><div class="panel-body" id="ops-lock">正在读取...</div></div>
     </div>
 </div>
