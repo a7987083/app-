@@ -9,13 +9,16 @@ on:
       - feature/2026092410-dylib-crud-legacy-codegen
       - feature/2026092411-dylib-center-ux
       - feature/2026092412-api-integration-center
+      - feature/2026092413-api-doc-full-catalog
       - 'release/**'
     paths:
       - 'application/common/library/codegen/**'
       - 'application/common/library/Ipa/DylibApiContract.php'
+      - 'application/common/library/Ipa/DylibApiDocumentation.php'
       - 'application/admin/controller/general/Occodegen.php'
       - 'application/admin/controller/DylibCenter.php'
       - 'application/admin/controller/DylibCodegen.php'
+      - 'application/admin/controller/DylibApiDocs.php'
       - 'application/admin/view/dylib_center/index.html'
       - 'public/assets/js/backend/dylib_center.js'
       - 'public/assets/js/backend/dylib_codegen_inline.js'
@@ -42,8 +45,10 @@ jobs:
         run: |
           set -euo pipefail
           php -l application/common/library/Ipa/DylibApiContract.php
+          php -l application/common/library/Ipa/DylibApiDocumentation.php
           php -l application/common/library/codegen/ObjectiveCGenerator.php
           php -l application/admin/controller/DylibCodegen.php
+          php -l application/admin/controller/DylibApiDocs.php
           php -l application/admin/controller/general/Occodegen.php
           php -l application/admin/controller/DylibCenter.php
           php -l tests/oc_codegen_contract_test.php
@@ -60,8 +65,10 @@ jobs:
           php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
           unzip -t zonoe-online-update.zip >/dev/null
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/Ipa/DylibApiContract.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/Ipa/DylibApiDocumentation.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/codegen/ObjectiveCGenerator.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/DylibCodegen.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/DylibApiDocs.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Occodegen.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/dylib_center/index.html'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/dylib_center.js'
