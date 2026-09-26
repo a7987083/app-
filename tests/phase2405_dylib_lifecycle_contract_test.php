@@ -46,20 +46,33 @@ foreach ([$controller, $service, $publicController, $view, $js, $client, $readme
     }
 }
 
-// 2405 lifecycle invariants must survive later authorization model changes.
+// 2405 lifecycle invariants that remain valid after later authorization changes.
 requireContains($service, "->where('enabled', 1)->find()", 'verification rejects disabled dylib');
 requireContains($service, "'dylib_unknown', 'block'", 'disabled/unknown response remains fail-closed');
 requireContains($controller, 'public function setDylibEnabled()', 'admin toggle endpoint');
 requireContains($controller, "'enabled' => \$enabled", 'toggle persists enabled flag');
 
-// Historical rows still prevent destructive deletion even though 2406 no longer
-// uses the old per-Dylib BundleID binding in the active verify path.
-requireContains($controller, "Db::name('dylib_version')->where('dylib_id', \$id)->count()", 'version reference check');
-requireContains($controller, "Db::name('dylib_app_binding')->where('dylib_id', \$id)->count()", 'legacy binding history reference check');
-requireContains($controller, "Db::name('dylib_verify_log')->where('dylib_key'", 'verification history reference check');
-requireContains($controller, '为保留历史禁止删除，请改为停用', 'referenced delete blocked');
+// 2410 intentionally changes the old history-protected delete contract: the
+// operator may now permanently delete a Dylib and its related historical rows.
+// Keep this destructive behavior explicit and transactional.
+requireContains($controller, 'public function deleteDylib()', 'admin delete endpoint');
+requireContains($controller, 'Db::startTrans();', 'destructive delete starts transaction');
+requireContains($controller, "Db::name('dylib_version')->where('dylib_id', \$id)->delete()", 'delete cascades versions');
+requireContains($controller, "Db::name('dylib_app_binding')->where('dylib_id', \$id)->delete()", 'delete cascades legacy bindings');
+requireContains($controller, "Db::name('dylib_verify_log')->where('dylib_key'", 'delete cascades verification logs');
+requireContains($controller, "Db::name('dylib')->where('id', \$id)->delete()", 'delete removes dylib row');
+requireContains($controller, 'Db::commit();', 'destructive delete commits transaction');
+requireContains($controller, 'Db::rollback();', 'destructive delete rolls back on failure');
+requireNotContains($controller, '为保留历史禁止删除，请改为停用', 'old referenced-delete blocker removed');
 requireContains($js, 'Layer.confirm(', 'delete second confirmation');
 requireContains($js, "url: 'dylib_center/deleteDylib'", 'delete uses Fast.api.ajax path');
+
+// 2410 version CRUD: editing reuses saveVersion(id), deletion has a dedicated endpoint.
+requireContains($controller, 'public function deleteVersion()', 'version delete endpoint');
+requireContains($controller, "Db::name('dylib_version')->where('id', \$id)->delete()", 'version physical delete');
+requireContains($js, 'js-version-edit', 'version edit control');
+requireContains($js, 'js-version-delete', 'version delete control');
+requireContains($js, "url: 'dylib_center/deleteVersion'", 'version delete AJAX endpoint');
 
 // Dylib key remains immutable after registration.
 requireContains($controller, 'Dylib key cannot be changed after registration', 'immutable dylib key');
