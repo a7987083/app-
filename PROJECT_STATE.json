@@ -1,27 +1,31 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "version": "2026092409",
-    "release": "source-v2026092409",
-    "branch": "release/2026092409-dylib-center-ux-simplification",
-    "commit": "a36b979e86d1b39da6eabf74f5f3e1ac99b3a5a8"
+    "version": "2026092411",
+    "release": "source-v2026092411",
+    "branch": "release/2026092411-dylib-center-ux",
+    "tag_target": "b46da637df7c0c7918b4ec71b6fe2bdf2387a73c",
+    "latest_tested_release_branch_head": "56f503c9eb094fe02cdc9987f25cd12edbf065f0"
   },
   "development": {
-    "version": "2026092410",
-    "branch": "feature/2026092410-dylib-crud-legacy-codegen",
-    "verified_checkpoint": "69208ccfd595ccd8cb4aab7093838eb5dc7f4c55",
-    "status": "code_and_ci_verified_real_admin_acceptance_pending",
+    "version": "2026092412",
+    "branch": "feature/2026092412-api-integration-center",
+    "verified_checkpoint": "fc5a3d90398df60f2c651a113c253dce67e8d4db",
+    "status": "feature_ci_green_release_pending",
+    "focus": "Dylib verification center as API provider only",
     "features": [
-      "transactional destructive Dylib deletion including versions, legacy bindings and verification logs",
-      "Dylib version edit UI backed by saveVersion(id)",
-      "Dylib version delete API and UI",
-      "Objective-C Generator 2.1.0 legacy Index::dylib and Index::apiface endpoint export"
+      "canonical Dylib API contract source with real request/response fields",
+      "documented string result codes and client handling guidance",
+      "Objective-C Generator 2.2.0 repositioned as test/reference API integration generator",
+      "generated API_REFERENCE.md ERROR_CODES.md and EXAMPLES.md",
+      "admin API integration guide with request response HMAC and error-code documentation",
+      "explicit separation between verification API and client UI workflows"
     ]
   },
   "ci": {
     "workflow": "OC Codegen CI",
-    "run": 36230506336,
-    "run_number": 9,
+    "run": 36239192712,
+    "run_number": 14,
     "conclusion": "success",
     "php70_contract": "passed",
     "javascript_syntax": "passed",
@@ -31,14 +35,12 @@
     "mysql57_migration_regression": "passed"
   },
   "verification": {
-    "dylib_delete_real_admin": "not_verified",
-    "version_edit_real_admin": "not_verified",
-    "version_delete_real_admin": "not_verified",
-    "generated_zip_real_project": "not_verified",
-    "formal_2410_release_gate": "not_run",
-    "formal_2410_release": "not_published"
+    "formal_2412_release_gate": "not_run",
+    "formal_2412_release": "not_published",
+    "real_client_manual_api_integration": "not_verified",
+    "generated_reference_zip_real_project": "not_verified"
   },
-  "next_task": "Exercise destructive Dylib deletion and version edit/delete with disposable records in the real admin, then generate one Objective-C ZIP and verify legacyDylibURLs/legacyApiFaceURLs before preparing the 2410 release gate.",
+  "next_task": "Prepare 2026092412 release metadata from the latest green feature checkpoint, run formal release gates and publish source-v2026092412 with online-update assets.",
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
   "handoff": "HANDOFF.md",
