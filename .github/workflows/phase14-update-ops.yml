@@ -4,15 +4,20 @@ on:
   push:
     branches:
       - feature/phase14-3-update-ops-v2
+      - feature/2026092414-ops-backup-log-cleanup
   pull_request:
     paths:
       - 'application/common/library/update/UpdateOps.php'
+      - 'application/common/library/update/UpdateBackupManager.php'
       - 'application/admin/controller/general/Updatemaintenance.php'
+      - 'application/admin/controller/general/Apilogmaintenance.php'
       - 'application/admin/view/general/updatemaintenance/panel.html'
+      - 'application/admin/view/common/script.html'
       - 'public/assets/js/backend/general/updatemaintenance.js'
       - 'public/assets/js/backend/general/config.js'
       - 'tests/phase14_update_ops_test.php'
       - 'tests/phase14_update_ops_ui_contract_test.php'
+      - 'tests/phase2414_ops_backup_log_cleanup_contract_test.php'
       - '.github/workflows/phase14-update-ops.yml'
 
 jobs:
@@ -25,13 +30,16 @@ jobs:
           php-version: '7.0'
           coverage: none
 
-      - name: Lint Phase14.3 files
+      - name: Lint Phase14.3 and 2414 files
         run: |
           set -euo pipefail
           php -l application/common/library/update/UpdateOps.php
+          php -l application/common/library/update/UpdateBackupManager.php
           php -l application/admin/controller/general/Updatemaintenance.php
+          php -l application/admin/controller/general/Apilogmaintenance.php
           php -l tests/phase14_update_ops_test.php
           php -l tests/phase14_update_ops_ui_contract_test.php
+          php -l tests/phase2414_ops_backup_log_cleanup_contract_test.php
           node --check public/assets/js/backend/general/updatemaintenance.js
           node --check public/assets/js/backend/general/config.js
 
@@ -40,6 +48,7 @@ jobs:
           set -euo pipefail
           php tests/phase14_update_ops_test.php
           php tests/phase14_update_ops_ui_contract_test.php
+          php tests/phase2414_ops_backup_log_cleanup_contract_test.php
 
       - name: Re-run updater hardening regression
         run: |
