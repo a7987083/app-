@@ -2,9 +2,11 @@
 
 namespace app\common\library\codegen;
 
+use app\common\library\Ipa\DylibApiContract;
+
 class ObjectiveCGenerator
 {
-    const GENERATOR_VERSION = '2.1.0';
+    const GENERATOR_VERSION = '2.2.0';
 
     public function buildConfig(array $dylib, array $runtimeConfig, array $version, array $draft = [], $domain = '')
     {
@@ -66,6 +68,9 @@ class ObjectiveCGenerator
                 'notice' => true,
                 'legacy_index_dylib' => true,
                 'legacy_index_apiface' => true,
+                'api_reference' => true,
+                'error_code_reference' => true,
+                'multi_language_examples' => true,
             ],
         ];
     }
@@ -80,7 +85,7 @@ class ObjectiveCGenerator
         if (empty($config['bootstrap_urls']) && empty($config['endpoint_url'])) $errors[] = 'Bootstrap 和直连验证地址均为空，无法生成可工作的客户端';
         if (empty($config['bootstrap_urls'])) $warnings[] = '未配置 Bootstrap URL，将主要依赖直连验证地址；不利于后续服务器迁移。';
         if (!empty($config['endpoint_url']) && stripos((string)$config['endpoint_url'], 'http://') === 0) $warnings[] = '验证地址使用 HTTP，iOS ATS 可能阻止明文请求。';
-        if (empty($config['dylib_enabled'])) $warnings[] = '当前 Dylib 已停用，生成代码仍可用于接入，但在线验证会返回 dylib_unknown / block。';
+        if (empty($config['dylib_enabled'])) $warnings[] = '当前 Dylib 已停用，生成代码仍可用于接入测试，但在线验证会返回 dylib_unknown / block。';
         return ['valid' => !$errors, 'errors' => $errors, 'warnings' => $warnings];
     }
 
@@ -114,6 +119,9 @@ class ObjectiveCGenerator
             $prefix . 'DylibVerify.m' => $verifyImpl,
             'GeneratedConfig.json' => $this->json($this->publicConfig($config)) . "\n",
             'INTEGRATION.md' => $this->integrationGuide($prefix, $config),
+            'API_REFERENCE.md' => $this->apiReference($config),
+            'ERROR_CODES.md' => $this->errorCodeGuide(),
+            'EXAMPLES.md' => $this->exampleGuide($prefix, $config),
         ];
 
         $hashes = [];
@@ -183,16 +191,50 @@ class ObjectiveCGenerator
     {
         $legacyDylib = isset($config['legacy_dylib_urls'][0]) ? $config['legacy_dylib_urls'][0] : '';
         $legacyApiFace = isset($config['legacy_apiface_urls'][0]) ? $config['legacy_apiface_urls'][0] : '';
-        return "# Dylib Objective-C 接入\n\n"
-            . "本包由 Dylib 验证中心按当前 Dylib、版本、Bootstrap、API Endpoint 和验证密钥自动生成。参与编译的文件只有 4 个：\n\n"
-            . "- `{$prefix}DylibConfig.h`\n- `{$prefix}DylibConfig.m`\n- `{$prefix}DylibVerify.h`\n- `{$prefix}DylibVerify.m`\n\n"
+        return "# Dylib API 接入示例\n\n"
+            . "> 定位：本 ZIP 中的 Objective-C 代码仅用于验证 API 的接入测试与参考，不是业务客户端 UI。UDID 获取、卡密输入、公告弹窗、悬浮窗、授权信息页等都由实际客户端工程自行实现。\n\n"
             . "当前 Dylib：`{$config['dylib_name']}` / `{$config['dylib_key']}`，版本 `{$config['dylib_version']}` (`{$config['dylib_build']}`)。\n\n"
-            . "## 新验证协议\n\n```objc\n#import \"{$prefix}DylibConfig.h\"\n\n{$prefix}DylibVerifyConfiguration *cfg = [{$prefix}DylibConfig configurationWithUDIDProvider:^NSString *{\n    return ExistingProjectUDID();\n}];\n{$prefix}DylibVerify *client = [[{$prefix}DylibVerify alloc] initWithConfiguration:cfg];\n[client verifyWithCompletion:^({$prefix}DylibVerifyResult *result) {\n    if (!result.isAllowed) return;\n    if ([result.permissions[@\"extra_menu\"] boolValue]) {\n        // show extra menu\n    }\n}];\n```\n\n"
-            . "## 旧接口兼容\n\n2409/2410 并未删除历史 `Index::dylib()` / `Index::apiface()`。生成配置会同时导出它们的 API URL，方便旧工程继续调用或做迁移对照。\n\n"
-            . "- `Index::dylib()`：`{$legacyDylib}`，GET 参数 `udid`，返回旧版远程 Dylib 配置和授权状态。\n"
-            . "- `Index::apiface()`：`{$legacyApiFace}`，GET 参数 `udid`，返回授权结果；当前服务端响应包含 `expire/ts/nonce/sign`，签名 canonical 为 `udid|expire|ts|nonce`。\n\n"
-            . "Objective-C 可通过 `[{$prefix}DylibConfig legacyDylibURLs]` 和 `[{$prefix}DylibConfig legacyApiFaceURLs]` 获取按 API Endpoint 顺序生成的候选地址。\n\n"
-            . "生成的 `Config.m` 包含该 Dylib 客户端协议所需的共享验证密钥，请仅放入受控工程，不要提交到公开仓库。后台管理密钥、数据库凭据和管理 Token 不会写入生成代码。\n";
+            . "请先阅读：`API_REFERENCE.md`、`ERROR_CODES.md`、`EXAMPLES.md`。\n\n"
+            . "## Objective-C 快速验证\n\n```objc\n#import \"{$prefix}DylibConfig.h\"\n\n{$prefix}DylibVerifyConfiguration *cfg = [{$prefix}DylibConfig configurationWithUDIDProvider:^NSString *{\n    return ExistingProjectUDID(); // 由你的客户端工程提供\n}];\n{$prefix}DylibVerify *client = [[{$prefix}DylibVerify alloc] initWithConfiguration:cfg];\n[client verifyWithCompletion:^({$prefix}DylibVerifyResult *result) {\n    NSLog(@\"code=%@ message=%@\", result.code, result.message);\n    if (!result.isAllowed) {\n        // 按 result.code / result.action 处理；message 可用于显示。\n        return;\n    }\n    // 验证通过后由你的客户端决定 UI / 菜单 / 功能。\n}];\n```\n\n"
+            . "## 旧接口兼容\n\n"
+            . "- `Index::dylib()`：`{$legacyDylib}`，GET 参数 `udid`。\n"
+            . "- `Index::apiface()`：`{$legacyApiFace}`，GET 参数 `udid`；canonical 为 `udid|expire|ts|nonce`。\n\n"
+            . "生成的 Config.m 含当前 Dylib 的 Verify Secret，仅应放入受控工程；不要提交到公开仓库。\n";
+    }
+
+    protected function apiReference(array $config)
+    {
+        $doc = DylibApiContract::document($config['dylib_key'], $config['dylib_version'], $config['dylib_build'], $config['verify_path']);
+        $out = "# Dylib Verification API Reference\n\n";
+        $out .= "**职责边界：** 验证中心只提供 API、签名规则和返回协议；客户端 UI/输入流程由调用方工程自行实现。\n\n";
+        $out .= "当前 Dylib：`{$config['dylib_key']}`，版本 `{$config['dylib_version']}`，Build `{$config['dylib_build']}`。\n\n";
+        $out .= "## Endpoint\n\n- Runtime Config: `GET /index/dylib_verify/config?dylib_key={$config['dylib_key']}`\n- Verify: `POST {$config['verify_path']}`\n- Content-Type: `application/x-www-form-urlencoded` 或 `application/json`\n\n";
+        $out .= "## 请求字段\n\n|字段|类型|必填|协议|说明|\n|---|---|---|---|---|\n";
+        foreach ($doc['request_fields'] as $f) $out .= '|' . $f['name'] . '|' . $f['type'] . '|' . ($f['required'] ? '是' : '否/按协议') . '|' . $f['since'] . '|' . $f['description'] . "|\n";
+        $out .= "\n## HMAC-SHA256\n\n算法：`hex_lowercase(HMAC-SHA256(canonical, verify_secret))`。字段之间使用换行符 `\\n`，不能使用 JSON 字段顺序代替 canonical。\n\n### Protocol v1\n\n```text\n" . DylibApiContract::canonicalV1() . "\n```\n\n### Protocol v2\n\n```text\n" . DylibApiContract::canonicalV2() . "\n```\n\n";
+        $out .= "## 返回字段\n\n|字段|类型|说明|\n|---|---|---|\n";
+        foreach ($doc['response_fields'] as $f) $out .= '|' . $f['name'] . '|' . $f['type'] . '|' . $f['description'] . "|\n";
+        $out .= "\n## 客户端处理原则\n\n1. 业务判断使用 `ok` + `code`，不要解析 `message` 文本。\n2. `message` 可直接作为服务器提示显示给用户。\n3. `action` 是验证中心给出的受保护能力处理建议。\n4. `notice` / `app_update` 是数据，如何展示由客户端决定。\n5. 网络异常时结合 `offline_grace_seconds` 与客户端已有缓存策略处理。\n";
+        return $out;
+    }
+
+    protected function errorCodeGuide()
+    {
+        $out = "# Dylib Verification Result Codes\n\n`code` 是客户端应使用的稳定业务结果码；`message` 是可展示文本，不应作为程序判断条件。\n\n|code|ok|含义|客户端建议|\n|---|---|---|---|\n";
+        foreach (DylibApiContract::errorCodes() as $row) $out .= '|' . $row['code'] . '|' . ($row['ok'] ? 'true' : 'false') . '|' . $row['meaning'] . '|' . $row['client'] . "|\n";
+        $out .= "\n## action\n\n";
+        foreach (DylibApiContract::actions() as $action => $meaning) $out .= '- `' . $action . '`：' . $meaning . "\n";
+        return $out;
+    }
+
+    protected function exampleGuide($prefix, array $config)
+    {
+        $url = $config['endpoint_url'] !== '' ? $config['endpoint_url'] : rtrim(isset($config['api_endpoints'][0]) ? $config['api_endpoints'][0] : '', '/') . $config['verify_path'];
+        $jsonExample = '{"udid":"<由客户端提供>","bundle_id":"com.example.app","dylib_key":"' . $config['dylib_key'] . '","dylib_version":"' . $config['dylib_version'] . '","dylib_build":"' . $config['dylib_build'] . '","dylib_sha256":"<optional>","timestamp":<unix>,"nonce":"<random>","signature":"<hmac-sha256>","protocol_version":2,"app_executable":"ExampleApp","app_macho_uuid":"<UUID>","app_version":"1.0","app_build":"1"}';
+        return "# API 调用示例\n\n这些示例只演示如何调用 API；不会生成卡密弹窗、UDID 页面或其他业务 UI。\n\n"
+            . "## cURL\n\n```bash\ncurl -X POST '" . $url . "' \\\n  -H 'Content-Type: application/json' \\\n  --data '" . $jsonExample . "'\n```\n\n"
+            . "## Objective-C\n\n```objc\n#import \"{$prefix}DylibConfig.h\"\n{$prefix}DylibVerifyConfiguration *cfg = [{$prefix}DylibConfig configurationWithUDIDProvider:^NSString *{ return YourUDID(); }];\n{$prefix}DylibVerify *api = [[{$prefix}DylibVerify alloc] initWithConfiguration:cfg];\n[api verifyWithCompletion:^({$prefix}DylibVerifyResult *r) {\n    if (!r.isAllowed) { NSLog(@\"%@ / %@\", r.code, r.message); return; }\n    NSLog(@\"permissions=%@ notice=%@\", r.permissions, r.notice);\n}];\n```\n\n"
+            . "## Swift / Python\n\n其他语言需要严格复刻 `API_REFERENCE.md` 中 canonical 字段顺序后做 HMAC-SHA256。不要对 JSON 字典排序后直接签名。\n";
     }
 
     protected function appendPath(array $bases, $path)
