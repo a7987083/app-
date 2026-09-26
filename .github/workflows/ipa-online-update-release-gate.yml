@@ -233,7 +233,8 @@ jobs:
           grep -q 'saveRuntimeConfig' application/admin/controller/DylibCenter.php
           grep -q 'saveNotice' application/admin/controller/DylibCenter.php
           grep -q 'Layer.confirm' public/assets/js/backend/dylib_center.js
-          grep -q 'POST /index/dylib_verify/verify' application/admin/view/dylib_center/index.html
+          grep -q 'runtimeConfig.verify_path' application/admin/view/dylib_center/index.html
+          grep -q 'id="api-doc-overview"' application/admin/view/dylib_center/index.html
           grep -q 'clearScanJobs' application/admin/controller/IpaCenter.php
           grep -q 'deleteAsset' application/admin/controller/IpaCenter.php
           grep -q 'clearAssets' application/admin/controller/IpaCenter.php
