@@ -1,9 +1,9 @@
 define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
     function esc(value) { return $('<div/>').text(value == null ? '' : String(value)).html(); }
     function bytes(value) {
-        var n = parseInt(value || 0, 10), units = ['B','KB','MB','GB','TB'], i = 0;
+        var n = parseFloat(value || 0), units = ['B','KB','MB','GB','TB'], i = 0;
         while (n >= 1024 && i < units.length - 1) { n = n / 1024; i++; }
-        return (i === 0 ? n : n.toFixed(n >= 10 ? 1 : 2)) + ' ' + units[i];
+        return (i === 0 ? Math.round(n) : n.toFixed(n >= 10 ? 1 : 2)) + ' ' + units[i];
     }
     function historyText(row) {
         if (!row) return '暂无记录';
@@ -12,12 +12,7 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
     }
     function storageHtml(storage) {
         storage = storage || {};
-        var rows = [
-            ['更新备份', storage.backups || {}],
-            ['更新历史', storage.history || {}],
-            ['任务状态', storage.status || {}],
-            ['更新缓存', storage.cache || {}]
-        ];
+        var rows = [['更新备份', storage.backups || {}], ['更新历史', storage.history || {}], ['任务状态', storage.status || {}], ['更新缓存', storage.cache || {}]];
         var html = '<table class="table table-bordered zonoe-ops-table"><thead><tr><th>类别</th><th>数量</th><th>占用</th></tr></thead><tbody>';
         $.each(rows, function(_, item){ html += '<tr><td>' + item[0] + '</td><td>' + esc(item[1].count || 0) + '</td><td>' + bytes(item[1].bytes || 0) + '</td></tr>'; });
         return html + '</tbody></table>';
@@ -35,6 +30,34 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
         var state = lock.busy === true ? '<span class="text-danger">正在占用</span>' : (lock.busy === false ? '<span class="text-success">未占用</span>' : '<span class="text-warning">无法判断</span>');
         return '<div>状态：' + state + '</div><div class="text-muted">锁龄：' + esc(lock.age_seconds || 0) + ' 秒</div><div class="text-muted">元数据：' + esc(lock.metadata || '-') + '</div>';
     }
+    function backupRowsHtml(manager) {
+        manager = manager || {}; var rows = manager.items || [];
+        if (!rows.length) return '<tr><td colspan="8" class="text-muted text-center">暂无更新备份</td></tr>';
+        var html = '';
+        $.each(rows, function(_, row) {
+            var locked = !!row.protected;
+            html += '<tr data-backup-id="' + esc(row.id) + '">' +
+                '<td><input type="checkbox" class="ops-backup-check" value="' + esc(row.id) + '" ' + (locked ? 'disabled' : '') + '></td>' +
+                '<td><code>' + esc(row.id) + '</code></td>' +
+                '<td>' + esc(row.created_at || '-') + '</td>' +
+                '<td>' + esc(row.files || 0) + '</td>' +
+                '<td>' + bytes(row.database_bytes || 0) + '</td>' +
+                '<td><b>' + bytes(row.bytes || 0) + '</b></td>' +
+                '<td>' + (locked ? '<span class="label label-warning" title="' + esc(row.protected_reason || '') + '">回滚保护</span>' : '<span class="label label-success">可删除</span>') + '</td>' +
+                '<td>' + (locked ? '<span class="text-muted">禁止删除</span>' : '<button type="button" class="btn btn-xs btn-danger ops-backup-delete-one" data-id="' + esc(row.id) + '">删除</button>') + '</td>' +
+                '</tr>';
+        });
+        return html;
+    }
+    function renderBackups(manager) {
+        manager = manager || {};
+        $('#ops-backup-body').html(backupRowsHtml(manager));
+        $('#ops-backup-summary').text('共 ' + (manager.count || 0) + ' 个 / ' + bytes(manager.bytes || 0) + '；可删除 ' + (manager.deletable_count || 0) + ' 个 / ' + bytes(manager.deletable_bytes || 0));
+        var free = manager.disk_free_bytes;
+        var total = manager.disk_total_bytes;
+        $('#ops-disk-summary').text(free == null || total == null ? '磁盘容量：系统暂无法读取' : '磁盘：可用 ' + bytes(free) + ' / 总计 ' + bytes(total));
+        $('#ops-backup-check-all').prop('checked', false);
+    }
     function render(data) {
         data = data || {}; var release = data.release || {}, storage = data.storage || {}, jobs = data.jobs || {}, history = data.history || {};
         $('#ops-version').text(release.version || '-');
@@ -49,18 +72,19 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
         $('#ops-latest-rollback').html(historyText(history.latest_rollback));
         $('#ops-jobs').html(jobsHtml(jobs));
         $('#ops-lock').html(lockHtml(data.lock || {}));
+        renderBackups(data.backup_manager || {});
     }
     function loadSnapshot(silent) {
         if (!silent) layer.load(1, {shade:0.05});
-        $.getJSON('general/updatemaintenance/index', function(ret){
+        $.getJSON('general/updatemaintenance/index', {_ts:new Date().getTime()}, function(ret){
             if (!silent) layer.closeAll('loading');
             if (!ret || ret.code !== 200 || !ret.data) { if (!silent) layer.alert((ret && ret.msg) || '读取更新运维状态失败',{icon:2}); return; }
             render(ret.data);
         }).fail(function(){ if (!silent) { layer.closeAll('loading'); layer.alert('读取更新运维状态失败',{icon:2}); } });
     }
-    function cleanup(apply) {
+    function retentionCleanup(apply) {
         layer.load(1,{shade:0.05});
-        $.ajax({type:'POST',url:'general/updatemaintenance/cleanup',dataType:'json',data:{apply:apply ? 1 : 0},success:function(ret){
+        $.ajax({type:'POST',url:'general/updatemaintenance/cleanup',dataType:'json',data:{mode:'retention',apply:apply ? 1 : 0},success:function(ret){
             layer.closeAll('loading');
             if (!ret || ret.code !== 200 || !ret.data) { layer.alert((ret && ret.msg) || '操作失败',{icon:2}); return; }
             var d = ret.data, c = d.candidates || {}, deleted = d.deleted || {};
@@ -72,10 +96,35 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
             }
         },error:function(){ layer.closeAll('loading'); layer.alert('请求失败',{icon:2}); }});
     }
+    function selectedBackupIds(allFree) {
+        var ids = [];
+        var selector = allFree ? '.ops-backup-check:not(:disabled)' : '.ops-backup-check:checked:not(:disabled)';
+        $(selector).each(function(){ ids.push(String($(this).val() || '')); });
+        return ids;
+    }
+    function deleteBackups(ids) {
+        if (!ids.length) { layer.msg('没有可删除的备份'); return; }
+        layer.confirm('将永久删除 ' + ids.length + ' 个未受保护的更新备份。删除后无法用于回滚，确定继续吗？', {icon:3,title:'确认删除备份'}, function(idx){
+            layer.close(idx); layer.load(1,{shade:0.05});
+            $.ajax({type:'POST',url:'general/updatemaintenance/cleanup',dataType:'json',data:{mode:'backup_selected',apply:1,backup_ids:ids},success:function(ret){
+                layer.closeAll('loading');
+                if (!ret || ret.code !== 200 || !ret.data) { layer.alert((ret && ret.msg) || '删除备份失败',{icon:2}); return; }
+                var d = ret.data || {}, skipped = d.skipped || [];
+                var msg = '已删除 ' + (d.deleted_count || 0) + ' 个备份，释放 ' + bytes(d.bytes || 0);
+                if (skipped.length) msg += '；' + skipped.length + ' 个被跳过';
+                layer.alert(msg, {icon: skipped.length ? 0 : 1}, function(i){ layer.close(i); loadSnapshot(true); });
+            },error:function(){ layer.closeAll('loading'); layer.alert('删除备份请求失败',{icon:2}); }});
+        });
+    }
     var Controller = {panel:function(){
         loadSnapshot(false);
-        $(document).off('click.zonoeOpsPreview').on('click.zonoeOpsPreview','#ops-preview',function(){ cleanup(false); });
-        $(document).off('click.zonoeOpsClean').on('click.zonoeOpsClean','#ops-clean',function(){ layer.confirm('仅清理在线更新系统自身的过期状态、历史和未被引用的旧备份。确定执行吗？',{icon:3,title:'确认安全清理'},function(idx){ layer.close(idx); cleanup(true); }); });
+        $(document).off('click.zonoeOpsPreview').on('click.zonoeOpsPreview','#ops-preview',function(){ retentionCleanup(false); });
+        $(document).off('click.zonoeOpsClean').on('click.zonoeOpsClean','#ops-clean',function(){ layer.confirm('仅清理在线更新系统自身的过期状态、历史和未被引用的旧备份。确定执行吗？',{icon:3,title:'确认安全清理'},function(idx){ layer.close(idx); retentionCleanup(true); }); });
+        $(document).off('click.zonoeBackupRefresh').on('click.zonoeBackupRefresh','#ops-backup-refresh',function(){ loadSnapshot(false); });
+        $(document).off('change.zonoeBackupCheckAll').on('change.zonoeBackupCheckAll','#ops-backup-check-all',function(){ $('.ops-backup-check:not(:disabled)').prop('checked', $(this).prop('checked')); });
+        $(document).off('click.zonoeBackupDeleteOne').on('click.zonoeBackupDeleteOne','.ops-backup-delete-one',function(){ deleteBackups([String($(this).data('id') || '')]); });
+        $(document).off('click.zonoeBackupDeleteSelected').on('click.zonoeBackupDeleteSelected','#ops-backup-delete-selected',function(){ deleteBackups(selectedBackupIds(false)); });
+        $(document).off('click.zonoeBackupDeleteAll').on('click.zonoeBackupDeleteAll','#ops-backup-delete-all-free',function(){ deleteBackups(selectedBackupIds(true)); });
     },index:function(){}};
     return Controller;
 });
