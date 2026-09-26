@@ -45,6 +45,7 @@ foreach ([$controller, $service, $publicController, $view, $js, $client, $readme
         exit(1);
     }
 }
+$jsCompact = preg_replace('/\s+/', '', $js);
 
 // 2405 lifecycle invariants that remain valid after later authorization changes.
 requireContains($service, "->where('enabled', 1)->find()", 'verification rejects disabled dylib');
@@ -54,7 +55,6 @@ requireContains($controller, "'enabled' => \$enabled", 'toggle persists enabled 
 
 // 2410 intentionally changes the old history-protected delete contract: the
 // operator may now permanently delete a Dylib and its related historical rows.
-// Keep this destructive behavior explicit and transactional.
 requireContains($controller, 'public function deleteDylib()', 'admin delete endpoint');
 requireContains($controller, 'Db::startTrans();', 'destructive delete starts transaction');
 requireContains($controller, "Db::name('dylib_version')->where('dylib_id', \$id)->delete()", 'delete cascades versions');
@@ -65,18 +65,18 @@ requireContains($controller, 'Db::commit();', 'destructive delete commits transa
 requireContains($controller, 'Db::rollback();', 'destructive delete rolls back on failure');
 requireNotContains($controller, '为保留历史禁止删除，请改为停用', 'old referenced-delete blocker removed');
 requireContains($js, 'Layer.confirm(', 'delete second confirmation');
-requireContains($js, "url: 'dylib_center/deleteDylib'", 'delete uses Fast.api.ajax path');
+requireContains($jsCompact, "url:'dylib_center/deleteDylib'", 'delete uses Fast.api.ajax path');
 
 // 2410 version CRUD: editing reuses saveVersion(id), deletion has a dedicated endpoint.
 requireContains($controller, 'public function deleteVersion()', 'version delete endpoint');
 requireContains($controller, "Db::name('dylib_version')->where('id', \$id)->delete()", 'version physical delete');
 requireContains($js, 'js-version-edit', 'version edit control');
 requireContains($js, 'js-version-delete', 'version delete control');
-requireContains($js, "url: 'dylib_center/deleteVersion'", 'version delete AJAX endpoint');
+requireContains($jsCompact, "url:'dylib_center/deleteVersion'", 'version delete AJAX endpoint');
 
 // Dylib key remains immutable after registration.
 requireContains($controller, 'Dylib key cannot be changed after registration', 'immutable dylib key');
-requireContains($js, ".prop('readonly', true)", 'edit UI keeps dylib key read-only');
+requireContains($jsCompact, ".prop('readonly',true)", 'edit UI keeps dylib key read-only');
 
 // Legacy v1 signing contract and endpoint remain present for already shipped clients.
 requireContains($readme, 'Protocol v1', 'legacy protocol documented');
