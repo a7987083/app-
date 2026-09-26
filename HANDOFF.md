@@ -3,44 +3,45 @@
 ## Current state
 
 - Repository: `a7987083/app-`
-- Stable release: `source-v2026092409`
-- Stable branch: `release/2026092409-dylib-center-ux-simplification`
-- Stable commit: `a36b979e86d1b39da6eabf74f5f3e1ac99b3a5a8`
-- Development branch: `feature/2026092410-dylib-crud-legacy-codegen`
-- Verified development checkpoint: `69208ccfd595ccd8cb4aab7093838eb5dc7f4c55`
-- OC Codegen CI #9 / Run `36230506336`: SUCCESS.
+- Stable release: `source-v2026092411`
+- Stable release target: `b46da637df7c0c7918b4ec71b6fe2bdf2387a73c`
+- Latest tested 2411 branch head: `56f503c9eb094fe02cdc9987f25cd12edbf065f0`
+- Development branch: `feature/2026092412-api-integration-center`
+- Verified 2412 code checkpoint: `fc5a3d90398df60f2c651a113c253dce67e8d4db`
+- OC Codegen CI #14 / Run `36239192712`: SUCCESS.
 
-## 2410 implementation
+## 2412 product boundary
 
-1. `DylibCenter::deleteDylib()` no longer blocks deletion when versions, legacy bindings, or verify logs exist.
-2. Dylib deletion is transactional and cascades its versions, legacy `dylib_app_binding` rows, matching verify logs, then the Dylib registration.
-3. Version table now has Edit/Delete controls. Editing uses the existing `saveVersion(id)` path; deleting uses new `deleteVersion()`.
-4. Version edit preserves `file_size`, SHA256, state, offline grace, fail action, and notice.
-5. Objective-C generator advanced to 2.1.0 and still derives config from the selected Dylib/version/runtime config/verify secret.
-6. Historical public APIs are not reimplemented: current `Index::dylib()` and `Index::apiface()` remain the source of truth.
-7. Codegen now exposes legacy URL arrays based on configured API endpoints:
-   - `/index/index/dylib`
-   - `/index/index/apiface`
-8. Generated Config header/implementation, `GeneratedConfig.json`, and `INTEGRATION.md` expose/document the legacy endpoints alongside the new verification client.
+The Dylib verification center is an API provider. It owns verification endpoints, HMAC rules, result codes, runtime configuration, API-returned notice/update data, logs, and integration documentation. It does not own UDID collection UI, license/card input UI, popup presentation, floating-window UI, or license-information pages. Those are client-project responsibilities.
+
+## 2412 implementation
+
+1. Added `DylibApiContract` as the canonical documentation model for the existing wire protocol.
+2. Kept existing string `code` values instead of adding an incompatible numeric-code protocol.
+3. Documented exact v1/v2 request fields and canonical HMAC-SHA256 ordering.
+4. Documented actual response fields including `ok`, `code`, `action`, `offline_grace_seconds`, `token`, `message`, and v2/extras.
+5. Objective-C Generator 2.2.0 is now explicitly a test/reference API integration generator.
+6. Generated package adds `API_REFERENCE.md`, `ERROR_CODES.md`, and `EXAMPLES.md` while retaining existing OC sample/config files.
+7. Admin integration guide now exposes endpoint, request, response, error-code and signature documentation directly in the Dylib Center.
+8. Client guidance: branch on `ok + code`; show `message` if desired; never parse message text to infer business state.
+9. Online-update manifest includes `application/common/library/Ipa/DylibApiContract.php`.
 
 ## Verified
 
-- PHP 7.0 syntax and contracts: passed.
-- Dylib Center JS syntax: passed.
-- OC Codegen deterministic contract: passed.
-- Legacy endpoint codegen assertions: passed.
-- Dylib CRUD/version CRUD contract assertions: passed.
+- PHP 7.0 syntax/contracts: passed.
+- JavaScript syntax: passed.
+- Deterministic codegen contract with 10 generated files: passed.
+- API reference/error-code assertions: passed.
 - Dylib Center UX contract: passed.
-- MySQL 5.7 migration regression: passed.
 - Online-update package content gate: passed.
+- MySQL 5.7 migration regression: passed.
 
-## Not yet verified
+## Not yet verified / not claimed
 
-- Real BaoTa/browser deletion of a Dylib that already has history.
-- Real browser version edit/delete behavior.
-- Real generated ZIP integration in a Dylib project.
-- Formal 2410 release gate / online-update E2E / published release.
+- Formal 2412 Release Gate and GitHub Release are pending.
+- Real OC/Swift client integration against production API has not been manually accepted.
+- Generated OC is reference/test code; CI success does not prove a third-party client implementation.
 
 ## Next task
 
-Use a disposable Dylib record in the real admin to exercise destructive delete and version edit/delete. Then generate one Objective-C ZIP and verify `legacyDylibURLs` / `legacyApiFaceURLs` against the configured API Base URL. If those pass, prepare the 2410 release metadata and formal release gate.
+Create `release/2026092412-api-integration-center`, write 2412 release metadata, run the formal Source Release + IPA Online Update Release Gate, verify online-update E2E, and publish `source-v2026092412` with ZIP/SHA256 assets.
