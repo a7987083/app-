@@ -9,7 +9,6 @@ use think\Db;
 class DylibCenter extends Backend
 {
     protected $noNeedRight = [];
-
     protected $states = ['active', 'deprecated', 'blocked', 'testing', 'revoked'];
     protected $failActions = ['disable_feature', 'show_message', 'block'];
     protected $accessLevels = ['', 'basic', 'app_plus', 'global_plus'];
@@ -17,9 +16,7 @@ class DylibCenter extends Backend
 
     public function index()
     {
-        $this->view->assign('dylibs', Db::name('dylib')
-            ->field('id,dylib_key,name,enabled,default_offline_grace,default_fail_action,created_at,updated_at')
-            ->order('id desc')->select());
+        $this->view->assign('dylibs', Db::name('dylib')->field('id,dylib_key,name,enabled,default_offline_grace,default_fail_action,created_at,updated_at')->order('id desc')->select());
         $this->view->assign('states', $this->states);
         $this->view->assign('failActions', $this->failActions);
         $runtimeConfig = Db::name('dylib_runtime_config')->where('id', 1)->find();
@@ -38,8 +35,7 @@ class DylibCenter extends Backend
         $runtimeConfig['api_endpoints_text'] = implode("\n", $this->decodeUrlList(isset($runtimeConfig['api_endpoints_json']) ? $runtimeConfig['api_endpoints_json'] : '[]'));
         $runtimeConfig['bootstrap_urls_text'] = implode("\n", $this->decodeUrlList(isset($runtimeConfig['bootstrap_urls_json']) ? $runtimeConfig['bootstrap_urls_json'] : '[]'));
         $this->view->assign('runtimeConfig', $runtimeConfig);
-        $this->view->assign('appOptions', Db::name('category')
-            ->field('id,name')->where('status', 'normal')->where('bt2b', '1')->order('weigh desc,id desc')->select());
+        $this->view->assign('appOptions', Db::name('category')->field('id,name')->where('status', 'normal')->where('bt2b', '1')->order('weigh desc,id desc')->select());
         return $this->view->fetch();
     }
 
@@ -47,12 +43,11 @@ class DylibCenter extends Backend
     {
         $dylibId = (int)$this->request->get('dylib_id', 0);
         $offset = max(0, (int)$this->request->get('offset', 0));
-        $limit = max(20, min(200, (int)$this->request->get('limit', 50)));
+        $limit = max(20, min(1000, (int)$this->request->get('limit', 50)));
         $query = Db::name('dylib_version');
         if ($dylibId > 0) $query->where('dylib_id', $dylibId);
         $total = (clone $query)->count();
-        $rows = $query->field('id,dylib_id,version,build,sha256,file_size,state,offline_grace,fail_action,notice,created_at,updated_at')
-            ->order('id desc')->limit($offset, $limit)->select();
+        $rows = $query->field('id,dylib_id,version,build,sha256,file_size,state,offline_grace,fail_action,notice,created_at,updated_at')->order('id desc')->limit($offset, $limit)->select();
         return json(['total' => (int)$total, 'rows' => $rows]);
     }
 
@@ -61,30 +56,26 @@ class DylibCenter extends Backend
     {
         $dylibId = (int)$this->request->get('dylib_id', 0);
         $offset = max(0, (int)$this->request->get('offset', 0));
-        $limit = max(20, min(200, (int)$this->request->get('limit', 50)));
+        $limit = max(20, min(1000, (int)$this->request->get('limit', 50)));
         $query = Db::name('dylib_app_binding');
         if ($dylibId > 0) $query->where('dylib_id', $dylibId);
         $total = (clone $query)->count();
-        $rows = $query->field('id,dylib_id,bundle_id,enabled,fail_action_override,offline_grace_override,created_at,updated_at')
-            ->order('id desc')->limit($offset, $limit)->select();
+        $rows = $query->field('id,dylib_id,bundle_id,enabled,fail_action_override,offline_grace_override,created_at,updated_at')->order('id desc')->limit($offset, $limit)->select();
         return json(['total' => (int)$total, 'rows' => $rows]);
     }
 
     public function notices()
     {
         $offset = max(0, (int)$this->request->get('offset', 0));
-        $limit = max(20, min(200, (int)$this->request->get('limit', 50)));
+        $limit = max(20, min(1000, (int)$this->request->get('limit', 50)));
         $query = Db::name('dylib_runtime_notice');
         $total = (clone $query)->count();
-        $rows = $query->field('id,enabled,category_id,min_access_level,notice_key,revision,priority,title,message,primary_title,primary_action,primary_url,secondary_title,secondary_action,secondary_url,starts_at,ends_at,created_at,updated_at')
-            ->order('priority desc,id desc')->limit($offset, $limit)->select();
+        $rows = $query->field('id,enabled,category_id,min_access_level,notice_key,revision,priority,title,message,primary_title,primary_action,primary_url,secondary_title,secondary_action,secondary_url,starts_at,ends_at,created_at,updated_at')->order('priority desc,id desc')->limit($offset, $limit)->select();
         $categoryIds = [];
         foreach ($rows as $row) if ((int)$row['category_id'] > 0) $categoryIds[(int)$row['category_id']] = true;
         $names = [];
         if ($categoryIds) {
-            foreach (Db::name('category')->field('id,name')->where('id', 'in', array_keys($categoryIds))->select() as $category) {
-                $names[(int)$category['id']] = (string)$category['name'];
-            }
+            foreach (Db::name('category')->field('id,name')->where('id', 'in', array_keys($categoryIds))->select() as $category) $names[(int)$category['id']] = (string)$category['name'];
         }
         foreach ($rows as &$row) {
             $id = (int)$row['category_id'];
@@ -97,22 +88,39 @@ class DylibCenter extends Backend
     public function logs()
     {
         $offset = max(0, (int)$this->request->get('offset', 0));
-        $limit = max(20, min(200, (int)$this->request->get('limit', 50)));
-        $search = trim((string)$this->request->get('search', ''));
-        $query = Db::name('dylib_verify_log');
-        if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('bundle_id', 'like', '%' . $search . '%')
-                    ->whereOr('dylib_key', 'like', '%' . $search . '%')
-                    ->whereOr('result_code', 'like', '%' . $search . '%');
-            });
-        }
+        $limit = max(20, min(1000, (int)$this->request->get('limit', 1000)));
+        $query = $this->buildLogQuery();
         $total = (clone $query)->count();
-        $rows = $query->field('id,udid_hash,bundle_id,dylib_key,dylib_version,result_code,action,latency_ms,created_at')
-            ->order('id desc')->limit($offset, $limit)->select();
+        $rows = $query->field('id,udid_hash,bundle_id,dylib_key,dylib_version,result_code,action,latency_ms,created_at')->order('id desc')->limit($offset, $limit)->select();
         foreach ($rows as &$row) if (!empty($row['udid_hash'])) $row['udid_hash'] = substr($row['udid_hash'], 0, 12) . '…';
         unset($row);
         return json(['total' => (int)$total, 'rows' => $rows]);
+    }
+
+    protected function buildLogQuery()
+    {
+        $query = Db::name('dylib_verify_log');
+        $search = trim((string)$this->request->param('search', ''));
+        $dylibKey = trim((string)$this->request->param('dylib_key', ''));
+        $bundleId = trim((string)$this->request->param('bundle_id', ''));
+        $resultCode = trim((string)$this->request->param('result_code', ''));
+        $version = trim((string)$this->request->param('dylib_version', ''));
+        $udidHash = trim((string)$this->request->param('udid_hash', ''));
+        $from = max(0, (int)$this->request->param('created_from', 0));
+        $to = max(0, (int)$this->request->param('created_to', 0));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('bundle_id', 'like', '%' . $search . '%')->whereOr('dylib_key', 'like', '%' . $search . '%')->whereOr('result_code', 'like', '%' . $search . '%')->whereOr('dylib_version', 'like', '%' . $search . '%')->whereOr('udid_hash', 'like', '%' . $search . '%');
+            });
+        }
+        if ($dylibKey !== '') $query->where('dylib_key', $dylibKey);
+        if ($bundleId !== '') $query->where('bundle_id', 'like', '%' . $bundleId . '%');
+        if ($resultCode !== '') $query->where('result_code', $resultCode);
+        if ($version !== '') $query->where('dylib_version', 'like', '%' . $version . '%');
+        if ($udidHash !== '') $query->where('udid_hash', 'like', $udidHash . '%');
+        if ($from > 0) $query->where('created_at', '>=', $from);
+        if ($to > 0) $query->where('created_at', '<=', $to);
+        return $query;
     }
 
     public function generateVerifySecret()
@@ -135,14 +143,12 @@ class DylibCenter extends Backend
         if (!in_array($action, $this->failActions, true)) $this->error('Invalid fail action');
         if ($id <= 0 && strlen($verifySecret) < 32) $this->error('New dylib requires a verify secret with at least 32 characters');
         if ($verifySecret !== '' && strlen($verifySecret) < 32) $this->error('Verify secret must contain at least 32 characters');
-
         $existing = null;
         if ($id > 0) {
             $existing = Db::name('dylib')->where('id', $id)->find();
             if (!$existing) $this->error('Dylib not found');
             if ((string)$existing['dylib_key'] !== $key) $this->error('Dylib key cannot be changed after registration');
         }
-
         $now = time();
         $data = [
             'dylib_key' => $key,
@@ -155,10 +161,7 @@ class DylibCenter extends Backend
         if ($verifySecret !== '') $data['verify_secret_ciphertext'] = SecretBox::encrypt($verifySecret);
         try {
             if ($id > 0) Db::name('dylib')->where('id', $id)->update($data);
-            else {
-                $data['created_at'] = $now;
-                $id = Db::name('dylib')->insertGetId($data);
-            }
+            else { $data['created_at'] = $now; $id = Db::name('dylib')->insertGetId($data); }
             $this->success('saved', null, ['id' => (int)$id]);
         } catch (\think\exception\PDOException $e) {
             $this->error(stripos($e->getMessage(), 'Duplicate') !== false ? 'Dylib key already exists' : $e->getMessage());
@@ -185,11 +188,9 @@ class DylibCenter extends Backend
         if ($id <= 0) $this->error('Invalid dylib id');
         $dylib = Db::name('dylib')->where('id', $id)->find();
         if (!$dylib) $this->error('Dylib not found');
-
         $versionCount = (int)Db::name('dylib_version')->where('dylib_id', $id)->count();
         $bindingCount = (int)Db::name('dylib_app_binding')->where('dylib_id', $id)->count();
         $logCount = (int)Db::name('dylib_verify_log')->where('dylib_key', (string)$dylib['dylib_key'])->count();
-
         Db::startTrans();
         try {
             Db::name('dylib_version')->where('dylib_id', $id)->delete();
@@ -201,12 +202,7 @@ class DylibCenter extends Backend
             Db::rollback();
             $this->error('删除 Dylib 失败：' . $e->getMessage());
         }
-        $this->success('deleted', null, [
-            'id' => $id,
-            'deleted_versions' => $versionCount,
-            'deleted_legacy_bindings' => $bindingCount,
-            'deleted_verify_logs' => $logCount,
-        ]);
+        $this->success('deleted', null, ['id' => $id, 'deleted_versions' => $versionCount, 'deleted_legacy_bindings' => $bindingCount, 'deleted_verify_logs' => $logCount]);
     }
 
     public function saveVersion()
@@ -229,15 +225,11 @@ class DylibCenter extends Backend
             'dylib_id' => $dylibId, 'version' => $version, 'build' => $build, 'sha256' => $sha256,
             'file_size' => max(0, (int)$this->request->post('file_size', 0)), 'state' => $state,
             'offline_grace' => max(0, min(86400, (int)$this->request->post('offline_grace', 900))),
-            'fail_action' => $action, 'notice' => mb_substr(trim((string)$this->request->post('notice', '')), 0, 1024),
-            'updated_at' => $now,
+            'fail_action' => $action, 'notice' => mb_substr(trim((string)$this->request->post('notice', '')), 0, 1024), 'updated_at' => $now,
         ];
         try {
             if ($id > 0) Db::name('dylib_version')->where('id', $id)->update($data);
-            else {
-                $data['created_at'] = $now;
-                $id = Db::name('dylib_version')->insertGetId($data);
-            }
+            else { $data['created_at'] = $now; $id = Db::name('dylib_version')->insertGetId($data); }
             $this->success('saved', null, ['id' => (int)$id]);
         } catch (\think\exception\PDOException $e) {
             $this->error(stripos($e->getMessage(), 'Duplicate') !== false ? 'Version/build already exists' : $e->getMessage());
@@ -267,19 +259,10 @@ class DylibCenter extends Backend
         if ($bundleId === '' || strlen($bundleId) > 255 || strpos($bundleId, '.') === false) $this->error('Invalid bundle id');
         if ($action !== '' && !in_array($action, $this->failActions, true)) $this->error('Invalid fail action override');
         $now = time();
-        $data = [
-            'dylib_id' => $dylibId, 'bundle_id' => $bundleId,
-            'enabled' => (int)$this->request->post('enabled', 1) ? 1 : 0,
-            'fail_action_override' => $action,
-            'offline_grace_override' => max(0, min(86400, (int)$this->request->post('offline_grace_override', 0))),
-            'updated_at' => $now,
-        ];
+        $data = ['dylib_id' => $dylibId, 'bundle_id' => $bundleId, 'enabled' => (int)$this->request->post('enabled', 1) ? 1 : 0, 'fail_action_override' => $action, 'offline_grace_override' => max(0, min(86400, (int)$this->request->post('offline_grace_override', 0))), 'updated_at' => $now];
         try {
             if ($id > 0) Db::name('dylib_app_binding')->where('id', $id)->update($data);
-            else {
-                $data['created_at'] = $now;
-                $id = Db::name('dylib_app_binding')->insertGetId($data);
-            }
+            else { $data['created_at'] = $now; $id = Db::name('dylib_app_binding')->insertGetId($data); }
             $this->success('saved', null, ['id' => (int)$id]);
         } catch (\think\exception\PDOException $e) {
             $this->error(stripos($e->getMessage(), 'Duplicate') !== false ? 'Bundle ID is already bound to this dylib' : $e->getMessage());
@@ -303,14 +286,10 @@ class DylibCenter extends Backend
             'update_title' => mb_substr(trim((string)$this->request->post('update_title', '发现游戏新版本')), 0, 255),
             'update_message' => mb_substr(trim((string)$this->request->post('update_message', '')), 0, 1024),
             'update_primary_title' => mb_substr(trim((string)$this->request->post('update_primary_title', '前往更新')), 0, 64),
-            'update_secondary_title' => mb_substr(trim((string)$this->request->post('update_secondary_title', '稍后提醒')), 0, 64),
-            'updated_at' => time(),
+            'update_secondary_title' => mb_substr(trim((string)$this->request->post('update_secondary_title', '稍后提醒')), 0, 64), 'updated_at' => time(),
         ];
         if ($current) Db::name('dylib_runtime_config')->where('id', 1)->update($data);
-        else {
-            $data['id'] = 1;
-            Db::name('dylib_runtime_config')->insert($data);
-        }
+        else { $data['id'] = 1; Db::name('dylib_runtime_config')->insert($data); }
         $this->success('运行配置已保存；配置版本已自动递增', null, ['config_version' => $data['config_version']]);
     }
 
@@ -319,9 +298,7 @@ class DylibCenter extends Backend
         $this->requirePost();
         $id = (int)$this->request->post('id', 0);
         $categoryId = max(0, (int)$this->request->post('category_id', 0));
-        if ($categoryId > 0 && !Db::name('category')->where('id', $categoryId)->where('status', 'normal')->where('bt2b', '1')->find()) {
-            $this->error('指定 App 不存在、已停用或不可锁定');
-        }
+        if ($categoryId > 0 && !Db::name('category')->where('id', $categoryId)->where('status', 'normal')->where('bt2b', '1')->find()) $this->error('指定 App 不存在、已停用或不可锁定');
         $access = trim((string)$this->request->post('min_access_level', ''));
         if (!in_array($access, $this->accessLevels, true)) $this->error('Invalid access level');
         $noticeKey = trim((string)$this->request->post('notice_key', ''));
@@ -335,35 +312,60 @@ class DylibCenter extends Backend
         if ($secondaryAction === 'open_url' && !$this->validHttpUrl($secondaryUrl)) $this->error('副按钮 URL 无效');
         $now = time();
         $data = [
-            'enabled' => (int)$this->request->post('enabled', 1) ? 1 : 0,
-            'category_id' => $categoryId,
-            'min_access_level' => $access,
-            'notice_key' => $noticeKey,
-            'revision' => max(1, (int)$this->request->post('revision', 1)),
-            'priority' => (int)$this->request->post('priority', 0),
-            'title' => mb_substr(trim((string)$this->request->post('title', '')), 0, 255),
-            'message' => trim((string)$this->request->post('message', '')),
-            'primary_title' => mb_substr(trim((string)$this->request->post('primary_title', '')), 0, 64),
-            'primary_action' => $primaryAction,
-            'primary_url' => $primaryUrl,
-            'secondary_title' => mb_substr(trim((string)$this->request->post('secondary_title', '')), 0, 64),
-            'secondary_action' => $secondaryAction,
-            'secondary_url' => $secondaryUrl,
-            'starts_at' => max(0, (int)$this->request->post('starts_at', 0)),
-            'ends_at' => max(0, (int)$this->request->post('ends_at', 0)),
-            'updated_at' => $now,
+            'enabled' => (int)$this->request->post('enabled', 1) ? 1 : 0, 'category_id' => $categoryId, 'min_access_level' => $access,
+            'notice_key' => $noticeKey, 'revision' => max(1, (int)$this->request->post('revision', 1)), 'priority' => (int)$this->request->post('priority', 0),
+            'title' => mb_substr(trim((string)$this->request->post('title', '')), 0, 255), 'message' => trim((string)$this->request->post('message', '')),
+            'primary_title' => mb_substr(trim((string)$this->request->post('primary_title', '')), 0, 64), 'primary_action' => $primaryAction, 'primary_url' => $primaryUrl,
+            'secondary_title' => mb_substr(trim((string)$this->request->post('secondary_title', '')), 0, 64), 'secondary_action' => $secondaryAction, 'secondary_url' => $secondaryUrl,
+            'starts_at' => max(0, (int)$this->request->post('starts_at', 0)), 'ends_at' => max(0, (int)$this->request->post('ends_at', 0)), 'updated_at' => $now,
         ];
         if ($data['title'] === '' && $data['message'] === '') $this->error('通知标题和正文不能同时为空');
         try {
             if ($id > 0) Db::name('dylib_runtime_notice')->where('id', $id)->update($data);
-            else {
-                $data['created_at'] = $now;
-                $id = Db::name('dylib_runtime_notice')->insertGetId($data);
-            }
+            else { $data['created_at'] = $now; $id = Db::name('dylib_runtime_notice')->insertGetId($data); }
             $this->success('通知已保存', null, ['id' => (int)$id]);
         } catch (\think\exception\PDOException $e) {
             $this->error(stripos($e->getMessage(), 'Duplicate') !== false ? '通知 Key 已存在' : $e->getMessage());
         }
+    }
+
+    public function setNoticeEnabled()
+    {
+        $this->requirePost();
+        $id = (int)$this->request->post('id', 0);
+        $enabledRaw = (string)$this->request->post('enabled', '');
+        if ($id <= 0 || !in_array($enabledRaw, ['0', '1'], true)) $this->error('通知状态参数无效');
+        if (!Db::name('dylib_runtime_notice')->where('id', $id)->find()) $this->error('通知不存在');
+        Db::name('dylib_runtime_notice')->where('id', $id)->update(['enabled' => (int)$enabledRaw, 'updated_at' => time()]);
+        $this->success((int)$enabledRaw ? '通知已启用' : '通知已停用');
+    }
+
+    public function deleteNotice()
+    {
+        $this->requirePost();
+        $id = (int)$this->request->post('id', 0);
+        if ($id <= 0) $this->error('通知 ID 无效');
+        if (!Db::name('dylib_runtime_notice')->where('id', $id)->find()) $this->error('通知不存在');
+        Db::name('dylib_runtime_notice')->where('id', $id)->delete();
+        $this->success('通知已删除', null, ['id' => $id]);
+    }
+
+    public function deleteLogs()
+    {
+        $this->requirePost();
+        $idsRaw = trim((string)$this->request->post('ids', ''));
+        $mode = trim((string)$this->request->post('mode', 'selected'));
+        $deleted = 0;
+        if ($mode === 'selected') {
+            $ids = array_values(array_unique(array_filter(array_map('intval', preg_split('/[\s,]+/', $idsRaw)))));
+            if (!$ids || count($ids) > 1000) $this->error('请选择 1-1000 条验证记录');
+            $deleted = (int)Db::name('dylib_verify_log')->where('id', 'in', $ids)->delete();
+        } elseif ($mode === 'filtered') {
+            $deleted = (int)$this->buildLogQuery()->delete();
+        } else {
+            $this->error('删除模式无效');
+        }
+        $this->success('验证记录已删除', null, ['deleted' => $deleted]);
     }
 
     protected function parseUrlLines($raw)
@@ -386,8 +388,7 @@ class DylibCenter extends Backend
 
     protected function validHttpUrl($url)
     {
-        return filter_var($url, FILTER_VALIDATE_URL)
-            && (stripos($url, 'https://') === 0 || stripos($url, 'http://') === 0);
+        return filter_var($url, FILTER_VALIDATE_URL) && (stripos($url, 'https://') === 0 || stripos($url, 'http://') === 0);
     }
 
     protected function requirePost()
