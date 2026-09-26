@@ -6,6 +6,7 @@ on:
       - feature/2026092406-oc-codegen-online-update
       - feature/2026092408-dylib-center-codegen-inline
       - feature/2026092409-dylib-center-ux-simplification
+      - feature/2026092410-dylib-crud-legacy-codegen
       - 'release/**'
     paths:
       - 'application/common/library/codegen/**'
@@ -40,6 +41,7 @@ jobs:
           php -l application/common/library/codegen/ObjectiveCGenerator.php
           php -l application/admin/controller/DylibCodegen.php
           php -l application/admin/controller/general/Occodegen.php
+          php -l application/admin/controller/DylibCenter.php
           php -l tests/oc_codegen_contract_test.php
           php -l tests/dylib_center_ux_contract_test.php
           node --check public/assets/js/backend/dylib_center.js
