@@ -86,15 +86,15 @@ requireContains($clientM, 'cachedRuntimeConfigAllowStale', 'client Last-Known-Go
 requireContains($clientM, 'verificationEndpointsFromRuntimeConfig', 'client runtime endpoint failover');
 requireContains($clientM, 'self.configuration.endpointURL', 'legacy direct endpoint remains final fallback');
 
-// Admin page is intentionally ordered and no longer exposes the retired Dylib BundleID whitelist.
+// 2409 changes only the admin information architecture: preserve active controls while
+// replacing the old numbered flat section order with the five-tab UX contract.
 requireOrdered($view, [
-    '1. Dylib 注册',
-    '2. 接入说明',
-    '3. 权限模型',
-    '4. 运行配置与通知',
-    '5. 版本控制',
-    '6. 验证记录',
-], '2406 Dylib center section order');
+    'href="#tab-overview"',
+    'href="#tab-versions"',
+    'href="#tab-notices"',
+    'href="#tab-logs"',
+    'href="#tab-advanced"',
+], '2409 Dylib center tab order');
 requireNotContains($view, '3. 游戏授权（BundleID）', 'retired binding section hidden from active UI');
 requireNotContains($view, 'id="binding-form"', 'retired binding form removed');
 requireContains($view, 'id="runtime-config-form"', 'runtime migration config UI');
