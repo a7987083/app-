@@ -185,16 +185,28 @@ class DylibCenter extends Backend
         if ($id <= 0) $this->error('Invalid dylib id');
         $dylib = Db::name('dylib')->where('id', $id)->find();
         if (!$dylib) $this->error('Dylib not found');
+
         $versionCount = (int)Db::name('dylib_version')->where('dylib_id', $id)->count();
-        // 2405 binding rows are retired from active authorization in 2406 but remain
-        // historical references and therefore still prevent destructive deletion.
         $bindingCount = (int)Db::name('dylib_app_binding')->where('dylib_id', $id)->count();
         $logCount = (int)Db::name('dylib_verify_log')->where('dylib_key', (string)$dylib['dylib_key'])->count();
-        if ($versionCount > 0 || $bindingCount > 0 || $logCount > 0) {
-            $this->error(sprintf('该 Dylib 已产生业务历史（版本 %d / 旧游戏授权 %d / 验证记录 %d），为保留历史禁止删除，请改为停用', $versionCount, $bindingCount, $logCount));
+
+        Db::startTrans();
+        try {
+            Db::name('dylib_version')->where('dylib_id', $id)->delete();
+            Db::name('dylib_app_binding')->where('dylib_id', $id)->delete();
+            Db::name('dylib_verify_log')->where('dylib_key', (string)$dylib['dylib_key'])->delete();
+            Db::name('dylib')->where('id', $id)->delete();
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            $this->error('删除 Dylib 失败：' . $e->getMessage());
         }
-        Db::name('dylib')->where('id', $id)->delete();
-        $this->success('deleted', null, ['id' => $id]);
+        $this->success('deleted', null, [
+            'id' => $id,
+            'deleted_versions' => $versionCount,
+            'deleted_legacy_bindings' => $bindingCount,
+            'deleted_verify_logs' => $logCount,
+        ]);
     }
 
     public function saveVersion()
@@ -208,6 +220,7 @@ class DylibCenter extends Backend
         $state = trim((string)$this->request->post('state', 'testing'));
         $action = trim((string)$this->request->post('fail_action', 'disable_feature'));
         if (!Db::name('dylib')->where('id', $dylibId)->find()) $this->error('Dylib not found');
+        if ($id > 0 && !Db::name('dylib_version')->where('id', $id)->find()) $this->error('Dylib version not found');
         if ($version === '' || strlen($version) > 64 || strlen($build) > 64) $this->error('Invalid version/build');
         if ($sha256 !== '' && !preg_match('/^[a-f0-9]{64}$/', $sha256)) $this->error('SHA256 must be 64 lowercase hex characters');
         if (!in_array($state, $this->states, true) || !in_array($action, $this->failActions, true)) $this->error('Invalid state or fail action');
@@ -229,6 +242,17 @@ class DylibCenter extends Backend
         } catch (\think\exception\PDOException $e) {
             $this->error(stripos($e->getMessage(), 'Duplicate') !== false ? 'Version/build already exists' : $e->getMessage());
         }
+    }
+
+    public function deleteVersion()
+    {
+        $this->requirePost();
+        $id = (int)$this->request->post('id', 0);
+        if ($id <= 0) $this->error('Invalid version id');
+        $row = Db::name('dylib_version')->where('id', $id)->find();
+        if (!$row) $this->error('Dylib version not found');
+        Db::name('dylib_version')->where('id', $id)->delete();
+        $this->success('deleted', null, ['id' => $id, 'dylib_id' => (int)$row['dylib_id'], 'version' => (string)$row['version']]);
     }
 
     /** Legacy write endpoint retained; 2406 verification no longer reads this table. */
