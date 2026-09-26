@@ -76,6 +76,37 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 $('#cancel-dylib-edit').addClass('hidden');
             }
 
+            function ensureVersionFormControls() {
+                var $form = $('#version-form');
+                if (!$form.find('[name=id]').length) $form.prepend('<input type="hidden" name="id" value="0">');
+                if (!$form.find('[name=file_size]').length) $form.prepend('<input type="hidden" name="file_size" value="0">');
+                if (!$('#cancel-version-edit').length) $form.find('button[type=submit]').after(' <button class="btn btn-default hidden" type="button" id="cancel-version-edit">取消编辑</button>');
+            }
+
+            function resetVersionForm() {
+                var $form = $('#version-form');
+                $form[0].reset();
+                $form.find('[name=id]').val('0');
+                $form.find('[name=file_size]').val('0');
+                $form.find('[name=offline_grace]').val('900');
+                $form.find('[name=state]').val('testing');
+                $form.find('[name=fail_action]').val('disable_feature');
+                $form.find('button[type=submit]').text('添加版本');
+                $('#cancel-version-edit').addClass('hidden');
+            }
+
+            function editVersion(row) {
+                ensureVersionFormControls();
+                var $form = $('#version-form');
+                $.each(['id', 'dylib_id', 'version', 'build', 'sha256', 'file_size', 'state', 'offline_grace', 'fail_action', 'notice'], function (i, field) {
+                    $form.find('[name=' + field + ']').val(row[field] === null || typeof row[field] === 'undefined' ? '' : row[field]);
+                });
+                $form.find('button[type=submit]').text('保存版本修改');
+                $('#cancel-version-edit').removeClass('hidden');
+                activateTab('#tab-versions');
+                setTimeout(function () { $('html,body').animate({scrollTop: $('#version-form').offset().top - 20}, 150); }, 80);
+            }
+
             function resetNoticeForm() {
                 var $form = $('#notice-form');
                 $form[0].reset();
@@ -87,6 +118,9 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 $form.find('[name=starts_at]').val('0');
                 $form.find('[name=ends_at]').val('0');
             }
+
+            ensureVersionFormControls();
+            $('#dylib-list').closest('.panel-body').find('.help-block').first().text('删除 Dylib 会同时删除其版本、旧游戏授权和验证记录；此操作不可恢复。');
 
             $('#version-table').bootstrapTable({
                 url: 'dylib_center/versions',
@@ -103,7 +137,27 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     {field: 'offline_grace', title: '离线容错（秒）'},
                     {field: 'fail_action', title: '失败动作', formatter: function (v) { return label(actionLabels, v); }},
                     {field: 'sha256', title: 'SHA256', formatter: function (v) { return v ? v.substr(0, 12) + '…' : '未限制'; }},
-                    {field: 'notice', title: '客户端提示'}
+                    {field: 'notice', title: '客户端提示'},
+                    {
+                        field: 'operate', title: '操作', formatter: function () {
+                            return '<button type="button" class="btn btn-xs btn-primary js-version-edit">编辑</button> ' +
+                                '<button type="button" class="btn btn-xs btn-danger js-version-delete">删除</button>';
+                        },
+                        events: {
+                            'click .js-version-edit': function (e, value, row) { editVersion(row); },
+                            'click .js-version-delete': function (e, value, row) {
+                                Layer.confirm('确定删除版本 “' + row.version + (row.build ? ' (' + row.build + ')' : '') + '” 吗？删除后客户端使用该版本会返回 version_unknown。', {title: '删除 Dylib 版本'}, function (index) {
+                                    Layer.close(index);
+                                    Fast.api.ajax({url: 'dylib_center/deleteVersion', type: 'POST', data: {id: row.id}}, function () {
+                                        Toastr.success('Dylib 版本已删除');
+                                        resetVersionForm();
+                                        $('#version-table').bootstrapTable('refresh');
+                                        return false;
+                                    });
+                                });
+                            }
+                        }
+                    }
                 ]]
             });
 
@@ -209,6 +263,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
 
             $('#reset-notice-form').on('click', resetNoticeForm);
             $('#cancel-dylib-edit').on('click', resetDylibForm);
+            $('#cancel-version-edit').on('click', resetVersionForm);
 
             $('#dylib-list').on('click', '.js-dylib-edit', function () {
                 var $row = $(this).closest('tr');
@@ -241,12 +296,12 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 var $row = $(this).closest('tr');
                 var name = $row.attr('data-name');
                 Layer.confirm(
-                    '确定删除“' + name + '”吗？只有从未产生版本、旧授权历史或验证记录的 Dylib 才允许删除；已有历史必须使用“停用”。',
-                    {title: '删除 Dylib（二次确认）'},
+                    '确定彻底删除“' + name + '”吗？该操作会同时删除此 Dylib 的版本、旧游戏授权和验证记录，且不可恢复。',
+                    {title: '彻底删除 Dylib（二次确认）'},
                     function (index) {
                         Layer.close(index);
                         Fast.api.ajax({url: 'dylib_center/deleteDylib', type: 'POST', data: {id: $row.data('id')}}, function () {
-                            Toastr.success('Dylib 已删除');
+                            Toastr.success('Dylib 及其关联历史已删除');
                             location.reload();
                             return false;
                         });
@@ -267,6 +322,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 e.preventDefault();
                 Fast.api.ajax({url: 'dylib_center/saveVersion', type: 'POST', data: $(this).serialize()}, function () {
                     Toastr.success('Dylib 版本已保存');
+                    resetVersionForm();
                     $('#version-table').bootstrapTable('refresh');
                     return false;
                 });
