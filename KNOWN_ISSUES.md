@@ -7,11 +7,12 @@
 - Generated/reference source must stay in controlled/private projects and must not be published to public repositories.
 - 2412 documents this risk; it does not redesign the signing architecture.
 
-## P1 — Admin API reference currently duplicates some canonical-contract text
+## P1 — Admin API reference still duplicates some canonical-contract text
 
 - `DylibApiContract.php` is the canonical documentation source for request/response fields and result codes.
 - The admin HTML currently renders a detailed static table that mirrors the contract for immediate usability.
 - Future work should render the page dynamically from `DylibApiContract` to eliminate documentation drift.
+- Release Gate #152 now validates semantic/dynamic API-path behavior instead of stale hard-coded copy.
 
 ## P1 — Client UI remains deliberately out of scope
 
@@ -21,13 +22,14 @@
 
 ## P1 — Real client integration acceptance pending
 
-- CI verifies the API reference, error-code catalog, deterministic generated examples and online-update packaging.
-- It does not prove an independent OC/Swift client has implemented the contract correctly.
+- CI and formal release gates verify the API reference, error-code catalog, deterministic generated examples, MySQL compatibility, online-update package and real GitHub Release upgrade path.
+- They do not prove an independent OC/Swift production client has implemented the contract correctly.
 - A real client should eventually be tested for canonical signing, nonce handling, result-code handling, notice/update consumption and offline-grace behavior.
 
 ## Compatibility boundaries
 
 - Existing v1/v2 canonical signing order is unchanged by 2412.
 - Existing string result codes remain the wire protocol; do not silently replace them with numeric codes.
+- `runtimeConfig.verify_path` is configurable; tests/docs must not assume `/index/dylib_verify/verify` is permanently hard-coded.
 - Legacy `Index::dylib()` / `Index::apiface()` remain separate compatibility APIs. Legacy `apiface` uses its existing signing contract and must not be conflated with the per-Dylib Verify Secret protocol.
 - Historical release/tag commits must not be rewritten.
