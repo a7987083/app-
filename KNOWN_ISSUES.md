@@ -1,43 +1,33 @@
 # Known Issues and Refactor Backlog
 
-## P0 — 2410 destructive Dylib deletion requires real-admin acceptance
+## P0 — Verify Secret is embedded in generated/reference client code
 
-- `deleteDylib()` now intentionally removes the Dylib registration together with its versions, legacy App bindings, and verification logs in one transaction.
-- This is a behavior change from 2409, which required disabling a Dylib once history existed.
-- CI validates syntax/contracts but does not prove production database contents or operator intent.
-- Before 2410 release, test with a disposable Dylib containing at least one version and confirm only the intended rows are deleted.
+- The current Dylib HMAC design requires the per-Dylib Verify Secret on the client side.
+- Generated `*DylibConfig.m` therefore contains that secret.
+- Generated/reference source must stay in controlled/private projects and must not be published to public repositories.
+- 2412 documents this risk; it does not redesign the signing architecture.
 
-## P0 — Version deletion can invalidate installed clients
+## P1 — Admin API reference currently duplicates some canonical-contract text
 
-- `deleteVersion()` is intentionally unrestricted after confirmation.
-- Any client still reporting the deleted version will resolve as `version_unknown` until that version is re-registered or the client updates.
-- Before deleting a production version, confirm rollout state and current active clients.
+- `DylibApiContract.php` is the canonical documentation source for request/response fields and result codes.
+- The admin HTML currently renders a detailed static table that mirrors the contract for immediate usability.
+- Future work should render the page dynamically from `DylibApiContract` to eliminate documentation drift.
 
-## P1 — Version edit/delete UI still needs real browser verification
+## P1 — Client UI remains deliberately out of scope
 
-- Backend update path existed before 2410; 2410 exposes it through table controls and adds delete.
-- PHP/JS contracts are green, but FastAdmin/Bootstrap Table behavior should be checked in the real BaoTa admin once.
+- The verification center does not collect UDID, display card/license forms, open notice popups, create floating windows, or render license-information pages.
+- It only returns API data such as `message`, `notice`, `app_update`, `permissions`, and `access_level`.
+- Client projects must implement their own UX and should branch on `ok + code`, not `message` text.
 
-## P1 — Legacy `Index::dylib()` / `Index::apiface()` remain compatibility APIs
+## P1 — Real client integration acceptance pending
 
-- Both methods still exist in `application/index/controller/Index.php`; 2410 does not duplicate or fork their server implementation.
-- OC Generator 2.1.0 now exports their candidate URLs from configured API endpoints.
-- Legacy `apiface` response signing currently uses `udid|expire|ts|nonce`; new Dylib v2 verification remains a separate protocol.
-- Do not merge the two signing contracts or silently replace the legacy endpoints.
+- CI verifies the API reference, error-code catalog, deterministic generated examples and online-update packaging.
+- It does not prove an independent OC/Swift client has implemented the contract correctly.
+- A real client should eventually be tested for canonical signing, nonce handling, result-code handling, notice/update consumption and offline-grace behavior.
 
-## P1 — Generated Objective-C ZIP contains the shared Dylib verify secret
+## Compatibility boundaries
 
-- This is required by the current client HMAC design.
-- Generated source must remain in controlled/private projects and must not be published to a public repository.
-- Backend/database/admin secrets are not exported.
-
-## P1 — Real generated ZIP integration pending
-
-- CI confirms deterministic generation and legacy URL inclusion.
-- Still required: download one generated ZIP from the real admin and compile/integrate it in a real Dylib project.
-
-## Stable compatibility boundary
-
-- `source-v2026092409` remains the current stable release until 2410 formal release gates complete.
-- 2409 v1/v2 HMAC, Bootstrap/runtime config, App identity, and database contracts are unchanged by the 2410 CRUD work.
+- Existing v1/v2 canonical signing order is unchanged by 2412.
+- Existing string result codes remain the wire protocol; do not silently replace them with numeric codes.
+- Legacy `Index::dylib()` / `Index::apiface()` remain separate compatibility APIs. Legacy `apiface` uses its existing signing contract and must not be conflated with the per-Dylib Verify Secret protocol.
 - Historical release/tag commits must not be rewritten.
