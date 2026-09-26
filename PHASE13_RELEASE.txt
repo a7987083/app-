@@ -1,31 +1,29 @@
-ZONOE 软件源 Release 2026092409
-版本：2026092409
-基线：source-v2026092408
-阶段：Dylib 验证中心 UX 简化
-发布分支：release/2026092409-dylib-center-ux-simplification
+ZONOE 软件源 Release 2026092410
+版本：2026092410
+基线：source-v2026092409
+阶段：Dylib CRUD 与 Legacy API Codegen 完善
+发布分支：release/2026092410-dylib-crud-legacy-codegen
 发布状态：正式发布候选（由 ZONOE Source Release CI 完成发布）
 
 更新内容：
-1. Dylib 验证中心从 2408 的 7 个大区块平铺改为 5 个主入口：概览、版本、通知、验证记录、高级。
-2. 概览集中 Dylib 基本信息、验证密钥、离线/失败策略、Dylib 列表与 OC 接入代码生成。
-3. OC Codegen 固定渲染到概览 codegen-slot，不再动态插入一个新的编号大区块。
-4. Codegen 默认只展示目标 Dylib、版本、预览和生成 ZIP；类前缀、最低 iOS、超时收进折叠“选项”；代码预览仅在执行预览后显示。
-5. 远程通知独立到“通知”页签；版本独立到“版本”页签；验证日志独立到“验证记录”页签。
-6. API Base URL、Bootstrap、Verify Path、游戏更新文案统一移入“高级”。
-7. Protocol v2 / HMAC 接入说明与权限模型说明保留，但默认折叠，日常使用不再直接展示内部协议细节。
-8. Bootstrap Table 在隐藏 Tab 打开后执行 resetView，避免隐藏容器初始化造成列宽异常。
-9. 2409 不修改 Dylib 验证协议、HMAC canonical、Runtime Config 签名、权限计算、数据库结构、OC 生成结果协议。
-10. 在线更新继续沿用既有 UpdateManager / UpdateInstaller；2409 无新增 SQL migration。
+1. Dylib 列表取消“已有业务历史禁止删除”的限制；删除时事务清理版本、旧游戏授权、对应验证日志，再删除 Dylib 本体。
+2. 版本管理新增编辑与删除入口；编辑复用现有 saveVersion(id) 更新能力，新增 deleteVersion() 物理删除指定版本。
+3. OC Codegen 升级到 Generator 2.1.0；继续自动读取 Dylib、版本、Bootstrap、API Endpoint 与验证密钥。
+4. 恢复并显式输出旧接口兼容信息：Index::dylib() -> /index/index/dylib，Index::apiface() -> /index/index/apiface。
+5. 生成的 Config 与 GeneratedConfig/INTEGRATION 文档增加 legacyDylibURLs / legacyApiFaceURLs，方便旧工程继续接入。
+6. 不修改现有 DylibVerificationService、Runtime Config、v1/v2 HMAC canonical、权限模型和数据库结构。
+7. 2409 的 5 Tab Dylib Center UX 保持不变。
+8. 在线更新继续沿用现有 UpdateManager / UpdateInstaller；2410 无新增 SQL migration。
 
 验证：
-- OC Codegen CI #6 / Run 36227164466：success。
-- PHP 7 / JavaScript syntax：success。
-- 原 OC Codegen contract：success。
-- 新 Dylib Center UX contract：success，验证 5 Tab、Codegen 位于概览、接入说明和权限模型默认折叠。
-- 在线更新包内容 Gate：view、dylib_center.js、dylib_codegen_inline.js 均已包含。
-- MySQL 5.7 regression：success；无新增 migration。
+- OC Codegen CI #9 / Run 36230506336：success。
+- PHP 7.0 lint：success。
+- JavaScript syntax：success。
+- OC Codegen contract：success，覆盖 legacy Index API URL 输出。
+- Dylib Center UX contract：success。
+- MySQL 5.7 migration regression：success；无新增 migration。
 
 在线更新：
-- 目标升级：source-v2026092408 -> source-v2026092409。
+- 目标升级：source-v2026092409 -> source-v2026092410。
 - 正式 Release 必须包含 zonoe-online-update.zip 与 zonoe-online-update.zip.sha256。
 - 继续执行 GitHub Release 检测、SHA256、备份、文件覆盖、版本写入、完整性校验与失败回滚。
