@@ -18,7 +18,13 @@ on:
       - 'tests/phase14_update_ops_test.php'
       - 'tests/phase14_update_ops_ui_contract_test.php'
       - 'tests/phase2414_ops_backup_log_cleanup_contract_test.php'
+      - 'release/auto-release.env'
+      - 'RELEASE_POLICY.md'
       - '.github/workflows/phase14-update-ops.yml'
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   php70-update-ops:
@@ -56,3 +62,71 @@ jobs:
           php tests/phase14_2_failure_injection_test.php
           php tests/phase13_update_runtime_test.php
           php tests/phase14_update_atomicity_test.php
+
+  auto-online-release:
+    name: Auto online release
+    needs: php70-update-ops
+    if: github.event_name == 'push' && success()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate automatic-release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s release/auto-release.env
+          # shellcheck disable=SC1091
+          source release/auto-release.env
+          test "${AUTO_RELEASE:-0}" = "1"
+          VERSION_VALUE="$(tr -d '\r\n ' < VERSION)"
+          TXT_VERSION="$(tr -d '\r\n ' < public/update/ver.txt)"
+          JSON_VERSION="$(php -r '$j=json_decode(file_get_contents("ver.json"), true); echo isset($j["version"]) ? $j["version"] : "";')"
+          [[ "$VERSION_VALUE" =~ ^20[0-9]{6,12}$ ]]
+          test "$VERSION_VALUE" = "$TXT_VERSION"
+          test "$VERSION_VALUE" = "$JSON_VERSION"
+          echo "version=$VERSION_VALUE" >> "$GITHUB_OUTPUT"
+          echo "tag=${RELEASE_TAG_PREFIX:-source-v}$VERSION_VALUE" >> "$GITHUB_OUTPUT"
+          echo "workflow=${RELEASE_WORKFLOW:-phase13_github_release.yml}" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether this version is already published
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          CODE="$(curl -sS -o /tmp/release.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}")"
+          if [ "$CODE" = "200" ]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "${TAG} already exists; automatic publishing is idempotently skipped."
+          elif [ "$CODE" = "404" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          else
+            cat /tmp/release.json || true
+            echo "Unexpected GitHub release lookup HTTP ${CODE}" >&2
+            exit 1
+          fi
+
+      - name: Dispatch ZONOE Source Release
+        if: steps.existing.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_WORKFLOW: ${{ steps.meta.outputs.workflow }}
+          RELEASE_REF: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAYLOAD="$(printf '{\"ref\":\"%s\"}' "$RELEASE_REF")"
+          curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${RELEASE_WORKFLOW}/dispatches" \
+            -d "$PAYLOAD"
+          echo "Dispatched ${RELEASE_WORKFLOW} for ${RELEASE_REF}."
