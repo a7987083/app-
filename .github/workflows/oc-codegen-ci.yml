@@ -5,12 +5,14 @@ on:
     branches:
       - feature/2026092406-oc-codegen-online-update
       - feature/2026092408-dylib-center-codegen-inline
+      - feature/2026092409-dylib-center-ux-simplification
       - 'release/**'
     paths:
       - 'application/common/library/codegen/**'
       - 'application/admin/controller/general/Occodegen.php'
       - 'application/admin/controller/DylibCenter.php'
       - 'application/admin/controller/DylibCodegen.php'
+      - 'application/admin/view/dylib_center/index.html'
       - 'public/assets/js/backend/dylib_center.js'
       - 'public/assets/js/backend/dylib_codegen_inline.js'
       - 'clients/ios/ZONDylibVerify/**'
@@ -18,6 +20,7 @@ on:
       - 'release/sql/2026092407_oc_codegen.sql'
       - 'release/sql/2026092408_oc_codegen_inline.sql'
       - 'tests/oc_codegen_*'
+      - 'tests/dylib_center_ux_contract_test.php'
       - '.github/workflows/oc-codegen-ci.yml'
   workflow_dispatch:
 
@@ -31,18 +34,21 @@ jobs:
           php-version: '7.0'
           coverage: none
           extensions: zip
-      - name: Lint generator and inline Dylib UI
+      - name: Lint generator and Dylib UI
         run: |
           set -euo pipefail
           php -l application/common/library/codegen/ObjectiveCGenerator.php
           php -l application/admin/controller/DylibCodegen.php
           php -l application/admin/controller/general/Occodegen.php
           php -l tests/oc_codegen_contract_test.php
+          php -l tests/dylib_center_ux_contract_test.php
           node --check public/assets/js/backend/dylib_center.js
           node --check public/assets/js/backend/dylib_codegen_inline.js
       - name: Run Dylib codegen contract
         run: php tests/oc_codegen_contract_test.php
-      - name: Verify online-update package contains 2408 codegen
+      - name: Run Dylib Center UX contract
+        run: php tests/dylib_center_ux_contract_test.php
+      - name: Verify online-update package contains Dylib Center and codegen
         run: |
           set -euo pipefail
           php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
@@ -50,6 +56,7 @@ jobs:
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/codegen/ObjectiveCGenerator.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/DylibCodegen.php'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/general/Occodegen.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/view/dylib_center/index.html'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/dylib_center.js'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/dylib_codegen_inline.js'
           unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/clients/ios/ZONDylibVerify/ZONVerifyClient.h'
