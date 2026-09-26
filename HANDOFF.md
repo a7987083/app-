@@ -3,75 +3,44 @@
 ## Current state
 
 - Repository: `a7987083/app-`
-- Current stable release: `source-v2026092406`
-- Previous stable release: `source-v2026092405`
-- Release branch: `release/2026092406-dylib-global-app-support`
-- Formal release commit: `798cbed23aedfefa2fd34a280ae70a01bb413e63`
-- Draft PR: `#25`（not merged; release published directly from the release branch）
-- Historical releases through 2026092405 remain immutable.
+- Stable release: `source-v2026092409`
+- Stable branch: `release/2026092409-dylib-center-ux-simplification`
+- Stable commit: `a36b979e86d1b39da6eabf74f5f3e1ac99b3a5a8`
+- Development branch: `feature/2026092410-dylib-crud-legacy-codegen`
+- Verified development checkpoint: `69208ccfd595ccd8cb4aab7093838eb5dc7f4c55`
+- OC Codegen CI #9 / Run `36230506336`: SUCCESS.
 
-## 2026092406 implementation
+## 2410 implementation
 
-1. Dylib validity and user feature entitlement are separate decisions. Active verification no longer uses per-Dylib BundleID binding as the runtime App allow-list.
-2. Card scopes map to runtime access levels: `scope=2 -> basic`, `scope=3 + server-recognized current App -> app_plus`, `scope=1 -> global_plus`. Multiple valid cards use the highest access applicable to the current App.
-3. scope=3 does not trust client `app_id` or BundleID alone. Server recognition uses BundleID + executable + Mach-O `LC_UUID`, then resolves through active `ipa_asset -> ipa_category_binding -> fa_category.id`.
-4. `MachOInspector` reads `LC_UUID`; `IpaParserService` persists main executable identity in `fa_ipa_app_identity`. Only parsed assets with active IPA→category bindings participate in App-specific authorization.
-5. Protocol v1 canonical HMAC order is unchanged; protocol v2 appends protocol/App identity/version fields.
-6. Existing response fields stay compatible; new data includes `access_level`, `permissions`, `app_identity`, `app_update` and `notice`.
-7. v2 session tokens and offline `app_plus` grace bind App identity. Offline recovery revalidates BundleID + executable + Mach-O UUID and clears cache on mismatch.
-8. Parsed IPA version data powers App update detection. Update title/body/button labels/actions are server controlled.
-9. Runtime notices support global/specific-App targeting, minimum access level, revision, priority, time window and button actions.
-10. `/index/dylib_verify/config` provides runtime endpoint discovery. The iOS client supports multiple Bootstrap URLs, multiple API endpoints, signed config validation, Last-Known-Good, legacy direct endpoint fallback and offline authorization fallback.
-11. Admin rejects Bootstrap-enabled configuration with zero API endpoints while retaining both-empty legacy direct-endpoint mode.
-12. Runtime identity index uses conservative `64/64/36` utf8mb4 prefixes while storing full field values.
-13. Admin workflow is Register → Integration → Permission Model → Runtime Config & Notices → Version Control → Verification Records.
+1. `DylibCenter::deleteDylib()` no longer blocks deletion when versions, legacy bindings, or verify logs exist.
+2. Dylib deletion is transactional and cascades its versions, legacy `dylib_app_binding` rows, matching verify logs, then the Dylib registration.
+3. Version table now has Edit/Delete controls. Editing uses the existing `saveVersion(id)` path; deleting uses new `deleteVersion()`.
+4. Version edit preserves `file_size`, SHA256, state, offline grace, fail action, and notice.
+5. Objective-C generator advanced to 2.1.0 and still derives config from the selected Dylib/version/runtime config/verify secret.
+6. Historical public APIs are not reimplemented: current `Index::dylib()` and `Index::apiface()` remain the source of truth.
+7. Codegen now exposes legacy URL arrays based on configured API endpoints:
+   - `/index/index/dylib`
+   - `/index/index/apiface`
+8. Generated Config header/implementation, `GeneratedConfig.json`, and `INTEGRATION.md` expose/document the legacy endpoints alongside the new verification client.
 
-## Formal online release evidence
+## Verified
 
-- Formal release commit: `798cbed23aedfefa2fd34a280ae70a01bb413e63`.
-- IPA Online Update Release Gate `36109410680`: SUCCESS.
-  - formal version metadata validated as `2026092406`;
-  - real online-update ZIP built and checked;
-  - 2406 runtime payload present;
-  - migration applied twice on MySQL 5.7;
-  - PHP 7.0 runtime contracts and runtime-access MySQL integration passed.
-- ZONOE Source Release `36109410642`: SUCCESS.
-  - PHP 7.0 regression passed;
-  - MySQL 5.7 migration gate passed;
-  - release-gating `/appstore` concurrency matrix passed;
-  - package-and-release passed;
-  - real GitHub Release online-update E2E passed.
-- GitHub Release: `source-v2026092406`, Release ID `396411187`, target commit `798cbed23aedfefa2fd34a280ae70a01bb413e63`, `draft=false`, `prerelease=false`.
-- Release ZIP: asset ID `587832059`, 221101 bytes, GitHub digest `sha256:2d7affcc75ed7a33c1ec2d1c0ad39f1ed0e765ee30b2a4c6ccfc8cc7eb5339c5`.
-- Release SHA file: asset ID `587832060`.
-- CI release artifact: `zonoe-source-2026092406-online-update`, artifact ID `10852219528`, digest `sha256:7788e599a6b5cb33d69a204535bb698b181257c34f4d3491784a44af7092ca2b`.
-- Real updater E2E resolved previous release `2026092405` and ended with:
-  `OK phase13_github_online_update_e2e real_release=2026092406 base=2026092405 self_update=passed progress=passed history=passed db_migration=yes`.
+- PHP 7.0 syntax and contracts: passed.
+- Dylib Center JS syntax: passed.
+- OC Codegen deterministic contract: passed.
+- Legacy endpoint codegen assertions: passed.
+- Dylib CRUD/version CRUD contract assertions: passed.
+- Dylib Center UX contract: passed.
+- MySQL 5.7 migration regression: passed.
+- Online-update package content gate: passed.
 
-## Compatibility boundary
+## Not yet verified
 
-- `source-v2026092405` is now previous stable and remains immutable.
-- v1 signing remains accepted with original canonical order.
-- Historical `dylib_app_binding` data/endpoints remain for compatibility/audit but are not used for active runtime App authorization.
-- Bootstrap/API lists may both remain empty for legacy direct `endpointURL`; Bootstrap-nonempty/API-empty is rejected.
-- Cloud save and other separately purchased entitlements remain independent from `basic/app_plus/global_plus`.
+- Real BaoTa/browser deletion of a Dylib that already has history.
+- Real browser version edit/delete behavior.
+- Real generated ZIP integration in a Dylib project.
+- Formal 2410 release gate / online-update E2E / published release.
 
-## Still requiring real BaoTa/device verification
+## Next task
 
-- Actual user BaoTa update click `2026092405 -> 2026092406` and resulting updater history/backup.
-- Actual BaoTa MySQL application of the 2406 migration and runtime-identity index.
-- Re-parse at least one actively bound IPA to populate `fa_ipa_app_identity`.
-- Real iOS behavior for scope=2 / scope=3 / scope=1 and multi-card access merging.
-- BundleID-only spoof negative test on device.
-- Offline `app_plus` identity-cache negative test on device.
-- Game update notice / arbitrary server text / runtime notice button actions.
-- API-domain migration, Bootstrap failover, Last-Known-Good and offline-grace behavior under real network failure.
-
-## Next production verification sequence
-
-1. On a real 2405 installation, use **GitHub 在线更新**; it should discover `2026092406` from the published Release.
-2. Confirm the updater finishes at 100%, local `ver.json` / `public/update/ver.txt` become `2026092406`, and update history contains a successful `2405 -> 2406` entry with backup.
-3. Confirm `fa_ipa_app_identity`, `fa_dylib_runtime_config`, `fa_dylib_runtime_notice` and the runtime identity index exist.
-4. Re-parse an actively bound App and confirm `fa_ipa_app_identity` is populated.
-5. Run real-device authorization matrix and spoof/offline negative cases.
-6. Validate updates/notices and endpoint migration/failover/LKG/offline grace.
+Use a disposable Dylib record in the real admin to exercise destructive delete and version edit/delete. Then generate one Objective-C ZIP and verify `legacyDylibURLs` / `legacyApiFaceURLs` against the configured API Base URL. If those pass, prepare the 2410 release metadata and formal release gate.
