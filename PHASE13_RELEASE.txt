@@ -1,29 +1,28 @@
-ZONOE 软件源 Release 2026092412
-版本：2026092412
-基线：source-v2026092411
-阶段：Dylib API 接入中心
-发布分支：release/2026092412-api-integration-center
+ZONOE 软件源 Release 2026092413
+版本：2026092413
+基线：source-v2026092412
+阶段：Dylib API 完整目录与文档下载
+发布分支：release/2026092413-api-doc-full-catalog
 发布状态：正式发布候选（由 ZONOE Source Release CI 完成发布）
 
 更新内容：
-1. Dylib 验证中心职责收敛为 API 提供方：验证接口、HMAC、错误码、运行配置、通知/更新数据与验证日志；客户端 UI 不属于验证中心。
-2. 新增 DylibApiContract，集中记录真实请求字段、返回字段、v1/v2 canonical、action 和 result code。
-3. 保持既有字符串 code 协议，不新增破坏兼容性的数字错误码。
-4. Objective-C Generator 升级到 2.2.0，明确定位为 API 测试/参考代码生成器。
-5. 生成包新增 API_REFERENCE.md、ERROR_CODES.md、EXAMPLES.md；实际客户端可以不使用生成 OC，直接按 API 文档自行实现。
-6. 后台“API 接入说明”增加接口、请求参数、返回字段、错误码、签名和接入原则。
-7. 客户端业务判断应使用 ok + code；message 可作为服务器提示展示，但不得依赖 message 文本判断业务状态。
-8. notice / app_update / permissions / access_level 均为 API 返回数据，如何显示由客户端工程自行决定。
-9. 在线更新 manifest 新增 application/common/library/Ipa/DylibApiContract.php。
-10. 现有 v1/v2 HMAC wire contract、数据库结构和 legacy Index API 均保持兼容。
+1. Dylib 验证中心“API 接入说明”由 2412 的局部说明升级为完整 API 目录。
+2. 页面明确列出 8 个现有入口，并区分 JSON API、HTML 页面兼容入口与 Legacy 接口，避免客户端误按 JSON 解析页面入口。
+3. 新增独立“签名协议”分页，继续使用现有 Protocol v1/v2 HMAC-SHA256 canonical，不改变 wire contract。
+4. 新增“一键全部下载 ZIP”，按当前选择的 Dylib 与 runtime verify_path 生成完整接入资料。
+5. 下载包固定包含 13 个文件：README、API 总览/参考、错误码、签名、返回模型、流程、cURL/Objective-C/Swift/Python 示例及 JSON schema。
+6. 下载资料不导出真实 Verify Secret，示例统一使用 <VERIFY_SECRET> 占位符。
+7. 新增 DylibApiDocumentation 统一文档数据源，网页与下载资料共用真实协议信息，降低文档漂移风险。
+8. 新增 DylibApiDocs 下载 Controller，并纳入在线更新包。
+9. 新增真实生成契约测试：校验 8 个入口、13 个文件、动态 verify_path、可解析 JSON schema 及 Secret 不泄漏。
+10. 不改变数据库结构、现有 Dylib verify 协议、Runtime Config 签名及 legacy API 行为。
 
 开发验证：
-- OC Codegen CI #14 / Run 36239192712：success。
-- PHP 7.0 lint/contracts：success。
-- JavaScript syntax：success。
-- API reference/error-code codegen contract：success。
-- Dylib Center UX contract：success。
-- Online-update package content gate：success。
-- MySQL 5.7 migration regression：success。
+- OC Codegen CI #17 / Run 36250685197：SUCCESS。
+- PHP 7.0 lint/contracts：SUCCESS。
+- Dylib Center UX contract：SUCCESS。
+- Dylib API documentation generation contract：SUCCESS。
+- Online-update package content gate：SUCCESS。
+- MySQL 5.7 migration regression：SUCCESS。
 
-在线更新目标：source-v2026092411 -> source-v2026092412。
+在线更新目标：source-v2026092412 -> source-v2026092413。

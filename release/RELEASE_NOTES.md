@@ -1,92 +1,76 @@
-# ZONOE 软件源 2026092412
+# ZONOE 软件源 2026092413
 
 ## 更新内容
 
-### Dylib API 接入中心
+### Dylib API 完整目录与下载
 
-本版本以 `source-v2026092411` 为升级基线，将 Dylib 验证中心的职责明确收敛为 **API 验证服务与接入文档中心**。
+本版本以 `source-v2026092412` 为升级基线，将 Dylib 验证中心的 API 接入说明从局部验证协议文档扩展为完整 API 目录，并提供可直接下载的完整接入资料包。
 
-### 职责边界
+### 8 个现有入口
 
-验证中心负责：
+后台 `Dylib 验证中心 -> API / 高级 -> API 接入说明` 现在明确列出 8 个现有入口，并标注接口类型：
 
-- Dylib 注册与允许版本；
-- `/index/dylib_verify/config` 运行配置发现；
-- `/index/dylib_verify/verify` 在线验证；
-- Protocol v1 / v2 HMAC-SHA256 canonical；
-- Verify Secret；
-- 稳定字符串 `code`、`action`、`message` 与返回字段；
-- `permissions`、`access_level`、`notice`、`app_update` 等 API 数据；
-- 验证日志和 API 接入说明。
+- `POST /authorization`：授权查询页面兼容入口；
+- `GET /appstore`：软件源/激活相关入口；
+- `GET /index/index/apiface`：Legacy 授权校验；
+- `GET /index/index/dylib`：Legacy Dylib 配置；
+- `POST /unbind`：换绑页面兼容入口；
+- `GET /unbind/query`：换绑状态 JSON 查询；
+- `GET /index/dylib_verify/config`：Runtime Config；
+- `POST <runtime verify_path>`：Dylib 在线验证。
 
-验证中心不负责：UDID 输入/采集界面、卡密输入窗口、公告弹窗、悬浮窗、授权信息页或其它客户端产品 UI。这些由实际 OC/Swift 客户端工程自行实现。
+特别说明：`/authorization` 与 `/unbind` 当前由 Controller 渲染 HTML 页面，不能作为纯 JSON API 直接解析。2413 在文档中明确区分 JSON API、页面兼容入口与 Legacy 接口。
 
-### Canonical API contract
+### 独立签名协议
 
-新增 `application/common/library/Ipa/DylibApiContract.php`，集中记录当前真实协议：
+签名说明从接口列表中独立成专门分页，继续使用现有 Protocol v1 / v2 HMAC-SHA256 canonical。2413 不改变请求字段顺序、Verify Secret 使用方式或现有 wire contract。
 
-- v1/v2 请求字段；
-- 返回字段；
-- HMAC canonical 字段顺序；
-- `allow / disable_feature / show_message / block` action；
-- 当前真实 success/error string codes 及客户端建议。
+### 全部下载 ZIP
 
-2412 不引入新的数字错误码，继续使用现有字符串 `code`，避免破坏已经存在的客户端协议。
+选择当前 Dylib 后，可在 API 接入说明右上角使用“全部下载 ZIP”。下载包按当前 Dylib 与运行配置动态生成，固定包含 13 个文件：
 
-### API 接入说明
-
-后台的“接入说明”升级成详细 API 文档页，直接提供：
-
-- Endpoint 与请求方式；
-- 请求字段、类型、必填条件和 v1/v2 差异；
-- 返回字段与用途；
-- Protocol v1/v2 canonical；
-- HMAC-SHA256 规则；
-- 错误码与客户端建议；
-- 推荐接入顺序和职责边界。
-
-客户端程序逻辑应使用 `ok + code`；`message` 是服务器返回的可展示文字，可原样显示，但不应解析 message 文本判断业务状态。
-
-### API 接入示例生成器 2.2.0
-
-原 OC Codegen 重新定位为测试/参考工具，而非完整客户端生成器。
-
-生成包现在包含：
-
-- `*DylibConfig.h/.m`
-- `*DylibVerify.h/.m`
-- `GeneratedConfig.json`
-- `INTEGRATION.md`
+- `README.md`
+- `API_OVERVIEW.md`
 - `API_REFERENCE.md`
 - `ERROR_CODES.md`
-- `EXAMPLES.md`
-- `generation-manifest.json`
+- `SIGNATURE.md`
+- `RESPONSE_MODEL.md`
+- `FLOW.md`
+- `examples/curl.md`
+- `examples/Objective-C.md`
+- `examples/Swift.md`
+- `examples/Python.md`
+- `schemas/api.json`
+- `schemas/error_codes.json`
 
-实际客户端可以完全不使用这些生成 OC 文件，直接按照 API 文档自行搭建。
+真实 Verify Secret 不会写入下载资料；示例统一使用 `<VERIFY_SECRET>` 占位符。
+
+### 统一文档数据源
+
+新增 `application/common/library/Ipa/DylibApiDocumentation.php`，网页展示和 ZIP 导出共用同一份协议描述；新增 `application/admin/controller/DylibApiDocs.php` 负责后台下载。两者均已加入在线更新 manifest。
+
+### 自动验证
+
+2413 新增 Dylib API 文档生成契约，真实调用文档生成器检查：
+
+- 8 个入口数量；
+- 13 个导出文件；
+- 动态 `verify_path`；
+- `api.json` / `error_codes.json` 可解析；
+- 页面兼容入口类型标注；
+- 导出内容不包含真实 Verify Secret。
+
+开发 CI：OC Codegen CI #17 / Run `36250685197` 全部成功；PHP 7.0、Dylib Center UX、API documentation contract、online-update package gate 与 MySQL 5.7 migration regression 均通过。
 
 ### 兼容性
 
-2412 不改变：
+2413 不改变：
 
-- v1 canonical；
-- v2 canonical；
-- `/index/dylib_verify/config`；
-- `/index/dylib_verify/verify`；
-- 当前字符串 result code wire protocol；
-- Runtime Config 签名逻辑；
-- 数据库表结构；
-- 旧 `Index::dylib()` / `Index::apiface()` 兼容接口。
+- Protocol v1 / v2 canonical；
+- Dylib 在线验证 wire contract；
+- Runtime Config 签名；
+- 数据库结构；
+- Legacy `Index::dylib()` / `Index::apiface()` 行为；
+- 2412 的 Objective-C 测试/参考代码定位。
 
-Legacy `Index::apiface()` 的签名协议仍与新的 per-Dylib Verify Secret 验证协议分离，不得混用。
-
-### 开发验证
-
-- OC Codegen CI #14 / Run `36239192712`：success。
-- PHP 7.0 lint/contracts：success。
-- JavaScript syntax：success。
-- API reference / error-code generation contract：success。
-- Dylib Center UX contract：success。
-- Online-update package content gate：success。
-- MySQL 5.7 migration regression：success。
-
-目标升级路径：`source-v2026092411 -> source-v2026092412`。
+目标升级路径：`source-v2026092412 -> source-v2026092413`。
