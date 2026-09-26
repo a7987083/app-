@@ -54,6 +54,11 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 return Object.prototype.hasOwnProperty.call(map, value) ? map[value] : value;
             }
 
+            function activateTab(target) {
+                var $link = $('#dylib-center-tabs a[href="' + target + '"]');
+                if ($link.length) $link.tab('show');
+            }
+
             function refreshAll() {
                 $('#version-table').bootstrapTable('refresh');
                 $('#notice-table').bootstrapTable('refresh');
@@ -129,7 +134,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                                     'starts_at', 'ends_at', 'enabled'], function (i, field) {
                                     $form.find('[name=' + field + ']').val(row[field] === null || typeof row[field] === 'undefined' ? '' : row[field]);
                                 });
-                                $('html,body').animate({scrollTop: $('#notice-form').offset().top - 20}, 150);
+                                activateTab('#tab-notices');
+                                setTimeout(function () { $('html,body').animate({scrollTop: $('#notice-form').offset().top - 20}, 150); }, 80);
                             }
                         }
                     }
@@ -156,11 +162,19 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 ]]
             });
 
+            $('#dylib-center-tabs a[data-toggle="tab"]').on('shown.bs.tab', function () {
+                window.setTimeout(function () {
+                    $('#version-table,#notice-table,#verify-log-table').each(function () {
+                        if ($(this).data('bootstrap.table')) $(this).bootstrapTable('resetView');
+                    });
+                }, 30);
+            });
+
             $('#generate-secret').on('click', function () {
                 Fast.api.ajax({url: 'dylib_center/generateVerifySecret', type: 'POST'}, function (data) {
                     if (data && data.secret) {
                         $('#verify-secret').attr('type', 'text').val(data.secret);
-                        Toastr.success('验证密钥已生成。请保存，并同步写入对应 Objective-C Dylib 配置。');
+                        Toastr.success('验证密钥已生成。保存后由 OC 生成器自动带入；请妥善保管。');
                     }
                     return false;
                 });
@@ -176,8 +190,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
 
             $('#runtime-config-form').on('submit', function (e) {
                 e.preventDefault();
-                Fast.api.ajax({url: 'dylib_center/saveRuntimeConfig', type: 'POST', data: $(this).serialize()}, function (data) {
-                    Toastr.success('运行配置已保存，旧 Dylib 将在下一次发现配置时自动采用新地址/文案。');
+                Fast.api.ajax({url: 'dylib_center/saveRuntimeConfig', type: 'POST', data: $(this).serialize()}, function () {
+                    Toastr.success('高级运行配置已保存；配置版本已自动递增。');
                     location.reload();
                     return false;
                 });
@@ -208,7 +222,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 $('#verify-secret').attr('type', 'password').val('');
                 $('.js-dylib-submit-label').text('保存修改');
                 $('#cancel-dylib-edit').removeClass('hidden');
-                $('html,body').animate({scrollTop: $('#section-register').offset().top - 20}, 150);
+                activateTab('#tab-overview');
+                setTimeout(function () { $('html,body').animate({scrollTop: $('#section-register').offset().top - 20}, 150); }, 80);
             });
 
             $('#dylib-list').on('click', '.js-dylib-toggle', function () {
@@ -243,12 +258,15 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 var $row = $(this).closest('tr');
                 $('#integration-name').text($row.attr('data-name'));
                 $('#integration-key').text($row.attr('data-key'));
-                $('html,body').animate({scrollTop: $('#section-integration').offset().top - 20}, 150);
+                activateTab('#tab-advanced');
+                $('#integration-detail').collapse('show');
+                setTimeout(function () { $('html,body').animate({scrollTop: $('#section-integration').offset().top - 20}, 150); }, 100);
             });
 
             $('#version-form').on('submit', function (e) {
                 e.preventDefault();
                 Fast.api.ajax({url: 'dylib_center/saveVersion', type: 'POST', data: $(this).serialize()}, function () {
+                    Toastr.success('Dylib 版本已保存');
                     $('#version-table').bootstrapTable('refresh');
                     return false;
                 });
