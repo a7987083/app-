@@ -151,6 +151,18 @@ ok_phase12(strpos($manager, 'localManifest') !== false, 'local update manifest r
 ok_phase12(strpos($manager, '$localManifest[\'file_sign\']') !== false, 'integrity check must use local ver.json file_sign');
 ok_phase12(strpos($manager, '$latest[\'file_sign\']') === false, 'remote file_sign must not be used for local tamper detection');
 
+$ipaController = file_get_contents(__DIR__ . '/../application/admin/controller/IpaCenter.php');
+ok_phase12(strpos($ipaController, "whereOr('path','like'") !== false, 'IPA asset search must include remote path');
+ok_phase12(strpos($ipaController, "whereOr('app_name','like'") !== false, 'IPA asset search must include app name');
+ok_phase12(strpos($ipaController, "whereOr('app_version','like'") !== false, 'IPA asset search must include app version');
+ok_phase12(strpos($ipaController, "whereOr('build_version','like'") !== false, 'IPA asset search must include build version');
+ok_phase12(strpos($ipaController, "Db::name('ipa_source')->where('name','like'") !== false, 'IPA asset search must include OpenList source name');
+$ipaJs = file_get_contents(__DIR__ . '/../public/assets/js/backend/ipa_center.js');
+ok_phase12(strpos($ipaJs, 'queryParams:function(params)') !== false, 'IPA asset table must explicitly map server query parameters');
+ok_phase12(strpos($ipaJs, "search:$.trim(params.search||'')") !== false, 'IPA asset table must send the search text to server');
+$duplicateMenuCleanup = file_get_contents(__DIR__ . '/../release/sql/2026092418_remove_duplicate_ipa_openlist_menu.sql');
+ok_phase12(strpos($duplicateMenuCleanup, "'ipa_openlist/index'") !== false, '2418 must remove duplicate IPA OpenList menu');
+
 $authorization = file_get_contents(__DIR__ . '/../application/admin/controller/Authorization.php');
 ok_phase12(strpos($authorization, "runtime' . DS . 'update_backup") !== false, 'diagnostic default backup path must stay inside site open_basedir');
 ok_phase12(strpos($authorization, '@is_dir($directory)') !== false, 'diagnostic backup probe must tolerate open_basedir restrictions');
