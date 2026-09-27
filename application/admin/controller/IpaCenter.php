@@ -40,7 +40,33 @@ class IpaCenter extends Backend
         $limit=max(20,min(500,(int)$this->request->get('limit',100)));
         $search=trim((string)$this->request->get('search',''));
         $query=Db::name('ipa_asset');
-        if($search!=='')$query->where(function($q)use($search){$q->whereLike('name','%'.$search.'%')->whereOr('bundle_id','like','%'.$search.'%');});
+        if($search!==''){
+            $like='%'.$search.'%';
+            $matchingSourceIds=Db::name('ipa_source')->where('name','like',$like)->column('id');
+            $statusAliases=[
+                '待解析'=>'discovered',
+                '解析中'=>'parsing',
+                '已解析'=>'parsed',
+                '解析失败'=>'parse_failed',
+                '已缺失'=>'missing',
+            ];
+            $statusSearch=isset($statusAliases[$search])?$statusAliases[$search]:$search;
+            $query->where(function($q)use($search,$like,$matchingSourceIds,$statusSearch){
+                $q->where('name','like',$like)
+                    ->whereOr('path','like',$like)
+                    ->whereOr('bundle_id','like',$like)
+                    ->whereOr('app_name','like',$like)
+                    ->whereOr('app_version','like',$like)
+                    ->whereOr('build_version','like',$like)
+                    ->whereOr('status','like','%'.$statusSearch.'%');
+                if(ctype_digit($search)){
+                    $q->whereOr('id',(int)$search)->whereOr('source_id',(int)$search);
+                }
+                if($matchingSourceIds){
+                    $q->whereOr('source_id','in',array_values($matchingSourceIds));
+                }
+            });
+        }
         $total=(clone $query)->count();
         $rows=$query->field('id,source_id,name,path,size_bytes,status,bundle_id,app_name,app_version,build_version,last_error,last_seen_at,parsed_at,updated_at')->order('id desc')->limit($offset,$limit)->select();
         $ids=[];$sourceIds=[];
