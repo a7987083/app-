@@ -1,27 +1,23 @@
-ZONOE 软件源 Release 2026092414
-版本：2026092414
-基线：source-v2026092413
-阶段：运维中心备份管理 + API 请求日志清理 + 自动在线发布
-发布分支：feature/2026092414-ops-backup-log-cleanup
+ZONOE 软件源 Release 2026092415
+版本：2026092415
+基线：source-v2026092414
+阶段：更新备份回滚保护策略调整
+发布分支：feature/2026092415-remove-rollback-protection
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 更新运维中心新增备份明细管理：显示备份时间、文件数、数据库备份大小、总占用与回滚保护状态。
-2. 新增备份总量、可删除占用、磁盘总容量与剩余容量统计。
-3. 支持单个删除、勾选批量删除、删除全部未保护备份。
-4. 仍被成功更新历史引用的备份保持回滚保护；前端禁止选择，后端再次校验拒绝删除。
-5. 备份删除仅接受内部备份 ID，并进行 realpath 与根目录边界校验。
-6. API 请求日志新增“删除全部日志”，前端两次确认，后端固定确认值；只清空 fa_api_request_log。
-7. 新增仓库级 Auto Online Release Gate：同 commit 其他 CI 全绿后自动检查版本并触发正式 ZONOE Source Release。
-8. 同版本 source-v<VERSION> 已存在时幂等跳过；任意 CI 失败时禁止发布。
-9. 自动发布规则写入 RELEASE_POLICY.md 与 release/auto-release.env，作为后续版本长期规则。
-10. 不改变 Dylib verify、Runtime Config、卡密授权协议与数据库结构。
+1. 取消被更新历史引用的备份删除保护，所有更新备份均允许手动删除。
+2. 保留内部备份 ID、realpath 与备份根目录边界校验，继续阻止越界和任意路径删除。
+3. protected / protected_reason 响应字段继续保留以兼容旧前端和调用方，但保护状态固定关闭。
+4. 支持单个删除、勾选批量删除和删除全部备份。
+5. 运维中心文案明确提示：删除仍被历史记录引用的备份后，对应历史回滚将不可用。
+6. 安全清理继续保留运行中任务状态，过期历史与备份按保留期清理，不再因历史引用跳过备份。
+7. 更新 Phase14.3 与备份/日志契约测试以覆盖新语义。
+8. 不改变 Dylib verify、Runtime Config、卡密授权协议与数据库结构。
 
-开发验证：
-- Phase14.3 Update Operations #32 / Run 36256318869：SUCCESS。
-- PHP 7.0 lint：SUCCESS。
-- 2414 backup/log cleanup contract：SUCCESS。
-- updater failure injection/runtime/atomicity regressions：SUCCESS。
-- Auto Online Release Gate 幂等验证：SUCCESS。
+发布验证：
+- 2415 开发分支 Phase14.3 Update Operations：SUCCESS（发布元数据提交前）。
+- 2415 Auto Online Release Gate：SUCCESS（发布元数据提交前，因版本仍为 2414 而幂等跳过）。
+- 本次发布提交将版本元数据统一切换为 2026092415，并由自动 Gate 重新执行完整发布门禁。
 
-在线更新目标：source-v2026092413 -> source-v2026092414。
+在线更新目标：source-v2026092414 -> source-v2026092415。
