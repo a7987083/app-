@@ -1,4 +1,6 @@
 PHASE13_RELEASE.txt
+application/common/library/update/UpdateHttpClient.php
+application/common/library/update/GitHubUpdateSource.php
 application/common/library/update/UpdateRuntimeStore.php
 application/common/library/update/UpdateInstaller.php
 application/common/library/update/UpdateManager.php

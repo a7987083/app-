@@ -1,22 +1,24 @@
-ZONOE 软件源 Release 2026092416
-版本：2026092416
-基线：source-v2026092415
-阶段：解析 IPA - OpenList Token 连接
-发布分支：feature/2026092416-ipa-parser-v1
+ZONOE 软件源 Release 2026092417
+版本：2026092417
+基线：source-v2026092416
+阶段：GitHub 在线更新性能优化
+发布分支：feature/2026092417-ipa-parser-openlist
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 在原版 FastAdmin / Bootstrap 后台 UI 中新增“软件源 -> 解析 IPA”入口。
-2. 第一阶段仅交付 OpenList 连接：地址、Token、IPA 根目录、请求超时、测试连接、保存配置。
-3. OpenList Token 通过原始 Authorization 请求头发送，不使用 Bearer 前缀。
-4. Token 使用现有 SecretBox 加密保存；编辑留空不覆盖旧 Token，页面不回显明文。
-5. 测试连接真实调用 /api/fs/list，同时验证 API、Token 权限与根目录访问。
-6. 新增幂等菜单迁移 release/sql/2026092416_ipa_openlist_menu.sql，不写死安装实例菜单 ID。
-7. 本阶段不改变现有 IPA 扫描 Worker、解析 Worker、数据库比对与写回主链。
+1. GitHub Release 检查不再预先串行请求最多 30 个历史版本的 SHA256 文件。
+2. 优先使用 GitHub asset digest 作为更新包 SHA256；可用时最新版检查只需一次 Release API 请求。
+3. digest 缺失时先按本地版本过滤，再只请求真正需要安装版本的 companion SHA256。
+4. 保留更新包 SHA256、安全解压、备份、数据库迁移、文件完整性验证和失败回滚。
+5. UpdateHttpClient.php 与 GitHubUpdateSource.php 正式加入在线更新包文件清单。
+6. phase12 updater contract 增加请求数量与历史 SHA 懒加载回归测试。
 
-发布验证：
-- 2416 OpenList 连接功能已提交。
-- 2416 Auto Online Release Gate #13 已 SUCCESS（发布元数据提交前，版本仍为 2415）。
-- 本次发布元数据统一切换为 2026092416，并由自动 Gate 重新执行完整发布门禁。
+发布验证目标：
+- PHP 7.0 updater contract / 全量回归通过。
+- MySQL 5.7 migration gate 通过。
+- HTTP load release gate 通过。
+- 自动生成 zonoe-online-update.zip 与 SHA256。
+- GitHub Release source-v2026092417 发布成功。
+- 真实 GitHub Release 在线更新 E2E 通过。
 
-在线更新目标：source-v2026092415 -> source-v2026092416。
+在线更新目标：source-v2026092416 -> source-v2026092417。
