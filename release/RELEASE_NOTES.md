@@ -1,27 +1,35 @@
-# ZONOE 软件源 2026092417
+# ZONOE 软件源 2026092418
 
 ## 更新内容
 
-### GitHub 在线更新性能优化
+### IPA 总览：移除重复入口
 
-本版本以 `source-v2026092416` 为升级基线，优化后台“GitHub 在线更新”的 Release 查询与 SHA256 获取路径，不降低更新完整性校验、备份或回滚要求。
+本版本以 `source-v2026092417` 为升级基线，撤销 2416/2417 中新增但与现有 IPA 总览重复的独立 `软件源 -> 解析 IPA` OpenList 页面，继续以现有 IPA 总览/解析中心作为唯一入口。
 
-- GitHub Release 列表仍一次获取稳定 Release 元数据，但不再为最多 30 个历史 Release 逐个下载 `.sha256`。
-- 优先直接使用 GitHub Release asset 的 `digest=sha256:...`，可用时检查最新版只需要一次 Release API 请求。
-- 当 asset digest 不可用时，先按本地版本过滤真正需要安装的 Release，再仅为这些候选版本请求 companion `.sha256`。
-- 保留更新包 SHA256 校验、安全解压、更新前备份、数据库迁移、文件覆盖校验和失败回滚。
-- 将 `UpdateHttpClient.php` 与 `GitHubUpdateSource.php` 纳入在线更新包白名单，确保旧版本通过在线更新即可获得本次性能修复。
-- 增加 updater contract 回归：验证 asset digest 单请求路径，以及历史 Release 不再产生无意义 SHA256 请求。
+- 删除独立 `IpaOpenlist` controller/view/js 源码。
+- 删除旧的 `2026092416_ipa_openlist_menu.sql` 新增菜单迁移。
+- 新增幂等清理迁移，在线升级后自动删除 `ipa_openlist/index`、`ipa_openlist/save`、`ipa_openlist/test` 权限/菜单规则。
+- 保留现有 IPA 总览里的 OpenList 数据源、扫描、解析、比对、写回等功能。
+
+### IPA 资产搜索修复
+
+修复“总览 -> IPA 资产”搜索看似存在、实际过滤能力不完整的问题。
+
+- 前端表格明确将 `search` 参数发送到 `ipa_center/assets` 服务端接口，并保留服务端分页。
+- 后端搜索范围扩展到：IPA 文件名、远端路径、Bundle ID、App 名、Version、Build、状态、OpenList Source 名。
+- 数字关键词同时支持按 IPA Asset ID / Source ID 精确匹配。
+- 中文状态词支持：待解析、解析中、已解析、解析失败、已缺失。
+- 搜索结果的 `total` 与 `rows` 均基于过滤后的数据库查询，不再是当前页前端假过滤。
+- 增加发布回归契约，确保后端搜索字段与前端 queryParams 不会再次被移除。
 
 ### 兼容性
 
-2417 不改变：
+2418 不改变：
 
-- Dylib Protocol v1 / v2 canonical；
-- Dylib 在线验证 wire contract；
-- Runtime Config 签名；
+- OpenList 数据源表结构；
+- IPA 扫描/解析主链；
+- Dylib Protocol v1/v2；
 - 卡密/授权现有业务协议；
-- OpenList Token 连接协议；
-- 现有更新包 SHA256、备份、数据库迁移与回滚安全链。
+- GitHub 在线更新 SHA256、备份、数据库迁移与失败回滚安全链。
 
-目标升级路径：`source-v2026092416 -> source-v2026092417`。
+目标升级路径：`source-v2026092417 -> source-v2026092418`。

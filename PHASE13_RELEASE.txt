@@ -1,24 +1,16 @@
-ZONOE 软件源 Release 2026092417
-版本：2026092417
-基线：source-v2026092416
-阶段：GitHub 在线更新性能优化
-发布分支：feature/2026092417-ipa-parser-openlist
+ZONOE 软件源 Release 2026092418
+版本：2026092418
+基线：source-v2026092417
+阶段：IPA 总览去重与资产搜索修复
+发布分支：feature/2026092418-remove-duplicate-ipa-entry-fix-search
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. GitHub Release 检查不再预先串行请求最多 30 个历史版本的 SHA256 文件。
-2. 优先使用 GitHub asset digest 作为更新包 SHA256；可用时最新版检查只需一次 Release API 请求。
-3. digest 缺失时先按本地版本过滤，再只请求真正需要安装版本的 companion SHA256。
-4. 保留更新包 SHA256、安全解压、备份、数据库迁移、文件完整性验证和失败回滚。
-5. UpdateHttpClient.php 与 GitHubUpdateSource.php 正式加入在线更新包文件清单。
-6. phase12 updater contract 增加请求数量与历史 SHA 懒加载回归测试。
+1. 删除重复的“软件源 -> 解析 IPA”独立 OpenList 页面源码，仅保留现有 IPA 总览/解析中心。
+2. 在线升级执行幂等 SQL，删除 ipa_openlist/index、save、test 菜单/权限规则。
+3. 修复 IPA 资产搜索：前端显式发送 search 参数，后端执行真正的数据库过滤。
+4. 搜索覆盖 IPA 名称、路径、Bundle ID、App 名、Version、Build、状态、OpenList Source 名及数字 ID。
+5. 搜索保持 server-side pagination，total/rows 均来自过滤后的数据库结果。
+6. 增加发布回归契约，防止搜索参数或字段覆盖退化。
 
-发布验证目标：
-- PHP 7.0 updater contract / 全量回归通过。
-- MySQL 5.7 migration gate 通过。
-- HTTP load release gate 通过。
-- 自动生成 zonoe-online-update.zip 与 SHA256。
-- GitHub Release source-v2026092417 发布成功。
-- 真实 GitHub Release 在线更新 E2E 通过。
-
-在线更新目标：source-v2026092416 -> source-v2026092417。
+在线更新目标：source-v2026092417 -> source-v2026092418。
