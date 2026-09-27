@@ -1,23 +1,22 @@
-ZONOE 软件源 Release 2026092415
-版本：2026092415
-基线：source-v2026092414
-阶段：更新备份回滚保护策略调整
-发布分支：feature/2026092415-remove-rollback-protection
+ZONOE 软件源 Release 2026092416
+版本：2026092416
+基线：source-v2026092415
+阶段：解析 IPA - OpenList Token 连接
+发布分支：feature/2026092416-ipa-parser-v1
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 取消被更新历史引用的备份删除保护，所有更新备份均允许手动删除。
-2. 保留内部备份 ID、realpath 与备份根目录边界校验，继续阻止越界和任意路径删除。
-3. protected / protected_reason 响应字段继续保留以兼容旧前端和调用方，但保护状态固定关闭。
-4. 支持单个删除、勾选批量删除和删除全部备份。
-5. 运维中心文案明确提示：删除仍被历史记录引用的备份后，对应历史回滚将不可用。
-6. 安全清理继续保留运行中任务状态，过期历史与备份按保留期清理，不再因历史引用跳过备份。
-7. 更新 Phase14.3 与备份/日志契约测试以覆盖新语义。
-8. 不改变 Dylib verify、Runtime Config、卡密授权协议与数据库结构。
+1. 在原版 FastAdmin / Bootstrap 后台 UI 中新增“软件源 -> 解析 IPA”入口。
+2. 第一阶段仅交付 OpenList 连接：地址、Token、IPA 根目录、请求超时、测试连接、保存配置。
+3. OpenList Token 通过原始 Authorization 请求头发送，不使用 Bearer 前缀。
+4. Token 使用现有 SecretBox 加密保存；编辑留空不覆盖旧 Token，页面不回显明文。
+5. 测试连接真实调用 /api/fs/list，同时验证 API、Token 权限与根目录访问。
+6. 新增幂等菜单迁移 release/sql/2026092416_ipa_openlist_menu.sql，不写死安装实例菜单 ID。
+7. 本阶段不改变现有 IPA 扫描 Worker、解析 Worker、数据库比对与写回主链。
 
 发布验证：
-- 2415 开发分支 Phase14.3 Update Operations：SUCCESS（发布元数据提交前）。
-- 2415 Auto Online Release Gate：SUCCESS（发布元数据提交前，因版本仍为 2414 而幂等跳过）。
-- 本次发布提交将版本元数据统一切换为 2026092415，并由自动 Gate 重新执行完整发布门禁。
+- 2416 OpenList 连接功能已提交。
+- 2416 Auto Online Release Gate #13 已 SUCCESS（发布元数据提交前，版本仍为 2415）。
+- 本次发布元数据统一切换为 2026092416，并由自动 Gate 重新执行完整发布门禁。
 
-在线更新目标：source-v2026092414 -> source-v2026092415。
+在线更新目标：source-v2026092415 -> source-v2026092416。
