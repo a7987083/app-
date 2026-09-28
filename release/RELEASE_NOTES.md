@@ -1,35 +1,35 @@
-# ZONOE 软件源 2026092418
+# ZONOE 软件源 2026092419
 
 ## 更新内容
 
-### IPA 总览：移除重复入口
+### IPA 资产：改用卡密同款真实搜索
 
-本版本以 `source-v2026092417` 为升级基线，撤销 2416/2417 中新增但与现有 IPA 总览重复的独立 `软件源 -> 解析 IPA` OpenList 页面，继续以现有 IPA 总览/解析中心作为唯一入口。
+本版本以 `source-v2026092418` 为升级基线，重做“总览 -> IPA 资产”的搜索/筛选交互，改为与卡密列表一致的 FastAdmin `Table.api.bindevent()` + `searchList` + 服务端 `search/filter/op` 查询契约。
 
-- 删除独立 `IpaOpenlist` controller/view/js 源码。
-- 删除旧的 `2026092416_ipa_openlist_menu.sql` 新增菜单迁移。
-- 新增幂等清理迁移，在线升级后自动删除 `ipa_openlist/index`、`ipa_openlist/save`、`ipa_openlist/test` 权限/菜单规则。
-- 保留现有 IPA 总览里的 OpenList 数据源、扫描、解析、比对、写回等功能。
+- 新增 `IpaAssets` 专用服务端查询端点，不再依赖表格前端伪过滤。
+- 保留右上角快速搜索，同时增加卡密同款字段筛选。
+- 支持按 ID、OpenList 来源、IPA 文件名、Bundle ID、App 名、Version、Build、解析状态筛选。
+- “异常”列提供真实筛选：异常、正常、待比对、字段异常、未匹配、源错误。
+- 快速搜索输入“异常”时，直接查询 `ipa_compare_result` 中 `anomaly / unmatched / source_error` 的资产。
+- 快速搜索输入“未匹配 / 源错误 / 正常 / 待比对”同样映射真实比对结果，不再把这些词当普通文件名搜索。
+- OpenList 来源名称通过服务端映射到 `source_id` 后过滤。
+- `total` 和 `rows` 都基于过滤后的数据库查询，保持 server-side pagination。
 
-### IPA 资产搜索修复
+### 扫描任务：仅展示
 
-修复“总览 -> IPA 资产”搜索看似存在、实际过滤能力不完整的问题。
-
-- 前端表格明确将 `search` 参数发送到 `ipa_center/assets` 服务端接口，并保留服务端分页。
-- 后端搜索范围扩展到：IPA 文件名、远端路径、Bundle ID、App 名、Version、Build、状态、OpenList Source 名。
-- 数字关键词同时支持按 IPA Asset ID / Source ID 精确匹配。
-- 中文状态词支持：待解析、解析中、已解析、解析失败、已缺失。
-- 搜索结果的 `total` 与 `rows` 均基于过滤后的数据库查询，不再是当前页前端假过滤。
-- 增加发布回归契约，确保后端搜索字段与前端 queryParams 不会再次被移除。
+- 扫描任务表显式关闭 `search` 和 `commonSearch`。
+- 保留分页、状态、计数、Worker、时间等展示。
+- 不改变扫描任务执行、清理或 Worker 逻辑。
 
 ### 兼容性
 
-2418 不改变：
+2419 不改变：
 
 - OpenList 数据源表结构；
 - IPA 扫描/解析主链；
+- IPA 比对/写回数据结构；
 - Dylib Protocol v1/v2；
 - 卡密/授权现有业务协议；
 - GitHub 在线更新 SHA256、备份、数据库迁移与失败回滚安全链。
 
-目标升级路径：`source-v2026092417 -> source-v2026092418`。
+目标升级路径：`source-v2026092418 -> source-v2026092419`。
