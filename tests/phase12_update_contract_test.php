@@ -151,15 +151,17 @@ ok_phase12(strpos($manager, 'localManifest') !== false, 'local update manifest r
 ok_phase12(strpos($manager, '$localManifest[\'file_sign\']') !== false, 'integrity check must use local ver.json file_sign');
 ok_phase12(strpos($manager, '$latest[\'file_sign\']') === false, 'remote file_sign must not be used for local tamper detection');
 
-$ipaController = file_get_contents(__DIR__ . '/../application/admin/controller/IpaCenter.php');
-ok_phase12(strpos($ipaController, "whereOr('path','like'") !== false, 'IPA asset search must include remote path');
-ok_phase12(strpos($ipaController, "whereOr('app_name','like'") !== false, 'IPA asset search must include app name');
-ok_phase12(strpos($ipaController, "whereOr('app_version','like'") !== false, 'IPA asset search must include app version');
-ok_phase12(strpos($ipaController, "whereOr('build_version','like'") !== false, 'IPA asset search must include build version');
-ok_phase12(strpos($ipaController, "Db::name('ipa_source')->where('name','like'") !== false, 'IPA asset search must include OpenList source name');
+$ipaAssets = file_get_contents(__DIR__ . '/../application/admin/controller/IpaAssets.php');
+ok_phase12($ipaAssets !== false, 'IPA asset commonsearch endpoint missing');
+ok_phase12(strpos($ipaAssets, "'异常'=>'abnormal'") !== false, 'quick search keyword 异常 must map to abnormal compare results');
+ok_phase12(strpos($ipaAssets, "case 'compare_state':") !== false, 'IPA commonsearch must support compare_state');
+ok_phase12(strpos($ipaAssets, "case 'source_name':") !== false, 'IPA commonsearch must support OpenList source name');
+ok_phase12(strpos($ipaAssets, "where('status', 'in', ['anomaly','unmatched','source_error'])") !== false, 'abnormal filter must query real compare result statuses');
 $ipaJs = file_get_contents(__DIR__ . '/../public/assets/js/backend/ipa_center.js');
-ok_phase12(strpos($ipaJs, 'queryParams:function(params)') !== false, 'IPA asset table must explicitly map server query parameters');
-ok_phase12(strpos($ipaJs, "search:$.trim(params.search||'')") !== false, 'IPA asset table must send the search text to server');
+ok_phase12(strpos($ipaJs, "url:'ipa_assets/index'") !== false, 'IPA asset table must use real commonsearch endpoint');
+ok_phase12(strpos($ipaJs, 'Table.api.bindevent(assetTable)') !== false, 'IPA asset table must bind FastAdmin commonsearch like card table');
+ok_phase12(strpos($ipaJs, "searchList:{abnormal:'异常'") !== false, 'IPA anomaly column must expose a real searchList');
+ok_phase12(strpos($ipaJs, "$('#job-table').bootstrapTable({url:'ipa_center/jobs',sidePagination:'server',pagination:true,search:false,commonSearch:false") !== false, 'scan job table must be display-only without search');
 $duplicateMenuCleanup = file_get_contents(__DIR__ . '/../release/sql/2026092418_remove_duplicate_ipa_openlist_menu.sql');
 ok_phase12(strpos($duplicateMenuCleanup, "'ipa_openlist/index'") !== false, '2418 must remove duplicate IPA OpenList menu');
 
