@@ -1,16 +1,17 @@
-ZONOE 软件源 Release 2026092418
-版本：2026092418
-基线：source-v2026092417
-阶段：IPA 总览去重与资产搜索修复
-发布分支：feature/2026092418-remove-duplicate-ipa-entry-fix-search
+ZONOE 软件源 Release 2026092419
+版本：2026092419
+基线：source-v2026092418
+阶段：IPA 资产 commonsearch 与扫描任务展示精简
+发布分支：feature/2026092419-ipa-asset-commonsearch
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 删除重复的“软件源 -> 解析 IPA”独立 OpenList 页面源码，仅保留现有 IPA 总览/解析中心。
-2. 在线升级执行幂等 SQL，删除 ipa_openlist/index、save、test 菜单/权限规则。
-3. 修复 IPA 资产搜索：前端显式发送 search 参数，后端执行真正的数据库过滤。
-4. 搜索覆盖 IPA 名称、路径、Bundle ID、App 名、Version、Build、状态、OpenList Source 名及数字 ID。
-5. 搜索保持 server-side pagination，total/rows 均来自过滤后的数据库结果。
-6. 增加发布回归契约，防止搜索参数或字段覆盖退化。
+1. IPA 资产改用与卡密列表一致的 FastAdmin commonsearch/searchList 服务端查询模式。
+2. 新增 IpaAssets 查询端点，支持 search/filter/op，并保持 server-side pagination。
+3. “异常”快速搜索和筛选直接查询 ipa_compare_result 的 anomaly/unmatched/source_error，不再按普通字符串处理。
+4. 异常列支持：异常、正常、待比对、字段异常、未匹配、源错误。
+5. 支持按 ID、OpenList 来源、IPA、Bundle ID、App、Version、Build、解析状态筛选。
+6. 扫描任务明确关闭 search/commonSearch，只保留分页展示。
+7. 新端点已加入在线更新文件白名单，并纳入 phase12 发布回归契约。
 
-在线更新目标：source-v2026092417 -> source-v2026092418。
+在线更新目标：source-v2026092418 -> source-v2026092419。
