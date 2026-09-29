@@ -38,6 +38,10 @@ jobs:
           php -l application/admin/controller/IpaAssets.php
           php -l tests/ipa_asset_search_mysql_test.php
 
+      - name: Compute source integrity sign
+        run: |
+          php -r "require 'application/common/library/UpdateIntegrity.php'; echo 'SOURCE_FILE_SIGN=' . app\\common\\library\\UpdateIntegrity::signFromRoot(getcwd()) . PHP_EOL;"
+
       - name: IPA search query contract
         run: |
           php -r '$s=file_get_contents("application/admin/controller/IpaAssets.php"); if ($s===false) exit(1); foreach (["buildAssetQuery","hasCommonFilters","where(\x27status\x27, \x27=\x27, \$statuses[0])"] as $needle) { if (strpos($s,$needle)===false) { fwrite(STDERR,"missing: $needle\n"); exit(1); } } if (strpos($s,"(clone \$query)->count()")!==false) { fwrite(STDERR,"forbidden cloned count query\n"); exit(1); } echo "IPA search query contract passed.\n";'
