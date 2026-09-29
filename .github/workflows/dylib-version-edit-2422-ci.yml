@@ -15,12 +15,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify 2420 baseline lineage
+      - name: Verify 2420 baseline lineage and 2422 release version
         shell: bash
         run: |
           set -euo pipefail
           git merge-base --is-ancestor bca75e7ddd927fe9216fad6c80727089ad163ff8 HEAD
-          test "$(tr -d '\r\n' < VERSION)" = "2026092420"
+          test "$(tr -d '\r\n' < VERSION)" = "2026092422"
 
       - name: JavaScript syntax
         run: node --check public/assets/js/backend/dylib_center.js
