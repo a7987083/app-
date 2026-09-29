@@ -149,7 +149,9 @@ Db::name('ipa_compare_result')->insert([
     'status' => 'anomaly',
 ]);
 
-$proxy = new IpaAssetsSearchTestProxy();
+// Bypass Backend/Controller constructor: these query helpers do not depend on request/session state.
+// This keeps the CLI regression focused on the production query code instead of web bootstrap globals.
+$proxy = (new \ReflectionClass(IpaAssetsSearchTestProxy::class))->newInstanceWithoutConstructor();
 
 ipaSearchAssertSame([101], $proxy->quickIds('agentofadventure2'), 'quick IPA filename');
 ipaSearchAssertSame([101], $proxy->quickIds('com.zonoe.agent'), 'quick Bundle ID');
