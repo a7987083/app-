@@ -43,7 +43,9 @@ class DylibCenter2421TestProxy extends \app\admin\controller\DylibCenter
     {
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_GET = [];
-        $request = new Request();
+        // ThinkPHP 5 Request intentionally has a protected constructor. Build a fresh
+        // request without invoking web bootstrap so each endpoint case has isolated params.
+        $request = (new \ReflectionClass(Request::class))->newInstanceWithoutConstructor();
         $request->get($params);
         $this->request = $request;
         return $this;
