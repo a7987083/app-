@@ -25,6 +25,9 @@ jobs:
       - name: JavaScript syntax
         run: node --check public/assets/js/backend/dylib_center.js
 
+      - name: Compute source integrity sign
+        run: php -r "require 'application/common/library/UpdateIntegrity.php'; echo 'SOURCE_FILE_SIGN=' . app\\common\\library\\UpdateIntegrity::signFromRoot(getcwd()) . PHP_EOL;"
+
       - name: Version editor behavior contract
         shell: bash
         run: |
