@@ -38,6 +38,9 @@ jobs:
           php -l tests/dylib_version_edit_mysql_test.php
           node --check public/assets/js/backend/dylib_center.js
 
+      - name: Compute source integrity sign
+        run: php -r "require 'application/common/library/UpdateIntegrity.php'; echo 'SOURCE_FILE_SIGN=' . app\\common\\library\\UpdateIntegrity::signFromRoot(getcwd()) . PHP_EOL;"
+
       - name: Dylib endpoint query contract
         run: |
           php -r '$s=file_get_contents("application/admin/controller/DylibCenter.php"); if ($s===false) exit(1); foreach (["buildVersionQuery", "buildLogQuery()->count()", "where(\x27dylib_id\x27, \x27=\x27", "where(\x27dylib_key\x27, \x27=\x27", "where(\x27result_code\x27, \x27=\x27"] as $needle) { if (strpos($s,$needle)===false) { fwrite(STDERR,"missing: $needle\n"); exit(1); } } $versions=substr($s,strpos($s,"public function versions()"),strpos($s,"/** Legacy 2405",strpos($s,"public function versions()"))-strpos($s,"public function versions()")); $logs=substr($s,strpos($s,"public function logs()"),strpos($s,"protected function buildLogQuery()",strpos($s,"public function logs()"))-strpos($s,"public function logs()")); if (strpos($versions,"(clone $query)->count()")!==false || strpos($logs,"(clone $query)->count()")!==false) { fwrite(STDERR,"forbidden cloned count query in versions/logs\n"); exit(1); } echo "Dylib versions/logs query contract passed.\n";'
