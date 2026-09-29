@@ -44,11 +44,16 @@ class DylibCenter extends Backend
         $dylibId = (int)$this->request->get('dylib_id', 0);
         $offset = max(0, (int)$this->request->get('offset', 0));
         $limit = max(20, min(1000, (int)$this->request->get('limit', 50)));
+        $total = (int)$this->buildVersionQuery($dylibId)->count();
+        $rows = $this->buildVersionQuery($dylibId)->field('id,dylib_id,version,build,sha256,file_size,state,offline_grace,fail_action,notice,created_at,updated_at')->order('id desc')->limit($offset, $limit)->select();
+        return json(['total' => $total, 'rows' => $rows]);
+    }
+
+    protected function buildVersionQuery($dylibId)
+    {
         $query = Db::name('dylib_version');
-        if ($dylibId > 0) $query->where('dylib_id', $dylibId);
-        $total = (clone $query)->count();
-        $rows = $query->field('id,dylib_id,version,build,sha256,file_size,state,offline_grace,fail_action,notice,created_at,updated_at')->order('id desc')->limit($offset, $limit)->select();
-        return json(['total' => (int)$total, 'rows' => $rows]);
+        if ((int)$dylibId > 0) $query->where('dylib_id', '=', (int)$dylibId);
+        return $query;
     }
 
     /** Legacy 2405 endpoint retained for historical data/API compatibility. */
@@ -89,12 +94,11 @@ class DylibCenter extends Backend
     {
         $offset = max(0, (int)$this->request->get('offset', 0));
         $limit = max(20, min(1000, (int)$this->request->get('limit', 1000)));
-        $query = $this->buildLogQuery();
-        $total = (clone $query)->count();
-        $rows = $query->field('id,udid_hash,bundle_id,dylib_key,dylib_version,result_code,action,latency_ms,created_at')->order('id desc')->limit($offset, $limit)->select();
+        $total = (int)$this->buildLogQuery()->count();
+        $rows = $this->buildLogQuery()->field('id,udid_hash,bundle_id,dylib_key,dylib_version,result_code,action,latency_ms,created_at')->order('id desc')->limit($offset, $limit)->select();
         foreach ($rows as &$row) if (!empty($row['udid_hash'])) $row['udid_hash'] = substr($row['udid_hash'], 0, 12) . '…';
         unset($row);
-        return json(['total' => (int)$total, 'rows' => $rows]);
+        return json(['total' => $total, 'rows' => $rows]);
     }
 
     protected function buildLogQuery()
@@ -113,9 +117,9 @@ class DylibCenter extends Backend
                 $q->where('bundle_id', 'like', '%' . $search . '%')->whereOr('dylib_key', 'like', '%' . $search . '%')->whereOr('result_code', 'like', '%' . $search . '%')->whereOr('dylib_version', 'like', '%' . $search . '%')->whereOr('udid_hash', 'like', '%' . $search . '%');
             });
         }
-        if ($dylibKey !== '') $query->where('dylib_key', $dylibKey);
+        if ($dylibKey !== '') $query->where('dylib_key', '=', $dylibKey);
         if ($bundleId !== '') $query->where('bundle_id', 'like', '%' . $bundleId . '%');
-        if ($resultCode !== '') $query->where('result_code', $resultCode);
+        if ($resultCode !== '') $query->where('result_code', '=', $resultCode);
         if ($version !== '') $query->where('dylib_version', 'like', '%' . $version . '%');
         if ($udidHash !== '') $query->where('udid_hash', 'like', $udidHash . '%');
         if ($from > 0) $query->where('created_at', '>=', $from);
