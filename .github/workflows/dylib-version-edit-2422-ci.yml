@@ -1,0 +1,55 @@
+name: Dylib Version Edit 2422 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092422-rebuild-from-2420-version-edit
+  workflow_dispatch:
+
+jobs:
+  version-editor-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify 2420 baseline lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor bca75e7ddd927fe9216fad6c80727089ad163ff8 HEAD
+          test "$(tr -d '\r\n' < VERSION)" = "2026092420"
+
+      - name: JavaScript syntax
+        run: node --check public/assets/js/backend/dylib_center.js
+
+      - name: Version editor behavior contract
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const s = fs.readFileSync('public/assets/js/backend/dylib_center.js', 'utf8');
+          const required = [
+            'function installVersionEditModal()',
+            'id="version-edit-modal"',
+            'id="version-edit-form"',
+            "$('#version-edit-modal').modal('show')",
+            "$advanced.remove()",
+            "Toastr.success('Dylib 版本修改已保存')"
+          ];
+          for (const needle of required) {
+            if (!s.includes(needle)) throw new Error('missing contract: ' + needle);
+          }
+          const editStart = s.indexOf('function editVersion(row)');
+          const editEnd = s.indexOf('function resetNoticeForm()', editStart);
+          if (editStart < 0 || editEnd < 0) throw new Error('editVersion block not found');
+          const edit = s.slice(editStart, editEnd);
+          if (edit.includes("syncCurrentDylib(row.dylib_id, 'version')")) throw new Error('legacy edit sync/refresh path returned');
+          if (edit.includes("$('#version-form')")) throw new Error('editVersion must not reuse add-version form');
+          if (s.includes('ensureVersionFormControls')) throw new Error('legacy dynamic edit controls returned');
+          if (s.includes('cancel-version-edit')) throw new Error('legacy inline cancel-edit control returned');
+          if (s.includes('version-advanced-options')) throw new Error('legacy advanced collapse UI returned');
+          console.log('2422 version editor contract passed.');
+          NODE
