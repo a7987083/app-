@@ -1,17 +1,18 @@
-ZONOE 软件源 Release 2026092422
-版本：2026092422
-基线：source-v2026092420
-阶段：Dylib 验证中心版本管理 UI / 编辑流程重建
-发布分支：feature/2026092422-rebuild-from-2420-version-edit
+ZONOE 软件源 Release 2026092423
+版本：2026092423
+基线：source-v2026092422
+阶段：Dylib 验证中心完整版本编辑 / 添加版本提交修复
+发布分支：feature/2026092423-version-editor-full-fields
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 本版本从 source-v2026092420 重新开发，不继承失败的 2026092421 实现。
-2. 移除版本管理里多余的“高级校验设置”折叠区与重复说明；新增版本日常界面只保留 Dylib、版本号、内部构建号、状态。
-3. 重做版本“编辑”流程：不再复用上方添加版本表单，点击编辑后打开独立编辑弹窗，并明确绑定现有版本记录 ID。
-4. 编辑保存继续调用既有 saveVersion UPDATE 语义；原记录 SHA256、file_size、offline_grace、fail_action、notice 通过隐藏字段保留，避免普通编辑误清空高级配置。
-5. 点击编辑不再调用 syncCurrentDylib(row.dylib_id, 'version')，不因进入编辑态额外刷新版本列表和验证日志列表。
-6. 新增 2422 专项 CI：校验 2420 正式 commit 血统、2026092422 发布版本、JavaScript 语法、独立编辑 Modal 契约以及旧 inline-edit 路径不得回归。
-7. 不修改 IPA 资产搜索修复、IPA 扫描/解析/Worker/比对主链、OpenList 数据源、Dylib Protocol v1/v2、卡密/授权协议及在线更新安全链。
+1. 2423 直接从 source-v2026092422 / 873b21fcbbead53bd71a92bd73975511ebda297a 继续开发。
+2. 版本编辑弹窗补齐“离线可用、验证失败时、文件 SHA256、用户提示”，与版本列表主要业务字段一一对应。
+3. file_size 继续作为兼容隐藏字段保留，不作为日常人工编辑项。
+4. 修复添加版本出现 Invalid version/build 的提交链：添加与编辑统一构造明确 payload，不再依赖整个 DOM 表单 serialize()。
+5. 添加中文前端校验：Dylib 必选、版本号必填、版本号/内部构建号最大 64 字符、SHA256 格式、离线秒数 0-86400、状态/失败动作合法性、用户提示最大 1024 字符。
+6. 后端 saveVersion 字段、INSERT/UPDATE 语义和数据库结构保持不变，服务端仍保留最终校验。
+7. 2423 专项 CI 校验 2422 Release 血统、JavaScript 语法、完整编辑字段、添加版本 payload 与后端 saveVersion 字段契约。
+8. 不修改 IPA 资产搜索/扫描/解析/Worker/比对主链、OpenList、Dylib Protocol v1/v2、卡密授权协议和在线更新安全链。
 
-在线更新目标：source-v2026092420 -> source-v2026092422。
+在线更新目标：source-v2026092422 -> source-v2026092423。
