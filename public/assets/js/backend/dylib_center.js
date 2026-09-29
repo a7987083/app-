@@ -169,9 +169,10 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 $form.find('button[type=submit]').first().text('添加版本'); $('#cancel-version-edit').addClass('hidden');
             }
             function editVersion(row) {
-                ensureVersionFormControls(); var $form = $('#version-form');
+                ensureVersionFormControls(); var $form = $('#version-form'), rowDylibId = parseInt(row.dylib_id || '0', 10);
                 $.each(['id','dylib_id','version','build','sha256','file_size','state','offline_grace','fail_action','notice'], function (_, field) { $form.find('[name=' + field + ']').val(row[field] == null ? '' : row[field]); });
-                syncCurrentDylib(row.dylib_id, 'version'); $form.find('button[type=submit]').first().text('保存版本修改'); $('#cancel-version-edit').removeClass('hidden');
+                if (rowDylibId > 0 && currentDylibId() !== rowDylibId) syncCurrentDylib(rowDylibId, 'version');
+                $form.find('button[type=submit]').first().text('保存版本修改'); $('#cancel-version-edit').removeClass('hidden');
                 activateTab('#tab-versions'); setTimeout(function () { $('html,body').animate({scrollTop: $('#version-form').offset().top - 20}, 150); }, 80);
             }
             function resetNoticeForm() {
@@ -208,7 +209,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     {field:'operate',title:'操作',formatter:function(v,row){return '<button type="button" class="btn btn-xs btn-primary js-notice-edit">编辑</button> '+(parseInt(row.enabled,10)?'<button type="button" class="btn btn-xs btn-warning js-notice-toggle" data-enabled="0">停用</button>':'<button type="button" class="btn btn-xs btn-success js-notice-toggle" data-enabled="1">启用</button>')+' <button type="button" class="btn btn-xs btn-danger js-notice-delete">删除</button>';},events:{
                         'click .js-notice-edit':function(e,v,row){var $f=$('#notice-form');$.each(['id','notice_key','revision','priority','category_id','min_access_level','title','message','primary_title','primary_action','primary_url','secondary_title','secondary_action','secondary_url','starts_at','ends_at','enabled'],function(_,field){$f.find('[name='+field+']').val(row[field]==null?'':row[field]);});activateTab('#tab-notices');setTimeout(function(){$('html,body').animate({scrollTop:$f.offset().top-20},150);},80);},
                         'click .js-notice-toggle':function(e,v,row){var enabled=String($(e.currentTarget).data('enabled'));Fast.api.ajax({url:'dylib_center/setNoticeEnabled',type:'POST',data:{id:row.id,enabled:enabled}},function(){Toastr.success(enabled==='1'?'通知已启用':'通知已停用');$('#notice-table').bootstrapTable('refresh');return false;});},
-                        'click .js-notice-delete':function(e,v,row){Layer.confirm('确定删除通知“'+(row.title||row.notice_key)+'”吗？',{title:'删除远程通知'},function(i){Layer.close(i);Fast.api.ajax({url:'dylib_center/deleteNotice',type:'POST',data:{id:row.id}},function(){Toastr.success('通知已删除');resetNoticeForm();$('#notice-table').bootstrapTable('refresh');return false;});});}
+                        'click .js-notice-delete':function(e,v,row){Layer.confirm('确定删除通知“'+(row.title||row.notice_key)+'”吗？',{title:'删除远程通知'},function(i){Layer.close(i);Fast.api.ajax({url:'dylib_center/deleteNotice',type:'POST',data:{id:row.id}},function(){Toastr.success('远程通知已删除');resetNoticeForm();$('#notice-table').bootstrapTable('refresh');return false;});});}
                     }}
                 ]]
             });
