@@ -31,15 +31,30 @@ jobs:
           extensions: pdo_mysql, mbstring
           coverage: none
 
-      - name: PHP syntax
+      - name: Syntax checks
         run: |
           php -v
           php -l application/admin/controller/DylibCenter.php
           php -l tests/dylib_version_edit_mysql_test.php
+          node --check public/assets/js/backend/dylib_center.js
 
       - name: Dylib endpoint query contract
         run: |
           php -r '$s=file_get_contents("application/admin/controller/DylibCenter.php"); if ($s===false) exit(1); foreach (["buildVersionQuery", "buildLogQuery()->count()", "where(\x27dylib_id\x27, \x27=\x27", "where(\x27dylib_key\x27, \x27=\x27", "where(\x27result_code\x27, \x27=\x27"] as $needle) { if (strpos($s,$needle)===false) { fwrite(STDERR,"missing: $needle\n"); exit(1); } } $versions=substr($s,strpos($s,"public function versions()"),strpos($s,"/** Legacy 2405",strpos($s,"public function versions()"))-strpos($s,"public function versions()")); $logs=substr($s,strpos($s,"public function logs()"),strpos($s,"protected function buildLogQuery()",strpos($s,"public function logs()"))-strpos($s,"public function logs()")); if (strpos($versions,"(clone $query)->count()")!==false || strpos($logs,"(clone $query)->count()")!==false) { fwrite(STDERR,"forbidden cloned count query in versions/logs\n"); exit(1); } echo "Dylib versions/logs query contract passed.\n";'
+
+      - name: Version edit UI contract
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const s = fs.readFileSync('public/assets/js/backend/dylib_center.js', 'utf8');
+          const start = s.indexOf('function editVersion(row)');
+          const end = s.indexOf('function resetNoticeForm()', start);
+          if (start < 0 || end < 0) throw new Error('editVersion block not found');
+          const block = s.slice(start, end);
+          if (!block.includes("currentDylibId() !== rowDylibId")) throw new Error('version edit must only sync when dylib context differs');
+          if (block.includes("syncCurrentDylib(row.dylib_id, 'version')")) throw new Error('unconditional version edit refresh returned');
+          console.log('Version edit UI contract passed.');
+          NODE
 
       - name: Prepare MySQL 5.7
         run: |
