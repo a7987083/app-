@@ -1,0 +1,67 @@
+name: Dylib Version Editor 2423 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092423-version-editor-full-fields
+  workflow_dispatch:
+
+jobs:
+  version-editor-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+      - name: Verify 2422 release baseline ancestry
+        run: |
+          git merge-base --is-ancestor 873b21fcbbead53bd71a92bd73975511ebda297a HEAD
+      - name: JavaScript syntax
+        run: node --check public/assets/js/backend/dylib_center.js
+      - name: Full-field edit modal contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('public/assets/js/backend/dylib_center.js').read_text()
+          start = s.index('function installVersionEditModal()')
+          end = s.index('function installNoticeHelp()', start)
+          modal = s[start:end]
+          for text in ['离线可用（秒）', '验证失败时', '文件 SHA256', '用户提示']:
+              assert text in modal, text
+          for field in ['sha256', 'offline_grace', 'fail_action', 'notice']:
+              assert ('name="%s"' % field) in modal, field
+              assert ('type="hidden" name="%s"' % field) not in modal, 'hidden:' + field
+          assert 'modal-dialog modal-lg' in modal
+          assert 'data = collectVersionPayload($form)' in modal
+          assert 'validateVersionPayload(data)' in modal
+          PY
+      - name: Add-version payload contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('public/assets/js/backend/dylib_center.js').read_text()
+          assert 'function collectVersionPayload($form, forcedId)' in s
+          assert 'function validateVersionPayload(data)' in s
+          anchor = "$('#version-form').on('submit'"
+          start = s.index(anchor)
+          end = s.index("$('#reset-notice-form')", start)
+          handler = s[start:end]
+          assert 'collectVersionPayload($form,0)' in handler
+          assert 'validateVersionPayload(data)' in handler
+          assert 'data:data' in handler
+          assert '.serialize()' not in handler
+          for text in ['请选择 Dylib。', '请填写版本号。', '版本号不能超过 64 个字符。', '内部构建号不能超过 64 个字符。']:
+              assert text in s, text
+          PY
+      - name: Backend saveVersion field contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('application/admin/controller/DylibCenter.php').read_text()
+          start = s.index('public function saveVersion()')
+          end = s.index('public function deleteVersion()', start)
+          fn = s[start:end]
+          for field in ['dylib_id','version','build','sha256','file_size','state','offline_grace','fail_action','notice']:
+              assert ("post('%s'" % field) in fn, field
+          assert 'Invalid version/build' in fn
+          PY
