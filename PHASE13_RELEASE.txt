@@ -1,16 +1,17 @@
-ZONOE 软件源 Release 2026092420
-版本：2026092420
-基线：source-v2026092419
-阶段：IPA 资产搜索后端执行修复
-发布分支：feature/2026092420-ipa-search-backend-fix
+ZONOE 软件源 Release 2026092421
+版本：2026092421
+基线：source-v2026092420
+阶段：Dylib 验证中心版本管理编辑稳定性修复
+发布分支：feature/2026092421-dylib-version-edit-fix
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 修复 IPA 资产使用搜索后返回 HTML 错误页、前端提示“未知的数据格式!”的问题。
-2. count 与 rows 查询分别构造独立 Query Builder，不再 clone/复用带 PDO bindings 的查询对象，规避 PHP 7.0 + 当前 ThinkPHP/PDO 查询绑定异常。
-3. FastAdmin commonSearch 存在有效 filter 时优先执行字段筛选；只有 filter 为空时才执行右上角 quick search，避免残留搜索词继续 AND 导致 0 条记录。
-4. 单值等值查询统一使用显式 where(field, '=', value)，降低 ThinkPHP 两参数 where 重载歧义。
-5. 新增 PHP 7.0 + MySQL 5.7 真实查询回归，覆盖 IPA 文件名、Bundle ID、App、Version、Build、ID、OpenList 来源、解析状态、异常状态及 commonSearch 优先级。
-6. 保持 BootstrapTable total/rows 响应契约；不修改 IPA 扫描、解析、比对写回、Dylib Protocol、卡密/授权协议和版本管理业务。
+1. 修复 Dylib 验证中心“版本管理 -> 编辑”后 versions/logs XHR 返回 500、后端错误页破坏 BootstrapTable JSON 契约的问题。
+2. versions() 的 count 与 rows 查询分别构造独立 Query Builder，不再 clone/复用带绑定参数的查询对象。
+3. logs() 同样分离 count/list Query Builder；dylib_id、dylib_key、result_code 等精确过滤使用显式三参数 where。
+4. 修正编辑按钮行为：当前 Dylib 下编辑版本记录时只填充编辑表单，不再无条件刷新版本表和验证日志表；仅上下文不一致时才同步 Dylib。
+5. 新增 PHP 7.0、JavaScript、查询契约与 UI 行为回归。
+6. 新增 MySQL 5.7 真实端点回归，覆盖 versions?dylib_id=5、logs?dylib_key=ceshi 与日志结果码过滤，并验证 total/rows JSON。
+7. 不修改 IPA 主链、Dylib Protocol、卡密/授权协议、版本保存业务语义和在线更新安全链。
 
-在线更新目标：source-v2026092419 -> source-v2026092420。
+在线更新目标：source-v2026092420 -> source-v2026092421。
