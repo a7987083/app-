@@ -87,7 +87,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 $('#section-version .panel-heading .text-muted').text('管理允许使用的 Dylib 版本；日常只需填写版本号、内部构建号和状态');
                 $form.before('<div id="version-help-2411" class="alert alert-info" style="padding:10px 12px">' +
                     '<b>怎么用：</b>“版本号”是对外版本（如 1.2.3）；“内部构建号”用于同一版本多次重新编译（如 45、46）。正常发布选择“正式使用”。</div>');
-                $form.find('[name=build]').attr('placeholder', '内部构建号（可选，如 45）').attr('title', '同一版本重新编译时用于区分不同构建');
+                $form.find('[name=version]').attr('maxlength', '64');
+                $form.find('[name=build]').attr('maxlength', '64').attr('placeholder', '内部构建号（可选，如 45）').attr('title', '同一版本重新编译时用于区分不同构建');
                 var $advanced = $form.children('div').first();
                 if ($advanced.length) $advanced.remove();
                 if (!$form.find('[name=sha256]').length) $form.append('<input type="hidden" name="sha256" value="">');
@@ -97,36 +98,77 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 if (!$form.find('[name=notice]').length) $form.append('<input type="hidden" name="notice" value="">');
             }
 
+            function collectVersionPayload($form, forcedId) {
+                function value(name, fallback) {
+                    var $field = $form.find('[name=' + name + ']');
+                    if (!$field.length) return fallback;
+                    var raw = $field.val();
+                    return $.trim(String(raw == null ? '' : raw));
+                }
+                var offlineRaw = value('offline_grace', '900');
+                return {
+                    id: parseInt(forcedId == null ? value('id', '0') : forcedId, 10) || 0,
+                    dylib_id: parseInt(value('dylib_id', '0'), 10) || 0,
+                    version: value('version', ''),
+                    build: value('build', ''),
+                    sha256: value('sha256', '').toLowerCase(),
+                    file_size: Math.max(0, parseInt(value('file_size', '0'), 10) || 0),
+                    state: value('state', 'testing') || 'testing',
+                    offline_grace: offlineRaw === '' ? 900 : parseInt(offlineRaw, 10),
+                    fail_action: value('fail_action', 'disable_feature') || 'disable_feature',
+                    notice: value('notice', '')
+                };
+            }
+
+            function validateVersionPayload(data) {
+                if (!data.dylib_id) { Layer.alert('请选择 Dylib。', {icon:0, title:'版本信息不完整'}); return false; }
+                if (!data.version) { Layer.alert('请填写版本号。', {icon:0, title:'版本信息不完整'}); return false; }
+                if (data.version.length > 64) { Layer.alert('版本号不能超过 64 个字符。', {icon:0, title:'版本信息有误'}); return false; }
+                if (data.build.length > 64) { Layer.alert('内部构建号不能超过 64 个字符。', {icon:0, title:'版本信息有误'}); return false; }
+                if (data.sha256 && !/^[a-f0-9]{64}$/.test(data.sha256)) { Layer.alert('文件 SHA256 必须是 64 位十六进制字符；不需要文件校验时请留空。', {icon:0, title:'文件校验格式有误'}); return false; }
+                if (isNaN(data.offline_grace) || data.offline_grace < 0 || data.offline_grace > 86400) { Layer.alert('离线可用时间必须为 0-86400 秒。', {icon:0, title:'离线设置有误'}); return false; }
+                if ($.inArray(data.state, ['testing','active','deprecated','blocked','revoked']) === -1) { Layer.alert('版本状态无效。', {icon:0}); return false; }
+                if ($.inArray(data.fail_action, ['disable_feature','show_message','block']) === -1) { Layer.alert('验证失败动作无效。', {icon:0}); return false; }
+                if (data.notice.length > 1024) { Layer.alert('用户提示不能超过 1024 个字符。', {icon:0, title:'用户提示过长'}); return false; }
+                return true;
+            }
+
             function installVersionEditModal() {
                 if ($('#version-edit-modal').length) return;
                 $('body').append(
                     '<div class="modal fade" id="version-edit-modal" tabindex="-1" role="dialog" aria-hidden="true">' +
-                    '<div class="modal-dialog"><div class="modal-content">' +
+                    '<div class="modal-dialog modal-lg"><div class="modal-content">' +
                     '<div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-label="关闭"><span aria-hidden="true">&times;</span></button>' +
                     '<h4 class="modal-title" id="version-edit-title">编辑 Dylib 版本</h4></div>' +
                     '<form id="version-edit-form"><div class="modal-body">' +
-                    '<input type="hidden" name="id" value="0"><input type="hidden" name="dylib_id" value="0">' +
-                    '<input type="hidden" name="sha256" value=""><input type="hidden" name="file_size" value="0">' +
-                    '<input type="hidden" name="offline_grace" value="900"><input type="hidden" name="fail_action" value="disable_feature"><input type="hidden" name="notice" value="">' +
-                    '<div class="alert alert-info" style="padding:8px 12px">正在编辑现有版本记录。保存后只更新这条记录，不会新增版本。</div>' +
+                    '<input type="hidden" name="id" value="0"><input type="hidden" name="dylib_id" value="0"><input type="hidden" name="file_size" value="0">' +
+                    '<div class="alert alert-info" style="padding:8px 12px">正在编辑现有版本记录。下面字段与版本列表中的版本号、内部构建号、状态、离线可用、验证失败动作、文件校验和用户提示一一对应。</div>' +
                     '<div class="form-group"><label>Dylib</label><input type="text" class="form-control js-version-edit-dylib" readonly></div>' +
-                    '<div class="form-group"><label>版本号</label><input type="text" class="form-control" name="version" maxlength="64" required></div>' +
-                    '<div class="form-group"><label>内部构建号</label><input type="text" class="form-control" name="build" maxlength="64" placeholder="可选，如 45"></div>' +
-                    '<div class="form-group"><label>状态</label><select class="form-control" name="state">' +
+                    '<div class="row"><div class="col-sm-6 form-group"><label>版本号</label><input type="text" class="form-control" name="version" maxlength="64" required></div>' +
+                    '<div class="col-sm-6 form-group"><label>内部构建号</label><input type="text" class="form-control" name="build" maxlength="64" placeholder="可选，如 45"></div></div>' +
+                    '<div class="row"><div class="col-sm-6 form-group"><label>状态</label><select class="form-control" name="state">' +
                     '<option value="testing">测试中</option><option value="active">正式使用</option><option value="deprecated">已弃用（仍允许）</option><option value="blocked">已阻止</option><option value="revoked">已撤销</option>' +
-                    '</select></div></div>' +
-                    '<div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">取消</button><button type="submit" class="btn btn-primary">保存版本修改</button></div>' +
+                    '</select></div>' +
+                    '<div class="col-sm-6 form-group"><label>离线可用（秒）</label><input type="number" min="0" max="86400" class="form-control" name="offline_grace" value="900"><p class="help-block" style="margin-bottom:0">0=不允许离线；900=15 分钟。</p></div></div>' +
+                    '<div class="form-group"><label>验证失败时</label><select class="form-control" name="fail_action">' +
+                    '<option value="disable_feature">禁用受保护功能</option><option value="show_message">只显示提示</option><option value="block">完全阻止使用</option>' +
+                    '</select></div>' +
+                    '<div class="form-group"><label>文件 SHA256</label><input type="text" class="form-control" name="sha256" maxlength="64" placeholder="留空 = 不校验文件指纹"><p class="help-block" style="margin-bottom:0">启用时填写 64 位 SHA256；列表中的“文件校验”由此字段决定。</p></div>' +
+                    '<div class="form-group"><label>用户提示</label><textarea class="form-control" name="notice" rows="3" maxlength="1024" placeholder="验证失败时返回给客户端的提示，可留空"></textarea></div>' +
+                    '</div><div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">取消</button><button type="submit" class="btn btn-primary">保存版本修改</button></div>' +
                     '</form></div></div></div>'
                 );
                 $('#version-edit-form').on('submit', function (e) {
                     e.preventDefault();
-                    var $form = $(this);
-                    Fast.api.ajax({url:'dylib_center/saveVersion',type:'POST',data:$form.serialize()}, function () {
+                    var $form = $(this), data = collectVersionPayload($form);
+                    if (!validateVersionPayload(data)) return false;
+                    Fast.api.ajax({url:'dylib_center/saveVersion',type:'POST',data:data}, function () {
                         Toastr.success('Dylib 版本修改已保存');
                         $('#version-edit-modal').modal('hide');
                         $('#version-table').bootstrapTable('refresh');
                         return false;
                     });
+                    return false;
                 });
             }
 
@@ -266,7 +308,13 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             $('#dylib-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveDylib',type:'POST',data:$(this).serialize()},function(){location.reload();return false;});});
             $('#runtime-config-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveRuntimeConfig',type:'POST',data:$(this).serialize()},function(){Toastr.success('高级运行配置已保存；配置版本已自动递增。');location.reload();return false;});});
             $('#notice-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveNotice',type:'POST',data:$(this).serialize()},function(){Toastr.success('远程通知已保存');resetNoticeForm();$('#notice-table').bootstrapTable('refresh');return false;});});
-            $('#version-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveVersion',type:'POST',data:$(this).serialize()},function(){Toastr.success('Dylib 版本已添加');resetVersionForm();$('#version-table').bootstrapTable('refresh');return false;});});
+            $('#version-form').on('submit',function(e){
+                e.preventDefault();
+                var $form=$(this),data=collectVersionPayload($form,0);
+                if(!validateVersionPayload(data)) return false;
+                Fast.api.ajax({url:'dylib_center/saveVersion',type:'POST',data:data},function(){Toastr.success('Dylib 版本已添加');resetVersionForm();$('#version-table').bootstrapTable('refresh');return false;});
+                return false;
+            });
             $('#reset-notice-form').on('click',resetNoticeForm);$('#cancel-dylib-edit').on('click',resetDylibForm);
 
             $('#dylib-list').on('click','.js-dylib-edit',function(){var $row=$(this).closest('tr'),$form=$('#dylib-form');syncCurrentDylib($row.data('id'),'list');$form.find('[name=id]').val($row.data('id'));$form.find('[name=dylib_key]').val($row.attr('data-key')).prop('readonly',true);$form.find('[name=name]').val($row.attr('data-name'));$form.find('[name=default_offline_grace]').val($row.attr('data-grace'));$form.find('[name=default_fail_action]').val($row.attr('data-action'));$form.find('[name=enabled]').val($row.attr('data-enabled'));$('#verify-secret').attr('type','password').val('');$('.js-dylib-submit-label').text('保存修改');$('#cancel-dylib-edit').removeClass('hidden');activateTab('#tab-overview');setTimeout(function(){$('html,body').animate({scrollTop:$('#section-register').offset().top-20},150);},80);});
