@@ -1,17 +1,16 @@
-ZONOE 软件源 Release 2026092419
-版本：2026092419
-基线：source-v2026092418
-阶段：IPA 资产 commonsearch 与扫描任务展示精简
-发布分支：feature/2026092419-ipa-asset-commonsearch
+ZONOE 软件源 Release 2026092420
+版本：2026092420
+基线：source-v2026092419
+阶段：IPA 资产搜索后端执行修复
+发布分支：feature/2026092420-ipa-search-backend-fix
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. IPA 资产改用与卡密列表一致的 FastAdmin commonsearch/searchList 服务端查询模式。
-2. 新增 IpaAssets 查询端点，支持 search/filter/op，并保持 server-side pagination。
-3. “异常”快速搜索和筛选直接查询 ipa_compare_result 的 anomaly/unmatched/source_error，不再按普通字符串处理。
-4. 异常列支持：异常、正常、待比对、字段异常、未匹配、源错误。
-5. 支持按 ID、OpenList 来源、IPA、Bundle ID、App、Version、Build、解析状态筛选。
-6. 扫描任务明确关闭 search/commonSearch，只保留分页展示。
-7. 新端点已加入在线更新文件白名单，并纳入 phase12 发布回归契约。
+1. 修复 IPA 资产使用搜索后返回 HTML 错误页、前端提示“未知的数据格式!”的问题。
+2. count 与 rows 查询分别构造独立 Query Builder，不再 clone/复用带 PDO bindings 的查询对象，规避 PHP 7.0 + 当前 ThinkPHP/PDO 查询绑定异常。
+3. FastAdmin commonSearch 存在有效 filter 时优先执行字段筛选；只有 filter 为空时才执行右上角 quick search，避免残留搜索词继续 AND 导致 0 条记录。
+4. 单值等值查询统一使用显式 where(field, '=', value)，降低 ThinkPHP 两参数 where 重载歧义。
+5. 新增 PHP 7.0 + MySQL 5.7 真实查询回归，覆盖 IPA 文件名、Bundle ID、App、Version、Build、ID、OpenList 来源、解析状态、异常状态及 commonSearch 优先级。
+6. 保持 BootstrapTable total/rows 响应契约；不修改 IPA 扫描、解析、比对写回、Dylib Protocol、卡密/授权协议和版本管理业务。
 
-在线更新目标：source-v2026092418 -> source-v2026092419。
+在线更新目标：source-v2026092419 -> source-v2026092420。

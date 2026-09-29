@@ -1,35 +1,29 @@
-# ZONOE 软件源 2026092419
+# ZONOE 软件源 2026092420
 
 ## 更新内容
 
-### IPA 资产：改用卡密同款真实搜索
+### IPA 资产搜索后端执行修复
 
-本版本以 `source-v2026092418` 为升级基线，重做“总览 -> IPA 资产”的搜索/筛选交互，改为与卡密列表一致的 FastAdmin `Table.api.bindevent()` + `searchList` + 服务端 `search/filter/op` 查询契约。
+本版本以 `source-v2026092419` 为升级基线，只处理“总览 -> IPA 资产”的搜索执行链和对应回归，不带回已删除 2420～2427 分支中的其他改动。
 
-- 新增 `IpaAssets` 专用服务端查询端点，不再依赖表格前端伪过滤。
-- 保留右上角快速搜索，同时增加卡密同款字段筛选。
-- 支持按 ID、OpenList 来源、IPA 文件名、Bundle ID、App 名、Version、Build、解析状态筛选。
-- “异常”列提供真实筛选：异常、正常、待比对、字段异常、未匹配、源错误。
-- 快速搜索输入“异常”时，直接查询 `ipa_compare_result` 中 `anomaly / unmatched / source_error` 的资产。
-- 快速搜索输入“未匹配 / 源错误 / 正常 / 待比对”同样映射真实比对结果，不再把这些词当普通文件名搜索。
-- OpenList 来源名称通过服务端映射到 `source_id` 后过滤。
-- `total` 和 `rows` 都基于过滤后的数据库查询，保持 server-side pagination。
+- 修复使用 IPA 资产搜索后，后端异常返回 HTML 错误页，BootstrapTable 因收不到 `total/rows` JSON 而提示“未知的数据格式!”的问题。
+- `count()` 与列表 `select()` 分别从相同搜索参数重新构造 Query Builder，不再 clone/复用带 PDO bindings 的查询对象。
+- FastAdmin commonSearch 有有效 `filter` 时优先执行字段筛选；只有 commonSearch 为空时才执行右上角 quick search，避免旧搜索词与新筛选条件继续 AND。
+- 单值等值条件使用显式 `where(field, '=', value)`。
+- 新增 PHP 7.0 + MySQL 5.7 真实数据库回归，覆盖 IPA 文件名、Bundle ID、App、Version、Build、数字 ID、OpenList 来源、中文解析状态、异常关键字及字段筛选。
+- 新增浏览器参数语义回归：即使 quick search 残留无关关键字，`filter.status=discovered` 等 commonSearch 仍必须按字段筛选返回正确结果。
+- 保持 BootstrapTable `total/rows` 响应结构和 server-side pagination 不变。
 
-### 扫描任务：仅展示
+## 不变范围
 
-- 扫描任务表显式关闭 `search` 和 `commonSearch`。
-- 保留分页、状态、计数、Worker、时间等展示。
-- 不改变扫描任务执行、清理或 Worker 逻辑。
+2420 不改变：
 
-### 兼容性
-
-2419 不改变：
-
-- OpenList 数据源表结构；
-- IPA 扫描/解析主链；
-- IPA 比对/写回数据结构；
+- OpenList 数据源结构；
+- IPA 扫描、解析和 Worker 主链；
+- IPA 比对与写回业务；
 - Dylib Protocol v1/v2；
-- 卡密/授权现有业务协议；
-- GitHub 在线更新 SHA256、备份、数据库迁移与失败回滚安全链。
+- 卡密/授权业务协议；
+- Dylib 版本管理业务；
+- 在线更新 SHA256、备份、数据库迁移与失败回滚安全链。
 
-目标升级路径：`source-v2026092418 -> source-v2026092419`。
+目标升级路径：`source-v2026092419 -> source-v2026092420`。
