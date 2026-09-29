@@ -127,7 +127,7 @@ Db::name('ipa_asset')->insertAll([
         'updated_at' => 1800000001,
     ],
     [
-        'id' => 202,
+        'id' => 909,
         'source_id' => 4,
         'path' => '/games/othergame.ipa',
         'name' => 'othergame.ipa',
@@ -161,7 +161,7 @@ ipaSearchAssertSame([101], $proxy->quickIds('57'), 'quick Build');
 ipaSearchAssertSame([101], $proxy->quickIds('OpenList Tokyo'), 'quick OpenList source');
 ipaSearchAssertSame([101], $proxy->quickIds('已解析'), 'quick localized status');
 ipaSearchAssertSame([101], $proxy->quickIds('异常'), 'quick anomaly alias');
-ipaSearchAssertSame([202], $proxy->quickIds('202'), 'quick numeric ID');
+ipaSearchAssertSame([909], $proxy->quickIds('909'), 'quick numeric ID');
 
 ipaSearchAssertSame([101], $proxy->commonIds(['id' => '101'], ['id' => '=']), 'common ID');
 ipaSearchAssertSame([101], $proxy->commonIds(['name' => 'agentof'], ['name' => 'LIKE']), 'common IPA');
@@ -170,13 +170,13 @@ ipaSearchAssertSame([101], $proxy->commonIds(['app_name' => 'Adventure'], ['app_
 ipaSearchAssertSame([101], $proxy->commonIds(['app_version' => '2.0'], ['app_version' => 'LIKE']), 'common Version');
 ipaSearchAssertSame([101], $proxy->commonIds(['build_version' => '57'], ['build_version' => 'LIKE']), 'common Build');
 ipaSearchAssertSame([101], $proxy->commonIds(['status' => 'parsed'], ['status' => '=']), 'common status parsed');
-ipaSearchAssertSame([202], $proxy->commonIds(['status' => 'discovered'], ['status' => '=']), 'common status discovered');
+ipaSearchAssertSame([909], $proxy->commonIds(['status' => 'discovered'], ['status' => '=']), 'common status discovered');
 ipaSearchAssertSame([101], $proxy->commonIds(['source_name' => 'Tokyo'], ['source_name' => 'LIKE']), 'common source name');
 ipaSearchAssertSame([101], $proxy->commonIds(['compare_state' => 'anomaly'], ['compare_state' => '=']), 'common compare state');
 
 // FastAdmin commonSearch may keep stale quick-search text. Effective field filters must win.
 ipaSearchAssertSame(
-    [202],
+    [909],
     $proxy->resolvedIds('definitely-not-present', ['status' => 'discovered'], ['status' => '=']),
     'common status overrides stale quick search'
 );
