@@ -1,29 +1,38 @@
-# ZONOE 软件源 2026092420
+# ZONOE 软件源 2026092422
 
 ## 更新内容
 
-### IPA 资产搜索后端执行修复
+### Dylib 验证中心：版本管理 UI / 编辑流程重建
 
-本版本以 `source-v2026092419` 为升级基线，只处理“总览 -> IPA 资产”的搜索执行链和对应回归，不带回已删除 2420～2427 分支中的其他改动。
+本版本从 `source-v2026092420` 重新开发，不继承失败的 2026092421 实现，只处理“Dylib 验证中心 -> 版本管理”的两个界面/编辑问题。
 
-- 修复使用 IPA 资产搜索后，后端异常返回 HTML 错误页，BootstrapTable 因收不到 `total/rows` JSON 而提示“未知的数据格式!”的问题。
-- `count()` 与列表 `select()` 分别从相同搜索参数重新构造 Query Builder，不再 clone/复用带 PDO bindings 的查询对象。
-- FastAdmin commonSearch 有有效 `filter` 时优先执行字段筛选；只有 commonSearch 为空时才执行右上角 quick search，避免旧搜索词与新筛选条件继续 AND。
-- 单值等值条件使用显式 `where(field, '=', value)`。
-- 新增 PHP 7.0 + MySQL 5.7 真实数据库回归，覆盖 IPA 文件名、Bundle ID、App、Version、Build、数字 ID、OpenList 来源、中文解析状态、异常关键字及字段筛选。
-- 新增浏览器参数语义回归：即使 quick search 残留无关关键字，`filter.status=discovered` 等 commonSearch 仍必须按字段筛选返回正确结果。
-- 保持 BootstrapTable `total/rows` 响应结构和 server-side pagination 不变。
+- 移除版本管理里多余的“高级校验设置”折叠区与重复说明；新增版本只保留 Dylib、版本号、内部构建号、状态四个日常字段。
+- SHA256、文件大小、离线容错、验证失败动作、用户提示不再作为日常版本录入 UI 展示；新增记录继续提交兼容默认值，后端协议不变。
+- 重做“编辑”按钮：不再复用上方“添加版本”表单，不再只是改变按钮文字。
+- 点击“编辑”后打开独立的版本编辑弹窗，明确显示当前版本记录 ID、所属 Dylib、版本号、内部构建号和状态。
+- 编辑保存明确携带现有记录 `id`，继续调用既有 `saveVersion` UPDATE 逻辑，不新增重复版本。
+- 编辑时保留原记录的 SHA256、file_size、offline_grace、fail_action、notice 隐藏值，避免只修改版本号/状态时意外清空历史高级配置。
+- 编辑动作不再调用 `syncCurrentDylib(row.dylib_id, 'version')`，不会因为点击编辑而额外刷新版本表或验证日志表。
+- 新增 2422 专项 CI：强制验证开发血统包含 2420 正式 commit、JavaScript 语法、独立编辑 Modal 契约，以及禁止旧 inline-edit 路径回归。
+
+## 基线说明
+
+2422 的开发起点固定为：
+
+`source-v2026092420` / `bca75e7ddd927fe9216fad6c80727089ad163ff8`
+
+2026092421 不作为代码基线，也没有 cherry-pick 其实现。
 
 ## 不变范围
 
-2420 不改变：
+2422 不改变：
 
+- IPA 资产搜索修复；
+- IPA 扫描、解析、Worker 与比对主链；
 - OpenList 数据源结构；
-- IPA 扫描、解析和 Worker 主链；
-- IPA 比对与写回业务；
 - Dylib Protocol v1/v2；
-- 卡密/授权业务协议；
-- Dylib 版本管理业务；
+- 卡密/授权协议；
+- `saveVersion` 后端业务语义；
 - 在线更新 SHA256、备份、数据库迁移与失败回滚安全链。
 
-目标升级路径：`source-v2026092419 -> source-v2026092420`。
+目标升级路径：`source-v2026092420 -> source-v2026092422`。
