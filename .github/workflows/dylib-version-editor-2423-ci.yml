@@ -18,6 +18,8 @@ jobs:
           git merge-base --is-ancestor 873b21fcbbead53bd71a92bd73975511ebda297a HEAD
       - name: JavaScript syntax
         run: node --check public/assets/js/backend/dylib_center.js
+      - name: Compute source integrity sign
+        run: php -r "require 'application/common/library/UpdateIntegrity.php'; echo 'SOURCE_FILE_SIGN=' . app\\common\\library\\UpdateIntegrity::signFromRoot(getcwd()) . PHP_EOL;"
       - name: Full-field edit modal contract
         run: |
           python3 - <<'PY'
