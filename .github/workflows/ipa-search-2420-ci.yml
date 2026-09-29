@@ -1,0 +1,58 @@
+name: IPA Search 2420 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092420-ipa-search-backend-fix
+  workflow_dispatch:
+
+jobs:
+  search-regression:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 7.0
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          extensions: pdo_mysql, mbstring
+          coverage: none
+
+      - name: PHP syntax
+        run: |
+          php -v
+          php -l application/admin/controller/IpaAssets.php
+          php -l tests/ipa_asset_search_mysql_test.php
+
+      - name: IPA search query contract
+        run: |
+          php -r '$s=file_get_contents("application/admin/controller/IpaAssets.php"); if ($s===false) exit(1); foreach (["buildAssetQuery","hasCommonFilters","where(\x27status\x27, \x27=\x27, $statuses[0])"] as $needle) { if (strpos($s,$needle)===false) { fwrite(STDERR,"missing: $needle\n"); exit(1); } } if (strpos($s,"(clone $query)->count()")!==false) { fwrite(STDERR,"forbidden cloned count query\n"); exit(1); } echo "IPA search query contract passed.\n";'
+
+      - name: Prepare MySQL 5.7
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq default-mysql-client
+          mysql -h127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS ipa_search_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
+
+      - name: Real MySQL IPA search regression
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+          IPA_SEARCH_DB: ipa_search_ci
+        run: php tests/ipa_asset_search_mysql_test.php
