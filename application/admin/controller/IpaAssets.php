@@ -11,6 +11,11 @@ use think\Db;
  *
  * 采用与 FastAdmin 卡密列表一致的 search/filter/op 查询参数，
  * 同时对虚拟字段 source_name / compare_state 做服务端映射。
+ *
+ * 2026092420：
+ * - count/select 使用独立 Query Builder，避免带绑定参数的查询对象 clone/复用；
+ * - commonSearch 存在有效 filter 时优先执行，避免残留 quick search 继续 AND 筛选；
+ * - 单值等值条件使用显式三参数 where(field, '=', value)。
  */
 class IpaAssets extends Backend
 {
@@ -33,12 +38,14 @@ class IpaAssets extends Backend
             $sort = 'id';
         }
 
-        $query = Db::name('ipa_asset');
-        $this->applyQuickSearch($query, $search);
-        $this->applyCommonSearch($query, $filter, $op);
+        // 不 clone / 复用带 PDO bindings 的 Query Builder。
+        // count 和 rows 分别重新构造完整条件，避免 PHP 7 + 当前 ThinkPHP/PDO
+        // 组合下出现占位符与绑定参数状态串扰（SQLSTATE 2031）。
+        $countQuery = $this->buildAssetQuery($search, $filter, $op);
+        $total = $countQuery->count();
 
-        $total = (clone $query)->count();
-        $rows = $query
+        $rowQuery = $this->buildAssetQuery($search, $filter, $op);
+        $rows = $rowQuery
             ->field('id,source_id,name,path,size_bytes,status,bundle_id,app_name,app_version,build_version,last_error,last_seen_at,parsed_at,updated_at')
             ->order($sort, $order)
             ->limit($offset, $limit)
@@ -84,6 +91,39 @@ class IpaAssets extends Backend
         return json(['total'=>(int)$total, 'rows'=>$rows]);
     }
 
+    protected function buildAssetQuery($search, array $filter, array $op)
+    {
+        $query = Db::name('ipa_asset');
+
+        // FastAdmin commonSearch 会保留 BootstrapTable 右上角 quick-search 文本。
+        // 只要存在有效字段筛选，就让 commonSearch 独占查询，避免旧 search 再次 AND。
+        if ($this->hasCommonFilters($filter)) {
+            $this->applyCommonSearch($query, $filter, $op);
+        } else {
+            $this->applyQuickSearch($query, $search);
+        }
+
+        return $query;
+    }
+
+    protected function hasCommonFilters(array $filter)
+    {
+        foreach ($filter as $value) {
+            if (is_array($value)) {
+                foreach ($value as $item) {
+                    if (trim((string)$item) !== '') {
+                        return true;
+                    }
+                }
+                continue;
+            }
+            if (trim((string)$value) !== '') {
+                return true;
+            }
+        }
+        return false;
+    }
+
     protected function applyQuickSearch($query, $search)
     {
         if ($search === '') {
@@ -111,7 +151,7 @@ class IpaAssets extends Backend
                 ->whereOr('build_version', 'like', $like)
                 ->whereOr('status', 'like', '%' . $statusSearch . '%');
             if (ctype_digit($search)) {
-                $q->whereOr('id', (int)$search)->whereOr('source_id', (int)$search);
+                $q->whereOr('id', '=', (int)$search)->whereOr('source_id', '=', (int)$search);
             }
             if ($sourceIds) {
                 $q->whereOr('source_id', 'in', array_values($sourceIds));
@@ -137,7 +177,7 @@ class IpaAssets extends Backend
                 case 'id':
                 case 'source_id':
                     if (ctype_digit($value)) {
-                        $query->where($field, (int)$value);
+                        $query->where($field, '=', (int)$value);
                     }
                     break;
 
@@ -153,7 +193,11 @@ class IpaAssets extends Backend
                 case 'status':
                     $statuses = array_values(array_filter(explode(',', $value), 'strlen'));
                     if ($statuses) {
-                        $query->where('status', count($statuses) > 1 ? 'in' : '=', count($statuses) > 1 ? $statuses : $statuses[0]);
+                        if (count($statuses) > 1) {
+                            $query->where('status', 'in', $statuses);
+                        } else {
+                            $query->where('status', '=', $statuses[0]);
+                        }
                     }
                     break;
 
@@ -162,7 +206,7 @@ class IpaAssets extends Backend
                     if ($ids) {
                         $query->where('source_id', 'in', array_values($ids));
                     } else {
-                        $query->where('id', 0);
+                        $query->where('id', '=', 0);
                     }
                     break;
 
@@ -171,7 +215,7 @@ class IpaAssets extends Backend
                     if ($ids) {
                         $query->where('id', 'in', $ids);
                     } else {
-                        $query->where('id', 0);
+                        $query->where('id', '=', 0);
                     }
                     break;
 
@@ -204,16 +248,16 @@ class IpaAssets extends Backend
                 ->column('asset_id'));
         }
         if ($state === 'anomaly') {
-            return $this->uniqueInts(Db::name('ipa_compare_result')->where('status', 'anomaly')->column('asset_id'));
+            return $this->uniqueInts(Db::name('ipa_compare_result')->where('status', '=', 'anomaly')->column('asset_id'));
         }
         if ($state === 'unmatched') {
-            return $this->uniqueInts(Db::name('ipa_compare_result')->where('status', 'unmatched')->column('asset_id'));
+            return $this->uniqueInts(Db::name('ipa_compare_result')->where('status', '=', 'unmatched')->column('asset_id'));
         }
         if ($state === 'source_error') {
-            return $this->uniqueInts(Db::name('ipa_compare_result')->where('status', 'source_error')->column('asset_id'));
+            return $this->uniqueInts(Db::name('ipa_compare_result')->where('status', '=', 'source_error')->column('asset_id'));
         }
         if ($state === 'normal') {
-            $good = $this->uniqueInts(Db::name('ipa_compare_result')->where('status', 'matched')->column('asset_id'));
+            $good = $this->uniqueInts(Db::name('ipa_compare_result')->where('status', '=', 'matched')->column('asset_id'));
             $bad = $this->uniqueInts(Db::name('ipa_compare_result')
                 ->where('status', 'in', ['anomaly','unmatched','source_error'])
                 ->column('asset_id'));
@@ -221,7 +265,7 @@ class IpaAssets extends Backend
         }
         if ($state === 'pending') {
             $compared = $this->uniqueInts(Db::name('ipa_compare_result')->column('asset_id'));
-            $q = Db::name('ipa_asset')->where('status', 'parsed');
+            $q = Db::name('ipa_asset')->where('status', '=', 'parsed');
             if ($compared) {
                 $q->where('id', 'not in', $compared);
             }
