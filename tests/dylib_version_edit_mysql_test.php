@@ -3,6 +3,7 @@
 $root = dirname(__DIR__);
 define('APP_PATH', $root . '/application/');
 require $root . '/thinkphp/base.php';
+require_once $root . '/thinkphp/helper.php';
 require_once $root . '/application/admin/library/traits/Backend.php';
 require_once $root . '/application/common/controller/Backend.php';
 require_once $root . '/application/admin/controller/DylibCenter.php';
