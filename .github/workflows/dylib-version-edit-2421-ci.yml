@@ -1,0 +1,57 @@
+name: Dylib Version Edit 2421 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092421-dylib-version-edit-fix
+  workflow_dispatch:
+
+jobs:
+  version-edit-regression:
+    runs-on: ubuntu-24.04
+    services:
+      mysql57:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 7.0
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          extensions: pdo_mysql, mbstring
+          coverage: none
+
+      - name: PHP syntax
+        run: |
+          php -v
+          php -l application/admin/controller/DylibCenter.php
+          php -l tests/dylib_version_edit_mysql_test.php
+
+      - name: Dylib endpoint query contract
+        run: |
+          php -r '$s=file_get_contents("application/admin/controller/DylibCenter.php"); if ($s===false) exit(1); foreach (["buildVersionQuery", "buildLogQuery()->count()", "where(\x27dylib_id\x27, \x27=\x27", "where(\x27dylib_key\x27, \x27=\x27", "where(\x27result_code\x27, \x27=\x27"] as $needle) { if (strpos($s,$needle)===false) { fwrite(STDERR,"missing: $needle\n"); exit(1); } } $versions=substr($s,strpos($s,"public function versions()"),strpos($s,"/** Legacy 2405",strpos($s,"public function versions()"))-strpos($s,"public function versions()")); $logs=substr($s,strpos($s,"public function logs()"),strpos($s,"protected function buildLogQuery()",strpos($s,"public function logs()"))-strpos($s,"public function logs()")); if (strpos($versions,"(clone $query)->count()")!==false || strpos($logs,"(clone $query)->count()")!==false) { fwrite(STDERR,"forbidden cloned count query in versions/logs\n"); exit(1); } echo "Dylib versions/logs query contract passed.\n";'
+
+      - name: Prepare MySQL 5.7
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq default-mysql-client
+          mysql -h127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS dylib_edit_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
+
+      - name: Real MySQL Dylib version edit regression
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+          DYLIB_EDIT_DB: dylib_edit_ci
+        run: php tests/dylib_version_edit_mysql_test.php
