@@ -86,21 +86,48 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 if (!$form.length || $('#version-help-2411').length) return;
                 $('#section-version .panel-heading .text-muted').text('管理允许使用的 Dylib 版本；日常只需填写版本号、内部构建号和状态');
                 $form.before('<div id="version-help-2411" class="alert alert-info" style="padding:10px 12px">' +
-                    '<b>怎么用：</b>“版本号”是对外版本（如 1.2.3）；“内部构建号”用于同一版本多次重新编译（如 45、46）。' +
-                    '正常发布选择“正式使用”。SHA256、离线时间、失败动作和客户端提示属于高级校验，可按需设置。</div>');
+                    '<b>怎么用：</b>“版本号”是对外版本（如 1.2.3）；“内部构建号”用于同一版本多次重新编译（如 45、46）。正常发布选择“正式使用”。</div>');
                 $form.find('[name=build]').attr('placeholder', '内部构建号（可选，如 45）').attr('title', '同一版本重新编译时用于区分不同构建');
-                $form.find('[name=sha256]').attr('placeholder', '文件 SHA256（留空=不校验文件指纹）').attr('title', '填写后客户端 Dylib 文件必须与该 SHA256 一致');
-                $form.find('[name=offline_grace]').attr('title', '服务器暂时不可访问时，允许继续使用缓存验证结果的秒数');
-                $form.find('[name=notice]').attr('placeholder', '验证失败时给用户看的提示（可选）').attr('title', '版本被阻止、撤销或校验失败时可返回给客户端显示');
-                $form.find('[name=fail_action] option[value=disable_feature]').text('禁用受保护功能');
-                $form.find('[name=fail_action] option[value=show_message]').text('只显示提示');
-                $form.find('[name=fail_action] option[value=block]').text('完全阻止使用');
                 var $advanced = $form.children('div').first();
-                if ($advanced.length) {
-                    $advanced.attr('id', 'version-advanced-options').addClass('collapse');
-                    $advanced.before('<div style="margin-top:8px"><button type="button" class="btn btn-default btn-xs" data-toggle="collapse" data-target="#version-advanced-options"><i class="fa fa-sliders"></i> 高级校验设置</button> <span class="text-muted">SHA256 / 离线容错 / 验证失败动作 / 用户提示</span></div>');
-                    $advanced.append('<p class="help-block" style="margin-bottom:0">SHA256 留空表示不限制文件指纹；“禁用受保护功能”表示验证失败时仅关闭需要授权的菜单/能力，不强制退出 App。</p>');
-                }
+                if ($advanced.length) $advanced.remove();
+                if (!$form.find('[name=sha256]').length) $form.append('<input type="hidden" name="sha256" value="">');
+                if (!$form.find('[name=file_size]').length) $form.append('<input type="hidden" name="file_size" value="0">');
+                if (!$form.find('[name=offline_grace]').length) $form.append('<input type="hidden" name="offline_grace" value="900">');
+                if (!$form.find('[name=fail_action]').length) $form.append('<input type="hidden" name="fail_action" value="disable_feature">');
+                if (!$form.find('[name=notice]').length) $form.append('<input type="hidden" name="notice" value="">');
+            }
+
+            function installVersionEditModal() {
+                if ($('#version-edit-modal').length) return;
+                $('body').append(
+                    '<div class="modal fade" id="version-edit-modal" tabindex="-1" role="dialog" aria-hidden="true">' +
+                    '<div class="modal-dialog"><div class="modal-content">' +
+                    '<div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-label="关闭"><span aria-hidden="true">&times;</span></button>' +
+                    '<h4 class="modal-title" id="version-edit-title">编辑 Dylib 版本</h4></div>' +
+                    '<form id="version-edit-form"><div class="modal-body">' +
+                    '<input type="hidden" name="id" value="0"><input type="hidden" name="dylib_id" value="0">' +
+                    '<input type="hidden" name="sha256" value=""><input type="hidden" name="file_size" value="0">' +
+                    '<input type="hidden" name="offline_grace" value="900"><input type="hidden" name="fail_action" value="disable_feature"><input type="hidden" name="notice" value="">' +
+                    '<div class="alert alert-info" style="padding:8px 12px">正在编辑现有版本记录。保存后只更新这条记录，不会新增版本。</div>' +
+                    '<div class="form-group"><label>Dylib</label><input type="text" class="form-control js-version-edit-dylib" readonly></div>' +
+                    '<div class="form-group"><label>版本号</label><input type="text" class="form-control" name="version" maxlength="64" required></div>' +
+                    '<div class="form-group"><label>内部构建号</label><input type="text" class="form-control" name="build" maxlength="64" placeholder="可选，如 45"></div>' +
+                    '<div class="form-group"><label>状态</label><select class="form-control" name="state">' +
+                    '<option value="testing">测试中</option><option value="active">正式使用</option><option value="deprecated">已弃用（仍允许）</option><option value="blocked">已阻止</option><option value="revoked">已撤销</option>' +
+                    '</select></div></div>' +
+                    '<div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">取消</button><button type="submit" class="btn btn-primary">保存版本修改</button></div>' +
+                    '</form></div></div></div>'
+                );
+                $('#version-edit-form').on('submit', function (e) {
+                    e.preventDefault();
+                    var $form = $(this);
+                    Fast.api.ajax({url:'dylib_center/saveVersion',type:'POST',data:$form.serialize()}, function () {
+                        Toastr.success('Dylib 版本修改已保存');
+                        $('#version-edit-modal').modal('hide');
+                        $('#version-table').bootstrapTable('refresh');
+                        return false;
+                    });
+                });
             }
 
             function installNoticeHelp() {
@@ -156,30 +183,30 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 $form.find('[name=dylib_key]').prop('readonly', false); $('#verify-secret').attr('type', 'password').val('');
                 $('.js-dylib-submit-label').text('注册 Dylib'); $('#cancel-dylib-edit').addClass('hidden');
             }
-            function ensureVersionFormControls() {
-                var $form = $('#version-form');
-                if (!$form.find('[name=id]').length) $form.prepend('<input type="hidden" name="id" value="0">');
-                if (!$form.find('[name=file_size]').length) $form.prepend('<input type="hidden" name="file_size" value="0">');
-                if (!$('#cancel-version-edit').length) $form.find('button[type=submit]').after(' <button class="btn btn-default hidden" type="button" id="cancel-version-edit">取消编辑</button>');
-            }
             function resetVersionForm() {
-                var $form = $('#version-form'); $form[0].reset(); $form.find('[name=id]').val('0'); $form.find('[name=file_size]').val('0');
-                $form.find('[name=offline_grace]').val('900'); $form.find('[name=state]').val('testing'); $form.find('[name=fail_action]').val('disable_feature');
+                var $form = $('#version-form'); $form[0].reset();
+                $form.find('[name=sha256]').val(''); $form.find('[name=file_size]').val('0'); $form.find('[name=offline_grace]').val('900');
+                $form.find('[name=fail_action]').val('disable_feature'); $form.find('[name=notice]').val(''); $form.find('[name=state]').val('testing');
                 if (currentDylibId()) $form.find('[name=dylib_id]').val(String(currentDylibId()));
-                $form.find('button[type=submit]').first().text('添加版本'); $('#cancel-version-edit').addClass('hidden');
             }
             function editVersion(row) {
-                ensureVersionFormControls(); var $form = $('#version-form');
-                $.each(['id','dylib_id','version','build','sha256','file_size','state','offline_grace','fail_action','notice'], function (_, field) { $form.find('[name=' + field + ']').val(row[field] == null ? '' : row[field]); });
-                syncCurrentDylib(row.dylib_id, 'version'); $form.find('button[type=submit]').first().text('保存版本修改'); $('#cancel-version-edit').removeClass('hidden');
-                activateTab('#tab-versions'); setTimeout(function () { $('html,body').animate({scrollTop: $('#version-form').offset().top - 20}, 150); }, 80);
+                installVersionEditModal();
+                var $form = $('#version-edit-form'), $dylib = dylibRowById(row.dylib_id);
+                $form.find('[name=id]').val(row.id == null ? '0' : row.id);
+                $form.find('[name=dylib_id]').val(row.dylib_id == null ? '0' : row.dylib_id);
+                $form.find('.js-version-edit-dylib').val($dylib.length ? (($dylib.attr('data-name') || '') + ' / ' + ($dylib.attr('data-key') || '')) : ('Dylib #' + row.dylib_id));
+                $.each(['version','build','state','sha256','file_size','offline_grace','fail_action','notice'], function (_, field) {
+                    $form.find('[name=' + field + ']').val(row[field] == null ? '' : row[field]);
+                });
+                $('#version-edit-title').text('编辑 Dylib 版本 #' + row.id);
+                $('#version-edit-modal').modal('show');
             }
             function resetNoticeForm() {
                 var $form = $('#notice-form'); $form[0].reset(); $form.find('[name=id]').val('0'); $form.find('[name=revision]').val('1');
                 $form.find('[name=priority]').val('0'); $form.find('[name=category_id]').val('0'); $form.find('[name=enabled]').val('1'); $form.find('[name=starts_at]').val('0'); $form.find('[name=ends_at]').val('0');
             }
 
-            installGlobalDylibSelector(); ensureVersionFormControls(); installVersionHelp(); installNoticeHelp(); installLogToolbar();
+            installGlobalDylibSelector(); installVersionHelp(); installVersionEditModal(); installNoticeHelp(); installLogToolbar();
             $('#dylib-list').closest('.panel-body').find('.help-block').first().text('删除 Dylib 会同时删除其版本、旧游戏授权和验证记录；此操作不可恢复。');
             $('#integration-detail p').filter(function () { return $(this).text().indexOf('运行配置：') === 0; }).html('运行配置：<code id="integration-config-url">GET /index/dylib_verify/config?dylib_key=...</code>');
 
@@ -194,7 +221,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     {field:'sha256',title:'文件校验',formatter:function(v){return v ? '已启用 · '+v.substr(0,12)+'…' : '未启用';}},
                     {field:'notice',title:'用户提示',formatter:function(v){return v || '—';}},
                     {field:'operate',title:'操作',formatter:function(){return '<button type="button" class="btn btn-xs btn-primary js-version-edit">编辑</button> <button type="button" class="btn btn-xs btn-danger js-version-delete">删除</button>';},events:{
-                        'click .js-version-edit':function(e,v,row){editVersion(row);},
+                        'click .js-version-edit':function(e,v,row){e.stopPropagation();editVersion(row);},
                         'click .js-version-delete':function(e,v,row){Layer.confirm('确定删除版本“'+row.version+(row.build?' ('+row.build+')':'')+'”吗？删除后客户端使用该版本会返回“版本未登记”。',{title:'删除 Dylib 版本'},function(i){Layer.close(i);Fast.api.ajax({url:'dylib_center/deleteVersion',type:'POST',data:{id:row.id}},function(){Toastr.success('Dylib 版本已删除');resetVersionForm();$('#version-table').bootstrapTable('refresh');return false;});});}
                     }}
                 ]]
@@ -239,8 +266,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             $('#dylib-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveDylib',type:'POST',data:$(this).serialize()},function(){location.reload();return false;});});
             $('#runtime-config-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveRuntimeConfig',type:'POST',data:$(this).serialize()},function(){Toastr.success('高级运行配置已保存；配置版本已自动递增。');location.reload();return false;});});
             $('#notice-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveNotice',type:'POST',data:$(this).serialize()},function(){Toastr.success('远程通知已保存');resetNoticeForm();$('#notice-table').bootstrapTable('refresh');return false;});});
-            $('#version-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveVersion',type:'POST',data:$(this).serialize()},function(){Toastr.success('Dylib 版本已保存');resetVersionForm();$('#version-table').bootstrapTable('refresh');return false;});});
-            $('#reset-notice-form').on('click',resetNoticeForm);$('#cancel-dylib-edit').on('click',resetDylibForm);$('#cancel-version-edit').on('click',resetVersionForm);
+            $('#version-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveVersion',type:'POST',data:$(this).serialize()},function(){Toastr.success('Dylib 版本已添加');resetVersionForm();$('#version-table').bootstrapTable('refresh');return false;});});
+            $('#reset-notice-form').on('click',resetNoticeForm);$('#cancel-dylib-edit').on('click',resetDylibForm);
 
             $('#dylib-list').on('click','.js-dylib-edit',function(){var $row=$(this).closest('tr'),$form=$('#dylib-form');syncCurrentDylib($row.data('id'),'list');$form.find('[name=id]').val($row.data('id'));$form.find('[name=dylib_key]').val($row.attr('data-key')).prop('readonly',true);$form.find('[name=name]').val($row.attr('data-name'));$form.find('[name=default_offline_grace]').val($row.attr('data-grace'));$form.find('[name=default_fail_action]').val($row.attr('data-action'));$form.find('[name=enabled]').val($row.attr('data-enabled'));$('#verify-secret').attr('type','password').val('');$('.js-dylib-submit-label').text('保存修改');$('#cancel-dylib-edit').removeClass('hidden');activateTab('#tab-overview');setTimeout(function(){$('html,body').animate({scrollTop:$('#section-register').offset().top-20},150);},80);});
             $('#dylib-list').on('click','.js-dylib-toggle',function(){var $row=$(this).closest('tr'),enabled=String($(this).data('enabled')),verb=enabled==='1'?'启用':'停用';Fast.api.ajax({url:'dylib_center/setDylibEnabled',type:'POST',data:{id:$row.data('id'),enabled:enabled}},function(){Toastr.success('Dylib 已'+verb);location.reload();return false;});});
