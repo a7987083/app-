@@ -20,7 +20,12 @@ class IpaParserService
             throw new \RuntimeException('OpenList did not return raw_url');
         }
 
-        $knownSize = !empty($asset['size_bytes']) ? (int)$asset['size_bytes'] : (isset($file['size']) ? (int)$file['size'] : 0);
+        // The current OpenList object is authoritative. A previously discovered asset row may
+        // contain a stale size when the same path has been overwritten with a newer IPA.
+        $freshSize = isset($file['size']) ? max(0, (int)$file['size']) : 0;
+        $storedSize = !empty($asset['size_bytes']) ? max(0, (int)$asset['size_bytes']) : 0;
+        $knownSize = $freshSize > 0 ? $freshSize : $storedSize;
+
         $range = new HttpRangeClient($rawUrl, [], (int)$source['request_timeout'], $knownSize);
         $zip = new RemoteZipReader($range);
         $entries = $zip->entries();
@@ -60,20 +65,25 @@ class IpaParserService
         // and dylibs, which could stall workers and hold DB locks for a long time.
         $binaryIndex = self::buildBinaryIndex((int)$asset['id'], $zip, $entries, $bundleId, $executable, $now);
 
+        $assetUpdate = [
+            'raw_url' => $rawUrl,
+            'status' => 'parsed',
+            'bundle_id' => $bundleId,
+            'app_name' => $appName,
+            'app_version' => $appVersion,
+            'build_version' => $buildVersion,
+            'minimum_os' => $minimumOs,
+            'last_error' => null,
+            'parsed_at' => $now,
+            'updated_at' => $now,
+        ];
+        if ($knownSize > 0) {
+            $assetUpdate['size_bytes'] = $knownSize;
+        }
+
         Db::startTrans();
         try {
-            Db::name('ipa_asset')->where('id', (int)$asset['id'])->update([
-                'raw_url' => $rawUrl,
-                'status' => 'parsed',
-                'bundle_id' => $bundleId,
-                'app_name' => $appName,
-                'app_version' => $appVersion,
-                'build_version' => $buildVersion,
-                'minimum_os' => $minimumOs,
-                'last_error' => null,
-                'parsed_at' => $now,
-                'updated_at' => $now,
-            ]);
+            Db::name('ipa_asset')->where('id', (int)$asset['id'])->update($assetUpdate);
 
             Db::name('ipa_binary')->where('asset_id', (int)$asset['id'])->delete();
             Db::name('ipa_app_identity')->where('asset_id', (int)$asset['id'])->delete();
