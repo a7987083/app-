@@ -10,6 +10,9 @@ use think\Db;
  *
  * Keep the raw row shape available because AppStorePayload::siteInfo() is part
  * of the compatibility contract and expects the legacy config rows.
+ *
+ * Cache is strictly an optimization. A cache backend outage must never make
+ * public source/runtime reads unavailable while MySQL is still healthy.
  */
 class SourceConfigRepository
 {
@@ -22,15 +25,28 @@ class SourceConfigRepository
     public static function rows($useCache = true)
     {
         if ($useCache) {
-            $cached = Cache::get(self::CACHE_KEY);
-            if (is_array($cached)) {
-                return $cached;
+            try {
+                $cached = Cache::get(self::CACHE_KEY);
+                if (is_array($cached)) {
+                    return $cached;
+                }
+            } catch (\Throwable $e) {
+                self::logCacheFailure('read', $e);
             }
         }
 
         $rows = Db::name('config')->select();
         $rows = is_array($rows) ? $rows : [];
-        Cache::set(self::CACHE_KEY, $rows, self::CACHE_TTL);
+
+        try {
+            $stored = Cache::set(self::CACHE_KEY, $rows, self::CACHE_TTL);
+            if ($stored === false) {
+                error_log('[SourceConfigRepository] cache write returned false; continuing with database rows');
+            }
+        } catch (\Throwable $e) {
+            self::logCacheFailure('write', $e);
+        }
+
         return $rows;
     }
 
@@ -122,6 +138,15 @@ class SourceConfigRepository
      */
     public static function forget()
     {
-        Cache::rm(self::CACHE_KEY);
+        try {
+            Cache::rm(self::CACHE_KEY);
+        } catch (\Throwable $e) {
+            self::logCacheFailure('remove', $e);
+        }
+    }
+
+    protected static function logCacheFailure($operation, \Throwable $e)
+    {
+        error_log('[SourceConfigRepository] cache ' . $operation . ' failed; fail-open to database: ' . $e->getMessage());
     }
 }

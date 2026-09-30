@@ -66,6 +66,7 @@ jobs:
           php -l tests/source_http_client_contract_test.php
           php -l tests/source_response_test.php
           php -l tests/source_config_repository_test.php
+          php -l tests/source_config_cache_failopen_test.php
           php -l tests/blacklist_policy_test.php
           php -l tests/blacklist_persistence_contract_test.php
           php -l tests/blacklist_maintenance_test.php
@@ -97,6 +98,7 @@ jobs:
           php tests/source_http_client_contract_test.php
           php tests/source_response_test.php
           php tests/source_config_repository_test.php
+          php tests/source_config_cache_failopen_test.php
           php tests/blacklist_policy_test.php
           php tests/blacklist_persistence_contract_test.php
           php tests/blacklist_maintenance_test.php
