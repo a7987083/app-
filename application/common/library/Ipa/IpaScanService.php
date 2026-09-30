@@ -85,9 +85,13 @@ class IpaScanService
 
     protected static function processDirectory(OpenListClient $client,array $source,array $item)
     {
+        // Incremental scans may use the 30-minute OpenList directory cache.
+        // A full scan is an explicit freshness request and must always bypass it.
+        $job=Db::name('ipa_scan_job')->where('id',(int)$item['job_id'])->find();
+        $forceRefresh=$job&&isset($job['mode'])&&(string)$job['mode']==='full';
         try{
             self::assertJobActive((int)$item['job_id']);
-            $data=$client->listDirectory($item['path'],1,0,false);
+            $data=$client->listDirectory($item['path'],1,0,$forceRefresh);
             self::assertJobActive((int)$item['job_id']);
             self::consumeDirectoryRows($source,$item,isset($data['content'])&&is_array($data['content'])?$data['content']:[]);
             return;
@@ -99,7 +103,7 @@ class IpaScanService
         $page=1;$pageSize=max(20,min(1000,(int)$source['scan_page_size']));
         do{
             self::assertJobActive((int)$item['job_id']);
-            $data=$client->listDirectory($item['path'], $page, $pageSize, false);
+            $data=$client->listDirectory($item['path'], $page, $pageSize, $forceRefresh);
             self::assertJobActive((int)$item['job_id']);
             $rows=isset($data['content'])&&is_array($data['content'])?$data['content']:[];
             self::consumeDirectoryRows($source,$item,$rows);
