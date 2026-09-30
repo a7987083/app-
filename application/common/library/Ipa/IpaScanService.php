@@ -123,13 +123,63 @@ class IpaScanService
 
     protected static function touchAssetFromFile(OpenListClient $client,array $source,$path){$data=$client->getFile($path);self::upsertAsset($source,$path,$data);}
 
+    /**
+     * Match ipaxiazaizhan-'s content identity rules. OpenList may expose hashes
+     * either as hash_info.md5 or as a JSON encoded hashinfo field depending on
+     * server/driver version. ipa_asset.etag is reused as the content fingerprint
+     * so 2427 requires no schema migration during online update.
+     */
+    protected static function contentFingerprint(array $row)
+    {
+        $md5='';
+        if(isset($row['hash_info'])&&is_array($row['hash_info'])&&!empty($row['hash_info']['md5'])){
+            $md5=(string)$row['hash_info']['md5'];
+        }elseif(!empty($row['hashinfo'])){
+            if(is_array($row['hashinfo'])){
+                $hashInfo=$row['hashinfo'];
+            }else{
+                $hashInfo=json_decode((string)$row['hashinfo'],true);
+            }
+            if(is_array($hashInfo)&&!empty($hashInfo['md5']))$md5=(string)$hashInfo['md5'];
+        }elseif(!empty($row['md5'])){
+            $md5=(string)$row['md5'];
+        }
+        $md5=strtoupper(trim($md5));
+        return preg_match('/^[0-9A-F]{32}$/',$md5)?'md5:'.$md5:'';
+    }
+
+    protected static function normalizedFingerprint($value)
+    {
+        $value=trim((string)$value);
+        if(stripos($value,'md5:')===0)$value=substr($value,4);
+        $value=strtoupper(trim($value));
+        return preg_match('/^[0-9A-F]{32}$/',$value)?'md5:'.$value:'';
+    }
+
     protected static function upsertAsset(array $source,$path,array $row)
     {
         if(!Db::name('ipa_source')->where('id',(int)$source['id'])->where('enabled',1)->find())throw new \RuntimeException('数据源已停止，拒绝继续写入扫描结果');
         $now=time();$hash=hash('sha256',(string)$path);$existing=Db::name('ipa_asset')->where('source_id',(int)$source['id'])->where('path_hash',$hash)->find();
         $mtime=0;if(!empty($row['modified'])){$p=strtotime($row['modified']);if($p!==false)$mtime=$p;}$size=isset($row['size'])?(int)$row['size']:0;
+        $fingerprint=self::contentFingerprint($row);
         $values=['path'=>(string)$path,'name'=>basename((string)$path),'size_bytes'=>$size,'modified_at'=>$mtime,'last_seen_at'=>$now,'updated_at'=>$now];
-        if($existing){$changed=(int)$existing['size_bytes']!==$size||($mtime>0&&(int)$existing['modified_at']!==$mtime);if($changed||(string)$existing['status']==='missing'){$values['status']='discovered';$values['parsed_at']=0;$values['last_error']=null;$values['raw_url']=null;Db::name('ipa_compare_result')->where('asset_id',(int)$existing['id'])->delete();}Db::name('ipa_asset')->where('id',$existing['id'])->update($values);return (int)$existing['id'];}
+        if($fingerprint!=='')$values['etag']=$fingerprint;
+        if($existing){
+            $oldFingerprint=self::normalizedFingerprint(isset($existing['etag'])?$existing['etag']:'');
+            if($oldFingerprint!==''&&$fingerprint!==''){
+                $changed=$oldFingerprint!==$fingerprint;
+            }else{
+                $changed=(int)$existing['size_bytes']!==$size||($mtime>0&&(int)$existing['modified_at']!==$mtime);
+            }
+            if($changed||(string)$existing['status']==='missing'){
+                $values['status']='discovered';$values['parsed_at']=0;$values['last_error']=null;$values['raw_url']=null;
+                $values['bundle_id']='';$values['app_name']='';$values['app_version']='';$values['build_version']='';$values['minimum_os']='';$values['sha256']='';
+                Db::name('ipa_binary')->where('asset_id',(int)$existing['id'])->delete();
+                Db::name('ipa_app_identity')->where('asset_id',(int)$existing['id'])->delete();
+                Db::name('ipa_compare_result')->where('asset_id',(int)$existing['id'])->delete();
+            }
+            Db::name('ipa_asset')->where('id',$existing['id'])->update($values);return (int)$existing['id'];
+        }
         $values['source_id']=(int)$source['id'];$values['path_hash']=$hash;$values['status']='discovered';$values['created_at']=$now;$id=Db::name('ipa_asset')->insertGetId($values);$jobId=self::currentJobId();if($jobId>0)Db::name('ipa_scan_job')->where('id',$jobId)->setInc('discovered_count');return $id;
     }
 
