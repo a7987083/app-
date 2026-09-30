@@ -22,6 +22,32 @@ class MemoryRangeClient extends HttpRangeClient
     }
 }
 
+class CachedMemoryRangeClient extends HttpRangeClient
+{
+    private $bytes;
+    public $fetchCount = 0;
+
+    public function __construct($bytes, $budgetBytes = 16777216, $blockBytes = 65536)
+    {
+        $this->bytes = $bytes;
+        parent::__construct(
+            'http://range-contract.invalid/fixture.ipa',
+            [],
+            3,
+            strlen($bytes),
+            67108864,
+            $budgetBytes,
+            $blockBytes
+        );
+    }
+
+    protected function fetchRange($start, $length)
+    {
+        $this->fetchCount++;
+        return substr($this->bytes, $start, $length);
+    }
+}
+
 function buildZipOne($name, $data)
 {
     $compressed = gzdeflate($data);
@@ -41,6 +67,41 @@ $decoded = (new PlistDecoder())->decode($zip->extract($entry));
 if ($decoded['CFBundleIdentifier'] !== 'com.example.game' || $decoded['CFBundleShortVersionString'] !== '1.2.3') {
     fwrite(STDERR, "XML plist contract failed\n"); exit(1);
 }
+
+// 2026092427: overlapping logical reads in the same 64 KiB block must issue
+// exactly one physical range fetch.
+$cacheFixture = str_repeat('R', 256 * 1024);
+$cachedClient = new CachedMemoryRangeClient($cacheFixture, 1024 * 1024, 65536);
+if ($cachedClient->getRange(1024, 4096) !== substr($cacheFixture, 1024, 4096)) {
+    fwrite(STDERR, "Range cache first slice mismatch\n"); exit(1);
+}
+if ($cachedClient->getRange(2048, 2048) !== substr($cacheFixture, 2048, 2048)) {
+    fwrite(STDERR, "Range cache overlapping slice mismatch\n"); exit(1);
+}
+$cacheStats = $cachedClient->stats();
+if ($cachedClient->fetchCount !== 1 || $cacheStats['network_requests'] !== 1 || $cacheStats['network_bytes'] !== 65536) {
+    fwrite(STDERR, "Range block cache did not collapse overlapping reads\n"); exit(1);
+}
+
+// The client must stop before physical Range traffic exceeds the per-IPA budget.
+$budgetFixture = str_repeat('B', 2 * 1024 * 1024);
+$budgetClient = new CachedMemoryRangeClient($budgetFixture, 1024 * 1024, 65536);
+$budgetRejected = false;
+try {
+    for ($offset = 0; $offset <= 1024 * 1024; $offset += 65536) {
+        $budgetClient->getRange($offset, 1);
+    }
+} catch (RuntimeException $e) {
+    $budgetRejected = strpos($e->getMessage(), 'budget exceeded') !== false;
+}
+if (!$budgetRejected) {
+    fwrite(STDERR, "Range cumulative budget was not enforced\n"); exit(1);
+}
+$budgetStats = $budgetClient->stats();
+if ($budgetStats['network_bytes'] > 1024 * 1024) {
+    fwrite(STDERR, "Range cumulative budget over-read fixture\n"); exit(1);
+}
+unset($cacheFixture, $budgetFixture);
 
 // Exercise the production OOM fix against a genuinely large deflated ZIP member. The parser
 // must materialize only the requested 2 MiB prefix, not the 32 MiB uncompressed member.
