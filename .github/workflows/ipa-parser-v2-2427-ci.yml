@@ -69,6 +69,15 @@ jobs:
           grep -q 'parse_failed' application/admin/command/IpaParseWorker.php
           grep -Eq '1800|30 ?\* ?60' application/admin/command/IpaParseWorker.php application/common/library/Ipa/IpaOpsSettings.php
 
+      - name: Bounded scheduling and full-scan freshness contracts
+        run: |
+          set -euo pipefail
+          grep -q "addOption('limit'" application/admin/command/IpaParseWorker.php
+          grep -q 'min(20' application/admin/command/IpaParseWorker.php
+          grep -q 'scheduledLimit' application/admin/command/IpaParseWorker.php
+          grep -q "mode.*===.*'full'" application/common/library/Ipa/IpaScanService.php
+          grep -q 'listDirectory.*forceRefresh' application/common/library/Ipa/IpaScanService.php
+
       - name: Fast Info.plist-only parser contracts
         run: |
           set -euo pipefail
