@@ -175,6 +175,16 @@ class IpaWorkerLauncher
             WorkerState::heartbeat('scan', $workerId, 'stopped', 0);
         } catch (\Exception $ignored) {
         }
+
+        // Scan/discovery and parsing remain separate queues. Once the scan queue
+        // has produced/updated assets, only kick the CLI parser; never parse in
+        // this FPM/shutdown worker.
+        if ($processed > 0) {
+            try {
+                self::ensureParseWorker();
+            } catch (\Exception $ignored) {
+            }
+        }
         return $processed;
     }
 
