@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - 'application/admin/command/IpaParseWorker.php'
+      - 'application/common/library/Ipa/IpaParserService.php'
       - 'application/common/library/Ipa/IpaParserV2Service.php'
       - 'application/common/library/Ipa/IpaWorkerLauncher.php'
       - 'application/common/library/Ipa/IpaOpsSettings.php'
@@ -35,6 +36,7 @@ jobs:
           set -euo pipefail
           php -v
           php -l application/admin/command/IpaParseWorker.php
+          php -l application/common/library/Ipa/IpaParserService.php
           php -l application/common/library/Ipa/IpaParserV2Service.php
           php -l application/common/library/Ipa/IpaWorkerLauncher.php
           php -l application/common/library/Ipa/IpaOpsSettings.php
@@ -45,7 +47,11 @@ jobs:
       - name: Legacy parser removal contracts
         run: |
           set -euo pipefail
-          test ! -e application/common/library/Ipa/IpaParserService.php
+          grep -q 'IpaParserV2Service::parseAsset' application/common/library/Ipa/IpaParserService.php
+          grep -q 'IpaParserV2Service::markParseError' application/common/library/Ipa/IpaParserService.php
+          ! grep -q 'buildBinaryIndex' application/common/library/Ipa/IpaParserService.php
+          ! grep -q 'MachOInspector' application/common/library/Ipa/IpaParserService.php
+          ! grep -q 'binaryHashLimit' application/common/library/Ipa/IpaParserService.php
           ! grep -q 'drainParseQueue' application/common/library/Ipa/IpaWorkerLauncher.php
           ! grep -q 'parseScheduled' application/common/library/Ipa/IpaWorkerLauncher.php
           grep -q "status' => 'cli_only" application/common/library/Ipa/IpaWorkerLauncher.php
@@ -55,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -q 'IpaParserV2Service' application/admin/command/IpaParseWorker.php
-          grep -q 'Payload/\[\^/\].*Info' application/common/library/Ipa/IpaParserV2Service.php || grep -q 'Info\\.plist' application/common/library/Ipa/IpaParserV2Service.php
+          grep -q 'Info\\.plist' application/common/library/Ipa/IpaParserV2Service.php
           grep -q 'PLIST_MAX_BYTES' application/common/library/Ipa/IpaParserV2Service.php
           ! grep -q 'MachOInspector' application/common/library/Ipa/IpaParserV2Service.php
           ! grep -q 'IpaCompareService' application/admin/command/IpaParseWorker.php
