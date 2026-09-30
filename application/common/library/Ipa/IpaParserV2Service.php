@@ -10,10 +10,14 @@ use think\Db;
  * Contract: parsing an IPA means reading Payload/*.app/Info.plist only. Binary
  * discovery, Mach-O inspection, hashing and software-source comparison are not
  * part of this transaction and must never block metadata parsing.
+ *
+ * 2026092427: the parser is explicitly bounded to 16 MiB of physical Range
+ * traffic per IPA and returns Range telemetry to the worker.
  */
 class IpaParserV2Service
 {
-    const PLIST_MAX_BYTES = 4194304; // 4 MiB
+    const PLIST_MAX_BYTES = 4194304;   // 4 MiB
+    const RANGE_MAX_BYTES = 16777216;  // 16 MiB
 
     public static function parseAsset($assetId, array $source, $token = '')
     {
@@ -37,7 +41,15 @@ class IpaParserV2Service
             throw new \RuntimeException('Unable to determine IPA size');
         }
 
-        $range = new HttpRangeClient($rawUrl, [], (int)$source['request_timeout'], $knownSize);
+        $range = new HttpRangeClient(
+            $rawUrl,
+            [],
+            (int)$source['request_timeout'],
+            $knownSize,
+            67108864,
+            self::RANGE_MAX_BYTES,
+            HttpRangeClient::DEFAULT_BLOCK_BYTES
+        );
         $zip = new RemoteZipReader($range);
         $plistEntry = $zip->findFirst('#^Payload/[^/]+\\.app/Info\\.plist$#i');
         if (!$plistEntry) {
@@ -97,6 +109,7 @@ class IpaParserV2Service
             throw $e;
         }
 
+        $rangeStats = $range->stats();
         return [
             'asset_id' => $assetId,
             'bundle_id' => $bundleId,
@@ -106,6 +119,10 @@ class IpaParserV2Service
             'minimum_os' => $minimumOs,
             'executable' => $executable,
             'parser' => 'v2-fast-plist',
+            'range_bytes' => (int)$rangeStats['network_bytes'],
+            'range_requests' => (int)$rangeStats['network_requests'],
+            'range_cached_blocks' => (int)$rangeStats['cached_blocks'],
+            'range_budget_bytes' => (int)$rangeStats['budget_bytes'],
         ];
     }
 
