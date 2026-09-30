@@ -1,0 +1,77 @@
+name: IPA Parser V2 2426 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092426-ipa-parser-v2-clean-rebuild
+  pull_request:
+    paths:
+      - 'application/admin/command/IpaParseWorker.php'
+      - 'application/common/library/Ipa/IpaParserV2Service.php'
+      - 'application/common/library/Ipa/IpaWorkerLauncher.php'
+      - 'application/common/library/Ipa/IpaOpsSettings.php'
+      - 'application/common/library/Ipa/HttpRangeClient.php'
+      - 'application/common/library/Ipa/RemoteZipReader.php'
+      - 'application/common/library/Ipa/PlistDecoder.php'
+      - 'deploy/systemd/zonoe-ipa-parse-worker.*'
+      - 'release/online-update-files.txt'
+      - 'VERSION'
+      - 'tests/ipa_range_parser_contract.php'
+      - '.github/workflows/ipa-parser-v2-2426-ci.yml'
+
+jobs:
+  parser-v2-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          extensions: curl, mbstring
+          coverage: none
+
+      - name: PHP 7.0 syntax
+        run: |
+          set -euo pipefail
+          php -v
+          php -l application/admin/command/IpaParseWorker.php
+          php -l application/common/library/Ipa/IpaParserV2Service.php
+          php -l application/common/library/Ipa/IpaWorkerLauncher.php
+          php -l application/common/library/Ipa/IpaOpsSettings.php
+          php -l application/common/library/Ipa/HttpRangeClient.php
+          php -l application/common/library/Ipa/RemoteZipReader.php
+          php -l application/common/library/Ipa/PlistDecoder.php
+
+      - name: Legacy parser removal contracts
+        run: |
+          set -euo pipefail
+          test ! -e application/common/library/Ipa/IpaParserService.php
+          ! grep -q 'drainParseQueue' application/common/library/Ipa/IpaWorkerLauncher.php
+          ! grep -q 'parseScheduled' application/common/library/Ipa/IpaWorkerLauncher.php
+          grep -q "status' => 'cli_only" application/common/library/Ipa/IpaWorkerLauncher.php
+          ! grep -q 'parseQuotaStatus' application/admin/command/IpaParseWorker.php
+
+      - name: Parser V2 fast-path contracts
+        run: |
+          set -euo pipefail
+          grep -q 'IpaParserV2Service' application/admin/command/IpaParseWorker.php
+          grep -q 'Payload/\[\^/\].*Info' application/common/library/Ipa/IpaParserV2Service.php || grep -q 'Info\\.plist' application/common/library/Ipa/IpaParserV2Service.php
+          grep -q 'PLIST_MAX_BYTES' application/common/library/Ipa/IpaParserV2Service.php
+          ! grep -q 'MachOInspector' application/common/library/Ipa/IpaParserV2Service.php
+          ! grep -q 'IpaCompareService' application/admin/command/IpaParseWorker.php
+          ! grep -q 'IpaCompareService' application/common/library/Ipa/IpaParserV2Service.php
+          ! grep -q 'binaryHashLimit' application/common/library/Ipa/IpaParserV2Service.php
+          ! grep -q "ipa_binary.*insert" application/common/library/Ipa/IpaParserV2Service.php
+          grep -q "status' => 'parse_failed" application/common/library/Ipa/IpaParserV2Service.php
+
+      - name: Range ZIP and plist regression
+        run: php tests/ipa_range_parser_contract.php
+
+      - name: CLI and systemd contracts
+        run: |
+          set -euo pipefail
+          chmod +x think
+          php think list | tee /tmp/think-list.txt
+          grep -q 'ipa:parse-worker' /tmp/think-list.txt
+          grep -q 'ipa:parse-worker --scheduled' deploy/systemd/zonoe-ipa-parse-worker.service
+          grep -q 'OnUnitActiveSec=1min' deploy/systemd/zonoe-ipa-parse-worker.timer
