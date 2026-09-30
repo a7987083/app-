@@ -12,6 +12,7 @@ on:
       - 'application/common/library/Ipa/IpaWorkerLauncher.php'
       - 'application/common/library/Ipa/IpaOpsSettings.php'
       - 'application/common/library/Ipa/IpaScanService.php'
+      - 'application/common/library/Ipa/OpenListClient.php'
       - 'application/common/library/Ipa/HttpRangeClient.php'
       - 'application/common/library/Ipa/RemoteZipReader.php'
       - 'application/common/library/Ipa/PlistDecoder.php'
@@ -40,6 +41,7 @@ jobs:
           php -l application/common/library/Ipa/IpaWorkerLauncher.php
           php -l application/common/library/Ipa/IpaOpsSettings.php
           php -l application/common/library/Ipa/IpaScanService.php
+          php -l application/common/library/Ipa/OpenListClient.php
           php -l application/common/library/Ipa/HttpRangeClient.php
           php -l application/common/library/Ipa/RemoteZipReader.php
           php -l application/common/library/Ipa/PlistDecoder.php
@@ -56,6 +58,8 @@ jobs:
       - name: ipaxiazaizhan migration contracts
         run: |
           set -euo pipefail
+          grep -q 'DIRECTORY_CACHE_TTL = 1800' application/common/library/Ipa/OpenListClient.php
+          grep -q 'ipa-directory-cache' application/common/library/Ipa/OpenListClient.php
           grep -q 'DEFAULT_BLOCK_BYTES = 262144' application/common/library/Ipa/HttpRangeClient.php
           grep -q 'DEFAULT_TOTAL_BUDGET = 16777216' application/common/library/Ipa/HttpRangeClient.php
           grep -q 'cached_blocks' application/common/library/Ipa/HttpRangeClient.php
