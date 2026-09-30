@@ -1,19 +1,26 @@
-ZONOE 软件源 Release 2026092425
-版本：2026092425
-基线：source-v2026092424
-阶段：IPA 数据中心 / 总览模块第一阶段重构
-发布分支：feature/2026092423-version-editor-full-fields
+ZONOE 软件源 Release 2026092426
+版本：2026092426
+基线：source-v2026092425 / b4111ce2995a4a39e3b7f4c065f37785ae2d657d
+阶段：IPA 数据中心 / Parser V2 Clean Rebuild
+发布分支：feature/2026092426-ipa-parser-v2-clean-rebuild
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 2425 直接从 source-v2026092424 / e5853e3f891443b9581a7cee3741e19ce21a2e03 继续开发。
-2. 新增 IpaOverviewService，将“IPA 数据中心 -> 总览”的只读统计与数据源查询从 IpaCenter 控制器拆出。
-3. ipa_asset 与 ipa_scan_item 的状态统计由多次 COUNT 改为按 status GROUP BY 聚合，减少总览页数据库往返。
-4. 页面数据契约保持不变：sources/assets/pending/failed/parse_pending/parse_failed/dylibs/verify24h 字段和 source id desc 排序均保持 2424 语义。
-5. verify24h 仍使用 created_at >= now - 86400，24 小时边界保持包含。
-6. 新增真实 MySQL 回归测试，直接复现 2424 原控制器算法，与新 Service 输出逐字段比较，并覆盖空数据、边界和排序。
-7. 在线更新清单加入 application/common/library/Ipa/IpaOverviewService.php，保证新增 Service 与控制器同步交付。
-8. IPA Parser、扫描 Worker、OpenList、Dylib Protocol v1/v2、卡密授权与在线更新安全链不做业务改动。
-9. CI 证明自动化行为契约未改变；真实部署/真机页面验证仍需发布后独立验收。
+1. 直接以 2026092425 正式版本为基线，不改写 2425 历史。
+2. 移除 2425 旧 IPA Parser 的实际实现：不再同步扫描 Framework/dylib、Mach-O、UUID 或小文件 SHA256。
+3. 新增 IpaParserV2Service：Parser V2 只通过 HTTP Range 读取 ZIP 目录和 Payload/*.app/Info.plist，提取 Bundle ID、应用名、版本、Build、MinimumOSVersion 和 executable。
+4. IPA 解析改为 CLI-only。PHP-FPM shutdown 只保留扫描队列兼容链，不再执行 IPA 解析，避免长时间占用 FPM worker。
+5. 复用现有 systemd `zonoe-ipa-parse-worker.service` + timer：每分钟执行 `php think ipa:parse-worker --scheduled`。
+6. Parse Worker 不再调用 IpaCompareService；数据库比对保留为显式/独立能力，不阻塞 IPA metadata 解析。
+7. 移除旧解析限速统计热路径。旧设置键仅为管理界面/数据库兼容保留，不再执行每轮 window/hour/day COUNT。
+8. 解析失败只标记当前资产为 parse_failed，不阻塞后续 discovered IPA；超过 10 分钟的孤立 parsing 状态仍可回收。
+9. 在线更新包新增 IpaParserV2Service，并用轻量 IpaParserService 兼容壳覆盖 2425 旧实现，保证在线升级后磁盘上的旧 Parser 逻辑也不再存在。
+10. 保留 IPA 扫描发现、ipa_asset、搜索、删除、清空解析结果、OpenList 数据源、手工数据库比对/写回、Dylib 与卡密授权协议。
+11. 新增 `IPA Parser V2 2426 CI`，覆盖 PHP 7.0 语法、旧 Parser 移除、V2 fast path、Range ZIP/plist、CLI 注册和 systemd 调度契约。
 
-在线更新目标：source-v2026092424 -> source-v2026092425。
+验证：
+- IPA Parser V2 2426 CI / Run 36747308466：SUCCESS（版本元数据提交前的 V2 主实现/打包清单回归）。
+- 正式 2426 发布提交仍由自动发布闸门重新执行同一专项 CI，并等待所有 sibling CI 成功后才允许发布。
+- 尚未声明生产服务器真实 OpenList 性能数据或真机后台页面验收；这些属于发布后的独立验证。
+
+在线更新目标：source-v2026092425 -> source-v2026092426。

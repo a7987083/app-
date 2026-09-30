@@ -1,38 +1,63 @@
-# ZONOE 软件源 2026092425
+# ZONOE 软件源 2026092426
 
-## 更新内容
+## IPA Parser V2 Clean Rebuild
 
-### IPA 数据中心：总览模块第一阶段重构
+本版本以 `source-v2026092425` / `b4111ce2995a4a39e3b7f4c065f37785ae2d657d` 为直接基线，重构 IPA 解析执行链。目标是先彻底移除旧 Parser 的重型同步逻辑，再以轻量、可隔离的 Parser V2 接管基础 IPA metadata 解析。
 
-本版本以 `source-v2026092424` 为直接基线，仅重构 IPA 数据中心“总览”页面的数据聚合层，保持页面字段、排序和统计语义不变。
+### 旧解析逻辑移除
 
-- 新增 `IpaOverviewService`，将总览统计和数据源列表查询从 `IpaCenter::index()` 中拆出，控制器只负责读取解析设置、调用服务并向视图赋值。
-- 将 `ipa_asset` 与 `ipa_scan_item` 原先按状态逐项执行的多次 `COUNT` 查询改为分别按 `status GROUP BY` 聚合，减少总览页数据库往返次数。
-- 保留原有返回契约：`sources`、`assets`、`pending`、`failed`、`parse_pending`、`parse_failed`、`dylibs`、`verify24h` 字段不变；数据源仍按 `id desc` 排序。
-- `verify24h` 仍按 `created_at >= now - 86400` 计算，24 小时边界保持包含语义。
-- 新增真实 MySQL 回归测试，以 2424 控制器原算法为基准逐字段比较新实现，并覆盖正常数据、空数据、24 小时边界和数据源排序。
-- 新增 `IPA Overview 2425 CI` 专项工作流；重构代码本身已通过专项回归。
-- 在线更新清单加入 `application/common/library/Ipa/IpaOverviewService.php`，确保控制器与新增服务在同一更新包内交付，避免只更新控制器导致类缺失。
+- PHP-FPM shutdown handler 不再执行 IPA 解析，只保留扫描队列兼容处理；解析任务不会再长期占用 FPM worker。
+- 2425 的旧 `IpaParserService` 实现已删除；在线升级时该路径由轻量兼容壳覆盖，旧 Mach-O/Hash 解析代码不会残留为可执行实现。
+- Parser V2 不再在 metadata 阶段扫描全部 Framework/dylib，不执行 Mach-O architecture/install-name/UUID enrichment，也不计算小二进制 SHA256。
+- Parse Worker 不再自动执行 `IpaCompareService::refreshAsset()`；数据库比对继续保留为显式业务能力。
+- 历史 window/hour/day 配置字段保留用于升级兼容，但 Parser V2 不再执行这些 COUNT 查询，也不按这些旧额度限速。
 
-## 基线说明
+### Parser V2
 
-2425 的直接开发基线：
+- 新增 `application/common/library/Ipa/IpaParserV2Service.php`。
+- 通过 OpenList 获取当前对象的 `raw_url` 与最新 size。
+- 使用 HTTP Range 读取 IPA ZIP 的 EOCD、Central Directory、目标 local header 与 `Payload/*.app/Info.plist`。
+- Info.plist 解包上限为 4 MiB。
+- 只提取 `CFBundleIdentifier`、`CFBundleDisplayName/CFBundleName`、`CFBundleShortVersionString`、`CFBundleVersion`、`MinimumOSVersion`、`CFBundleExecutable`。
+- 成功后使用短数据库事务更新 `ipa_asset`；旧 binary/app identity/compare 派生数据在 V2 成功接管该资产时清理，避免展示陈旧的 2425 派生结果。
+- 单个 IPA 失败只标记该资产 `parse_failed`，不会终止整个 Worker。
 
-`source-v2026092424` / `e5853e3f891443b9581a7cee3741e19ce21a2e03`
+### CLI Worker / 调度
 
-## 不变范围
+- `ipa:parse-worker` 改为 Parser V2 CLI Worker。
+- 继续支持 `--once`、`--scheduled` 与 `--sleep` 参数，兼容现有运维入口。
+- 复用 `deploy/systemd/zonoe-ipa-parse-worker.service`，由 timer 每分钟执行一次 scheduled batch。
+- `parsing` 超过 600 秒可回收为 `discovered`，防止异常退出永久占住资产。
 
-2425 不改变：
+### 保持不变
 
-- IPA 扫描、解析 Worker 与 2424 的远程解析事务边界修复；
-- IPA 资产搜索、删除、清空解析结果等业务语义；
-- OpenList 数据源协议；
-- Dylib Protocol v1/v2；
-- 卡密/授权协议；
-- 在线更新 SHA256、备份、数据库迁移与失败回滚安全链。
+- IPA 扫描与 OpenList 数据源。
+- `ipa_asset` 资产发现记录与 IPA 搜索。
+- 增量/全量扫描。
+- IPA 删除、清空解析结果语义。
+- 软件源数据库手工比对/写回能力。
+- Dylib Protocol v1/v2、卡密/授权协议。
+- 在线更新 SHA256、备份、数据库迁移和失败回滚链。
 
-目标升级路径：`source-v2026092424 -> source-v2026092425`。
+## CI
 
-## 真机验证
+新增 `IPA Parser V2 2426 CI`，覆盖：
 
-CI 用于证明数据契约与数据库行为未改变；后台页面的真实部署/真机访问验证仍作为发布后的独立验收步骤，不以 CI 代替真机验证。
+- PHP 7.0 语法检查；
+- 旧 Parser 重型实现不存在；
+- 兼容壳只能转发到 V2；
+- FPM launcher 不包含 parse drain；
+- V2 不引用 MachOInspector/IpaCompareService/binary hash；
+- Range ZIP / plist 原有回归；
+- ThinkPHP CLI command 注册；
+- systemd service/timer 调度契约。
+
+V2 主实现与在线更新清单阶段已经通过专项 CI Run `36747308466`。正式 2426 版本提交仍需由 Auto Online Release Gate 对最终 commit 重新等待所有 CI 后发布。
+
+## 升级路径
+
+`source-v2026092425 -> source-v2026092426`
+
+## 尚未声明
+
+自动化 CI 不等同于生产环境真实性能结果。本版本发布后仍需在实际 OpenList / MySQL / PHP-FPM 环境验证解析耗时、Range 请求量、FPM 占用和后台页面体验。
