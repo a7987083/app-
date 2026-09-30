@@ -1,35 +1,36 @@
-# ZONOE 软件源 2026092423
+# ZONOE 软件源 2026092424
 
 ## 更新内容
 
-### Dylib 验证中心：完整版本编辑 + 添加版本提交修复
+### IPA Parser P0：远程解析与数据库事务解耦
 
-本版本以 `source-v2026092422` 为直接基线，继续修复“Dylib 验证中心 -> 版本管理”。
+本版本以 `source-v2026092423` 为直接基线，修复 IPA 远程解析链的 P0 结构性问题。
 
-- 版本编辑弹窗与版本列表字段对齐：除 Dylib、版本号、内部构建号、状态外，新增可直接编辑“离线可用”“验证失败时”“文件 SHA256”“用户提示”。
-- `offline_grace` 支持 0-86400 秒；`fail_action` 可选择禁用受保护功能、只显示提示或完全阻止使用；SHA256 留空表示不启用文件指纹校验；用户提示最多 1024 字符。
-- `file_size` 继续作为兼容字段保留，不额外暴露为日常编辑项，避免无文件上下文时误改。
-- 修复“添加版本”提交后出现 `Invalid version/build` 的问题链：添加与编辑统一使用明确的版本 payload 收集器，不再依赖整个 DOM 表单的 `serialize()` 结果。
-- 添加版本提交前增加中文前端校验：Dylib 必选、版本号必填、版本号/内部构建号最长 64 字符、SHA256 格式、离线秒数范围、状态/失败动作合法性及用户提示长度。
-- 后端 `saveVersion` 数据结构与 API 语义保持不变；仍由后端最终校验并执行 INSERT/UPDATE。
-- 保留 2422 的独立编辑 Modal，不恢复旧 inline-edit，也不因点击编辑额外刷新版本表/验证日志表。
-- 新增 2423 专项 CI：校验 2422 Release 血统、JavaScript 语法、完整编辑字段、添加版本显式 payload 以及后端 `saveVersion` 字段契约。
+- 将 Framework / Dylib / 主可执行文件的远程 HTTP Range、ZIP 解压前缀读取、Mach-O 元数据提取与可选 SHA256 计算全部移动到数据库事务开始之前。
+- `Db::startTrans()` 之后只执行 `ipa_asset`、`ipa_binary`、`ipa_app_identity` 的数据库更新/删除/插入，不再在事务内触发远程网络请求。
+- 避免 IPA 包含较多 Framework / Dylib 时，长时间持有数据库事务并串行等待远程 Range 请求，降低 Worker 卡住、事务占用过久及并发受阻风险。
+- 新增 IPA Parser 事务边界回归门禁，明确校验远程 enrichment 必须在 `Db::startTrans()` 之前完成，并禁止事务体重新出现 ZIP/Range 提取调用。
+- 解析时优先使用 OpenList 当前返回的文件大小，避免同一路径 IPA 被覆盖后继续使用 `ipa_asset.size_bytes` 旧值；解析成功后同步回写最新大小。
+- P1 项（ZIP64 支持、HTTP 206 兼容策略等）不纳入本版本，不阻塞 2424 发布。
 
 ## 基线说明
 
-2423 的直接开发基线：
+2424 的直接开发基线：
 
-`source-v2026092422` / `873b21fcbbead53bd71a92bd73975511ebda297a`
+`source-v2026092423` / `2928239dee7267cdd7311e760e9eada8920047b4`
+
+P0 主修复提交：
+
+`eaf2f30a42160f99b73e5d1ac3c44922d356d020`
 
 ## 不变范围
 
-2423 不改变：
+2424 不改变：
 
-- IPA 资产搜索、扫描、解析、Worker 与比对主链；
-- OpenList 数据源结构；
+- IPA 扫描发现与资产搜索业务语义；
+- OpenList 数据源协议；
 - Dylib Protocol v1/v2；
 - 卡密/授权协议；
-- `saveVersion` 的后端存储字段和 INSERT/UPDATE 业务语义；
 - 在线更新 SHA256、备份、数据库迁移与失败回滚安全链。
 
-目标升级路径：`source-v2026092422 -> source-v2026092423`。
+目标升级路径：`source-v2026092423 -> source-v2026092424`。
