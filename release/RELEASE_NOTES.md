@@ -1,6 +1,8 @@
 # ZONOE 软件源 2026092426
 
-## IPA Parser V2 Clean Rebuild
+## 更新内容
+
+### IPA Parser V2 Clean Rebuild
 
 本版本以 `source-v2026092425` / `b4111ce2995a4a39e3b7f4c065f37785ae2d657d` 为直接基线，重构 IPA 解析执行链。目标是先彻底移除旧 Parser 的重型同步逻辑，再以轻量、可隔离的 Parser V2 接管基础 IPA metadata 解析。
 
@@ -52,7 +54,7 @@
 - ThinkPHP CLI command 注册；
 - systemd service/timer 调度契约。
 
-V2 主实现与在线更新清单阶段已经通过专项 CI Run `36747308466`。正式 2426 版本提交仍需由 Auto Online Release Gate 对最终 commit 重新等待所有 CI 后发布。
+V2 主实现已经通过专项 CI。正式 2426 发布仍由 Auto Online Release Gate 等待同一最终提交上的全部 sibling CI 后刷新 GitHub Release，并执行真实在线升级 E2E。
 
 ## 升级路径
 
