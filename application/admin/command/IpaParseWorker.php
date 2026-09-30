@@ -24,7 +24,8 @@ class IpaParseWorker extends Command
     {
         $this->setName('ipa:parse-worker')
             ->addOption('once', null, Option::VALUE_NONE, 'Parse at most one IPA and exit')
-            ->addOption('scheduled', null, Option::VALUE_NONE, 'Compatibility mode: drain current queue and exit')
+            ->addOption('scheduled', null, Option::VALUE_NONE, 'Parse a bounded batch and exit')
+            ->addOption('limit', null, Option::VALUE_OPTIONAL, 'Maximum IPA count for --scheduled (1-20)', 20)
             ->addOption('sleep', null, Option::VALUE_OPTIONAL, 'Idle sleep seconds', 2)
             ->setDescription('Run IPA Parser V2 fast metadata worker (CLI only)');
     }
@@ -33,8 +34,10 @@ class IpaParseWorker extends Command
     {
         $once = (bool)$input->getOption('once');
         $scheduled = (bool)$input->getOption('scheduled');
+        $scheduledLimit = max(1, min(20, (int)$input->getOption('limit')));
         $sleep = max(1, min(30, (int)$input->getOption('sleep')));
         $workerId = gethostname() . ':' . getmypid();
+        $processed = 0;
 
         try {
             $this->preflightSecrets();
@@ -67,7 +70,8 @@ class IpaParseWorker extends Command
             $source = Db::name('ipa_source')->where('id', (int)$asset['source_id'])->find();
             if (!$source || !(int)$source['enabled']) {
                 $this->requeueAsset((int)$asset['id'], 'OpenList source is missing or disabled');
-                if ($once) {
+                $processed++;
+                if ($once || ($scheduled && $processed >= $scheduledLimit)) {
                     break;
                 }
                 continue;
@@ -94,8 +98,9 @@ class IpaParseWorker extends Command
                 $output->error(sprintf('parse-v2 failed asset=%d: %s', $asset['id'], $e->getMessage()));
             }
 
+            $processed++;
             WorkerState::heartbeat('parse', $workerId, 'idle', 0);
-            if ($once) {
+            if ($once || ($scheduled && $processed >= $scheduledLimit)) {
                 break;
             }
         }
