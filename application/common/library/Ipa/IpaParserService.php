@@ -53,6 +53,13 @@ class IpaParserService
         unset($plist);
 
         $now = time();
+
+        // IMPORTANT: all remote HTTP / ZIP / Mach-O enrichment happens before the
+        // database transaction. The previous implementation kept the transaction
+        // open while issuing potentially hundreds of Range requests for frameworks
+        // and dylibs, which could stall workers and hold DB locks for a long time.
+        $binaryIndex = self::buildBinaryIndex((int)$asset['id'], $zip, $entries, $bundleId, $executable, $now);
+
         Db::startTrans();
         try {
             Db::name('ipa_asset')->where('id', (int)$asset['id'])->update([
@@ -70,7 +77,14 @@ class IpaParserService
 
             Db::name('ipa_binary')->where('asset_id', (int)$asset['id'])->delete();
             Db::name('ipa_app_identity')->where('asset_id', (int)$asset['id'])->delete();
-            self::indexBinaries((int)$asset['id'], $zip, $entries, $bundleId, $executable, $now);
+
+            foreach ($binaryIndex['binaries'] as $row) {
+                Db::name('ipa_binary')->insert($row);
+            }
+            if (!empty($binaryIndex['identity'])) {
+                Db::name('ipa_app_identity')->insert($binaryIndex['identity']);
+            }
+
             Db::commit();
         } catch (\Exception $e) {
             Db::rollback();
@@ -88,11 +102,13 @@ class IpaParserService
         ];
     }
 
-    protected static function indexBinaries($assetId, RemoteZipReader $zip, array $entries, $bundleId, $executable, $now)
+    protected static function buildBinaryIndex($assetId, RemoteZipReader $zip, array $entries, $bundleId, $executable, $now)
     {
         $inspector = new MachOInspector();
         $fullHashLimit = self::binaryHashLimit();
         $headerLimit = self::binaryHeaderLimit();
+        $binaries = [];
+        $identity = null;
 
         foreach ($entries as $name => $entry) {
             $type = self::binaryType($name, $executable);
@@ -144,8 +160,8 @@ class IpaParserService
                 }
             }
 
-            Db::name('ipa_binary')->insert([
-                'asset_id' => $assetId,
+            $binaries[] = [
+                'asset_id' => (int)$assetId,
                 'relative_path' => $name,
                 'binary_type' => $type,
                 'name' => basename($name),
@@ -153,21 +169,26 @@ class IpaParserService
                 'size_bytes' => $uncompressedSize,
                 'architectures' => $architectures,
                 'install_name' => $installName,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+                'created_at' => (int)$now,
+                'updated_at' => (int)$now,
+            ];
 
             if ($type === 'main') {
-                Db::name('ipa_app_identity')->insert([
+                $identity = [
                     'asset_id' => (int)$assetId,
                     'bundle_id' => (string)$bundleId,
                     'executable' => (string)$executable,
                     'macho_uuid' => $machoUuid,
                     'created_at' => (int)$now,
                     'updated_at' => (int)$now,
-                ]);
+                ];
             }
         }
+
+        return [
+            'binaries' => $binaries,
+            'identity' => $identity,
+        ];
     }
 
     protected static function binaryHeaderLimit()
