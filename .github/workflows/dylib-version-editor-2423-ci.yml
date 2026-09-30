@@ -67,3 +67,22 @@ jobs:
               assert ("post('%s'" % field) in fn, field
           assert 'Invalid version/build' in fn
           PY
+      - name: IPA parser syntax and range contract
+        run: |
+          php -l application/common/library/Ipa/IpaParserService.php
+          php -l application/common/library/Ipa/HttpRangeClient.php
+          php -l application/common/library/Ipa/RemoteZipReader.php
+          php tests/ipa_range_parser_contract.php
+      - name: IPA parser transaction boundary contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('application/common/library/Ipa/IpaParserService.php').read_text()
+          enrich = s.index('$binaryIndex = self::buildBinaryIndex')
+          tx = s.index('Db::startTrans();')
+          assert enrich < tx, 'remote binary enrichment must finish before DB transaction starts'
+          tx_body = s[tx:s.index('return [', tx)]
+          assert '$zip->' not in tx_body
+          assert 'extractPrefix(' not in tx_body
+          assert '->extract(' not in tx_body
+          PY
