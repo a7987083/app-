@@ -1,17 +1,19 @@
-ZONOE 软件源 Release 2026092424
-版本：2026092424
-基线：source-v2026092423
-阶段：IPA Parser P0 / 远程解析与数据库事务解耦
+ZONOE 软件源 Release 2026092425
+版本：2026092425
+基线：source-v2026092424
+阶段：IPA 数据中心 / 总览模块第一阶段重构
 发布分支：feature/2026092423-version-editor-full-fields
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 2424 直接从 source-v2026092423 / 2928239dee7267cdd7311e760e9eada8920047b4 继续开发。
-2. 修复 IPA Parser P0：Framework、Dylib、主可执行文件的 HTTP Range / ZIP / Mach-O enrichment 全部在 Db::startTrans() 之前完成。
-3. 数据库事务内仅保留 ipa_asset、ipa_binary、ipa_app_identity 的数据库写入，不再执行远程网络请求。
-4. 新增事务边界回归门禁，禁止后续改动把 ZIP/Range 提取重新放回数据库事务。
-5. 解析时优先使用 OpenList 当前返回的文件大小；同一路径 IPA 被覆盖后不再优先使用旧 ipa_asset.size_bytes，并在解析成功后回写最新大小。
-6. P1（ZIP64、HTTP 206 fallback 等）不纳入 2424，不阻塞本次发布。
-7. Dylib Protocol v1/v2、卡密授权协议和在线更新安全链保持不变。
+1. 2425 直接从 source-v2026092424 / e5853e3f891443b9581a7cee3741e19ce21a2e03 继续开发。
+2. 新增 IpaOverviewService，将“IPA 数据中心 -> 总览”的只读统计与数据源查询从 IpaCenter 控制器拆出。
+3. ipa_asset 与 ipa_scan_item 的状态统计由多次 COUNT 改为按 status GROUP BY 聚合，减少总览页数据库往返。
+4. 页面数据契约保持不变：sources/assets/pending/failed/parse_pending/parse_failed/dylibs/verify24h 字段和 source id desc 排序均保持 2424 语义。
+5. verify24h 仍使用 created_at >= now - 86400，24 小时边界保持包含。
+6. 新增真实 MySQL 回归测试，直接复现 2424 原控制器算法，与新 Service 输出逐字段比较，并覆盖空数据、边界和排序。
+7. 在线更新清单加入 application/common/library/Ipa/IpaOverviewService.php，保证新增 Service 与控制器同步交付。
+8. IPA Parser、扫描 Worker、OpenList、Dylib Protocol v1/v2、卡密授权与在线更新安全链不做业务改动。
+9. CI 证明自动化行为契约未改变；真实部署/真机页面验证仍需发布后独立验收。
 
-在线更新目标：source-v2026092423 -> source-v2026092424。
+在线更新目标：source-v2026092424 -> source-v2026092425。
