@@ -92,7 +92,11 @@ class IpaWorkerLauncher
             return ['started' => false, 'status' => 'external_required', 'worker_id' => '', 'reason' => 'think_not_found'];
         }
 
-        $php = defined('PHP_BINARY') && PHP_BINARY !== '' ? PHP_BINARY : 'php';
+        $php = self::resolveCliPhpBinary();
+        if ($php === '') {
+            return ['started' => false, 'status' => 'external_required', 'worker_id' => '', 'reason' => 'cli_php_not_found'];
+        }
+
         $workerId = self::workerId('parse-launch');
         self::$parseScheduled = true;
         WorkerState::heartbeat('parse', $workerId, 'scheduled', 0);
@@ -186,6 +190,43 @@ class IpaWorkerLauncher
             }
         }
         return $processed;
+    }
+
+    protected static function resolveCliPhpBinary()
+    {
+        $candidates = [];
+
+        if (defined('PHP_BINARY') && PHP_BINARY !== '') {
+            $binary = (string)PHP_BINARY;
+            if (PHP_SAPI === 'cli' && is_file($binary) && is_executable($binary)) {
+                return $binary;
+            }
+
+            // Under PHP-FPM, PHP_BINARY normally points at .../sbin/php-fpm.
+            // Prefer the matching CLI binary from the same PHP installation.
+            $installRoot = dirname(dirname($binary));
+            $candidates[] = $installRoot . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'php';
+        }
+
+        if (defined('PHP_BINDIR') && PHP_BINDIR !== '') {
+            $candidates[] = rtrim((string)PHP_BINDIR, '/\\') . DIRECTORY_SEPARATOR . 'php';
+        }
+
+        // Baota/BT Panel versioned PHP layout, e.g. /www/server/php/70/bin/php.
+        if (defined('PHP_MAJOR_VERSION') && defined('PHP_MINOR_VERSION')) {
+            $candidates[] = '/www/server/php/' . PHP_MAJOR_VERSION . PHP_MINOR_VERSION . '/bin/php';
+        }
+
+        $candidates[] = '/usr/bin/php';
+        $candidates[] = '/usr/local/bin/php';
+
+        foreach (array_unique($candidates) as $candidate) {
+            if (is_file($candidate) && is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return '';
     }
 
     protected static function functionAvailable($name)
