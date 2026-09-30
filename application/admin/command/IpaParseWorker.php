@@ -54,7 +54,7 @@ class IpaParseWorker extends Command
             }
 
             WorkerState::heartbeat('parse', $workerId, 'idle', 0);
-            $asset = $this->claimAsset();
+            $asset = $this->claimAsset($settings);
             if (!$asset) {
                 if ($once || $scheduled) {
                     break;
@@ -80,8 +80,13 @@ class IpaParseWorker extends Command
                 IpaOpsSettings::recordAttempt((int)$asset['id'], $workerId, 'success', '');
                 $elapsedMs = (int)round((microtime(true) - $startedAt) * 1000);
                 $output->info(sprintf(
-                    'parsed-v2 asset=%d bundle=%s version=%s elapsed_ms=%d',
-                    $asset['id'], $meta['bundle_id'], $meta['app_version'], $elapsedMs
+                    'parsed-v2 asset=%d bundle=%s version=%s elapsed_ms=%d range_bytes=%d range_requests=%d',
+                    $asset['id'],
+                    $meta['bundle_id'],
+                    $meta['app_version'],
+                    $elapsedMs,
+                    isset($meta['range_bytes']) ? (int)$meta['range_bytes'] : 0,
+                    isset($meta['range_requests']) ? (int)$meta['range_requests'] : 0
                 ));
             } catch (\Exception $e) {
                 IpaParserV2Service::markParseError((int)$asset['id'], $e);
@@ -115,15 +120,25 @@ class IpaParseWorker extends Command
         }
     }
 
-    protected function claimAsset()
+    protected function claimAsset(array $settings)
     {
         $now = time();
+        $retrySeconds = max(60, (int)$settings['parse_retry_minutes'] * 60);
         Db::startTrans();
         try {
             // Crash recovery only; the active CLI worker heartbeats separately.
             Db::name('ipa_asset')
                 ->where('status', 'parsing')
                 ->where('updated_at', '<', $now - 600)
+                ->update(['status' => 'discovered', 'updated_at' => $now]);
+
+            // Reference-project cooldown semantics: a failed IPA is isolated from
+            // the queue, then becomes eligible again only after parse_retry_minutes.
+            // `updated_at` is written by markParseError(), so no schema migration is
+            // required and old databases upgrade safely.
+            Db::name('ipa_asset')
+                ->where('status', 'parse_failed')
+                ->where('updated_at', '<=', $now - $retrySeconds)
                 ->update(['status' => 'discovered', 'updated_at' => $now]);
 
             $sourceIds = Db::name('ipa_source')->where('enabled', 1)->column('id');
