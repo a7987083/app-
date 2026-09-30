@@ -97,7 +97,11 @@ foreach (['discovered','discovered','parsed','parse_failed','missing','parsing']
 foreach (['pending','pending','processing','failed','done','failed'] as $status) {
     Db::name('ipa_scan_item')->insert(['status'=>$status]);
 }
-Db::name('dylib')->insertAll([[], [], []]);
+Db::name('dylib')->insertAll([
+    ['id'=>1],
+    ['id'=>2],
+    ['id'=>3],
+]);
 Db::name('dylib_verify_log')->insertAll([
     ['created_at'=>$now - 30],
     ['created_at'=>$now - 86399],
