@@ -1,18 +1,17 @@
-ZONOE 软件源 Release 2026092423
-版本：2026092423
-基线：source-v2026092422
-阶段：Dylib 验证中心完整版本编辑 / 添加版本提交修复
+ZONOE 软件源 Release 2026092424
+版本：2026092424
+基线：source-v2026092423
+阶段：IPA Parser P0 / 远程解析与数据库事务解耦
 发布分支：feature/2026092423-version-editor-full-fields
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 2423 直接从 source-v2026092422 / 873b21fcbbead53bd71a92bd73975511ebda297a 继续开发。
-2. 版本编辑弹窗补齐“离线可用、验证失败时、文件 SHA256、用户提示”，与版本列表主要业务字段一一对应。
-3. file_size 继续作为兼容隐藏字段保留，不作为日常人工编辑项。
-4. 修复添加版本出现 Invalid version/build 的提交链：添加与编辑统一构造明确 payload，不再依赖整个 DOM 表单 serialize()。
-5. 添加中文前端校验：Dylib 必选、版本号必填、版本号/内部构建号最大 64 字符、SHA256 格式、离线秒数 0-86400、状态/失败动作合法性、用户提示最大 1024 字符。
-6. 后端 saveVersion 字段、INSERT/UPDATE 语义和数据库结构保持不变，服务端仍保留最终校验。
-7. 2423 专项 CI 校验 2422 Release 血统、JavaScript 语法、完整编辑字段、添加版本 payload 与后端 saveVersion 字段契约。
-8. 不修改 IPA 资产搜索/扫描/解析/Worker/比对主链、OpenList、Dylib Protocol v1/v2、卡密授权协议和在线更新安全链。
+1. 2424 直接从 source-v2026092423 / 2928239dee7267cdd7311e760e9eada8920047b4 继续开发。
+2. 修复 IPA Parser P0：Framework、Dylib、主可执行文件的 HTTP Range / ZIP / Mach-O enrichment 全部在 Db::startTrans() 之前完成。
+3. 数据库事务内仅保留 ipa_asset、ipa_binary、ipa_app_identity 的数据库写入，不再执行远程网络请求。
+4. 新增事务边界回归门禁，禁止后续改动把 ZIP/Range 提取重新放回数据库事务。
+5. 解析时优先使用 OpenList 当前返回的文件大小；同一路径 IPA 被覆盖后不再优先使用旧 ipa_asset.size_bytes，并在解析成功后回写最新大小。
+6. P1（ZIP64、HTTP 206 fallback 等）不纳入 2424，不阻塞本次发布。
+7. Dylib Protocol v1/v2、卡密授权协议和在线更新安全链保持不变。
 
-在线更新目标：source-v2026092422 -> source-v2026092423。
+在线更新目标：source-v2026092423 -> source-v2026092424。
