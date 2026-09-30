@@ -7,13 +7,13 @@ use think\Db;
 /**
  * IPA queue launcher.
  *
- * 2026092426: legacy IPA parsing inside PHP-FPM has been retired. HTTP requests
- * may still drain the lightweight scan queue for compatibility, but parsing is
- * never executed from a shutdown handler. Parser V2 is owned by the CLI worker.
+ * Scan work keeps the lightweight FPM shutdown compatibility path. IPA parsing
+ * itself always runs in the CLI command; web requests only spawn that CLI worker.
  */
 class IpaWorkerLauncher
 {
     protected static $scanScheduled = false;
+    protected static $parseScheduled = false;
 
     public static function ensureScanWorker()
     {
@@ -43,15 +43,79 @@ class IpaWorkerLauncher
     }
 
     /**
-     * Kept only as a compatibility surface for callers from older deployments.
-     * 2426 must never start or drain the retired parser from PHP-FPM.
+     * Ensure Parser V2 is running without executing parser work in PHP-FPM.
+     *
+     * The web process only launches `php think ipa:parse-worker --scheduled` in
+     * the background. The CLI worker still owns serial claiming, stale recovery,
+     * OpenList access and parsing. systemd remains optional as a long-running
+     * supervisor, not a prerequisite for normal admin-triggered parsing.
      */
     public static function ensureParseWorker()
     {
+        $settings = IpaOpsSettings::all();
+        if (empty($settings['parse_enabled'])) {
+            return ['started' => false, 'status' => 'disabled', 'worker_id' => ''];
+        }
+
+        $snapshot = WorkerState::snapshot($settings['worker_alive_seconds']);
+        if (isset($snapshot['parse']) && !empty($snapshot['parse']['alive'])) {
+            return [
+                'started' => false,
+                'status' => 'alive',
+                'worker_id' => (string)$snapshot['parse']['worker_id'],
+            ];
+        }
+
+        if (self::$parseScheduled) {
+            return ['started' => false, 'status' => 'scheduled', 'worker_id' => ''];
+        }
+
+        $sourceIds = Db::name('ipa_source')->where('enabled', 1)->column('id');
+        if (!$sourceIds) {
+            return ['started' => false, 'status' => 'no_source', 'worker_id' => ''];
+        }
+        $pending = (int)Db::name('ipa_asset')
+            ->where('status', 'discovered')
+            ->where('source_id', 'in', $sourceIds)
+            ->count();
+        if ($pending <= 0) {
+            return ['started' => false, 'status' => 'idle', 'worker_id' => ''];
+        }
+
+        if (!self::functionAvailable('exec')) {
+            return ['started' => false, 'status' => 'external_required', 'worker_id' => '', 'reason' => 'exec_disabled'];
+        }
+
+        $root = dirname(__DIR__, 4);
+        $think = $root . DIRECTORY_SEPARATOR . 'think';
+        if (!is_file($think)) {
+            return ['started' => false, 'status' => 'external_required', 'worker_id' => '', 'reason' => 'think_not_found'];
+        }
+
+        $php = defined('PHP_BINARY') && PHP_BINARY !== '' ? PHP_BINARY : 'php';
+        $workerId = self::workerId('parse-launch');
+        self::$parseScheduled = true;
+        WorkerState::heartbeat('parse', $workerId, 'scheduled', 0);
+
+        $command = escapeshellarg($php)
+            . ' ' . escapeshellarg($think)
+            . ' ipa:parse-worker --scheduled'
+            . ' > /dev/null 2>&1 & echo $!';
+        $output = [];
+        $exitCode = 1;
+        @exec($command, $output, $exitCode);
+        $pid = isset($output[0]) ? (int)trim((string)$output[0]) : 0;
+        if ($exitCode !== 0 || $pid <= 0) {
+            self::$parseScheduled = false;
+            WorkerState::heartbeat('parse', $workerId, 'stopped', 0);
+            return ['started' => false, 'status' => 'external_required', 'worker_id' => '', 'reason' => 'spawn_failed'];
+        }
+
         return [
-            'started' => false,
-            'status' => 'cli_only',
-            'worker_id' => '',
+            'started' => true,
+            'status' => 'scheduled',
+            'worker_id' => $workerId,
+            'pid' => $pid,
         ];
     }
 
@@ -112,6 +176,15 @@ class IpaWorkerLauncher
         } catch (\Exception $ignored) {
         }
         return $processed;
+    }
+
+    protected static function functionAvailable($name)
+    {
+        if (!function_exists($name)) {
+            return false;
+        }
+        $disabled = array_filter(array_map('trim', explode(',', (string)ini_get('disable_functions'))));
+        return !in_array($name, $disabled, true);
     }
 
     protected static function workerId($type)
