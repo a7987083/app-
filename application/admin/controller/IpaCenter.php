@@ -5,6 +5,7 @@ namespace app\admin\controller;
 use app\common\controller\Backend;
 use app\common\library\Ipa\IpaCompareService;
 use app\common\library\Ipa\IpaOpsSettings;
+use app\common\library\Ipa\IpaOverviewService;
 use app\common\library\Ipa\IpaScanService;
 use app\common\library\Ipa\IpaWorkerLauncher;
 use app\common\library\Ipa\IpaWritebackService;
@@ -19,18 +20,10 @@ class IpaCenter extends Backend
     public function index()
     {
         $settings=IpaOpsSettings::all();
+        $overview=IpaOverviewService::snapshot();
         $this->view->assign('parseSettings',$settings);
-        $this->view->assign('summary',[
-            'sources'=>(int)Db::name('ipa_source')->count(),
-            'assets'=>(int)Db::name('ipa_asset')->count(),
-            'pending'=>(int)Db::name('ipa_scan_item')->where('status','pending')->count(),
-            'failed'=>(int)Db::name('ipa_scan_item')->where('status','failed')->count(),
-            'parse_pending'=>(int)Db::name('ipa_asset')->where('status','discovered')->count(),
-            'parse_failed'=>(int)Db::name('ipa_asset')->where('status','parse_failed')->count(),
-            'dylibs'=>(int)Db::name('dylib')->count(),
-            'verify24h'=>(int)Db::name('dylib_verify_log')->where('created_at','>=',time()-86400)->count(),
-        ]);
-        $this->view->assign('sources',Db::name('ipa_source')->field('id,name,base_url,root_path,enabled,scan_page_size,request_timeout,updated_at')->order('id desc')->select());
+        $this->view->assign('summary',$overview['summary']);
+        $this->view->assign('sources',$overview['sources']);
         return $this->view->fetch();
     }
 
