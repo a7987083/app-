@@ -61,7 +61,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -q 'IpaParserV2Service' application/admin/command/IpaParseWorker.php
-          grep -q 'Info\\.plist' application/common/library/Ipa/IpaParserV2Service.php
+          grep -q 'findFirst' application/common/library/Ipa/IpaParserV2Service.php
+          grep -q 'Payload/' application/common/library/Ipa/IpaParserV2Service.php
           grep -q 'PLIST_MAX_BYTES' application/common/library/Ipa/IpaParserV2Service.php
           ! grep -q 'MachOInspector' application/common/library/Ipa/IpaParserV2Service.php
           ! grep -q 'IpaCompareService' application/admin/command/IpaParseWorker.php
