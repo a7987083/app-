@@ -86,7 +86,7 @@ application/common/library/Ipa/DylibVerificationService.php
 application/common/library/Ipa/DylibRuntimeAccessService.php
 application/common/library/Ipa/DylibRuntimeConfigService.php
 application/common/library/Ipa/HttpRangeClient.php
-application/common/library/Ipa/IpaParserService.php
+application/common/library/Ipa/IpaParserV2Service.php
 application/common/library/Ipa/IpaOverviewService.php
 application/common/library/Ipa/IpaScanService.php
 application/common/library/Ipa/IpaWorkerLauncher.php
