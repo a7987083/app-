@@ -1,0 +1,74 @@
+name: IPA Overview 2425 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092423-version-editor-full-fields
+  workflow_dispatch:
+
+jobs:
+  overview-regression:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 7.0
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          extensions: pdo_mysql, mbstring
+          coverage: none
+
+      - name: PHP syntax
+        run: |
+          php -v
+          php -l application/common/library/Ipa/IpaOverviewService.php
+          php -l application/admin/controller/IpaCenter.php
+          php -l application/admin/controller/IpaAssets.php
+          php -l tests/ipa_overview_mysql_test.php
+          php -l tests/ipa_asset_search_mysql_test.php
+
+      - name: Overview wiring contract
+        run: |
+          php -r '$s=file_get_contents("application/admin/controller/IpaCenter.php"); if ($s===false) exit(1); foreach (["use app\\common\\library\\Ipa\\IpaOverviewService;","IpaOverviewService::snapshot()","assign(\x27summary\x27,\$overview[\x27summary\x27])","assign(\x27sources\x27,\$overview[\x27sources\x27])"] as $needle) { if (strpos($s,$needle)===false) { fwrite(STDERR,"missing: $needle\n"); exit(1); } } if (strpos($s,"\x27sources\x27=>(int)Db::name(\x27ipa_source\x27)->count()")!==false) { fwrite(STDERR,"legacy overview summary query still wired in controller\n"); exit(1); } echo "IPA overview wiring contract passed.\n";'
+
+      - name: Compute source integrity sign
+        run: |
+          php -r "require 'application/common/library/UpdateIntegrity.php'; echo 'SOURCE_FILE_SIGN=' . app\\common\\library\\UpdateIntegrity::signFromRoot(getcwd()) . PHP_EOL;"
+
+      - name: Prepare MySQL 5.7
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq default-mysql-client
+          mysql -h127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS ipa_overview_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci; CREATE DATABASE IF NOT EXISTS ipa_search_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+
+      - name: Real MySQL IPA overview regression
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+          IPA_OVERVIEW_DB: ipa_overview_ci
+        run: php tests/ipa_overview_mysql_test.php
+
+      - name: Existing IPA asset search regression
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+          IPA_SEARCH_DB: ipa_search_ci
+        run: php tests/ipa_asset_search_mysql_test.php
