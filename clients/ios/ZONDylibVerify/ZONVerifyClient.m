@@ -1,50 +1,23 @@
 #import "ZONVerifyClient.h"
 #import <CommonCrypto/CommonDigest.h>
-#import <CommonCrypto/CommonHMAC.h>
 #import <Security/Security.h>
 #import <dlfcn.h>
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
 
 static void ZONVerifyImageAnchor(void) {}
-static NSString * const ZONRuntimeConfigAccount = @"runtime-config";
-static NSTimeInterval const ZONRuntimeConfigMaxStale = 30.0 * 24.0 * 60.0 * 60.0;
 
 @implementation ZONVerifyConfiguration
-- (instancetype)init
-{
-    self = [super init];
-    if (self) {
-        _dylibBuild = @"";
-        _bootstrapURLs = @[];
-        _requestTimeout = 10.0;
-    }
-    return self;
-}
+- (instancetype)init { self=[super init]; if(self){ _dylibBuild=@""; _bootstrapURLs=@[]; _serverPublicKeyPEM=@""; _serverKeyID=@""; _requestTimeout=10.0; } return self; }
 @end
 
 @implementation ZONVerifyResult
-- (instancetype)init
-{
-    self = [super init];
-    if (self) {
-        _code = @"unknown";
-        _action = @"disable_feature";
-        _message = @"";
-        _token = @"";
-        _accessLevel = @"block";
-        _permissions = @{};
-        _appIdentity = @{};
-        _appUpdate = @{ @"available": @NO };
-        _protocolVersion = 1;
-    }
-    return self;
-}
+- (instancetype)init { self=[super init]; if(self){ _code=@"unknown"; _action=@"disable_feature"; _message=@""; _token=@""; _accessLevel=@"block"; _permissions=@{}; _appIdentity=@{}; _appUpdate=@{ @"available":@NO }; _protocolVersion=3; } return self; }
 @end
 
 @interface ZONVerifyClient ()
-@property (nonatomic, strong) ZONVerifyConfiguration *configuration;
-@property (nonatomic, strong) NSURLSession *session;
+@property(nonatomic,strong) ZONVerifyConfiguration *configuration;
+@property(nonatomic,strong) NSURLSession *session;
 @end
 
 @implementation ZONVerifyClient
@@ -52,528 +25,270 @@ static NSTimeInterval const ZONRuntimeConfigMaxStale = 30.0 * 24.0 * 60.0 * 60.0
 - (instancetype)initWithConfiguration:(ZONVerifyConfiguration *)configuration
 {
     NSParameterAssert(configuration);
-    self = [super init];
-    if (self) {
-        _configuration = configuration;
-        NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
-        sessionConfiguration.timeoutIntervalForRequest = MAX(3.0, configuration.requestTimeout);
-        sessionConfiguration.timeoutIntervalForResource = MAX(5.0, configuration.requestTimeout + 5.0);
-        _session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+    self=[super init];
+    if(self){
+        _configuration=configuration;
+        NSURLSessionConfiguration *cfg=[NSURLSessionConfiguration ephemeralSessionConfiguration];
+        cfg.timeoutIntervalForRequest=MAX(3.0,configuration.requestTimeout);
+        cfg.timeoutIntervalForResource=MAX(5.0,configuration.requestTimeout+5.0);
+        _session=[NSURLSession sessionWithConfiguration:cfg];
     }
     return self;
 }
 
 - (void)verifyWithCompletion:(void (^)(ZONVerifyResult *result))completion
 {
-    if (!completion) return;
+    if(!completion) return;
+    NSString *udid=self.configuration.udidProvider?self.configuration.udidProvider():@"";
+    NSString *bundleID=NSBundle.mainBundle.bundleIdentifier?:@"";
+    NSString *executable=[NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleExecutable"]?:@"";
+    NSString *appVersion=[NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"]?:@"";
+    NSString *appBuild=[NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleVersion"]?:@"";
+    NSString *appUUID=[ZONVerifyClient currentAppMachOUUID]?:@"";
+    if(udid.length==0||bundleID.length==0||self.configuration.dylibKey.length==0||self.configuration.dylibVersion.length==0||self.configuration.serverPublicKeyPEM.length==0||executable.length==0||appUUID.length==0){ completion([self resultAllowed:NO code:@"client_config_invalid" action:@"block" message:@"Verification client configuration is incomplete"]); return; }
 
-    NSString *udid = self.configuration.udidProvider ? self.configuration.udidProvider() : nil;
-    NSString *bundleID = NSBundle.mainBundle.bundleIdentifier ?: @"";
-    NSString *executable = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleExecutable"] ?: @"";
-    NSString *appVersion = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"";
-    NSString *appBuild = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"";
-    NSString *appUUID = [ZONVerifyClient currentAppMachOUUID] ?: @"";
+    SecKeyRef privateKey=[self devicePrivateKey];
+    if(!privateKey){ completion([self resultAllowed:NO code:@"device_key_unavailable" action:@"block" message:@"Unable to create device key"]); return; }
+    NSString *publicPEM=[self publicKeyPEMForPrivateKey:privateKey];
+    if(publicPEM.length==0){ CFRelease(privateKey); completion([self resultAllowed:NO code:@"device_key_unavailable" action:@"block" message:@"Unable to export device public key"]); return; }
 
-    if (udid.length == 0) {
-        completion([self resultAllowed:NO code:@"udid_missing" action:@"block" message:@"UDID unavailable"]);
-        return;
-    }
-    BOOL hasDiscovery = self.configuration.bootstrapURLs.count > 0 || self.configuration.endpointURL != nil;
-    if (bundleID.length == 0 || !hasDiscovery || self.configuration.dylibKey.length == 0 ||
-        self.configuration.dylibVersion.length == 0 || self.configuration.verifySecret.length < 32 ||
-        executable.length == 0 || appUUID.length == 0) {
-        completion([self resultAllowed:NO code:@"client_config_invalid" action:@"block" message:@"Verification client configuration is incomplete"]);
-        return;
-    }
-
-    NSString *sha256 = [ZONVerifyClient currentDylibSHA256];
-    NSTimeInterval now = floor([[NSDate date] timeIntervalSince1970]);
-    NSString *nonce = [self randomHexBytes:24];
-    NSInteger protocolVersion = 2;
-    NSString *canonical = [self canonicalV2UDID:udid
-                                       bundleID:bundleID
-                                       dylibKey:self.configuration.dylibKey
-                                        version:self.configuration.dylibVersion
-                                          build:self.configuration.dylibBuild ?: @""
-                                         sha256:sha256 ?: @""
-                                      timestamp:(NSInteger)now
-                                          nonce:nonce
-                                protocolVersion:protocolVersion
-                                     executable:executable
-                                      machoUUID:appUUID
-                                     appVersion:appVersion
-                                       appBuild:appBuild];
-    NSString *signature = [self hmacSHA256Hex:canonical key:self.configuration.verifySecret];
-
-    NSDictionary *payload = @{
-        @"protocol_version": @(protocolVersion),
-        @"udid": udid,
-        @"bundle_id": bundleID,
-        @"dylib_key": self.configuration.dylibKey,
-        @"dylib_version": self.configuration.dylibVersion,
-        @"dylib_build": self.configuration.dylibBuild ?: @"",
-        @"dylib_sha256": sha256 ?: @"",
-        @"app_executable": executable,
-        @"app_macho_uuid": appUUID,
-        @"app_version": appVersion,
-        @"app_build": appBuild,
-        @"timestamp": @((NSInteger)now),
-        @"nonce": nonce,
-        @"signature": signature
-    };
-
-    NSError *jsonError = nil;
-    NSData *body = [NSJSONSerialization dataWithJSONObject:payload options:0 error:&jsonError];
-    if (!body) {
-        completion([self resultAllowed:NO code:@"json_error" action:@"disable_feature" message:jsonError.localizedDescription ?: @"Unable to encode request"]);
-        return;
-    }
-
-    __weak typeof(self) weakSelf = self;
-    [self resolveVerificationEndpointsWithCompletion:^(NSArray<NSURL *> *endpoints) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        if (endpoints.count == 0) {
-            ZONVerifyResult *cached = [strongSelf validOfflineCacheForBundleID:bundleID];
-            completion(cached ?: [strongSelf resultAllowed:NO code:@"network_unavailable" action:@"disable_feature" message:@"No verification endpoint available"]);
+    __weak typeof(self) weakSelf=self;
+    [self resolveEndpoints:^(NSURL *challengeURL, NSURL *verifyURL){
+        __strong typeof(weakSelf) self=weakSelf;
+        if(!self){ CFRelease(privateKey); return; }
+        if(!challengeURL||!verifyURL){
+            CFRelease(privateKey);
+            ZONVerifyResult *cached=[self cachedResultForBundleID:bundleID];
+            completion(cached?:[self resultAllowed:NO code:@"network_unavailable" action:@"disable_feature" message:@"No verification endpoint available"]);
             return;
         }
-        [strongSelf sendVerificationBody:body endpoints:endpoints index:0 bundleID:bundleID completion:completion];
+        NSDictionary *challengeRequest=@{ @"udid":udid,@"dylib_key":self.configuration.dylibKey,@"device_public_key":publicPEM };
+        [self postJSON:challengeRequest URL:challengeURL completion:^(NSDictionary *json,NSError *error){
+            if(error||![json[@"ok"] boolValue]){
+                CFRelease(privateKey);
+                ZONVerifyResult *cached=[self cachedResultForBundleID:bundleID];
+                completion(cached?:[self resultAllowed:NO code:json[@"code"]?:@"challenge_unavailable" action:@"disable_feature" message:json[@"message"]?:error.localizedDescription?:@"Challenge unavailable"]);
+                return;
+            }
+            NSString *challengeID=[json[@"challenge_id"] isKindOfClass:NSString.class]?json[@"challenge_id"]:@"";
+            NSString *challenge=[json[@"challenge"] isKindOfClass:NSString.class]?json[@"challenge"]:@"";
+            NSString *sha256=[ZONVerifyClient currentDylibSHA256]?:@"";
+            NSDictionary *base=@{
+                @"protocol_version":@3,@"udid":udid,@"bundle_id":bundleID,@"dylib_key":self.configuration.dylibKey,
+                @"dylib_version":self.configuration.dylibVersion,@"dylib_build":self.configuration.dylibBuild?:@"",@"dylib_sha256":sha256,
+                @"app_executable":executable,@"app_macho_uuid":appUUID,@"app_version":appVersion,@"app_build":appBuild,
+                @"challenge_id":challengeID,@"challenge":challenge,@"device_public_key":publicPEM
+            };
+            NSString *canonical=[self canonicalProof:base];
+            NSData *signature=[self signatureForString:canonical privateKey:privateKey];
+            CFRelease(privateKey);
+            if(!signature){ completion([self resultAllowed:NO code:@"device_signature_failed" action:@"block" message:@"Unable to sign challenge"]); return; }
+            NSMutableDictionary *verify=[base mutableCopy];
+            verify[@"device_signature"]=[signature base64EncodedStringWithOptions:0];
+            if([json[@"enrollment_required"] boolValue]){
+                NSString *license=self.configuration.licenseCodeProvider?self.configuration.licenseCodeProvider():@"";
+                if(license.length==0){ completion([self resultAllowed:NO code:@"license_required" action:@"block" message:@"First device enrollment requires the current license code"]); return; }
+                verify[@"license_code"]=license;
+            }
+            [self postJSON:verify URL:verifyURL completion:^(NSDictionary *response,NSError *verifyError){
+                if(verifyError||![response isKindOfClass:NSDictionary.class]){
+                    ZONVerifyResult *cached=[self cachedResultForBundleID:bundleID];
+                    completion(cached?:[self resultAllowed:NO code:@"network_unavailable" action:@"disable_feature" message:verifyError.localizedDescription?:@"Verification service unavailable"]);
+                    return;
+                }
+                ZONVerifyResult *result=[self resultFromJSON:response];
+                if(result.isAllowed) [self storeCachedResult:response bundleID:bundleID]; else [self clearCachedResultForBundleID:bundleID];
+                completion(result);
+            }];
+        }];
     }];
 }
 
-- (void)sendVerificationBody:(NSData *)body
-                    endpoints:(NSArray<NSURL *> *)endpoints
-                        index:(NSUInteger)index
-                     bundleID:(NSString *)bundleID
-                   completion:(void (^)(ZONVerifyResult *result))completion
+- (void)resolveEndpoints:(void(^)(NSURL *challengeURL,NSURL *verifyURL))completion
 {
-    if (index >= endpoints.count) {
-        ZONVerifyResult *cached = [self validOfflineCacheForBundleID:bundleID];
-        completion(cached ?: [self resultAllowed:NO code:@"network_unavailable" action:@"disable_feature" message:@"Verification service unavailable"]);
-        return;
-    }
-
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:endpoints[index]];
-    request.HTTPMethod = @"POST";
-    request.HTTPBody = body;
-    [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
-    [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
-
-    __weak typeof(self) weakSelf = self;
-    NSURLSessionDataTask *task = [self.session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        NSHTTPURLResponse *http = [response isKindOfClass:NSHTTPURLResponse.class] ? (NSHTTPURLResponse *)response : nil;
-        if (error || http.statusCode >= 500 || data.length == 0) {
-            [strongSelf sendVerificationBody:body endpoints:endpoints index:index + 1 bundleID:bundleID completion:completion];
-            return;
+    if(self.configuration.bootstrapURLs.count==0){ completion([self challengeURLFromVerifyURL:self.configuration.endpointURL],self.configuration.endpointURL); return; }
+    [self fetchBootstrapAtIndex:0 completion:^(NSDictionary *config){
+        if(config){
+            NSArray *apis=[config[@"api_endpoints"] isKindOfClass:NSArray.class]?config[@"api_endpoints"]:@[];
+            NSString *verifyPath=[config[@"verify_path"] isKindOfClass:NSString.class]?config[@"verify_path"]:@"/index/dylib_verify/verify";
+            NSString *challengePath=[config[@"challenge_path"] isKindOfClass:NSString.class]?config[@"challenge_path"]:@"/index/dylib_verify/challenge";
+            if(apis.count>0&&[apis[0] isKindOfClass:NSString.class]){
+                NSString *base=[apis[0] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+                while([base hasSuffix:@"/"]) base=[base substringToIndex:base.length-1];
+                completion([NSURL URLWithString:[base stringByAppendingString:[challengePath hasPrefix:@"/"]?challengePath:[@"/" stringByAppendingString:challengePath]]],[NSURL URLWithString:[base stringByAppendingString:[verifyPath hasPrefix:@"/"]?verifyPath:[@"/" stringByAppendingString:verifyPath]]]);
+                return;
+            }
         }
-
-        NSError *decodeError = nil;
-        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&decodeError];
-        if (![json isKindOfClass:NSDictionary.class]) {
-            completion([strongSelf resultAllowed:NO code:@"response_invalid" action:@"disable_feature" message:decodeError.localizedDescription ?: @"Invalid verification response"]);
-            return;
-        }
-
-        ZONVerifyResult *result = [strongSelf resultFromJSON:json];
-        if (result.isAllowed) {
-            [strongSelf storeOfflineCacheForResult:result bundleID:bundleID];
-        } else {
-            [strongSelf clearOfflineCacheForBundleID:bundleID];
-        }
-        completion(result);
-    }];
-    [task resume];
-}
-
-#pragma mark - Runtime endpoint discovery
-
-- (void)resolveVerificationEndpointsWithCompletion:(void (^)(NSArray<NSURL *> *endpoints))completion
-{
-    NSDictionary *cached = [self cachedRuntimeConfigAllowStale:YES];
-    NSMutableArray<NSURL *> *bootstrap = [NSMutableArray array];
-    for (NSURL *url in self.configuration.bootstrapURLs ?: @[]) {
-        if ([url isKindOfClass:NSURL.class] && ![bootstrap containsObject:url]) [bootstrap addObject:url];
-    }
-    NSArray *cachedBootstrap = [cached[@"bootstrap_urls"] isKindOfClass:NSArray.class] ? cached[@"bootstrap_urls"] : @[];
-    for (id value in cachedBootstrap) {
-        NSURL *url = [value isKindOfClass:NSString.class] ? [NSURL URLWithString:value] : nil;
-        if (url && ![bootstrap containsObject:url]) [bootstrap addObject:url];
-    }
-
-    if (bootstrap.count == 0) {
-        completion([self verificationEndpointsFromRuntimeConfig:cached]);
-        return;
-    }
-
-    __weak typeof(self) weakSelf = self;
-    [self fetchBootstrapURLs:bootstrap index:0 completion:^(NSDictionary * _Nullable config) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        NSDictionary *selected = config ?: cached;
-        NSArray<NSURL *> *endpoints = [strongSelf verificationEndpointsFromRuntimeConfig:selected];
-        completion(endpoints);
+        completion([self challengeURLFromVerifyURL:self.configuration.endpointURL],self.configuration.endpointURL);
     }];
 }
 
-- (void)fetchBootstrapURLs:(NSArray<NSURL *> *)urls
-                     index:(NSUInteger)index
-                completion:(void (^)(NSDictionary * _Nullable config))completion
+- (void)fetchBootstrapAtIndex:(NSUInteger)index completion:(void(^)(NSDictionary *config))completion
 {
-    if (index >= urls.count) {
-        completion(nil);
-        return;
-    }
-    NSURLComponents *components = [NSURLComponents componentsWithURL:urls[index] resolvingAgainstBaseURL:NO];
-    NSMutableArray<NSURLQueryItem *> *items = [NSMutableArray arrayWithArray:components.queryItems ?: @[]];
+    if(index>=self.configuration.bootstrapURLs.count){ completion(nil); return; }
+    NSURLComponents *components=[NSURLComponents componentsWithURL:self.configuration.bootstrapURLs[index] resolvingAgainstBaseURL:NO];
+    NSMutableArray *items=[NSMutableArray arrayWithArray:components.queryItems?:@[]];
     [items addObject:[NSURLQueryItem queryItemWithName:@"dylib_key" value:self.configuration.dylibKey]];
-    components.queryItems = items;
-    NSURL *url = components.URL;
-    if (!url) {
-        [self fetchBootstrapURLs:urls index:index + 1 completion:completion];
-        return;
-    }
-
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
-    request.HTTPMethod = @"GET";
-    [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
-    __weak typeof(self) weakSelf = self;
-    NSURLSessionDataTask *task = [self.session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        NSHTTPURLResponse *http = [response isKindOfClass:NSHTTPURLResponse.class] ? (NSHTTPURLResponse *)response : nil;
-        if (error || http.statusCode >= 400 || data.length == 0) {
-            [strongSelf fetchBootstrapURLs:urls index:index + 1 completion:completion];
-            return;
-        }
-        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-        if (![strongSelf validateRuntimeConfig:json allowStale:NO]) {
-            [strongSelf fetchBootstrapURLs:urls index:index + 1 completion:completion];
-            return;
-        }
-        NSMutableDictionary *stored = [json mutableCopy];
-        stored[@"received_at"] = @([[NSDate date] timeIntervalSince1970]);
-        [strongSelf storeRuntimeConfig:stored];
-        completion(stored);
+    components.queryItems=items;
+    NSURL *url=components.URL;
+    if(!url){ [self fetchBootstrapAtIndex:index+1 completion:completion]; return; }
+    NSURLSessionDataTask *task=[self.session dataTaskWithURL:url completionHandler:^(NSData *data,NSURLResponse *response,NSError *error){
+        NSDictionary *json=data?[NSJSONSerialization JSONObjectWithData:data options:0 error:nil]:nil;
+        if(error||![self validateRuntimeConfig:json]){ [self fetchBootstrapAtIndex:index+1 completion:completion]; return; }
+        completion(json);
     }];
     [task resume];
 }
 
-- (NSArray<NSURL *> *)verificationEndpointsFromRuntimeConfig:(NSDictionary *)config
+- (BOOL)validateRuntimeConfig:(NSDictionary *)config
 {
-    NSMutableArray<NSURL *> *result = [NSMutableArray array];
-    if ([self validateRuntimeConfig:config allowStale:YES]) {
-        NSArray *bases = [config[@"api_endpoints"] isKindOfClass:NSArray.class] ? config[@"api_endpoints"] : @[];
-        NSString *path = [config[@"verify_path"] isKindOfClass:NSString.class] ? config[@"verify_path"] : @"/index/dylib_verify/verify";
-        for (id value in bases) {
-            if (![value isKindOfClass:NSString.class]) continue;
-            NSString *base = [(NSString *)value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-            while ([base hasSuffix:@"/"]) base = [base substringToIndex:base.length - 1];
-            NSString *normalizedPath = [path hasPrefix:@"/"] ? path : [@"/" stringByAppendingString:path];
-            NSURL *url = [NSURL URLWithString:[base stringByAppendingString:normalizedPath]];
-            if (url && ![result containsObject:url]) [result addObject:url];
-        }
-    }
-    if (self.configuration.endpointURL && ![result containsObject:self.configuration.endpointURL]) {
-        [result addObject:self.configuration.endpointURL];
-    }
-    return result;
+    if(![config isKindOfClass:NSDictionary.class]||![config[@"ok"] boolValue]) return NO;
+    if([config[@"protocol_version"] integerValue]!=3) return NO;
+    NSString *keyID=[config[@"key_id"] isKindOfClass:NSString.class]?config[@"key_id"]:@"";
+    if(self.configuration.serverKeyID.length&&![keyID isEqualToString:self.configuration.serverKeyID]) return NO;
+    NSArray *apis=[config[@"api_endpoints"] isKindOfClass:NSArray.class]?config[@"api_endpoints"]:nil;
+    NSArray *boots=[config[@"bootstrap_urls"] isKindOfClass:NSArray.class]?config[@"bootstrap_urls"]:nil;
+    NSString *challengePath=[config[@"challenge_path"] isKindOfClass:NSString.class]?config[@"challenge_path"]:nil;
+    NSString *verifyPath=[config[@"verify_path"] isKindOfClass:NSString.class]?config[@"verify_path"]:nil;
+    NSInteger version=[config[@"config_version"] integerValue];
+    NSInteger expires=[config[@"expires_at"] integerValue];
+    NSString *signature=[config[@"signature"] isKindOfClass:NSString.class]?config[@"signature"]:@"";
+    if(!apis||!boots||challengePath.length==0||verifyPath.length==0||version<3||expires<(NSInteger)NSDate.date.timeIntervalSince1970||signature.length==0) return NO;
+    NSString *canonical=[@[ @"zonoe-runtime-config-v3",[NSString stringWithFormat:@"%ld",(long)version],[apis componentsJoinedByString:@","],[boots componentsJoinedByString:@","],challengePath,verifyPath,[NSString stringWithFormat:@"%ld",(long)expires] ] componentsJoinedByString:@"\n"];
+    NSData *sig=[[NSData alloc] initWithBase64EncodedString:signature options:0];
+    SecKeyRef serverKey=[self serverPublicKey];
+    if(!sig||!serverKey) return NO;
+    NSData *message=[canonical dataUsingEncoding:NSUTF8StringEncoding];
+    BOOL ok=SecKeyVerifySignature(serverKey,kSecKeyAlgorithmECDSASignatureMessageX962SHA256,(__bridge CFDataRef)message,(__bridge CFDataRef)sig,NULL);
+    CFRelease(serverKey);
+    return ok;
 }
 
-- (BOOL)validateRuntimeConfig:(NSDictionary *)config allowStale:(BOOL)allowStale
+- (NSURL *)challengeURLFromVerifyURL:(NSURL *)verifyURL
 {
-    if (![config isKindOfClass:NSDictionary.class] || ![config[@"ok"] boolValue]) return NO;
-    NSArray *apis = [config[@"api_endpoints"] isKindOfClass:NSArray.class] ? config[@"api_endpoints"] : nil;
-    NSArray *bootstraps = [config[@"bootstrap_urls"] isKindOfClass:NSArray.class] ? config[@"bootstrap_urls"] : nil;
-    NSString *path = [config[@"verify_path"] isKindOfClass:NSString.class] ? config[@"verify_path"] : nil;
-    NSString *signature = [config[@"signature"] isKindOfClass:NSString.class] ? config[@"signature"] : nil;
-    NSInteger version = [config[@"config_version"] integerValue];
-    NSTimeInterval expires = [config[@"expires_at"] doubleValue];
-    if (!apis || !bootstraps || path.length == 0 || signature.length != 64 || version < 1 || expires <= 0) return NO;
-
-    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
-    if (!allowStale && expires < now) return NO;
-    if (allowStale && expires < now) {
-        NSTimeInterval received = [config[@"received_at"] doubleValue];
-        if (received <= 0 || now - received > ZONRuntimeConfigMaxStale) return NO;
-    }
-
-    NSString *canonical = [self canonicalRuntimeConfigVersion:version apiEndpoints:apis bootstrapURLs:bootstraps verifyPath:path expiresAt:(NSInteger)expires];
-    NSString *expected = [self hmacSHA256Hex:canonical key:self.configuration.verifySecret];
-    return [self constantTimeHex:expected equals:signature.lowercaseString];
+    if(!verifyURL) return nil;
+    NSString *absolute=verifyURL.absoluteString;
+    NSRange range=[absolute rangeOfString:@"/verify" options:NSBackwardsSearch];
+    if(range.location==NSNotFound) return nil;
+    return [NSURL URLWithString:[absolute stringByReplacingCharactersInRange:range withString:@"/challenge"]];
 }
 
-- (NSString *)canonicalRuntimeConfigVersion:(NSInteger)version
-                                apiEndpoints:(NSArray *)apiEndpoints
-                               bootstrapURLs:(NSArray *)bootstrapURLs
-                                  verifyPath:(NSString *)verifyPath
-                                   expiresAt:(NSInteger)expiresAt
+- (void)postJSON:(NSDictionary *)json URL:(NSURL *)url completion:(void(^)(NSDictionary *json,NSError *error))completion
 {
-    return [@[ [NSString stringWithFormat:@"%ld", (long)version],
-               [apiEndpoints componentsJoinedByString:@","],
-               [bootstrapURLs componentsJoinedByString:@","],
-               verifyPath ?: @"",
-               [NSString stringWithFormat:@"%ld", (long)expiresAt] ] componentsJoinedByString:@"\n"];
+    NSError *encodeError=nil; NSData *body=[NSJSONSerialization dataWithJSONObject:json options:0 error:&encodeError];
+    if(!body){ completion(nil,encodeError); return; }
+    NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:url]; request.HTTPMethod=@"POST"; request.HTTPBody=body;
+    [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"]; [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    NSURLSessionDataTask *task=[self.session dataTaskWithRequest:request completionHandler:^(NSData *data,NSURLResponse *response,NSError *error){
+        if(error||data.length==0){ completion(nil,error?:[NSError errorWithDomain:@"ZONVerify" code:1 userInfo:nil]); return; }
+        NSDictionary *decoded=[NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        completion([decoded isKindOfClass:NSDictionary.class]?decoded:nil,[decoded isKindOfClass:NSDictionary.class]?nil:[NSError errorWithDomain:@"ZONVerify" code:2 userInfo:nil]);
+    }]; [task resume];
 }
 
-- (BOOL)constantTimeHex:(NSString *)left equals:(NSString *)right
+- (NSString *)canonicalProof:(NSDictionary *)p
 {
-    NSData *a = [left.lowercaseString dataUsingEncoding:NSUTF8StringEncoding];
-    NSData *b = [right.lowercaseString dataUsingEncoding:NSUTF8StringEncoding];
-    if (a.length != b.length || a.length == 0) return NO;
-    const uint8_t *ab = a.bytes;
-    const uint8_t *bb = b.bytes;
-    uint8_t diff = 0;
-    for (NSUInteger i = 0; i < a.length; i++) diff |= ab[i] ^ bb[i];
-    return diff == 0;
+    return [@[ @"zonoe-dylib-auth-v3",p[@"challenge_id"]?:@"",p[@"challenge"]?:@"",p[@"udid"]?:@"",p[@"bundle_id"]?:@"",p[@"dylib_key"]?:@"",p[@"dylib_version"]?:@"",p[@"dylib_build"]?:@"",[p[@"dylib_sha256"] lowercaseString]?:@"",p[@"app_executable"]?:@"",[p[@"app_macho_uuid"] uppercaseString]?:@"",p[@"app_version"]?:@"",p[@"app_build"]?:@"" ] componentsJoinedByString:@"\n"];
 }
 
-#pragma mark - App identity
-
-+ (NSString *)currentAppMachOUUID
+- (SecKeyRef)devicePrivateKey
 {
-    const struct mach_header *header = _dyld_get_image_header(0);
-    if (!header) return @"";
-    uint32_t magic = header->magic;
-    BOOL is64 = (magic == MH_MAGIC_64 || magic == MH_CIGAM_64);
-    uintptr_t cursor = (uintptr_t)header + (is64 ? sizeof(struct mach_header_64) : sizeof(struct mach_header));
-    uint32_t ncmds = header->ncmds;
-    for (uint32_t i = 0; i < ncmds; i++) {
-        const struct load_command *command = (const struct load_command *)cursor;
-        if (!command || command->cmdsize < sizeof(struct load_command)) break;
-        if ((command->cmd & 0x7fffffff) == LC_UUID && command->cmdsize >= sizeof(struct uuid_command)) {
-            const struct uuid_command *uuidCommand = (const struct uuid_command *)command;
-            const uint8_t *u = uuidCommand->uuid;
-            return [NSString stringWithFormat:@"%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
-                    u[0],u[1],u[2],u[3],u[4],u[5],u[6],u[7],u[8],u[9],u[10],u[11],u[12],u[13],u[14],u[15]];
-        }
-        cursor += command->cmdsize;
-    }
-    return @"";
+    NSData *tag=[[NSString stringWithFormat:@"xyz.zonoe.dylib-auth.%@",self.configuration.dylibKey] dataUsingEncoding:NSUTF8StringEncoding];
+    NSDictionary *query=@{(__bridge id)kSecClass:(__bridge id)kSecClassKey,(__bridge id)kSecAttrApplicationTag:tag,(__bridge id)kSecAttrKeyType:(__bridge id)kSecAttrKeyTypeECSECPrimeRandom,(__bridge id)kSecReturnRef:@YES};
+    SecKeyRef key=NULL; OSStatus status=SecItemCopyMatching((__bridge CFDictionaryRef)query,(CFTypeRef *)&key);
+    if(status==errSecSuccess&&key) return key;
+    NSDictionary *privateAttrs=@{(__bridge id)kSecAttrIsPermanent:@YES,(__bridge id)kSecAttrApplicationTag:tag};
+    NSDictionary *attrs=@{(__bridge id)kSecAttrKeyType:(__bridge id)kSecAttrKeyTypeECSECPrimeRandom,(__bridge id)kSecAttrKeySizeInBits:@256,(__bridge id)kSecPrivateKeyAttrs:privateAttrs};
+    return SecKeyCreateRandomKey((__bridge CFDictionaryRef)attrs,NULL);
 }
 
-+ (NSString *)currentDylibSHA256
+- (NSString *)publicKeyPEMForPrivateKey:(SecKeyRef)privateKey
 {
-    Dl_info info;
-    if (dladdr((const void *)&ZONVerifyImageAnchor, &info) == 0 || !info.dli_fname) return @"";
-    NSString *path = [NSString stringWithUTF8String:info.dli_fname];
-    NSInputStream *stream = [NSInputStream inputStreamWithFileAtPath:path];
-    [stream open];
-    CC_SHA256_CTX ctx;
-    CC_SHA256_Init(&ctx);
-    uint8_t buffer[64 * 1024];
-    NSInteger read = 0;
-    while ((read = [stream read:buffer maxLength:sizeof(buffer)]) > 0) CC_SHA256_Update(&ctx, buffer, (CC_LONG)read);
-    [stream close];
-    if (read < 0) return @"";
-    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
-    CC_SHA256_Final(digest, &ctx);
-    NSMutableString *hex = [NSMutableString stringWithCapacity:CC_SHA256_DIGEST_LENGTH * 2];
-    for (NSUInteger i = 0; i < CC_SHA256_DIGEST_LENGTH; i++) [hex appendFormat:@"%02x", digest[i]];
-    return hex;
+    SecKeyRef pub=SecKeyCopyPublicKey(privateKey); if(!pub) return @"";
+    CFErrorRef error=NULL; CFDataRef rawRef=SecKeyCopyExternalRepresentation(pub,&error); CFRelease(pub);
+    if(!rawRef){ if(error) CFRelease(error); return @""; }
+    NSData *raw=(__bridge_transfer NSData *)rawRef;
+    const unsigned char prefixBytes[]={0x30,0x59,0x30,0x13,0x06,0x07,0x2A,0x86,0x48,0xCE,0x3D,0x02,0x01,0x06,0x08,0x2A,0x86,0x48,0xCE,0x3D,0x03,0x01,0x07,0x03,0x42,0x00};
+    NSMutableData *spki=[NSMutableData dataWithBytes:prefixBytes length:sizeof(prefixBytes)]; [spki appendData:raw];
+    NSString *b64=[spki base64EncodedStringWithOptions:0]; NSMutableString *lines=[NSMutableString string];
+    for(NSUInteger i=0;i<b64.length;i+=64) [lines appendFormat:@"%@\n",[b64 substringWithRange:NSMakeRange(i,MIN((NSUInteger)64,b64.length-i))]];
+    return [NSString stringWithFormat:@"-----BEGIN PUBLIC KEY-----\n%@-----END PUBLIC KEY-----\n",lines];
 }
 
-#pragma mark - Signing
-
-- (NSString *)canonicalV2UDID:(NSString *)udid
-                     bundleID:(NSString *)bundleID
-                     dylibKey:(NSString *)dylibKey
-                      version:(NSString *)version
-                        build:(NSString *)build
-                       sha256:(NSString *)sha256
-                    timestamp:(NSInteger)timestamp
-                        nonce:(NSString *)nonce
-              protocolVersion:(NSInteger)protocolVersion
-                   executable:(NSString *)executable
-                    machoUUID:(NSString *)machoUUID
-                   appVersion:(NSString *)appVersion
-                     appBuild:(NSString *)appBuild
+- (NSData *)signatureForString:(NSString *)string privateKey:(SecKeyRef)privateKey
 {
-    NSArray *parts = @[udid ?: @"", bundleID ?: @"", dylibKey ?: @"", version ?: @"", build ?: @"", sha256.lowercaseString ?: @"",
-                       [NSString stringWithFormat:@"%ld", (long)timestamp], nonce ?: @"",
-                       [NSString stringWithFormat:@"%ld", (long)protocolVersion], executable ?: @"", machoUUID.uppercaseString ?: @"", appVersion ?: @"", appBuild ?: @""];
-    return [parts componentsJoinedByString:@"\n"];
+    NSData *data=[string dataUsingEncoding:NSUTF8StringEncoding]; CFErrorRef error=NULL;
+    CFDataRef sig=SecKeyCreateSignature(privateKey,kSecKeyAlgorithmECDSASignatureMessageX962SHA256,(__bridge CFDataRef)data,&error);
+    if(!sig){ if(error) CFRelease(error); return nil; }
+    return CFBridgingRelease(sig);
 }
 
-- (NSString *)hmacSHA256Hex:(NSString *)message key:(NSString *)key
+- (SecKeyRef)serverPublicKey
 {
-    NSData *keyData = [key dataUsingEncoding:NSUTF8StringEncoding];
-    NSData *messageData = [message dataUsingEncoding:NSUTF8StringEncoding];
-    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
-    CCHmac(kCCHmacAlgSHA256, keyData.bytes, keyData.length, messageData.bytes, messageData.length, digest);
-    NSMutableString *hex = [NSMutableString stringWithCapacity:CC_SHA256_DIGEST_LENGTH * 2];
-    for (NSUInteger i = 0; i < CC_SHA256_DIGEST_LENGTH; i++) [hex appendFormat:@"%02x", digest[i]];
-    return hex;
+    NSString *pem=self.configuration.serverPublicKeyPEM?:@"";
+    NSString *body=[pem stringByReplacingOccurrencesOfString:@"-----BEGIN PUBLIC KEY-----" withString:@""];
+    body=[body stringByReplacingOccurrencesOfString:@"-----END PUBLIC KEY-----" withString:@""];
+    body=[[body componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] componentsJoinedByString:@""];
+    NSData *spki=[[NSData alloc] initWithBase64EncodedString:body options:0];
+    if(spki.length!=91) return NULL;
+    NSData *raw=[spki subdataWithRange:NSMakeRange(26,65)];
+    NSDictionary *attrs=@{(__bridge id)kSecAttrKeyType:(__bridge id)kSecAttrKeyTypeECSECPrimeRandom,(__bridge id)kSecAttrKeyClass:(__bridge id)kSecAttrKeyClassPublic,(__bridge id)kSecAttrKeySizeInBits:@256};
+    return SecKeyCreateWithData((__bridge CFDataRef)raw,(__bridge CFDictionaryRef)attrs,NULL);
 }
-
-- (NSString *)randomHexBytes:(NSUInteger)count
-{
-    NSMutableData *data = [NSMutableData dataWithLength:count];
-    if (SecRandomCopyBytes(kSecRandomDefault, count, data.mutableBytes) != errSecSuccess) return [NSUUID UUID].UUIDString.lowercaseString;
-    const uint8_t *bytes = data.bytes;
-    NSMutableString *hex = [NSMutableString stringWithCapacity:count * 2];
-    for (NSUInteger i = 0; i < count; i++) [hex appendFormat:@"%02x", bytes[i]];
-    return hex;
-}
-
-#pragma mark - Result/cache
 
 - (ZONVerifyResult *)resultFromJSON:(NSDictionary *)json
 {
-    ZONVerifyResult *result = [ZONVerifyResult new];
-    result.allowed = [json[@"ok"] boolValue];
-    result.code = [json[@"code"] isKindOfClass:NSString.class] ? json[@"code"] : @"unknown";
-    result.action = [json[@"action"] isKindOfClass:NSString.class] ? json[@"action"] : @"disable_feature";
-    result.message = [json[@"message"] isKindOfClass:NSString.class] ? json[@"message"] : @"";
-    result.token = [json[@"token"] isKindOfClass:NSString.class] ? json[@"token"] : @"";
-    result.accessLevel = [json[@"access_level"] isKindOfClass:NSString.class] ? json[@"access_level"] : (result.allowed ? @"basic" : @"block");
-    result.permissions = [json[@"permissions"] isKindOfClass:NSDictionary.class] ? json[@"permissions"] : @{};
-    result.appIdentity = [json[@"app_identity"] isKindOfClass:NSDictionary.class] ? json[@"app_identity"] : @{};
-    result.appUpdate = [json[@"app_update"] isKindOfClass:NSDictionary.class] ? json[@"app_update"] : @{ @"available": @NO };
-    result.notice = [json[@"notice"] isKindOfClass:NSDictionary.class] ? json[@"notice"] : nil;
-    result.protocolVersion = MAX(1, [json[@"protocol_version"] integerValue]);
-    result.offlineGraceSeconds = [json[@"offline_grace_seconds"] doubleValue];
-    result.serverTime = [json[@"server_time"] doubleValue];
-    return result;
+    ZONVerifyResult *r=[ZONVerifyResult new]; r.allowed=[json[@"ok"] boolValue];
+    r.code=[json[@"code"] isKindOfClass:NSString.class]?json[@"code"]:@"unknown";
+    r.action=[json[@"action"] isKindOfClass:NSString.class]?json[@"action"]:@"disable_feature";
+    r.message=[json[@"message"] isKindOfClass:NSString.class]?json[@"message"]:@"";
+    r.token=[json[@"token"] isKindOfClass:NSString.class]?json[@"token"]:@"";
+    r.accessLevel=[json[@"access_level"] isKindOfClass:NSString.class]?json[@"access_level"]:@"block";
+    r.permissions=[json[@"permissions"] isKindOfClass:NSDictionary.class]?json[@"permissions"]:@{};
+    r.appIdentity=[json[@"app_identity"] isKindOfClass:NSDictionary.class]?json[@"app_identity"]:@{};
+    r.appUpdate=[json[@"app_update"] isKindOfClass:NSDictionary.class]?json[@"app_update"]:@{ @"available":@NO };
+    r.notice=[json[@"notice"] isKindOfClass:NSDictionary.class]?json[@"notice"]:nil;
+    r.protocolVersion=[json[@"protocol_version"] integerValue]?:3; r.offlineGraceSeconds=[json[@"offline_grace_seconds"] doubleValue]; r.serverTime=[json[@"server_time"] doubleValue];
+    return r;
 }
 
 - (ZONVerifyResult *)resultAllowed:(BOOL)allowed code:(NSString *)code action:(NSString *)action message:(NSString *)message
 {
-    ZONVerifyResult *result = [ZONVerifyResult new];
-    result.allowed = allowed;
-    result.code = code ?: @"unknown";
-    result.action = action ?: @"disable_feature";
-    result.message = message ?: @"";
-    return result;
+    ZONVerifyResult *r=[ZONVerifyResult new]; r.allowed=allowed; r.code=code?:@"unknown"; r.action=action?:@"disable_feature"; r.message=message?:@""; return r;
 }
 
-- (NSString *)cacheService
+- (NSString *)cacheKeyForBundleID:(NSString *)bundleID { return [NSString stringWithFormat:@"ZONDylibAuth.v3.%@.%@",self.configuration.dylibKey,bundleID]; }
+- (void)storeCachedResult:(NSDictionary *)json bundleID:(NSString *)bundleID
 {
-    return [NSString stringWithFormat:@"com.zonoe.dylib.verify.%@", self.configuration.dylibKey ?: @"unknown"];
+    NSTimeInterval grace=[json[@"offline_grace_seconds"] doubleValue]; if(grace<=0) return;
+    NSMutableDictionary *copy=[json mutableCopy]; copy[@"cache_expires_at"]=@(NSDate.date.timeIntervalSince1970+grace);
+    [[NSUserDefaults standardUserDefaults] setObject:copy forKey:[self cacheKeyForBundleID:bundleID]];
+}
+- (ZONVerifyResult *)cachedResultForBundleID:(NSString *)bundleID
+{
+    NSDictionary *json=[[NSUserDefaults standardUserDefaults] dictionaryForKey:[self cacheKeyForBundleID:bundleID]];
+    if(!json||[json[@"cache_expires_at"] doubleValue]<NSDate.date.timeIntervalSince1970||![json[@"ok"] boolValue]) return nil;
+    ZONVerifyResult *r=[self resultFromJSON:json]; r.offlineCache=YES; return r;
+}
+- (void)clearCachedResultForBundleID:(NSString *)bundleID { [[NSUserDefaults standardUserDefaults] removeObjectForKey:[self cacheKeyForBundleID:bundleID]]; }
+
++ (NSString *)currentDylibSHA256
+{
+    Dl_info info; if(dladdr((const void *)&ZONVerifyImageAnchor,&info)==0||!info.dli_fname) return @"";
+    NSData *data=[NSData dataWithContentsOfFile:[NSString stringWithUTF8String:info.dli_fname]]; if(!data) return @"";
+    unsigned char digest[CC_SHA256_DIGEST_LENGTH]; CC_SHA256(data.bytes,(CC_LONG)data.length,digest);
+    NSMutableString *hex=[NSMutableString stringWithCapacity:64]; for(int i=0;i<CC_SHA256_DIGEST_LENGTH;i++) [hex appendFormat:@"%02x",digest[i]]; return hex;
 }
 
-- (NSString *)runtimeConfigService
++ (NSString *)currentAppMachOUUID
 {
-    return [NSString stringWithFormat:@"com.zonoe.dylib.runtime-config.%@", self.configuration.dylibKey ?: @"unknown"];
-}
-
-- (void)storeRuntimeConfig:(NSDictionary *)config
-{
-    NSData *data = [NSJSONSerialization dataWithJSONObject:config options:0 error:nil];
-    if (!data) return;
-    NSDictionary *query = @{(__bridge id)kSecClass:(__bridge id)kSecClassGenericPassword,
-                            (__bridge id)kSecAttrService:[self runtimeConfigService],
-                            (__bridge id)kSecAttrAccount:ZONRuntimeConfigAccount};
-    SecItemDelete((__bridge CFDictionaryRef)query);
-    NSMutableDictionary *add = [query mutableCopy];
-    add[(__bridge id)kSecValueData] = data;
-    add[(__bridge id)kSecAttrAccessible] = (__bridge id)kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly;
-    SecItemAdd((__bridge CFDictionaryRef)add, NULL);
-}
-
-- (NSDictionary *)cachedRuntimeConfigAllowStale:(BOOL)allowStale
-{
-    NSMutableDictionary *query = [@{(__bridge id)kSecClass:(__bridge id)kSecClassGenericPassword,
-                                    (__bridge id)kSecAttrService:[self runtimeConfigService],
-                                    (__bridge id)kSecAttrAccount:ZONRuntimeConfigAccount,
-                                    (__bridge id)kSecReturnData:@YES,
-                                    (__bridge id)kSecMatchLimit:(__bridge id)kSecMatchLimitOne} mutableCopy];
-    CFTypeRef resultRef = NULL;
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &resultRef);
-    if (status != errSecSuccess || !resultRef) return nil;
-    NSData *data = CFBridgingRelease(resultRef);
-    NSDictionary *config = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-    return [self validateRuntimeConfig:config allowStale:allowStale] ? config : nil;
-}
-
-- (void)storeOfflineCacheForResult:(ZONVerifyResult *)result bundleID:(NSString *)bundleID
-{
-    NSDictionary *cache = @{
-        @"verified_at": @([[NSDate date] timeIntervalSince1970]),
-        @"offline_grace_seconds": @(MAX(0, result.offlineGraceSeconds)),
-        @"token": result.token ?: @"",
-        @"code": result.code ?: @"ok",
-        @"message": result.message ?: @"",
-        @"access_level": result.accessLevel ?: @"basic",
-        @"permissions": result.permissions ?: @{},
-        @"app_identity": result.appIdentity ?: @{},
-        @"app_update": result.appUpdate ?: @{ @"available": @NO }
-    };
-    NSData *data = [NSJSONSerialization dataWithJSONObject:cache options:0 error:nil];
-    if (!data) return;
-    NSDictionary *query = @{(__bridge id)kSecClass:(__bridge id)kSecClassGenericPassword,
-                            (__bridge id)kSecAttrService:[self cacheService],
-                            (__bridge id)kSecAttrAccount:bundleID};
-    SecItemDelete((__bridge CFDictionaryRef)query);
-    NSMutableDictionary *add = [query mutableCopy];
-    add[(__bridge id)kSecValueData] = data;
-    add[(__bridge id)kSecAttrAccessible] = (__bridge id)kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly;
-    SecItemAdd((__bridge CFDictionaryRef)add, NULL);
-}
-
-- (ZONVerifyResult *)validOfflineCacheForBundleID:(NSString *)bundleID
-{
-    NSMutableDictionary *query = [@{(__bridge id)kSecClass:(__bridge id)kSecClassGenericPassword,
-                                    (__bridge id)kSecAttrService:[self cacheService],
-                                    (__bridge id)kSecAttrAccount:bundleID,
-                                    (__bridge id)kSecReturnData:@YES,
-                                    (__bridge id)kSecMatchLimit:(__bridge id)kSecMatchLimitOne} mutableCopy];
-    CFTypeRef resultRef = NULL;
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &resultRef);
-    if (status != errSecSuccess || !resultRef) return nil;
-    NSData *data = CFBridgingRelease(resultRef);
-    NSDictionary *cache = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-    if (![cache isKindOfClass:NSDictionary.class]) return nil;
-    NSTimeInterval verifiedAt = [cache[@"verified_at"] doubleValue];
-    NSTimeInterval grace = MIN(86400.0, MAX(0.0, [cache[@"offline_grace_seconds"] doubleValue]));
-    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
-    if (verifiedAt <= 0 || grace <= 0 || now > verifiedAt + grace) {
-        [self clearOfflineCacheForBundleID:bundleID];
-        return nil;
+    const struct mach_header *header=_dyld_get_image_header(0); if(!header) return @"";
+    BOOL is64=(header->magic==MH_MAGIC_64||header->magic==MH_CIGAM_64); uintptr_t cursor=(uintptr_t)header+(is64?sizeof(struct mach_header_64):sizeof(struct mach_header));
+    for(uint32_t i=0;i<header->ncmds;i++){
+        const struct load_command *cmd=(const struct load_command *)cursor; if(!cmd||cmd->cmdsize<sizeof(struct load_command)) break;
+        if((cmd->cmd&0x7fffffff)==LC_UUID){ const struct uuid_command *uuid=(const struct uuid_command *)cmd; NSMutableString *s=[NSMutableString string]; for(int j=0;j<16;j++){ [s appendFormat:@"%02X",uuid->uuid[j]]; if(j==3||j==5||j==7||j==9) [s appendString:@"-"]; } return s; }
+        cursor+=cmd->cmdsize;
     }
-
-    NSString *accessLevel = [cache[@"access_level"] isKindOfClass:NSString.class] ? cache[@"access_level"] : @"basic";
-    NSDictionary *cachedIdentity = [cache[@"app_identity"] isKindOfClass:NSDictionary.class] ? cache[@"app_identity"] : @{};
-    if ([accessLevel isEqualToString:@"app_plus"]) {
-        NSString *currentExecutable = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleExecutable"] ?: @"";
-        NSString *currentUUID = [ZONVerifyClient currentAppMachOUUID] ?: @"";
-        NSString *cachedBundleID = [cachedIdentity[@"bundle_id"] isKindOfClass:NSString.class] ? cachedIdentity[@"bundle_id"] : @"";
-        NSString *cachedExecutable = [cachedIdentity[@"executable"] isKindOfClass:NSString.class] ? cachedIdentity[@"executable"] : @"";
-        NSString *cachedUUID = [cachedIdentity[@"macho_uuid"] isKindOfClass:NSString.class] ? cachedIdentity[@"macho_uuid"] : @"";
-        BOOL identityMatches = [cachedIdentity[@"resolved"] boolValue] &&
-            cachedBundleID.length > 0 && [cachedBundleID isEqualToString:bundleID] &&
-            cachedExecutable.length > 0 && [cachedExecutable isEqualToString:currentExecutable] &&
-            cachedUUID.length > 0 && [cachedUUID caseInsensitiveCompare:currentUUID] == NSOrderedSame;
-        if (!identityMatches) {
-            [self clearOfflineCacheForBundleID:bundleID];
-            return nil;
-        }
-    }
-
-    ZONVerifyResult *result = [ZONVerifyResult new];
-    result.allowed = YES;
-    result.code = @"offline_grace";
-    result.action = @"allow";
-    result.message = [cache[@"message"] isKindOfClass:NSString.class] ? cache[@"message"] : @"Offline grace active";
-    result.token = [cache[@"token"] isKindOfClass:NSString.class] ? cache[@"token"] : @"";
-    result.accessLevel = accessLevel;
-    result.permissions = [cache[@"permissions"] isKindOfClass:NSDictionary.class] ? cache[@"permissions"] : @{};
-    result.appIdentity = cachedIdentity;
-    result.appUpdate = [cache[@"app_update"] isKindOfClass:NSDictionary.class] ? cache[@"app_update"] : @{ @"available": @NO };
-    result.offlineGraceSeconds = grace;
-    result.offlineCache = YES;
-    result.protocolVersion = 2;
-    return result;
+    return @"";
 }
-
-- (void)clearOfflineCacheForBundleID:(NSString *)bundleID
-{
-    NSDictionary *query = @{(__bridge id)kSecClass:(__bridge id)kSecClassGenericPassword,
-                            (__bridge id)kSecAttrService:[self cacheService],
-                            (__bridge id)kSecAttrAccount:bundleID};
-    SecItemDelete((__bridge CFDictionaryRef)query);
-}
-
 @end
