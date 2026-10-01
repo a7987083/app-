@@ -4,12 +4,8 @@ namespace app\common\library\Ipa;
 
 /**
  * Canonical public documentation contract for the Dylib verification APIs.
- *
- * This class documents the protocol that already exists in
- * DylibVerify/DylibVerificationService. It does not own client UI and it does
- * not change the wire format. Client projects decide how to collect UDID/card
- * data and how to present messages; the verification center only defines the
- * API contract and examples.
+ * Client projects still own UI/input flows; the verification center defines
+ * endpoint, authentication and response contracts only.
  */
 class DylibApiContract
 {
@@ -22,14 +18,16 @@ class DylibApiContract
             ['name' => 'dylib_version', 'type' => 'string', 'required' => true, 'since' => 'v1', 'description' => 'Dylib 版本号。'],
             ['name' => 'dylib_build', 'type' => 'string', 'required' => false, 'since' => 'v1', 'description' => '内部构建号；填写后服务端按 version + build 精确匹配。'],
             ['name' => 'dylib_sha256', 'type' => 'string', 'required' => false, 'since' => 'v1', 'description' => 'Dylib 文件 SHA256；版本登记了指纹时必须匹配。'],
-            ['name' => 'timestamp', 'type' => 'int', 'required' => true, 'since' => 'v1', 'description' => 'Unix 秒级时间戳；超出服务端允许时差会返回 timestamp_invalid。'],
-            ['name' => 'nonce', 'type' => 'string', 'required' => true, 'since' => 'v1', 'description' => '16~128 字符随机串；同一有效 nonce 重放会返回 replay_detected。'],
-            ['name' => 'signature', 'type' => 'string', 'required' => true, 'since' => 'v1', 'description' => '64 位小写十六进制 HMAC-SHA256。'],
-            ['name' => 'protocol_version', 'type' => 'int', 'required' => false, 'since' => 'v2', 'description' => '协议版本；v2 使用值 2。'],
-            ['name' => 'app_executable', 'type' => 'string', 'required' => false, 'since' => 'v2', 'description' => 'v2 必填：当前主程序可执行文件名。'],
-            ['name' => 'app_macho_uuid', 'type' => 'string', 'required' => false, 'since' => 'v2', 'description' => 'v2 必填：当前主程序 Mach-O UUID。'],
+            ['name' => 'protocol_version', 'type' => 'int', 'required' => true, 'since' => 'v3', 'description' => '2430 Secretless Auth 固定使用 3。'],
+            ['name' => 'app_executable', 'type' => 'string', 'required' => true, 'since' => 'v2', 'description' => '当前主程序可执行文件名。'],
+            ['name' => 'app_macho_uuid', 'type' => 'string', 'required' => true, 'since' => 'v2', 'description' => '当前主程序 Mach-O UUID。'],
             ['name' => 'app_version', 'type' => 'string', 'required' => false, 'since' => 'v2', 'description' => '当前 App 对外版本，用于 app_update 判断。'],
             ['name' => 'app_build', 'type' => 'string', 'required' => false, 'since' => 'v2', 'description' => '当前 App Build，用于 app_update 判断。'],
+            ['name' => 'challenge_id', 'type' => 'string', 'required' => true, 'since' => 'v3', 'description' => '由 challenge API 返回的一次性 Challenge ID。'],
+            ['name' => 'challenge', 'type' => 'string', 'required' => true, 'since' => 'v3', 'description' => '由 challenge API 返回的一次性随机值。'],
+            ['name' => 'device_public_key', 'type' => 'PEM', 'required' => true, 'since' => 'v3', 'description' => '设备 P-256 公钥；私钥保存在设备 Keychain。'],
+            ['name' => 'device_signature', 'type' => 'base64 DER', 'required' => true, 'since' => 'v3', 'description' => '设备私钥对 canonical proof 的 ECDSA-SHA256 签名。'],
+            ['name' => 'license_code', 'type' => 'string', 'required' => false, 'since' => 'v3', 'description' => '仅首次设备密钥绑定时需要，用于把新公钥绑定到现有授权链。'],
         ];
     }
 
@@ -44,6 +42,7 @@ class DylibApiContract
             ['name' => 'message', 'type' => 'string', 'description' => '服务端可展示消息；客户端可原样提示，但不要靠 message 文本判断业务状态。'],
             ['name' => 'server_time', 'type' => 'int', 'description' => '服务端 Unix 时间。'],
             ['name' => 'protocol_version', 'type' => 'int', 'description' => '本次验证采用的协议版本。'],
+            ['name' => 'device_key_id', 'type' => 'string', 'description' => '服务端已绑定设备公钥的 Key ID。'],
             ['name' => 'access_level', 'type' => 'string', 'description' => '服务端解析后的授权等级。'],
             ['name' => 'permissions', 'type' => 'object', 'description' => '服务端最终权限集合；客户端消费结果，不自行推导卡类型。'],
             ['name' => 'app_identity', 'type' => 'object', 'description' => '服务端解析出的 App 身份信息。'],
@@ -56,22 +55,24 @@ class DylibApiContract
     {
         return [
             ['code' => 'bad_request', 'ok' => false, 'meaning' => '必填请求参数缺失', 'client' => '检查请求字段；可直接展示 message。'],
-            ['code' => 'method_not_allowed', 'ok' => false, 'meaning' => '验证接口不是 POST', 'client' => '改用 POST，不应重试原请求。'],
-            ['code' => 'timestamp_invalid', 'ok' => false, 'meaning' => '请求时间超出允许窗口', 'client' => '校准时间并重新签名请求。'],
-            ['code' => 'nonce_invalid', 'ok' => false, 'meaning' => 'Nonce 长度或格式无效', 'client' => '重新生成 16~128 字符随机 nonce。'],
-            ['code' => 'signature_invalid', 'ok' => false, 'meaning' => 'signature 格式不是 64 位小写 hex', 'client' => '检查 HMAC 输出格式。'],
-            ['code' => 'signature_mismatch', 'ok' => false, 'meaning' => 'HMAC 与服务端计算结果不一致', 'client' => '检查 canonical 字段顺序、值和 Verify Secret。'],
-            ['code' => 'replay_detected', 'ok' => false, 'meaning' => 'Nonce 已使用，检测到重放', 'client' => '生成新 nonce、新 timestamp 并重新签名。'],
+            ['code' => 'method_not_allowed', 'ok' => false, 'meaning' => '接口请求方法错误', 'client' => '按 API 文档改用正确方法。'],
+            ['code' => 'protocol_unsupported', 'ok' => false, 'meaning' => '客户端协议版本低于 v3', 'client' => '更新为 2430 生成的 Secretless 客户端。'],
+            ['code' => 'challenge_unavailable', 'ok' => false, 'meaning' => 'Challenge 服务暂不可用', 'client' => '尝试备用 endpoint 或 offline grace。'],
+            ['code' => 'challenge_expired', 'ok' => false, 'meaning' => '一次性 Challenge 已过期', 'client' => '重新请求 Challenge 后再次签名。'],
+            ['code' => 'challenge_replayed', 'ok' => false, 'meaning' => 'Challenge 已使用或不存在', 'client' => '重新获取 Challenge；不要复用旧证明。'],
+            ['code' => 'challenge_mismatch', 'ok' => false, 'meaning' => 'Challenge 与 UDID/Dylib/公钥上下文不匹配', 'client' => '丢弃本次 Challenge，重新开始认证。'],
+            ['code' => 'device_auth_invalid', 'ok' => false, 'meaning' => '设备认证字段或公钥无效', 'client' => '检查 P-256 公钥、Challenge 和签名字段。'],
+            ['code' => 'device_signature_invalid', 'ok' => false, 'meaning' => '设备签名验证失败', 'client' => '检查 canonical proof 和设备私钥。'],
+            ['code' => 'device_key_mismatch', 'ok' => false, 'meaning' => 'UDID 已绑定其它设备公钥', 'client' => '需要后台撤销旧设备密钥后重新绑定。'],
+            ['code' => 'device_enrollment_denied', 'ok' => false, 'meaning' => '首次设备公钥绑定没有通过现有授权链', 'client' => '提供有效卡密/授权后重新绑定。'],
             ['code' => 'dylib_unknown', 'ok' => false, 'meaning' => 'Dylib Key 不存在或 Dylib 已停用', 'client' => '停止受保护功能并展示 message。'],
-            ['code' => 'dylib_key_unconfigured', 'ok' => false, 'meaning' => '当前 Dylib 未配置验证密钥', 'client' => '属于服务端配置问题，不应循环重试。'],
-            ['code' => 'dylib_key_unavailable', 'ok' => false, 'meaning' => '验证密钥当前不可解密/不可用', 'client' => '属于服务端配置问题，按 action 处理。'],
             ['code' => 'blacklisted', 'ok' => false, 'meaning' => '设备在服务端黑名单中', 'client' => '按 action 处理并展示 message。'],
-            ['code' => 'app_identity_incomplete', 'ok' => false, 'meaning' => 'Protocol v2 缺少 executable 或 Mach-O UUID', 'client' => '补齐 v2 App 身份字段后重新签名。'],
+            ['code' => 'app_identity_incomplete', 'ok' => false, 'meaning' => '缺少 executable 或 Mach-O UUID', 'client' => '补齐 App 身份字段后重新认证。'],
             ['code' => 'app_identity_unknown', 'ok' => false, 'meaning' => '服务端无法识别当前 App 身份', 'client' => '检查 BundleID / executable / Mach-O UUID。'],
             ['code' => 'app_identity_unbound', 'ok' => false, 'meaning' => '解析到的 App 尚未绑定服务端分类', 'client' => '属于后台数据配置问题。'],
             ['code' => 'app_identity_ambiguous', 'ok' => false, 'meaning' => 'App 身份匹配到多个候选', 'client' => '属于后台数据问题，客户端按 action 处理。'],
             ['code' => 'app_identity_inactive', 'ok' => false, 'meaning' => '对应 App 已停用或不可用', 'client' => '按 action 处理。'],
-            ['code' => 'app_identity_required', 'ok' => false, 'meaning' => '当前授权范围要求 v2 App 身份', 'client' => '升级为 Protocol v2 请求。'],
+            ['code' => 'app_identity_required', 'ok' => false, 'meaning' => '当前授权范围要求 App 身份', 'client' => '使用 v3 请求并提供完整 App Identity。'],
             ['code' => 'app_not_authorized', 'ok' => false, 'meaning' => '当前授权不适用于该 App', 'client' => '展示 message；不要在客户端自行放宽范围。'],
             ['code' => 'license_invalid', 'ok' => false, 'meaning' => '设备授权无效或已过期', 'client' => '客户端可提示用户重新授权。'],
             ['code' => 'version_unknown', 'ok' => false, 'meaning' => 'Dylib 版本未登记', 'client' => '检查 dylib_version/build 是否与后台登记一致。'],
@@ -96,14 +97,9 @@ class DylibApiContract
         ];
     }
 
-    public static function canonicalV1()
+    public static function canonicalV3()
     {
-        return "udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce";
-    }
-
-    public static function canonicalV2()
-    {
-        return self::canonicalV1() . "\nprotocol_version\napp_executable\napp_macho_uuid\napp_version\napp_build";
+        return "zonoe-dylib-auth-v3\nchallenge_id\nchallenge\nudid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\napp_executable\napp_macho_uuid\napp_version\napp_build";
     }
 
     public static function document($dylibKey = '', $version = '', $build = '', $verifyPath = '/index/dylib_verify/verify')
@@ -115,13 +111,13 @@ class DylibApiContract
             'dylib_build' => (string)$build,
             'endpoints' => [
                 'runtime_config' => ['method' => 'GET', 'path' => '/index/dylib_verify/config', 'query' => ['dylib_key']],
+                'challenge' => ['method' => 'POST', 'path' => '/index/dylib_verify/challenge', 'content_types' => ['application/x-www-form-urlencoded', 'application/json']],
                 'verify' => ['method' => 'POST', 'path' => (string)$verifyPath, 'content_types' => ['application/x-www-form-urlencoded', 'application/json']],
             ],
             'request_fields' => self::verifyRequestFields(),
             'response_fields' => self::verifyResponseFields(),
-            'canonical_v1' => self::canonicalV1(),
-            'canonical_v2' => self::canonicalV2(),
-            'signature' => 'hex_lowercase(HMAC-SHA256(canonical, verify_secret))',
+            'canonical_v3' => self::canonicalV3(),
+            'signature' => 'base64(ECDSA-P256-SHA256(canonical_v3, device_private_key)); Bootstrap uses RSA-2048-SHA256 server signature',
             'actions' => self::actions(),
             'result_codes' => self::errorCodes(),
         ];
