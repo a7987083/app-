@@ -6,7 +6,7 @@ use app\common\library\Ipa\DylibApiContract;
 
 class ObjectiveCGenerator
 {
-    const GENERATOR_VERSION = '3.0.0';
+    const GENERATOR_VERSION = '3.1.0';
 
     public function buildConfig(array $dylib, array $runtimeConfig, array $version, array $draft = [], $domain = '')
     {
@@ -61,6 +61,7 @@ class ObjectiveCGenerator
             'protocol_version' => 3,
             'features' => [
                 'secretless_auth' => true,
+                'active_udid_auth_proof' => true,
                 'device_key' => true,
                 'challenge' => true,
                 'app_identity' => true,
@@ -199,11 +200,12 @@ class ObjectiveCGenerator
             . "> 定位：本 ZIP 中的 Objective-C 代码仅用于验证 API 的接入测试与参考，不是业务客户端 UI。UDID 获取、卡密输入、公告弹窗、悬浮窗、授权信息页等都由实际客户端工程自行实现。\n\n"
             . "当前 Dylib：`{$config['dylib_name']}` / `{$config['dylib_key']}`，版本 `{$config['dylib_version']}` (`{$config['dylib_build']}`)。\n\n"
             . "请先阅读：`API_REFERENCE.md`、`ERROR_CODES.md`、`EXAMPLES.md`。\n\n"
-            . "## Objective-C 快速验证\n\n```objc\n#import \"{$prefix}DylibConfig.h\"\n\n{$prefix}DylibVerifyConfiguration *cfg = [{$prefix}DylibConfig configurationWithUDIDProvider:^NSString *{\n    return ExistingProjectUDID(); // 由你的客户端工程提供\n}];\ncfg.licenseCodeProvider = ^NSString *{\n    return ExistingActivatedCardCode(); // 仅首次设备密钥绑定需要\n};\n{$prefix}DylibVerify *client = [[{$prefix}DylibVerify alloc] initWithConfiguration:cfg];\n[client verifyWithCompletion:^({$prefix}DylibVerifyResult *result) {\n    NSLog(@\"code=%@ message=%@\", result.code, result.message);\n    if (!result.isAllowed) {\n        // 按 result.code / result.action 处理；message 可用于显示。\n        return;\n    }\n    // 验证通过后由你的客户端决定 UI / 菜单 / 功能。\n}];\n```\n\n"
+            . "## Objective-C 快速验证\n\n```objc\n#import \"{$prefix}DylibConfig.h\"\n\n{$prefix}DylibVerifyConfiguration *cfg = [{$prefix}DylibConfig configurationWithUDIDProvider:^NSString *{\n    return ExistingProjectUDID(); // 由你的客户端工程提供\n}];\n{$prefix}DylibVerify *client = [[{$prefix}DylibVerify alloc] initWithConfiguration:cfg];\n[client verifyWithCompletion:^({$prefix}DylibVerifyResult *result) {\n    NSLog(@\"code=%@ message=%@\", result.code, result.message);\n    if (!result.isAllowed) {\n        // 按 result.code / result.action 处理；message 可用于显示。\n        return;\n    }\n    // 验证通过后由你的客户端决定 UI / 菜单 / 功能。\n}];\n```\n\n"
+            . "新版客户端会自动用 UDID 请求 `/index/index/apiface` 获取短时 `auth_proof`，再执行 Challenge / Verify；已激活卡密不需要再次保存在 Dylib 客户端。\n\n"
             . "## 旧接口兼容\n\n"
             . "- `Index::dylib()`：`{$legacyDylib}`，GET 参数 `udid`。\n"
-            . "- `Index::apiface()`：`{$legacyApiFace}`，GET 参数 `udid`；canonical 为 `udid|expire|ts|nonce`。\n\n"
-            . "生成代码只包含服务器 RSA 公钥，不包含任何全局共享 Verify Secret 或服务器私钥。\n";
+            . "- `Index::apiface()`：`{$legacyApiFace}`，GET 参数 `udid`；保留旧 canonical `udid|expire|ts|nonce`，并追加短时 `auth_proof`。\n\n"
+            . "生成代码只包含服务器 RSA 公钥，不包含任何全局共享 Verify Secret、服务器私钥或卡密。\n";
     }
 
     protected function apiReference(array $config)
@@ -212,10 +214,10 @@ class ObjectiveCGenerator
         $out = "# Dylib Verification API Reference\n\n";
         $out .= "**职责边界：** 验证中心只提供 API、签名规则和返回协议；客户端 UI/输入流程由调用方工程自行实现。\n\n";
         $out .= "当前 Dylib：`{$config['dylib_key']}`，版本 `{$config['dylib_version']}`，Build `{$config['dylib_build']}`。\n\n";
-        $out .= "## Endpoint\n\n- Runtime Config: `GET /index/dylib_verify/config?dylib_key={$config['dylib_key']}`\n- Challenge: `POST /index/dylib_verify/challenge`\n- Verify: `POST {$config['verify_path']}`\n- Content-Type: `application/x-www-form-urlencoded` 或 `application/json`\n\n";
+        $out .= "## Endpoint\n\n- Active UDID Proof: `GET /index/index/apiface?udid=<UDID>`\n- Runtime Config: `GET /index/dylib_verify/config?dylib_key={$config['dylib_key']}`\n- Challenge: `POST /index/dylib_verify/challenge`\n- Verify: `POST {$config['verify_path']}`\n- Content-Type: `application/x-www-form-urlencoded` 或 `application/json`\n\n";
         $out .= "## 请求字段\n\n|字段|类型|必填|协议|说明|\n|---|---|---|---|---|\n";
         foreach ($doc['request_fields'] as $f) $out .= '|' . $f['name'] . '|' . $f['type'] . '|' . ($f['required'] ? '是' : '否/按协议') . '|' . $f['since'] . '|' . $f['description'] . "|\n";
-        $out .= "\n## Device Proof\n\n首次或每次验证先请求 Challenge，然后对以下 canonical 文本做 P-256 / ECDSA-SHA256 签名，签名以 DER bytes Base64 传输。\n\n```text\n" . DylibApiContract::canonicalV3() . "\n```\n\n";
+        $out .= "\n## Device Proof\n\n先由 `/index/index/apiface` 获取短时 `auth_proof`，再请求 Challenge，并对以下 canonical 文本做 P-256 / ECDSA-SHA256 签名，签名以 DER bytes Base64 传输。\n\n```text\n" . DylibApiContract::canonicalV3() . "\n```\n\n";
         $out .= "Bootstrap / Runtime Config 由服务器 RSA-2048 + SHA-256 签名；生成代码内只嵌入服务器公钥和 Key ID。\n\n";
         $out .= "## 返回字段\n\n|字段|类型|说明|\n|---|---|---|\n";
         foreach ($doc['response_fields'] as $f) $out .= '|' . $f['name'] . '|' . $f['type'] . '|' . $f['description'] . "|\n";
@@ -236,12 +238,14 @@ class ObjectiveCGenerator
     {
         $url = $config['endpoint_url'] !== '' ? $config['endpoint_url'] : rtrim(isset($config['api_endpoints'][0]) ? $config['api_endpoints'][0] : '', '/') . $config['verify_path'];
         $challengeURL = preg_replace('#/verify$#', '/challenge', $url);
-        $jsonExample = '{"protocol_version":3,"udid":"<由客户端提供>","bundle_id":"com.example.app","dylib_key":"' . $config['dylib_key'] . '","dylib_version":"' . $config['dylib_version'] . '","dylib_build":"' . $config['dylib_build'] . '","dylib_sha256":"<optional>","app_executable":"ExampleApp","app_macho_uuid":"<UUID>","app_version":"1.0","app_build":"1","challenge_id":"<challenge_id>","challenge":"<challenge>","device_public_key":"<P-256 PEM>","device_signature":"<base64 DER>"}';
+        $apiFaceURL = isset($config['legacy_apiface_urls'][0]) ? $config['legacy_apiface_urls'][0] : '';
+        $jsonExample = '{"protocol_version":3,"udid":"<由客户端提供>","bundle_id":"com.example.app","dylib_key":"' . $config['dylib_key'] . '","dylib_version":"' . $config['dylib_version'] . '","dylib_build":"' . $config['dylib_build'] . '","dylib_sha256":"<optional>","app_executable":"ExampleApp","app_macho_uuid":"<UUID>","app_version":"1.0","app_build":"1","auth_proof":"<apiface auth_proof>","challenge_id":"<challenge_id>","challenge":"<challenge>","device_public_key":"<P-256 PEM>","device_signature":"<base64 DER>"}';
         return "# API 调用示例\n\n这些示例只演示如何调用 API；不会生成卡密弹窗、UDID 页面或其他业务 UI。\n\n"
-            . "## Challenge\n\n```bash\ncurl -X POST '" . $challengeURL . "' -H 'Content-Type: application/json' --data '{\"udid\":\"<UDID>\",\"dylib_key\":\"{$config['dylib_key']}\",\"device_public_key\":\"<PEM>\"}'\n```\n\n"
+            . "## Active UDID Proof\n\n```bash\ncurl '" . $apiFaceURL . "?udid=<UDID>'\n```\n\n"
+            . "## Challenge\n\n```bash\ncurl -X POST '" . $challengeURL . "' -H 'Content-Type: application/json' --data '{\"udid\":\"<UDID>\",\"dylib_key\":\"{$config['dylib_key']}\",\"device_public_key\":\"<PEM>\",\"auth_proof\":\"<apiface auth_proof>\"}'\n```\n\n"
             . "## Verify\n\n```bash\ncurl -X POST '" . $url . "' \\\n  -H 'Content-Type: application/json' \\\n  --data '" . $jsonExample . "'\n```\n\n"
-            . "## Objective-C\n\n```objc\n#import \"{$prefix}DylibConfig.h\"\n{$prefix}DylibVerifyConfiguration *cfg = [{$prefix}DylibConfig configurationWithUDIDProvider:^NSString *{ return YourUDID(); }];\ncfg.licenseCodeProvider = ^NSString *{ return CurrentLicenseCode(); };\n{$prefix}DylibVerify *api = [[{$prefix}DylibVerify alloc] initWithConfiguration:cfg];\n[api verifyWithCompletion:^({$prefix}DylibVerifyResult *r) {\n    if (!r.isAllowed) { NSLog(@\"%@ / %@\", r.code, r.message); return; }\n    NSLog(@\"permissions=%@ notice=%@\", r.permissions, r.notice);\n}];\n```\n\n"
-            . "## Swift / Python\n\n其它语言需严格复刻 `API_REFERENCE.md` 的 canonical v3 字段顺序，并使用设备 P-256 私钥做 ECDSA-SHA256；Bootstrap 则用生成配置中的服务器 RSA 公钥验签。\n";
+            . "## Objective-C\n\n```objc\n#import \"{$prefix}DylibConfig.h\"\n{$prefix}DylibVerifyConfiguration *cfg = [{$prefix}DylibConfig configurationWithUDIDProvider:^NSString *{ return YourUDID(); }];\n{$prefix}DylibVerify *api = [[{$prefix}DylibVerify alloc] initWithConfiguration:cfg];\n[api verifyWithCompletion:^({$prefix}DylibVerifyResult *r) {\n    if (!r.isAllowed) { NSLog(@\"%@ / %@\", r.code, r.message); return; }\n    NSLog(@\"permissions=%@ notice=%@\", r.permissions, r.notice);\n}];\n```\n\n"
+            . "## Swift / Python\n\n其它语言需严格复刻 `API_REFERENCE.md` 的 canonical v3.1 字段顺序，并使用设备 P-256 私钥做 ECDSA-SHA256；Bootstrap 则用生成配置中的服务器 RSA 公钥验签。\n";
     }
 
     protected function appendPath(array $bases, $path)
