@@ -18,6 +18,7 @@ jobs:
         run: |
           php -l application/common/library/Ipa/DylibAuthProofService.php
           php -l application/common/library/Ipa/DylibDeviceAuthService.php
+          php -l application/common/library/Ipa/DylibApiContract.php
           php -l application/index/controller/Index.php
           php -l application/common/library/Ipa/DylibVerificationService.php
           php -l application/index/controller/DylibVerify.php
@@ -26,9 +27,18 @@ jobs:
           grep -q "DylibAuthProofService::issue" application/index/controller/Index.php
           grep -q "DylibAuthProofService::validate" application/common/library/Ipa/DylibDeviceAuthService.php
           grep -q "auth_proof" application/common/library/Ipa/DylibDeviceAuthService.php
-          grep -q "challenge .*authProof\|challenge . .*authProof" application/common/library/Ipa/DylibDeviceAuthService.php
+          grep -q 'challenge .*authProof\|challenge . .*authProof' application/common/library/Ipa/DylibDeviceAuthService.php
           ! grep -q "AuthorizationLicense::query" application/common/library/Ipa/DylibDeviceAuthService.php
           ! grep -q "license_code" application/common/library/Ipa/DylibDeviceAuthService.php
+          grep -q 'auth_proof' application/common/library/Ipa/DylibApiContract.php
+          grep -q 'challenge\\nauth_proof' application/common/library/Ipa/DylibApiContract.php
+      - name: iOS client proof flow
+        run: |
+          grep -q 'fetchAuthProofForUDID' clients/ios/ZONDylibVerify/ZONVerifyClient.m
+          grep -q 'auth_proof' clients/ios/ZONDylibVerify/ZONVerifyClient.m
+          grep -q '/index/index/apiface' clients/ios/ZONDylibVerify/ZONVerifyClient.m
+          ! grep -q 'license_required' clients/ios/ZONDylibVerify/ZONVerifyClient.m
+          ! grep -q 'verifyPayload\[@"license_code"\]' clients/ios/ZONDylibVerify/ZONVerifyClient.m
       - name: Duplicate tester removed
         run: |
           test ! -e application/admin/controller/DylibApiTest.php
@@ -45,5 +55,6 @@ jobs:
         run: |
           grep -qx 'application/common/library/Ipa/DylibAuthProofService.php' release/online-update-files.txt
           grep -qx 'application/common/library/Ipa/DylibDeviceAuthService.php' release/online-update-files.txt
+          grep -qx 'application/common/library/Ipa/DylibApiContract.php' release/online-update-files.txt
           grep -qx 'application/index/controller/Index.php' release/online-update-files.txt
           grep -qx 'clients/ios/ZONDylibVerify/ZONVerifyClient.m' release/online-update-files.txt
