@@ -300,7 +300,7 @@ class DylibCenter extends Backend
         $current = Db::name('dylib_runtime_config')->where('id', 1)->find();
         $data = [
             'config_version' => max(3, (int)(isset($current['config_version']) ? $current['config_version'] : 2) + 1),
-            'api_endpoints_json' => json_encode($apiEndpoints, JSON_UNESCAP_SLASHES),
+            'api_endpoints_json' => json_encode($apiEndpoints, JSON_UNESCAPED_SLASHES),
             'bootstrap_urls_json' => json_encode($bootstrapUrls, JSON_UNESCAPED_SLASHES),
             'verify_path' => $verifyPath,
             'update_title' => mb_substr(trim((string)$this->request->post('update_title', '发现游戏新版本')), 0, 255),
