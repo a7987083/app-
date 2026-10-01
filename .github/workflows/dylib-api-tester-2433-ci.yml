@@ -1,0 +1,57 @@
+name: Dylib API Tester 2433 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092433-dylib-v3-api-tester
+  workflow_dispatch:
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+      - name: PHP syntax
+        run: |
+          php -l application/admin/controller/DylibApiTest.php
+          php -l application/common/library/Ipa/DylibVerifyAudit.php
+          php -l application/index/controller/DylibVerify.php
+      - name: Protocol v3 tester contract
+        run: |
+          grep -q "DylibRuntimeConfigService::bootstrap" application/admin/controller/DylibApiTest.php
+          grep -q "DylibDeviceAuthService::issueChallenge" application/admin/controller/DylibApiTest.php
+          grep -q "DylibDeviceAuthService::canonicalProof" application/admin/controller/DylibApiTest.php
+          grep -q "DylibVerificationService::verify" application/admin/controller/DylibApiTest.php
+          grep -q "DylibVerifyAudit::logBadRequest" application/admin/controller/DylibApiTest.php
+          grep -q "DylibVerifyAudit::logBadRequest" application/index/controller/DylibVerify.php
+          grep -q "device_signature" application/admin/view/dylib_api_test/index.html
+          grep -q "Challenge" application/admin/view/dylib_api_test/index.html
+      - name: JavaScript syntax
+        run: node --check public/assets/js/backend/dylib_api_test.js
+
+  package-shape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+      - name: Assert online-update manifest contains tester
+        run: |
+          grep -qx 'application/admin/controller/DylibApiTest.php' release/online-update-files.txt
+          grep -qx 'application/admin/view/dylib_api_test/index.html' release/online-update-files.txt
+          grep -qx 'application/common/library/Ipa/DylibVerifyAudit.php' release/online-update-files.txt
+          grep -qx 'public/assets/js/backend/dylib_api_test.js' release/online-update-files.txt
+          grep -qx 'application/index/controller/DylibVerify.php' release/online-update-files.txt
+      - name: Build online-update package when builder exists
+        run: |
+          if [ -f tools/build_online_update.php ]; then
+            php tools/build_online_update.php
+          elif [ -f release/build_online_update.php ]; then
+            php release/build_online_update.php
+          else
+            echo 'No standalone package builder found; manifest assertions completed.'
+          fi
