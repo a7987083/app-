@@ -4,7 +4,7 @@ namespace app\admin\controller;
 
 use app\common\controller\Backend;
 use app\common\library\codegen\ObjectiveCGenerator;
-use app\common\library\Ipa\SecretBox;
+use app\common\library\Ipa\DylibSigningKey;
 use think\Db;
 
 class DylibCodegen extends Backend
@@ -171,13 +171,14 @@ class DylibCodegen extends Backend
 
         $dylib = Db::name('dylib')->where('id', $dylibId)->find();
         if (!$dylib) throw new \InvalidArgumentException('Dylib 不存在');
-        $ciphertext = isset($dylib['verify_secret_ciphertext']) ? (string)$dylib['verify_secret_ciphertext'] : '';
-        $dylib['verify_secret'] = SecretBox::decrypt($ciphertext);
+        $dylib['server_public_key_pem'] = DylibSigningKey::publicKeyPem();
+        $dylib['server_key_id'] = DylibSigningKey::keyId();
+        $dylib['server_signature_alg'] = DylibSigningKey::algorithm();
 
         $runtimeConfig = Db::name('dylib_runtime_config')->where('id', 1)->find();
         if (!$runtimeConfig) {
             $runtimeConfig = [
-                'config_version' => 1,
+                'config_version' => 3,
                 'api_endpoints_json' => '[]',
                 'bootstrap_urls_json' => '[]',
                 'verify_path' => '/index/dylib_verify/verify',
