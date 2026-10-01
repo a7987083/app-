@@ -11,7 +11,7 @@ use think\Db;
 
 class DylibApiTest extends Backend
 {
-    protected $noNeedRight = [];
+    protected $noNeedRight = ['index', 'configTest', 'challengeTest', 'canonicalTest', 'verifyTest'];
 
     public function index()
     {
