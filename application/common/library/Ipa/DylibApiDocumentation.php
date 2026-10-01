@@ -4,8 +4,8 @@ namespace app\common\library\Ipa;
 
 /**
  * One documentation source for the Dylib Center API guide and downloadable
- * integration bundle. This describes existing endpoints; it does not turn
- * page/form compatibility routes into JSON APIs.
+ * integration bundle. Existing 2428 APIs remain documented; protocol v3 only
+ * replaces the Dylib Verify authentication mechanism.
  */
 class DylibApiDocumentation
 {
@@ -30,7 +30,7 @@ class DylibApiDocumentation
                     ['name' => 'code', 'required' => true, 'description' => '卡密'],
                     ['name' => 'udid', 'required' => true, 'description' => '25 或 40 字符设备 UDID'],
                 ],
-                'next' => '需要首次激活时调用 /appstore；日常 Dylib 授权校验使用 /index/index/apiface 或新的 Dylib Verify。',
+                'next' => '需要首次激活时调用 /appstore；日常 Dylib 授权校验使用 /index/index/apiface 或 Dylib Verify。',
             ],
             [
                 'key' => 'appstore',
@@ -45,7 +45,7 @@ class DylibApiDocumentation
                     ['name' => 'udid', 'required' => true, 'description' => '设备 UDID'],
                     ['name' => 'code', 'required' => false, 'description' => '卡密；激活时必填，仅刷新时可省略'],
                 ],
-                'next' => '激活成功后，日常授权检查使用 /index/index/apiface；受保护 Dylib 还应继续调用 Dylib Verify。',
+                'next' => '激活成功后，日常授权检查使用 /index/index/apiface；首次 Secretless 设备密钥绑定使用同一已激活卡密。',
             ],
             [
                 'key' => 'dylib_auth',
@@ -55,11 +55,11 @@ class DylibApiDocumentation
                 'response_type' => 'JSON',
                 'client_recommended' => true,
                 'purpose' => '按 UDID 查询已激活且未过期授权，并返回 expire、ts、nonce、sign 等旧协议字段。',
-                'when' => '兼容旧客户端的日常启动授权检查。新 Dylib 安全验证仍应使用 /index/dylib_verify/verify。',
+                'when' => '保留 2428 既有客户端/业务调用。新的 Dylib 安全验证使用 Challenge + Verify。',
                 'params' => [
                     ['name' => 'udid', 'required' => true, 'description' => '设备 UDID'],
                 ],
-                'next' => '验证通过后可读取 /index/index/dylib 获取旧远程配置，或进入 Dylib Verify 流程。',
+                'next' => '验证通过后可读取 /index/index/dylib 获取旧远程配置，或进入 Dylib Verify v3 流程。',
             ],
             [
                 'key' => 'dylib_config',
@@ -69,11 +69,11 @@ class DylibApiDocumentation
                 'response_type' => 'JSON',
                 'client_recommended' => true,
                 'purpose' => '返回旧协议的远程 Dylib 配置与当前 UDID 授权状态。',
-                'when' => '兼容旧客户端远程配置流程。2412+ Runtime Config 请优先使用 /index/dylib_verify/config。',
+                'when' => '保留 2428 远程配置流程。Runtime Config 请优先使用 /index/dylib_verify/config。',
                 'params' => [
                     ['name' => 'udid', 'required' => true, 'description' => '设备 UDID'],
                 ],
-                'next' => '需要 2412+ 动态 Endpoint/签名配置时调用 /index/dylib_verify/config。',
+                'next' => '需要动态 Endpoint/服务器签名配置时调用 /index/dylib_verify/config。',
             ],
             [
                 'key' => 'unbind',
@@ -112,12 +112,28 @@ class DylibApiDocumentation
                 'path' => '/index/dylib_verify/config',
                 'response_type' => 'JSON',
                 'client_recommended' => true,
-                'purpose' => '按 dylib_key 获取签名后的运行配置、业务 API Endpoint、Verify Path 与配置版本。',
+                'purpose' => '按 dylib_key 获取 RSA 签名后的运行配置、业务 API Endpoint、Verify Path 与配置版本。',
                 'when' => 'Dylib 启动并准备在线验证之前调用；客户端可缓存 Last-Known-Good。',
                 'params' => [
                     ['name' => 'dylib_key', 'required' => true, 'description' => '验证中心登记的 Dylib Key'],
                 ],
-                'next' => '从配置得到 Endpoint/Verify Path 后准备 canonical、signature，再 POST Verify。',
+                'next' => '验证服务器 RSA 签名后，从配置得到 Endpoint/Verify Path，然后请求 Challenge。',
+            ],
+            [
+                'key' => 'challenge',
+                'title' => 'Dylib 一次性 Challenge',
+                'method' => 'POST',
+                'path' => '/index/dylib_verify/challenge',
+                'response_type' => 'JSON',
+                'client_recommended' => true,
+                'purpose' => '为 Protocol v3 设备证明签发短期一次性 Challenge，并判断当前设备公钥是否需要首次绑定。',
+                'when' => '每次在线 Verify 前调用。Challenge 只能消费一次且有短 TTL。',
+                'params' => [
+                    ['name' => 'udid', 'required' => true, 'description' => '设备 UDID'],
+                    ['name' => 'dylib_key', 'required' => true, 'description' => 'Dylib Key'],
+                    ['name' => 'device_public_key', 'required' => true, 'description' => '设备 P-256 SPKI PEM 公钥'],
+                ],
+                'next' => '使用设备 Keychain 私钥对 canonical v3 签名，再 POST Verify。首次绑定时同时提供已激活卡密。',
             ],
             [
                 'key' => 'verify',
@@ -126,8 +142,8 @@ class DylibApiDocumentation
                 'path' => $verifyPath,
                 'response_type' => 'JSON',
                 'client_recommended' => true,
-                'purpose' => 'Dylib 核心在线验证：校验设备、App 身份、Dylib Key/版本/Build/SHA256、时间戳、Nonce 与 HMAC。',
-                'when' => '取得 Runtime Config 后调用；支持 form-urlencoded 或 application/json。',
+                'purpose' => 'Dylib 核心在线验证：校验一次性 Challenge、设备公钥证明、App 身份、Dylib Key/版本/Build/SHA256，并继续执行 2428 授权/权限/公告/更新逻辑。',
+                'when' => '取得 Challenge 并完成 P-256 签名后调用；支持 form-urlencoded 或 application/json。',
                 'params' => DylibApiContract::verifyRequestFields(),
                 'next' => '客户端先判断 ok，再按 code + action 处理；message 只用于展示，不用于业务条件判断。',
             ],
@@ -137,17 +153,20 @@ class DylibApiDocumentation
     public static function machineDocument($dylibKey, $dylibName, $verifyPath, array $runtimeConfig = [])
     {
         return [
-            'schema_version' => 1,
+            'schema_version' => 2,
             'generated_for' => [
                 'dylib_key' => (string)$dylibKey,
                 'dylib_name' => (string)$dylibName,
             ],
             'security' => [
-                'verify_secret' => '<VERIFY_SECRET>',
-                'note' => '真实 Verify Secret 不会写入文档 ZIP。请在受控客户端工程中配置。',
+                'protocol' => 'secretless-v3',
+                'device_signature' => 'ECDSA P-256 SHA-256; private key stays in device Keychain',
+                'runtime_config_signature' => 'RSA-2048 SHA-256; client contains only server public key',
+                'verify_secret' => false,
             ],
             'runtime' => [
                 'verify_path' => (string)$verifyPath,
+                'challenge_path' => '/index/dylib_verify/challenge',
                 'config_version' => isset($runtimeConfig['config_version']) ? (int)$runtimeConfig['config_version'] : 0,
             ],
             'apis' => self::catalog($verifyPath),
@@ -181,7 +200,7 @@ class DylibApiDocumentation
         return "# Dylib API Integration\n\n"
             . "Dylib: " . ($name !== '' ? $name : $key) . " (`" . $key . "`)\n\n"
             . "本包是验证中心 API 接入资料，不包含客户端 UI。OC/Swift 示例只用于演示请求、签名与结果处理。\n\n"
-            . "安全：本包永远不会导出真实 Verify Secret；示例中的 `<VERIFY_SECRET>` 必须由受控工程自行配置。\n";
+            . "安全：客户端不包含全局 Verify Secret 或服务器私钥。每台设备使用独立 P-256 Keychain 私钥；Bootstrap 只嵌入服务器 RSA 公钥。\n";
     }
 
     protected static function overviewMarkdown(array $apis)
@@ -223,11 +242,12 @@ class DylibApiDocumentation
 
     protected static function signatureMarkdown()
     {
-        return "# Signature Protocol\n\n"
-            . "算法：`hex_lowercase(HMAC-SHA256(canonical, <VERIFY_SECRET>))`\n\n"
-            . "## Protocol v1 canonical\n\n```text\n" . DylibApiContract::canonicalV1() . "\n```\n\n"
-            . "## Protocol v2 canonical\n\n```text\n" . DylibApiContract::canonicalV2() . "\n```\n\n"
-            . "字段之间使用真实换行符。不要对 JSON key 排序后签名，也不要改变字段顺序。每次请求生成新的 nonce。\n";
+        return "# Signature Protocol v3\n\n"
+            . "## Device proof\n\n设备生成独立 P-256 私钥并保存到 Keychain；服务器只保存公钥。每次验证先申请一次性 Challenge，再签名以下 canonical：\n\n"
+            . "```text\n" . DylibApiContract::canonicalV3() . "\n```\n\n"
+            . "签名算法：ECDSA P-256 + SHA-256；iOS `SecKeyCreateSignature` 输出 DER signature，传输时 Base64。\n\n"
+            . "## Runtime Config\n\nBootstrap/Runtime Config 使用服务器 RSA-2048 + SHA-256 签名。客户端生成配置只嵌入服务器公钥和 Key ID，服务器私钥不进入数据库、仓库或客户端。\n\n"
+            . "字段之间使用真实换行符，不要使用 JSON key 排序替代 canonical。一次性 Challenge 不可复用。\n";
     }
 
     protected static function responseMarkdown()
@@ -246,29 +266,30 @@ class DylibApiDocumentation
     protected static function flowMarkdown()
     {
         return "# Recommended Flows\n\n"
-            . "## 首次卡密激活\n\n```text\n用户输入卡密\n  ↓\n网页可用 POST /authorization 查询\n  ↓\n未激活时 GET /appstore?udid=...&code=...\n  ↓\n绑定/激活\n  ↓\nGET /index/index/apiface?udid=...（旧授权兼容检查）\n```\n\n"
-            . "## Dylib 2412+ 验证\n\n```text\nDylib 启动\n  ↓\nGET /index/dylib_verify/config?dylib_key=...\n  ↓\n准备 timestamp + nonce + canonical + HMAC\n  ↓\nPOST Verify Path\n  ↓\nok → code → action → message / permissions / notice / app_update\n```\n";
+            . "## 首次卡密激活\n\n```text\n用户输入卡密\n  ↓\n网页可用 POST /authorization 查询\n  ↓\n未激活时 GET /appstore?udid=...&code=...\n  ↓\n绑定/激活\n  ↓\nGET /index/index/apiface?udid=...（原 API 保留）\n```\n\n"
+            . "## Dylib Secretless v3 验证\n\n```text\nDylib 启动\n  ↓\nGET /index/dylib_verify/config?dylib_key=...\n  ↓\nRSA 公钥验签 Runtime Config\n  ↓\nPOST /index/dylib_verify/challenge\n  ↓\n设备 P-256 私钥签 canonical v3\n  ↓\n首次绑定：附带当前已激活卡密\n  ↓\nPOST Verify Path\n  ↓\nok → code → action → message / permissions / notice / app_update\n```\n";
     }
 
     protected static function curlExamples($key, $verifyPath)
     {
         return "# cURL Examples\n\n"
             . "```bash\ncurl -G 'https://YOUR_HOST/index/dylib_verify/config' --data-urlencode 'dylib_key=" . $key . "'\n```\n\n"
-            . "```bash\ncurl -X POST 'https://YOUR_HOST" . $verifyPath . "' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"udid\":\"<UDID>\",\"bundle_id\":\"com.example.app\",\"dylib_key\":\"" . $key . "\",\"dylib_version\":\"1.0.0\",\"timestamp\":0,\"nonce\":\"<NONCE>\",\"signature\":\"<SIGNATURE>\"}'\n```\n";
+            . "```bash\ncurl -X POST 'https://YOUR_HOST/index/dylib_verify/challenge' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"udid\":\"<UDID>\",\"dylib_key\":\"" . $key . "\",\"device_public_key\":\"<P-256-SPKI-PEM>\"}'\n```\n\n"
+            . "```bash\ncurl -X POST 'https://YOUR_HOST" . $verifyPath . "' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"protocol_version\":3,\"udid\":\"<UDID>\",\"bundle_id\":\"com.example.app\",\"dylib_key\":\"" . $key . "\",\"dylib_version\":\"1.0.0\",\"app_executable\":\"ExampleApp\",\"app_macho_uuid\":\"<UUID>\",\"challenge_id\":\"<ID>\",\"challenge\":\"<VALUE>\",\"device_public_key\":\"<PEM>\",\"device_signature\":\"<BASE64-DER>\"}'\n```\n";
     }
 
     protected static function objectiveCExamples($key, $verifyPath)
     {
-        return "# Objective-C Reference\n\n```objc\n// 示例仅展示请求边界；<VERIFY_SECRET> 由受控工程自行配置。\nNSString *path = @\"" . addslashes($verifyPath) . "\";\nNSString *dylibKey = @\"" . addslashes($key) . "\";\n// 1) 生成 timestamp + nonce\n// 2) 按 SIGNATURE.md 固定字段顺序构造 canonical\n// 3) HMAC-SHA256 -> lowercase hex\n// 4) POST JSON 到 path\n// 5) 先判断 ok，再处理 code/action；message 只用于展示\n```\n";
+        return "# Objective-C Reference\n\n```objc\n// 保留 2428 的 API/结果处理模型，只替换认证层。\nNSString *path = @\"" . addslashes($verifyPath) . "\";\nNSString *dylibKey = @\"" . addslashes($key) . "\";\n// 1) Keychain 创建/读取 P-256 私钥\n// 2) POST /index/dylib_verify/challenge\n// 3) 按 SIGNATURE.md 固定字段顺序构造 canonical v3\n// 4) SecKeyCreateSignature(ECDSA-SHA256) -> Base64 DER\n// 5) POST JSON 到 path；首次绑定附带已激活卡密\n// 6) 先判断 ok，再处理 code/action；message 只用于展示\n```\n";
     }
 
     protected static function swiftExamples($key, $verifyPath)
     {
-        return "# Swift Reference\n\n```swift\nlet dylibKey = \"" . addslashes($key) . "\"\nlet verifyPath = \"" . addslashes($verifyPath) . "\"\n// 构造 canonical -> HMAC-SHA256 -> POST JSON。\n// 使用 ok + code + action 做业务判断。\n```\n";
+        return "# Swift Reference\n\n```swift\nlet dylibKey = \"" . addslashes($key) . "\"\nlet verifyPath = \"" . addslashes($verifyPath) . "\"\n// Security.framework P-256 Keychain key -> Challenge -> ECDSA-SHA256 -> POST Verify。\n// Runtime Config 使用生成配置中的服务器 RSA 公钥验签。\n// 使用 ok + code + action 做业务判断。\n```\n";
     }
 
     protected static function pythonExamples($key, $verifyPath)
     {
-        return "# Python Reference\n\n```python\nimport hashlib, hmac\nsecret = b'<VERIFY_SECRET>'\ncanonical = '<按 SIGNATURE.md 拼接>'.encode()\nsignature = hmac.new(secret, canonical, hashlib.sha256).hexdigest()\n# POST https://YOUR_HOST" . $verifyPath . "\n# dylib_key = '" . addslashes($key) . "'\n```\n";
+        return "# Python Reference\n\n```python\n# 伪代码：使用独立 P-256 私钥，不存在 Verify Secret。\n# 1. POST /index/dylib_verify/challenge\n# 2. canonical = '<按 SIGNATURE.md 拼接>'\n# 3. signature = base64(ECDSA_P256_SHA256(device_private_key, canonical))\n# 4. POST https://YOUR_HOST" . $verifyPath . "\n# dylib_key = '" . addslashes($key) . "'\n```\n";
     }
 }
