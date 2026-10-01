@@ -19,6 +19,7 @@ jobs:
           php -l application/common/library/Ipa/DylibAuthProofService.php
           php -l application/common/library/Ipa/DylibDeviceAuthService.php
           php -l application/common/library/Ipa/DylibApiContract.php
+          php -l application/common/library/Ipa/DylibApiDocumentation.php
           php -l application/common/library/codegen/ObjectiveCGenerator.php
           php -l application/index/controller/Index.php
           php -l application/common/library/Ipa/DylibVerificationService.php
@@ -36,6 +37,9 @@ jobs:
           grep -q "GENERATOR_VERSION = '3.1.0'" application/common/library/codegen/ObjectiveCGenerator.php
           ! grep -q 'ExistingActivatedCardCode' application/common/library/codegen/ObjectiveCGenerator.php
           ! grep -q 'CurrentLicenseCode' application/common/library/codegen/ObjectiveCGenerator.php
+          grep -q 'license_code_in_device_enrollment.*false' application/common/library/Ipa/DylibApiDocumentation.php
+          ! grep -q '首次绑定.*卡密' application/common/library/Ipa/DylibApiDocumentation.php
+          ! grep -q '首次设备密钥绑定使用同一已激活卡密' application/common/library/Ipa/DylibApiDocumentation.php
       - name: iOS client proof flow
         run: |
           grep -q 'fetchAuthProofForUDID' clients/ios/ZONDylibVerify/ZONVerifyClient.m
@@ -60,6 +64,7 @@ jobs:
           grep -qx 'application/common/library/Ipa/DylibAuthProofService.php' release/online-update-files.txt
           grep -qx 'application/common/library/Ipa/DylibDeviceAuthService.php' release/online-update-files.txt
           grep -qx 'application/common/library/Ipa/DylibApiContract.php' release/online-update-files.txt
+          grep -qx 'application/common/library/Ipa/DylibApiDocumentation.php' release/online-update-files.txt
           grep -qx 'application/common/library/codegen/ObjectiveCGenerator.php' release/online-update-files.txt
           grep -qx 'application/index/controller/Index.php' release/online-update-files.txt
           grep -qx 'clients/ios/ZONDylibVerify/ZONVerifyClient.m' release/online-update-files.txt
