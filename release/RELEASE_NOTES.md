@@ -1,6 +1,8 @@
 # ZONOE 软件源 2026092430
 
-## Dylib 验证中心：从 2026092428 基线重做 Secretless Auth
+## 更新内容
+
+### Dylib 验证中心：从 2026092428 基线重做 Secretless Auth
 
 本版本直接以 `source-v2026092428` 为基线重新开发，不继承 2429 的精简实现。目标是：**2428 完整功能集合保持不变，只替换 Verify Secret / HMAC 认证机制。**
 
@@ -53,7 +55,7 @@ Runtime Config 不再使用客户端共享 Secret 验签，改为服务器 RSA-2
 
 ## CI / 验证
 
-第一轮 `Dylib Secretless Auth 2430 CI` 已通过：
+`Dylib Secretless Auth 2430 CI` 覆盖：
 
 - PHP 7.0 / JS syntax；
 - Secretless v3 核心断言；
@@ -63,7 +65,7 @@ Runtime Config 不再使用客户端共享 Secret 验签，改为服务器 RSA-2
 - MySQL 5.7 migration 双次执行；
 - 在线更新 ZIP 实际构建和关键文件检查。
 
-版本元数据切换到 2026092430 后还会再次执行完整 sibling CI 与 canonical Release gate。CI 成功仅证明代码、迁移和发布链满足契约；真机 Challenge -> Device Sign -> Verify 运行链仍需独立真机证据。
+canonical Release 还会执行完整 PHP 7.0 regression、source integrity/file_sign、真实 MySQL 5.7 migration、/appstore HTTP 并发 gate，以及真实 GitHub Release 在线更新 E2E。CI 成功仅证明代码、迁移和发布链满足契约；真机 Challenge -> Device Sign -> Verify 运行链仍需独立真机证据。
 
 ## 升级路径
 
