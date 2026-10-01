@@ -1,0 +1,140 @@
+name: Dylib Admin 2431 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092431-verify-log-udid-ip-offline-inherit
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php70-js-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: openssl, mbstring, zip
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          php -l application/admin/controller/DylibCenter.php
+          php -l application/common/library/Ipa/DylibVerificationService.php
+          php -l application/common/library/Ipa/DylibDeviceAuthService.php
+          php -l application/common/library/Ipa/DylibRuntimeConfigService.php
+          node --check public/assets/js/backend/dylib_center.js
+      - name: Assert 2431 verify log contract
+        run: |
+          set -euo pipefail
+          grep -q "'udid' => \$udid" application/common/library/Ipa/DylibVerificationService.php
+          grep -q "'ip' => \$ip" application/common/library/Ipa/DylibVerificationService.php
+          grep -q "field('id,udid,ip,bundle_id" application/admin/controller/DylibCenter.php
+          grep -q "param('udid'" application/admin/controller/DylibCenter.php
+          grep -q "param('ip'" application/admin/controller/DylibCenter.php
+          grep -q "field:'udid',title:'UDID'" public/assets/js/backend/dylib_center.js
+          grep -q "field:'ip',title:'IP'" public/assets/js/backend/dylib_center.js
+          grep -q "log-filter-ip" public/assets/js/backend/dylib_center.js
+          ! grep -q "UDID Hash 前缀" public/assets/js/backend/dylib_center.js
+      - name: Assert offline inheritance contract
+        run: |
+          set -euo pipefail
+          grep -q "offline_grace' => \$offlineGrace" application/admin/controller/DylibCenter.php
+          grep -q "offlineRaw === '' ? ''" public/assets/js/backend/dylib_center.js
+          grep -q "继承 Dylib 默认" public/assets/js/backend/dylib_center.js
+          grep -q "if (isset(\$version\['offline_grace'\]))" application/common/library/Ipa/DylibVerificationService.php
+      - name: Assert 2430 Secretless and 2428 API surface preserved
+        run: |
+          set -euo pipefail
+          grep -q 'DylibDeviceAuthService::authenticate' application/common/library/Ipa/DylibVerificationService.php
+          grep -q 'DylibSigningKey::sign' application/common/library/Ipa/DylibRuntimeConfigService.php
+          for method in versions bindings notices logs saveDylib setDylibEnabled deleteDylib saveVersion deleteVersion saveBinding saveRuntimeConfig saveNotice setNoticeEnabled deleteNotice deleteLogs; do
+            grep -q "function ${method}" application/admin/controller/DylibCenter.php || exit 1
+          done
+          for endpoint in /authorization /appstore /index/index/apiface /index/index/dylib /unbind /unbind/query /index/dylib_verify/config /index/dylib_verify/challenge; do
+            grep -q "$endpoint" application/common/library/Ipa/DylibApiDocumentation.php || exit 1
+          done
+
+  mysql57-migration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare 2430 production-like tables
+        run: |
+          set -euo pipefail
+          mysql -h127.0.0.1 -uroot -proot zonoe_test <<'SQL'
+          CREATE TABLE fa_dylib_verify_log (
+            id bigint unsigned NOT NULL AUTO_INCREMENT,
+            udid_hash char(64) NOT NULL DEFAULT '',
+            bundle_id varchar(255) NOT NULL DEFAULT '',
+            dylib_key varchar(128) NOT NULL DEFAULT '',
+            dylib_version varchar(64) NOT NULL DEFAULT '',
+            result_code varchar(64) NOT NULL DEFAULT '',
+            action varchar(32) NOT NULL DEFAULT '',
+            ip_hash char(64) NOT NULL DEFAULT '',
+            latency_ms int unsigned NOT NULL DEFAULT 0,
+            created_at int unsigned NOT NULL DEFAULT 0,
+            PRIMARY KEY(id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+          CREATE TABLE fa_dylib_version (
+            id bigint unsigned NOT NULL AUTO_INCREMENT,
+            dylib_id bigint unsigned NOT NULL,
+            version varchar(64) NOT NULL,
+            build varchar(64) NOT NULL DEFAULT '',
+            offline_grace int unsigned NOT NULL DEFAULT 900,
+            PRIMARY KEY(id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+          INSERT INTO fa_dylib_version(dylib_id,version,build,offline_grace) VALUES(1,'1.0.0','1',900);
+          SQL
+      - name: Apply 2431 migration twice
+        run: |
+          set -euo pipefail
+          mysql -h127.0.0.1 -uroot -proot zonoe_test < release/sql/2026092431_dylib_log_identity_offline_inherit.sql
+          mysql -h127.0.0.1 -uroot -proot zonoe_test < release/sql/2026092431_dylib_log_identity_offline_inherit.sql
+      - name: Assert schema and historical values
+        run: |
+          set -euo pipefail
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='zonoe_test' AND table_name='fa_dylib_verify_log' AND column_name='udid'")" = "1"
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='zonoe_test' AND table_name='fa_dylib_verify_log' AND column_name='ip'")" = "1"
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT IS_NULLABLE FROM information_schema.columns WHERE table_schema='zonoe_test' AND table_name='fa_dylib_version' AND column_name='offline_grace'")" = "YES"
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT offline_grace FROM fa_dylib_version WHERE version='1.0.0'")" = "900"
+          mysql -h127.0.0.1 -uroot -proot zonoe_test -e "INSERT INTO fa_dylib_verify_log(udid,ip,udid_hash,bundle_id,dylib_key,dylib_version,result_code,action,ip_hash,latency_ms,created_at) VALUES('00008110-ABCDEF','203.0.113.8','','com.example.app','zonoe.main','1.0.0','ok','allow','',12,1);"
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT CONCAT(udid,'|',ip) FROM fa_dylib_verify_log LIMIT 1")" = "00008110-ABCDEF|203.0.113.8"
+
+  update-package-shape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: zip
+      - name: Build and inspect package
+        run: |
+          set -euo pipefail
+          grep -Fx 'application/admin/controller/DylibCenter.php' release/online-update-files.txt
+          grep -Fx 'application/common/library/Ipa/DylibVerificationService.php' release/online-update-files.txt
+          grep -Fx 'public/assets/js/backend/dylib_center.js' release/online-update-files.txt
+          php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
+          unzip -t zonoe-online-update.zip >/dev/null
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/controller/DylibCenter.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/Ipa/DylibVerificationService.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/public/assets/js/backend/dylib_center.js'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026092431_dylib_log_identity_offline_inherit.sql'
