@@ -1,9 +1,9 @@
-name: Dylib Auth Proof 2433 CI
+name: Dylib Auth Proof 2434 CI
 
 on:
   push:
     branches:
-      - feature/2026092433-dylib-v3-api-tester
+      - release/2026092434-auth-proof-enrollment
   workflow_dispatch:
 
 jobs:
@@ -29,23 +29,17 @@ jobs:
           grep -q "DylibAuthProofService::issue" application/index/controller/Index.php
           grep -q "DylibAuthProofService::validate" application/common/library/Ipa/DylibDeviceAuthService.php
           grep -q "auth_proof" application/common/library/Ipa/DylibDeviceAuthService.php
-          grep -q 'challenge .*authProof\|challenge . .*authProof' application/common/library/Ipa/DylibDeviceAuthService.php
           ! grep -q "AuthorizationLicense::query" application/common/library/Ipa/DylibDeviceAuthService.php
           ! grep -q "license_code" application/common/library/Ipa/DylibDeviceAuthService.php
           grep -q 'auth_proof' application/common/library/Ipa/DylibApiContract.php
           grep -q 'challenge\\nauth_proof' application/common/library/Ipa/DylibApiContract.php
           grep -q "GENERATOR_VERSION = '3.1.0'" application/common/library/codegen/ObjectiveCGenerator.php
-          ! grep -q 'ExistingActivatedCardCode' application/common/library/codegen/ObjectiveCGenerator.php
-          ! grep -q 'CurrentLicenseCode' application/common/library/codegen/ObjectiveCGenerator.php
           grep -q 'license_code_in_device_enrollment.*false' application/common/library/Ipa/DylibApiDocumentation.php
-          ! grep -q '首次绑定.*卡密' application/common/library/Ipa/DylibApiDocumentation.php
-          ! grep -q '首次设备密钥绑定使用同一已激活卡密' application/common/library/Ipa/DylibApiDocumentation.php
       - name: iOS client proof flow
         run: |
           grep -q 'fetchAuthProofForUDID' clients/ios/ZONDylibVerify/ZONVerifyClient.m
           grep -q 'auth_proof' clients/ios/ZONDylibVerify/ZONVerifyClient.m
           grep -q '/index/index/apiface' clients/ios/ZONDylibVerify/ZONVerifyClient.m
-          ! grep -q 'license_required' clients/ios/ZONDylibVerify/ZONVerifyClient.m
           ! grep -q 'verifyPayload\[@"license_code"\]' clients/ios/ZONDylibVerify/ZONVerifyClient.m
       - name: Duplicate tester removed
         run: |

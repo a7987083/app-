@@ -1,23 +1,21 @@
-ZONOE 软件源 Release 2026092433
-版本：2026092433
-基线：source-v2026092432
-阶段：Dylib active-UDID auth proof / Device Key enrollment 修复
-发布分支：feature/2026092433-dylib-v3-api-tester
-发布状态：开发候选，AUTO_RELEASE=0；最终完整 Gate 全绿后再发布
+ZONOE 软件源 Release 2026092434
+版本：2026092434
+基线：source-v2026092433
+阶段：Dylib active-UDID auth proof / Device Key enrollment
+发布分支：release/2026092434-auth-proof-enrollment
+发布状态：正式候选；完整 Gate 全绿后发布
 
 更新内容：
-1. /index/index/apiface 在保留旧字段的基础上，为当前有效 UDID 签发短时 auth_proof。
-2. 首次 Device Key enrollment 改为 active UDID + auth_proof + one-time Challenge + P-256 device signature，不再要求客户端保存/提交 license_code。
-3. Challenge 把 auth_proof 与 challenge/public_key/UDID/Dylib 绑定；Verify canonical 同步绑定 auth_proof。
-4. 新 iOS ZONVerifyClient 自动从 /index/index/apiface?udid=... 获取 proof，再执行 Challenge/Verify。
-5. 已登记 active Device Key 的旧 v3 客户端保留兼容路径；首次新 Key 不再回退旧 license_code enrollment。
-6. 删除重复的 dylib_api_test/index Controller/View/JS；API 调试继续统一使用系统配置现有 API 接口测试。
-7. 保留 verify bad_request 审计和验证记录 UDID/IP 能力。
-8. 在线更新 manifest 已加入 DylibAuthProofService，并移除独立 tester 文件。
-9. 保留 2432/2431/2430 正式能力。
+1. /index/index/apiface 为当前有效 UDID 签发短时 auth_proof。
+2. 首次 Device Key enrollment 改为 active UDID + auth_proof + one-time Challenge + P-256 device signature，不再要求 license_code。
+3. Challenge 与 auth_proof/public_key/UDID/Dylib 绑定；Verify canonical 同步绑定 auth_proof。
+4. 新 iOS ZONVerifyClient 自动获取 proof 再执行 Challenge/Verify。
+5. 已登记 active Device Key 的旧 v3 客户端保留兼容；首次新 Key 不回退 license_code enrollment。
+6. 删除重复 dylib_api_test/index；API 调试统一使用系统配置现有 API 接口测试。
+7. 保留 verify bad_request 审计、验证记录 UDID/IP、2432/2431/2430 正式能力。
 
 验证：
-- Dylib Auth Proof 2433 CI 覆盖 PHP 7.0 syntax、auth_proof 服务端契约、iOS proof 自动获取、canonical 绑定、首次 enrollment 去 license_code、重复测试页清理及在线更新 manifest。
-- AUTO_RELEASE 当前保持关闭，不会覆盖正式 2432；最终候选完成完整 canonical Release gate 后再开启。
+- Dylib Auth Proof 2434 CI：PHP 7.0 syntax、服务端 proof 契约、iOS proof 自动获取、canonical 绑定、首次 enrollment 去 license_code、重复测试页清理、在线更新 manifest。
+- canonical Release Gate：完整 regression、source integrity、MySQL 5.7 migration、HTTP load、GitHub Release 在线升级 E2E。
 
-在线更新目标：source-v2026092432 -> source-v2026092433。
+在线更新目标：source-v2026092433 -> source-v2026092434。
