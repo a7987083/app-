@@ -1,0 +1,27 @@
+name: Build 2434 Baota Full Package
+
+on:
+  push:
+    branches:
+      - build/2026092434-baota-full-package
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare full program tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifact/program
+          rsync -a --exclude='.git' --exclude='.github' ./ artifact/program/
+          printf 'source_tag=source-v2026092434\nsource_commit=982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da\n' > artifact/SOURCE.txt
+      - name: Upload full source tree
+        uses: actions/upload-artifact@v4
+        with:
+          name: zonoe-2026092434-full-program
+          path: artifact
+          if-no-files-found: error
+          retention-days: 7
