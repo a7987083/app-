@@ -1,0 +1,58 @@
+name: Baota Deploy Package 2434
+
+on:
+  push:
+    branches:
+      - package/2026092434-baota
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 2434 package branch
+        uses: actions/checkout@v4
+
+      - name: Build Baota deployment package
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist/site
+          rsync -a ./ dist/site/ \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'dist/'
+          cat > dist/site/BAOTA_DEPLOY_README.txt <<'EOF'
+          ZONOE 2026092434 宝塔完整部署包
+          来源: source-v2026092434
+          正式源码 HEAD: 982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da
+
+          用法:
+          1. 备份现有站点文件和数据库。
+          2. 将本 ZIP 解压后的内容上传/覆盖到宝塔站点根目录。
+          3. 保留生产环境已有数据库配置、runtime 可写目录和站点证书/Nginx 配置。
+          4. 如为全新环境，按仓库 BUILD/安装说明配置数据库和 PHP 环境。
+          5. 部署后先访问后台和 /index/index/apiface 做基础验证。
+
+          说明:
+          - 这是完整站点部署包，不是 zonoe-online-update.zip 增量更新包。
+          - 包内保留 vendor、clients、release 等运行/生成器依赖目录。
+          EOF
+          cd dist/site
+          zip -qry ../zonoe-baota-deploy-2026092434.zip .
+          cd ..
+          sha256sum zonoe-baota-deploy-2026092434.zip > zonoe-baota-deploy-2026092434.zip.sha256
+          unzip -l zonoe-baota-deploy-2026092434.zip | grep -E 'application/index/controller/Index.php|application/common/library/Ipa/DylibAuthProofService.php|clients/ios/ZONDylibVerify/ZONVerifyClient.m|vendor/autoload.php|release/online-update-files.txt'
+
+      - name: Upload Baota deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: zonoe-baota-deploy-2026092434
+          path: |
+            dist/zonoe-baota-deploy-2026092434.zip
+            dist/zonoe-baota-deploy-2026092434.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
