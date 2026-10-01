@@ -1,32 +1,22 @@
-ZONOE 软件源 Release 2026092427
-版本：2026092427
-基线：source-v2026092426
-阶段：IPA 数据中心 / ipaxiazaizhan Parser Migration
-发布分支：feature/2026092427-ipa-parser-ipaxiazaizhan-migration
+ZONOE 软件源 Release 2026092428
+版本：2026092428
+基线：source-v2026092427
+阶段：IPA 数据中心 / Parser CLI Launcher Hotfix
+发布分支：feature/2026092428-ipa-parser-cli-launch-fix
 发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 将 a7987083/ipaxiazaizhan- 已验证的 IPA metadata 解析模型迁移到 app-，不再延续 2426 仅依赖 systemd timer 才能解析的方向。
-2. 扫描结束后由应用内 IpaWorkerLauncher 检测 discovered 资产并后台 spawn `php think ipa:parse-worker --scheduled`；Parser 仍运行于独立 CLI PHP 进程，不占用 PHP-FPM shutdown worker。
-3. systemd parser service/timer 保留为可选运维入口，不再是 Parser 启动的唯一依赖。
-4. 扫描阶段读取并持久化 OpenList MD5 内容指纹，兼容 hash_info.md5、hashinfo 与 md5 字段；复用现有 ipa_asset.etag，无需新增数据库列。
-5. Parser 发起 Range 前优先查找相同 MD5 已解析资产；命中后直接复用 metadata，避免重复读取远端 IPA。
-6. OpenList `/api/fs/list` 新增 30 分钟持久化目录缓存；增量扫描可复用缓存，全量扫描必须强制 refresh 并绕过缓存。
-7. HTTP Range 使用固定 256 KiB block cache，单 IPA 网络读取预算限制为 16 MiB。
-8. Parser 只读取 Payload/*.app/Info.plist，提取 Bundle ID、应用名、版本、Build、MinimumOSVersion 与 executable；不恢复 Mach-O/dylib/framework/hash 重型解析。
-9. `ipa:parse-worker --scheduled` 改为有界批次，新增 `--limit`，范围 1-20，默认单轮最多 20 个 IPA，不再无限 drain 队列。
-10. parse_failed 使用 30 分钟 cooldown，失败资产不会高频重试，也不会阻塞后续 discovered IPA；孤立 parsing 状态继续支持超时回收。
-11. Parse Worker 不自动调用 IpaCompareService；软件源手工比对/写回继续保留为独立业务能力。
-12. 保留 IPA 扫描、资产记录、搜索、删除、清空解析结果、OpenList 数据源、增量/全量扫描、现有后台 UI 以及其它软件源/卡密/Dylib 功能。
-13. 清空解析结果仍只清除解析派生数据，不删除 IPA 扫描/发现记录。
+1. 基于 2026092427，仅修复 IPA Parser 启动链，不改 Parser V2 的 metadata / Range / MD5 / OpenList 数据逻辑。
+2. 修复 PHP-FPM 环境下 IpaWorkerLauncher 直接使用 PHP_BINARY 的问题。PHP-FPM 下 PHP_BINARY 可能指向 php-fpm，而不是 CLI php，导致 `think ipa:parse-worker --scheduled` 被错误启动后立即退出。
+3. 新增 CLI PHP 解析逻辑：优先当前 PHP 安装目录/bin/php、PHP_BINDIR/php、宝塔 `/www/server/php/<major><minor>/bin/php`，再回退 `/usr/bin/php` 与 `/usr/local/bin/php`。
+4. 找不到可执行 CLI PHP 时返回 `cli_php_not_found`，不再把失败伪装成已正常调度。
+5. 保留 2026092427 的应用内 Parser 触发、systemd 可选入口、MD5 metadata 复用、OpenList 目录缓存、256 KiB Range block cache、16 MiB 单 IPA 预算、30 分钟 parse_failed cooldown 与有界批次。
+6. 保留 IPA 扫描、资产记录、搜索、删除、清空解析结果、OpenList 数据源、增量/全量扫描、现有后台 UI，以及其它软件源/卡密/Dylib 功能。
 
 验证：
-- IPA Parser V2 2427 Migration CI：SUCCESS。
-- PHP 7.0 全回归：SUCCESS。
-- MySQL 5.7 migration：SUCCESS。
-- HTTP 并发负载矩阵：SUCCESS。
-- 上一轮正式发布仅因 RELEASE_NOTES.md / PHASE13_RELEASE.txt 仍为 2426 而在 Validate release metadata 被阻断；Parser 与上述测试没有失败。
-- 本提交修正 2427 发布元数据后，由自动发布链重新执行 package/release 与真实 GitHub Release 在线升级 E2E。
-- 在最终 E2E 成功前，不声明生产服务器已完成真实性能验收。
+- 2026092427 上原修复提交 a90861d3135b1c87972d0998182a9a6233b6ca76 的 IPA Parser V2 2427 Migration CI：SUCCESS。
+- Auto Online Release Gate：SUCCESS。
+- 本版本将以 2026092428 重新执行完整 sibling CI、canonical Release 与在线升级 E2E，避免生产端已是 2026092427 时无法检测到同版本更新。
+- 在生产服务器实际出现 discovered -> parsing -> parsed 前，不声明生产解析链已验收。
 
-在线更新目标：source-v2026092426 -> source-v2026092427。
+在线更新目标：source-v2026092427 -> source-v2026092428。
