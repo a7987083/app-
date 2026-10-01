@@ -2,7 +2,6 @@
 
 namespace app\common\library\Ipa;
 
-use app\common\library\AuthorizationLicense;
 use think\Config;
 use think\Db;
 
@@ -15,14 +14,23 @@ class DylibDeviceAuthService
     {
         $udid = trim((string)(isset($payload['udid']) ? $payload['udid'] : ''));
         $dylibKey = trim((string)(isset($payload['dylib_key']) ? $payload['dylib_key'] : ''));
+        $authProof = trim((string)(isset($payload['auth_proof']) ? $payload['auth_proof'] : ''));
         $publicKey = self::normalizePublicKey(isset($payload['device_public_key']) ? $payload['device_public_key'] : '');
-        if ($udid === '' || $dylibKey === '' || $publicKey === '') {
+        if ($udid === '' || $dylibKey === '' || $authProof === '' || $publicKey === '') {
             return ['ok' => false, 'code' => 'bad_request', 'message' => 'Missing device authentication fields'];
         }
 
         $dylib = Db::name('dylib')->where('dylib_key', $dylibKey)->where('enabled', 1)->find();
         if (!$dylib) {
             return ['ok' => false, 'code' => 'dylib_unknown', 'message' => 'Unknown dylib'];
+        }
+
+        $proof = DylibAuthProofService::validate($authProof, $udid);
+        if (empty($proof['ok'])) {
+            return $proof;
+        }
+        if (!self::hasActiveAuthorization($udid)) {
+            return ['ok' => false, 'code' => 'authorization_inactive', 'message' => 'UDID authorization is not active'];
         }
 
         $now = time();
@@ -34,7 +42,7 @@ class DylibDeviceAuthService
 
         Db::name('dylib_auth_challenge')->insert([
             'challenge_id' => $challengeId,
-            'challenge_hash' => hash('sha256', $challenge),
+            'challenge_hash' => hash('sha256', $challenge . "\n" . $authProof),
             'udid_hash' => $udidHash,
             'dylib_id' => (int)$dylib['id'],
             'public_key_hash' => $publicKeyHash,
@@ -65,18 +73,27 @@ class DylibDeviceAuthService
     {
         $udid = trim((string)(isset($payload['udid']) ? $payload['udid'] : ''));
         $dylibKey = trim((string)(isset($payload['dylib_key']) ? $payload['dylib_key'] : ''));
+        $authProof = trim((string)(isset($payload['auth_proof']) ? $payload['auth_proof'] : ''));
         $challengeId = strtolower(trim((string)(isset($payload['challenge_id']) ? $payload['challenge_id'] : '')));
         $challenge = trim((string)(isset($payload['challenge']) ? $payload['challenge'] : ''));
         $signature = base64_decode((string)(isset($payload['device_signature']) ? $payload['device_signature'] : ''), true);
         $publicKey = self::normalizePublicKey(isset($payload['device_public_key']) ? $payload['device_public_key'] : '');
 
-        if ($udid === '' || $dylibKey === '' || !preg_match('/^[a-f0-9]{32}$/', $challengeId) || $challenge === '' || $signature === false || $publicKey === '') {
+        if ($udid === '' || $dylibKey === '' || $authProof === '' || !preg_match('/^[a-f0-9]{32}$/', $challengeId) || $challenge === '' || $signature === false || $publicKey === '') {
             return ['ok' => false, 'code' => 'device_auth_invalid', 'message' => 'Invalid device authentication payload'];
         }
 
         $dylib = Db::name('dylib')->where('dylib_key', $dylibKey)->where('enabled', 1)->find();
         if (!$dylib) {
             return ['ok' => false, 'code' => 'dylib_unknown', 'message' => 'Unknown dylib'];
+        }
+
+        $proof = DylibAuthProofService::validate($authProof, $udid);
+        if (empty($proof['ok'])) {
+            return $proof;
+        }
+        if (!self::hasActiveAuthorization($udid)) {
+            return ['ok' => false, 'code' => 'authorization_inactive', 'message' => 'UDID authorization is not active'];
         }
 
         $secret = self::serverSecret();
@@ -93,7 +110,7 @@ class DylibDeviceAuthService
         if (!hash_equals((string)$row['udid_hash'], $udidHash)
             || (int)$row['dylib_id'] !== (int)$dylib['id']
             || !hash_equals((string)$row['public_key_hash'], $publicKeyHash)
-            || !hash_equals((string)$row['challenge_hash'], hash('sha256', $challenge))) {
+            || !hash_equals((string)$row['challenge_hash'], hash('sha256', $challenge . "\n" . $authProof))) {
             return ['ok' => false, 'code' => 'challenge_mismatch', 'message' => 'Challenge context mismatch'];
         }
 
@@ -113,15 +130,6 @@ class DylibDeviceAuthService
         }
 
         if (!$bound) {
-            $license = AuthorizationLicense::query(isset($payload['license_code']) ? $payload['license_code'] : '', $udid);
-            if (empty($license['ok']) || empty($license['active'])) {
-                return [
-                    'ok' => false,
-                    'code' => 'device_enrollment_denied',
-                    'message' => isset($license['message']) ? (string)$license['message'] : 'Valid card required',
-                ];
-            }
-
             $keyId = substr($publicKeyHash, 0, 32);
             Db::name('dylib_device_key')->insert([
                 'udid_hash' => $udidHash,
@@ -167,6 +175,7 @@ class DylibDeviceAuthService
             'zonoe-dylib-auth-v3',
             (string)$challengeId,
             (string)$challenge,
+            trim((string)(isset($payload['auth_proof']) ? $payload['auth_proof'] : '')),
             trim((string)(isset($payload['udid']) ? $payload['udid'] : '')),
             trim((string)(isset($payload['bundle_id']) ? $payload['bundle_id'] : '')),
             trim((string)(isset($payload['dylib_key']) ? $payload['dylib_key'] : '')),
@@ -178,6 +187,15 @@ class DylibDeviceAuthService
             trim((string)(isset($payload['app_version']) ? $payload['app_version'] : '')),
             trim((string)(isset($payload['app_build']) ? $payload['app_build'] : '')),
         ]);
+    }
+
+    protected static function hasActiveAuthorization($udid)
+    {
+        return (bool)Db::name('kami')
+            ->where('udid', trim((string)$udid))
+            ->where('jh', 1)
+            ->where('endtime', '>', time())
+            ->find();
     }
 
     protected static function normalizePublicKey($pem)
