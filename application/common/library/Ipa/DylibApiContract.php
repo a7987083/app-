@@ -18,16 +18,16 @@ class DylibApiContract
             ['name' => 'dylib_version', 'type' => 'string', 'required' => true, 'since' => 'v1', 'description' => 'Dylib 版本号。'],
             ['name' => 'dylib_build', 'type' => 'string', 'required' => false, 'since' => 'v1', 'description' => '内部构建号；填写后服务端按 version + build 精确匹配。'],
             ['name' => 'dylib_sha256', 'type' => 'string', 'required' => false, 'since' => 'v1', 'description' => 'Dylib 文件 SHA256；版本登记了指纹时必须匹配。'],
-            ['name' => 'protocol_version', 'type' => 'int', 'required' => true, 'since' => 'v3', 'description' => '2430 Secretless Auth 固定使用 3。'],
+            ['name' => 'protocol_version', 'type' => 'int', 'required' => true, 'since' => 'v3', 'description' => 'Secretless Auth 固定使用 3。'],
             ['name' => 'app_executable', 'type' => 'string', 'required' => true, 'since' => 'v2', 'description' => '当前主程序可执行文件名。'],
             ['name' => 'app_macho_uuid', 'type' => 'string', 'required' => true, 'since' => 'v2', 'description' => '当前主程序 Mach-O UUID。'],
             ['name' => 'app_version', 'type' => 'string', 'required' => false, 'since' => 'v2', 'description' => '当前 App 对外版本，用于 app_update 判断。'],
             ['name' => 'app_build', 'type' => 'string', 'required' => false, 'since' => 'v2', 'description' => '当前 App Build，用于 app_update 判断。'],
+            ['name' => 'auth_proof', 'type' => 'string', 'required' => true, 'since' => 'v3.1', 'description' => '由 /index/index/apiface 在确认 UDID 当前授权有效后签发的短时服务器证明；Challenge 与 Verify 都必须携带同一份。'],
             ['name' => 'challenge_id', 'type' => 'string', 'required' => true, 'since' => 'v3', 'description' => '由 challenge API 返回的一次性 Challenge ID。'],
             ['name' => 'challenge', 'type' => 'string', 'required' => true, 'since' => 'v3', 'description' => '由 challenge API 返回的一次性随机值。'],
             ['name' => 'device_public_key', 'type' => 'PEM', 'required' => true, 'since' => 'v3', 'description' => '设备 P-256 公钥；私钥保存在设备 Keychain。'],
             ['name' => 'device_signature', 'type' => 'base64 DER', 'required' => true, 'since' => 'v3', 'description' => '设备私钥对 canonical proof 的 ECDSA-SHA256 签名。'],
-            ['name' => 'license_code', 'type' => 'string', 'required' => false, 'since' => 'v3', 'description' => '仅首次设备密钥绑定时需要，用于把新公钥绑定到现有授权链。'],
         ];
     }
 
@@ -56,15 +56,19 @@ class DylibApiContract
         return [
             ['code' => 'bad_request', 'ok' => false, 'meaning' => '必填请求参数缺失', 'client' => '检查请求字段；可直接展示 message。'],
             ['code' => 'method_not_allowed', 'ok' => false, 'meaning' => '接口请求方法错误', 'client' => '按 API 文档改用正确方法。'],
-            ['code' => 'protocol_unsupported', 'ok' => false, 'meaning' => '客户端协议版本低于 v3', 'client' => '更新为 2430 生成的 Secretless 客户端。'],
+            ['code' => 'protocol_unsupported', 'ok' => false, 'meaning' => '客户端协议版本低于 v3', 'client' => '更新为当前 Secretless 客户端。'],
+            ['code' => 'auth_proof_missing', 'ok' => false, 'meaning' => '缺少 active-UDID 授权证明', 'client' => '先调用 /index/index/apiface 获取 auth_proof。'],
+            ['code' => 'auth_proof_invalid', 'ok' => false, 'meaning' => '授权证明签名或格式无效', 'client' => '重新请求 /apiface，不要复用损坏的 proof。'],
+            ['code' => 'auth_proof_expired', 'ok' => false, 'meaning' => '授权证明已过期', 'client' => '重新请求 /apiface 获取短时 proof。'],
+            ['code' => 'auth_proof_mismatch', 'ok' => false, 'meaning' => '授权证明与当前 UDID 不匹配', 'client' => '丢弃 proof，按当前 UDID 重新开始认证。'],
+            ['code' => 'authorization_inactive', 'ok' => false, 'meaning' => 'UDID 当前没有有效授权', 'client' => '先完成正常卡密激活/续期。'],
             ['code' => 'challenge_unavailable', 'ok' => false, 'meaning' => 'Challenge 服务暂不可用', 'client' => '尝试备用 endpoint 或 offline grace。'],
-            ['code' => 'challenge_expired', 'ok' => false, 'meaning' => '一次性 Challenge 已过期', 'client' => '重新请求 Challenge 后再次签名。'],
+            ['code' => 'challenge_expired', 'ok' => false, 'meaning' => '一次性 Challenge 已过期', 'client' => '重新请求 auth_proof + Challenge 后再次签名。'],
             ['code' => 'challenge_replayed', 'ok' => false, 'meaning' => 'Challenge 已使用或不存在', 'client' => '重新获取 Challenge；不要复用旧证明。'],
-            ['code' => 'challenge_mismatch', 'ok' => false, 'meaning' => 'Challenge 与 UDID/Dylib/公钥上下文不匹配', 'client' => '丢弃本次 Challenge，重新开始认证。'],
-            ['code' => 'device_auth_invalid', 'ok' => false, 'meaning' => '设备认证字段或公钥无效', 'client' => '检查 P-256 公钥、Challenge 和签名字段。'],
+            ['code' => 'challenge_mismatch', 'ok' => false, 'meaning' => 'Challenge 与 UDID/Dylib/公钥/auth_proof 上下文不匹配', 'client' => '丢弃本次 proof/Challenge，重新开始认证。'],
+            ['code' => 'device_auth_invalid', 'ok' => false, 'meaning' => '设备认证字段或公钥无效', 'client' => '检查 P-256 公钥、Challenge、auth_proof 和签名字段。'],
             ['code' => 'device_signature_invalid', 'ok' => false, 'meaning' => '设备签名验证失败', 'client' => '检查 canonical proof 和设备私钥。'],
             ['code' => 'device_key_mismatch', 'ok' => false, 'meaning' => 'UDID 已绑定其它设备公钥', 'client' => '需要后台撤销旧设备密钥后重新绑定。'],
-            ['code' => 'device_enrollment_denied', 'ok' => false, 'meaning' => '首次设备公钥绑定没有通过现有授权链', 'client' => '提供有效卡密/授权后重新绑定。'],
             ['code' => 'dylib_unknown', 'ok' => false, 'meaning' => 'Dylib Key 不存在或 Dylib 已停用', 'client' => '停止受保护功能并展示 message。'],
             ['code' => 'blacklisted', 'ok' => false, 'meaning' => '设备在服务端黑名单中', 'client' => '按 action 处理并展示 message。'],
             ['code' => 'app_identity_incomplete', 'ok' => false, 'meaning' => '缺少 executable 或 Mach-O UUID', 'client' => '补齐 App 身份字段后重新认证。'],
@@ -99,7 +103,7 @@ class DylibApiContract
 
     public static function canonicalV3()
     {
-        return "zonoe-dylib-auth-v3\nchallenge_id\nchallenge\nudid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\napp_executable\napp_macho_uuid\napp_version\napp_build";
+        return "zonoe-dylib-auth-v3\nchallenge_id\nchallenge\nauth_proof\nudid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\napp_executable\napp_macho_uuid\napp_version\napp_build";
     }
 
     public static function document($dylibKey = '', $version = '', $build = '', $verifyPath = '/index/dylib_verify/verify')
@@ -110,6 +114,7 @@ class DylibApiContract
             'dylib_version' => (string)$version,
             'dylib_build' => (string)$build,
             'endpoints' => [
+                'active_udid_proof' => ['method' => 'GET', 'path' => '/index/index/apiface', 'query' => ['udid']],
                 'runtime_config' => ['method' => 'GET', 'path' => '/index/dylib_verify/config', 'query' => ['dylib_key']],
                 'challenge' => ['method' => 'POST', 'path' => '/index/dylib_verify/challenge', 'content_types' => ['application/x-www-form-urlencoded', 'application/json']],
                 'verify' => ['method' => 'POST', 'path' => (string)$verifyPath, 'content_types' => ['application/x-www-form-urlencoded', 'application/json']],
@@ -117,7 +122,7 @@ class DylibApiContract
             'request_fields' => self::verifyRequestFields(),
             'response_fields' => self::verifyResponseFields(),
             'canonical_v3' => self::canonicalV3(),
-            'signature' => 'base64(ECDSA-P256-SHA256(canonical_v3, device_private_key)); Bootstrap uses RSA-2048-SHA256 server signature',
+            'signature' => 'base64(ECDSA-P256-SHA256(canonical_v3, device_private_key)); auth_proof uses a short-lived server HMAC; Bootstrap uses RSA-2048-SHA256 server signature',
             'actions' => self::actions(),
             'result_codes' => self::errorCodes(),
         ];
