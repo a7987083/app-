@@ -2,8 +2,8 @@
     <div class="panel-heading">{:build_heading(null,FALSE)}</div>
     <div class="panel-body">
         <div class="alert alert-info" style="margin-bottom:15px">
-            <strong>Dylib 验证中心 · 2413 API 文档中心</strong>
-            <span class="text-muted">这里只负责提供验证 API、签名规则、错误码、运行配置和验证记录；UDID 获取、卡密输入、公告弹窗、悬浮窗等客户端 UI 由实际 OC/Swift 工程自行实现。</span>
+            <strong>Dylib 验证中心 · Secretless v3</strong>
+            <span class="text-muted">保留 2428 的验证 API、错误码、运行配置、Codegen 和验证记录；认证层改为设备 P-256 Key + 一次性 Challenge，客户端不再保存 Verify Secret。</span>
         </div>
 
         <ul class="nav nav-tabs" id="dylib-center-tabs" style="margin-bottom:15px">
@@ -33,13 +33,8 @@
                                         <label>名称</label>
                                         <input class="form-control" name="name" placeholder="主验证 Dylib" required>
                                     </div>
-                                    <div class="form-group">
-                                        <label>Verify Secret</label>
-                                        <div class="input-group">
-                                            <input class="form-control" id="verify-secret" name="verify_secret" type="password" autocomplete="new-password" placeholder="新建时生成；编辑留空=不轮换">
-                                            <span class="input-group-btn"><button class="btn btn-default" type="button" id="generate-secret">自动生成</button></span>
-                                        </div>
-                                        <p class="help-block">客户端按 API 文档的 canonical 顺序做 HMAC-SHA256；Secret 只提供给受控客户端工程。</p>
+                                    <div class="alert alert-success" style="padding:8px 12px">
+                                        <strong>Secretless Auth：</strong>无需配置 Verify Secret。设备私钥保存在 Keychain；服务器 Runtime Config 使用独立 RSA 私钥签名，客户端只嵌入公钥。
                                     </div>
                                     <div class="row">
                                         <div class="col-sm-6 form-group">
@@ -206,7 +201,7 @@
             <div class="tab-pane" id="tab-advanced">
                 <div class="panel panel-primary" id="section-integration">
                     <div class="panel-heading">
-                        <strong>API 接入说明</strong> <span class="label label-info">8 个入口</span>
+                        <strong>API 接入说明</strong> <span class="label label-info">9 个入口</span>
                         <span class="pull-right">
                             <a href="javascript:void(0)" class="btn btn-xs btn-success" style="margin-right:10px;color:#fff" onclick="var s=document.getElementById('global-dylib-select');if(!s||!s.value){alert('请先选择 Dylib');return false;}var p=window.location.pathname.replace(/\/dylib_center(?:\/index)?\/?$/,'/dylib_api_docs/download');window.location=p+'?dylib_id='+encodeURIComponent(s.value);return false;"><i class="fa fa-download"></i> 全部下载 ZIP</a>
                             <a data-toggle="collapse" href="#integration-detail" aria-expanded="false" style="color:#fff">展开 / 收起</a>
@@ -215,7 +210,7 @@
                     <div id="integration-detail" class="panel-collapse collapse">
                         <div class="panel-body">
                             <div class="alert alert-info">
-                                <strong>职责边界：</strong>这里给实际客户端提供 API 契约。生成的 OC 代码仅用于测试/参考；实际项目应按下面的 API、HMAC、错误码自己接入。客户端如何取得 UDID、输入卡密、显示公告或授权信息，不属于本验证中心。
+                                <strong>职责边界：</strong>这里给实际客户端提供 API 契约。生成的 OC 代码仅用于测试/参考；实际项目应按下面的 API、设备签名、错误码自己接入。客户端如何取得 UDID、输入卡密、显示公告或授权信息，不属于本验证中心。
                             </div>
                             <div class="alert alert-warning" style="padding:8px 12px">
                                 <strong>接口类型要区分：</strong><code>/authorization</code> 与 <code>/unbind</code> 当前是 HTML 页面兼容入口，不是纯 JSON API；OC/Swift 不应直接按 JSON 解析。其余标注为 JSON 的接口可用于程序化接入。
@@ -235,68 +230,60 @@
                                     <div class="panel-group" id="api-full-catalog">
                                         <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-authorization"><strong>1. 卡密授权查询</strong> <code>POST /authorization</code> <span class="label label-warning">HTML 页面</span></a></div><div id="api-authorization" class="panel-collapse collapse in"><div class="panel-body"><p><strong>用途：</strong>查询指定卡密与 UDID 的授权状态。当前实现将查询结果渲染到网页，不返回纯 JSON。</p><p><strong>什么时候调用：</strong>网页自助查询授权信息时；OC/Swift 客户端不要把它当 JSON API。</p><p><strong>参数：</strong><code>code</code> 卡密（必填），<code>udid</code> 当前设备 UDID（必填）。</p><pre>POST /authorization
 code=XXXX-XXXX
-udid=000081...</pre><p><strong>下一步：</strong>未激活时调用 <code>/appstore</code>；日常旧授权检查使用 <code>/index/index/apiface</code>，2412+ Dylib 保护使用 Verify API。</p></div></div></div>
-
-                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-appstore"><strong>2. 卡密激活 / 软件源刷新</strong> <code>GET /appstore</code> <span class="label label-success">程序接口</span></a></div><div id="api-appstore" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>带 <code>code</code> 时激活一次性卡密并绑定 UDID；不带 code 时刷新软件源。</p><p><strong>什么时候调用：</strong>首次激活卡密，或已授权设备刷新软件源数据。</p><p><strong>参数：</strong><code>udid</code> 必填；<code>code</code> 激活时必填、仅刷新时可省略。</p><pre>GET /appstore?udid=&lt;UDID&gt;&amp;code=&lt;CARD_CODE&gt;</pre><p><strong>常见失败：</strong>未获取设备UDID、解锁码不存在、解锁码已使用、指定 App 卡未配置授权 App、黑名单等。客户端应显示服务端 <code>msg</code>。</p><p><strong>下一步：</strong>激活成功后用 <code>/index/index/apiface</code> 做旧授权校验；受保护 Dylib 继续进入 Runtime Config + Verify。</p></div></div></div>
-
-                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-apiface"><strong>3. 已激活设备授权校验</strong> <code>GET /index/index/apiface</code> <span class="label label-success">JSON</span></a></div><div id="api-apiface" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>兼容旧客户端：按 UDID 查询已激活且未过期授权，返回 <code>expire / ts / nonce / sign</code>。</p><p><strong>参数：</strong><code>udid</code> 必填。</p><pre>GET /index/index/apiface?udid=&lt;UDID&gt;</pre><p><strong>成功字段：</strong><code>code=1</code>、<code>msg=ok</code>、<code>expire</code>、<code>ts</code>、<code>nonce</code>、<code>sign</code>。旧签名原文为 <code>udid|expire|ts|nonce</code>。</p><p><strong>失败：</strong>未获取设备 udid、未查到解锁记录、解锁已到期、签名配置不可用。</p><p><strong>下一步：</strong>旧客户端可继续取远程 Dylib 配置；新验证链继续调用 2412+ Verify。</p></div></div></div>
-
-                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-legacy-config"><strong>4. 旧远程 Dylib 配置</strong> <code>GET /index/index/dylib</code> <span class="label label-success">JSON</span></a></div><div id="api-legacy-config" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>返回旧协议远程 Dylib 配置与当前 UDID 授权状态。</p><p><strong>参数：</strong><code>udid</code> 必填。</p><pre>GET /index/index/dylib?udid=&lt;UDID&gt;</pre><p><strong>典型结果：</strong><code>code=1</code> 验证成功；<code>code=2</code> 未查到解锁记录；<code>code=3</code> 已到期；<code>code=666</code> 黑名单。</p><p><strong>下一步：</strong>2412+ 客户端建议改用 <code>/index/dylib_verify/config</code> 获取 Runtime Config。</p></div></div></div>
-
-                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-unbind"><strong>5. 设备换绑提交</strong> <code>POST /unbind</code> <span class="label label-warning">HTML 页面</span></a></div><div id="api-unbind" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>提交卡密、旧 UDID、新 UDID 执行自助换绑；当前 Controller 把结果渲染到换绑页面。</p><p><strong>参数：</strong><code>code</code>、<code>old_udid</code>、<code>new_udid</code> 均必填。</p><pre>POST /unbind
-code=&lt;CARD_CODE&gt;
-old_udid=&lt;OLD_UDID&gt;
-new_udid=&lt;NEW_UDID&gt;</pre><p><strong>业务检查：</strong>卡密匹配、授权未过期、黑名单、剩余次数、每日限制、冷却时间、新设备同类授权冲突。</p><p><strong>下一步：</strong>用 <code>/unbind/query?udid=新UDID</code> 查询当前换绑资格/授权状态。</p></div></div></div>
-
-                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-unbind-query"><strong>6. 换绑状态查询</strong> <code>GET /unbind/query</code> <span class="label label-success">JSON</span></a></div><div id="api-unbind-query" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>查询当前 UDID 是否有有效授权，以及换绑剩余次数、每日限制、冷却时间。</p><p><strong>参数：</strong><code>udid</code> 必填。</p><pre>GET /unbind/query?udid=&lt;UDID&gt;</pre><p><strong>成功字段：</strong><code>ok</code>、<code>message</code>、<code>remaining</code>、<code>daily_used</code>、<code>daily_limit</code>、<code>next_allowed_at</code>、<code>can_transfer</code>。</p><p><strong>客户端处理：</strong>以 <code>can_transfer</code> 判断当前是否允许进入换绑动作，message 可展示。</p></div></div></div>
-
-                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-runtime-config"><strong>7. Dylib Runtime Config</strong> <code id="integration-config-url">GET /index/dylib_verify/config?dylib_key=...</code> <span class="label label-primary">核心</span></a></div><div id="api-runtime-config" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>按 Dylib Key 获取签名后的运行配置、API Endpoint、Verify Path 和配置版本。</p><p><strong>参数：</strong><code>dylib_key</code> 必填。</p><pre>GET /index/dylib_verify/config?dylib_key=&lt;DYLIB_KEY&gt;</pre><p><strong>失败：</strong><code>config_unavailable</code>。客户端可使用 Last-Known-Good 配置或已有 endpointURL 兜底。</p><p><strong>下一步：</strong>根据配置准备 timestamp + nonce + canonical + HMAC，再 POST Verify。</p></div></div></div>
-
-                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-verify"><strong>8. Dylib 在线验证</strong> <code>POST {$runtimeConfig.verify_path|htmlentities}</code> <span class="label label-primary">核心</span></a></div><div id="api-verify" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>验证设备、App 身份、Dylib Key、版本/Build/SHA256、时间戳、Nonce 和 HMAC。</p><p><strong>Content-Type：</strong><code>application/x-www-form-urlencoded</code> 或 <code>application/json</code>。</p><p><strong>调用顺序：</strong>取得 Runtime Config → 准备字段 → 生成 timestamp/nonce → 按 v1/v2 canonical 签名 → POST Verify → 判断 <code>ok + code + action</code>。</p><pre>POST {$runtimeConfig.verify_path|htmlentities}
-Content-Type: application/json
-
-{
+udid=000081...</pre><p><strong>下一步：</strong>未激活时调用 <code>/appstore</code>；日常旧授权检查使用 <code>/index/index/apiface</code>，Dylib 保护使用 Secretless v3 Verify。</p></div></div></div>
+                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-appstore"><strong>2. 卡密激活 / 软件源刷新</strong> <code>GET /appstore</code> <span class="label label-success">程序接口</span></a></div><div id="api-appstore" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>带 <code>code</code> 时激活一次性卡密并绑定 UDID；不带 code 时刷新软件源。</p><p><strong>什么时候调用：</strong>首次激活卡密，或已授权设备刷新软件源数据。</p><p><strong>参数：</strong><code>udid</code> 必填；<code>code</code> 激活时必填、仅刷新时可省略。</p><pre>GET /appstore?udid=&lt;UDID&gt;&amp;code=&lt;CARD_CODE&gt;</pre><p><strong>下一步：</strong>激活成功后原 <code>/index/index/apiface</code> 继续可用；首次设备密钥登记使用当前已激活卡密。</p></div></div></div>
+                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-apiface"><strong>3. 已激活设备授权校验</strong> <code>GET /index/index/apiface</code> <span class="label label-success">JSON</span></a></div><div id="api-apiface" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>保留 2428 原 API：按 UDID 查询已激活且未过期授权，返回 <code>expire / ts / nonce / sign</code>。</p><p><strong>参数：</strong><code>udid</code> 必填。</p><pre>GET /index/index/apiface?udid=&lt;UDID&gt;</pre></div></div></div>
+                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-legacy-config"><strong>4. 旧远程 Dylib 配置</strong> <code>GET /index/index/dylib</code> <span class="label label-success">JSON</span></a></div><div id="api-legacy-config" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>保留 2428 原 API，返回旧协议远程 Dylib 配置与当前 UDID 授权状态。</p><pre>GET /index/index/dylib?udid=&lt;UDID&gt;</pre></div></div></div>
+                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-unbind"><strong>5. 设备换绑提交</strong> <code>POST /unbind</code> <span class="label label-warning">HTML 页面</span></a></div><div id="api-unbind" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>保留 2428 换绑页面入口。</p><p><strong>参数：</strong><code>code</code>、<code>old_udid</code>、<code>new_udid</code> 均必填。</p></div></div></div>
+                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-unbind-query"><strong>6. 换绑状态查询</strong> <code>GET /unbind/query</code> <span class="label label-success">JSON</span></a></div><div id="api-unbind-query" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>保留 2428 API，查询当前 UDID 有效授权及换绑资格。</p><pre>GET /unbind/query?udid=&lt;UDID&gt;</pre></div></div></div>
+                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-runtime-config"><strong>7. Dylib Runtime Config</strong> <code id="integration-config-url">GET /index/dylib_verify/config?dylib_key=...</code> <span class="label label-primary">核心</span></a></div><div id="api-runtime-config" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>按 Dylib Key 获取 RSA 签名后的运行配置、API Endpoint、Verify Path 和配置版本。</p><p><strong>失败：</strong><code>config_unavailable</code>。客户端可使用 Last-Known-Good 配置或已有 endpointURL 兜底。</p><p><strong>下一步：</strong>使用生成配置中的服务器公钥验签，然后请求 Challenge。</p></div></div></div>
+                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-challenge"><strong>8. Dylib 一次性 Challenge</strong> <code>POST /index/dylib_verify/challenge</code> <span class="label label-primary">核心</span></a></div><div id="api-challenge" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>签发一次性 Challenge，并判断设备 P-256 公钥是否需要首次登记。</p><pre>{
   "udid":"&lt;UDID&gt;",
-  "bundle_id":"com.example.app",
   "dylib_key":"&lt;DYLIB_KEY&gt;",
-  "dylib_version":"1.0.0",
-  "dylib_build":"1",
-  "dylib_sha256":"&lt;SHA256&gt;",
-  "timestamp":0,
-  "nonce":"&lt;NONCE&gt;",
-  "signature":"&lt;SIGNATURE&gt;"
-}</pre><p><strong>客户端处理：</strong>先看 <code>ok</code>，再按稳定字符串 <code>code</code> 分支，未知 code 按 <code>action</code> 处理；<code>message</code> 只用于展示。</p></div></div></div>
+  "device_public_key":"&lt;P-256 SPKI PEM&gt;"
+}</pre><p><strong>下一步：</strong>用 Keychain 私钥对 canonical v3 签名；首次登记时 Verify 请求附带当前已激活卡密。</p></div></div></div>
+                                        <div class="panel panel-default"><div class="panel-heading"><a data-toggle="collapse" data-parent="#api-full-catalog" href="#api-verify"><strong>9. Dylib 在线验证</strong> <code>POST {$runtimeConfig.verify_path|htmlentities}</code> <span class="label label-primary">核心</span></a></div><div id="api-verify" class="panel-collapse collapse"><div class="panel-body"><p><strong>用途：</strong>验证一次性 Challenge、设备签名、App 身份、Dylib Key、版本/Build/SHA256，并继续执行原 2428 权限、公告、更新和离线策略。</p><p><strong>Content-Type：</strong><code>application/x-www-form-urlencoded</code> 或 <code>application/json</code>。</p><p><strong>调用顺序：</strong>Runtime Config → RSA 验签 → Challenge → P-256 签名 → POST Verify → 判断 <code>ok + code + action</code>。</p></div></div></div>
                                     </div>
                                 </div>
 
                                 <div class="tab-pane" id="api-doc-signature">
-                                    <div class="alert alert-danger" style="padding:8px 12px"><strong>Verify Secret 不会出现在“全部下载 ZIP”中。</strong> 下载示例统一使用 <code>&lt;VERIFY_SECRET&gt;</code>，真实密钥只应放在受控客户端工程。</div>
-                                    <p><code>hex_lowercase(HMAC-SHA256(canonical, verify_secret))</code></p>
-                                    <div class="row">
-                                        <div class="col-md-6"><strong>Protocol v1 canonical</strong><pre>udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce</pre></div>
-                                        <div class="col-md-6"><strong>Protocol v2 canonical</strong><pre>udid\nbundle_id\ndylib_key\ndylib_version\ndylib_build\ndylib_sha256\ntimestamp\nnonce\nprotocol_version\napp_executable\napp_macho_uuid\napp_version\napp_build</pre></div>
-                                    </div>
-                                    <p class="help-block">字段之间是真实换行符。不要把 JSON 字典排序后直接签名，不要改变 canonical 顺序；每次请求生成新的 nonce。</p>
+                                    <div class="alert alert-success" style="padding:8px 12px"><strong>客户端不再存在 Verify Secret。</strong> 设备使用独立 P-256 Keychain 私钥；服务器 Runtime Config 使用独立 RSA-2048 私钥签名，生成代码仅含服务器公钥。</div>
+                                    <strong>Protocol v3 canonical</strong><pre>zonoe-dylib-auth-v3
+challenge_id
+challenge
+udid
+bundle_id
+dylib_key
+dylib_version
+dylib_build
+dylib_sha256
+app_executable
+app_macho_uuid
+app_version
+app_build</pre>
+                                    <p class="help-block">设备签名：ECDSA P-256 + SHA-256，DER signature 以 Base64 传输。Challenge 一次性消费，不能复用。</p>
                                 </div>
 
                                 <div class="tab-pane" id="api-doc-request">
                                     <div class="table-responsive"><table class="table table-bordered table-condensed">
                                         <thead><tr><th>字段</th><th>类型</th><th>必填</th><th>协议</th><th>说明</th></tr></thead>
                                         <tbody>
-                                        <tr><td><code>udid</code></td><td>string</td><td>是</td><td>v1+</td><td>客户端自己取得的设备标识；验证中心不负责采集。</td></tr>
-                                        <tr><td><code>bundle_id</code></td><td>string</td><td>是</td><td>v1+</td><td>当前 App Bundle Identifier。</td></tr>
-                                        <tr><td><code>dylib_key</code></td><td>string</td><td>是</td><td>v1+</td><td>当前选择的 Dylib Key：<code class="js-current-dylib-key">...</code></td></tr>
-                                        <tr><td><code>dylib_version</code></td><td>string</td><td>是</td><td>v1+</td><td>必须与后台登记版本一致。</td></tr>
-                                        <tr><td><code>dylib_build</code></td><td>string</td><td>否</td><td>v1+</td><td>填写后按 version + build 精确匹配。</td></tr>
-                                        <tr><td><code>dylib_sha256</code></td><td>string</td><td>按配置</td><td>v1+</td><td>后台登记 SHA256 时必须匹配。</td></tr>
-                                        <tr><td><code>timestamp</code></td><td>int</td><td>是</td><td>v1+</td><td>Unix 秒级时间戳。</td></tr>
-                                        <tr><td><code>nonce</code></td><td>string</td><td>是</td><td>v1+</td><td>16~128 字符随机串，每次请求使用新值。</td></tr>
-                                        <tr><td><code>signature</code></td><td>string</td><td>是</td><td>v1+</td><td>64 位小写 hex HMAC-SHA256。</td></tr>
-                                        <tr><td><code>protocol_version</code></td><td>int</td><td>v2</td><td>v2</td><td>当前 v2 使用 2。</td></tr>
-                                        <tr><td><code>app_executable</code></td><td>string</td><td>v2</td><td>v2</td><td>当前主程序可执行文件名。</td></tr>
-                                        <tr><td><code>app_macho_uuid</code></td><td>string</td><td>v2</td><td>v2</td><td>当前主程序 Mach-O UUID。</td></tr>
-                                        <tr><td><code>app_version</code></td><td>string</td><td>否</td><td>v2</td><td>用于 app_update 判断。</td></tr>
-                                        <tr><td><code>app_build</code></td><td>string</td><td>否</td><td>v2</td><td>用于 app_update 判断。</td></tr>
+                                        <tr><td><code>udid</code></td><td>string</td><td>是</td><td>v3</td><td>客户端自己取得的设备标识。</td></tr>
+                                        <tr><td><code>bundle_id</code></td><td>string</td><td>是</td><td>v3</td><td>当前 App Bundle Identifier。</td></tr>
+                                        <tr><td><code>dylib_key</code></td><td>string</td><td>是</td><td>v3</td><td>当前选择的 Dylib Key：<code class="js-current-dylib-key">...</code></td></tr>
+                                        <tr><td><code>dylib_version</code></td><td>string</td><td>是</td><td>v3</td><td>必须与后台登记版本一致。</td></tr>
+                                        <tr><td><code>dylib_build</code></td><td>string</td><td>否</td><td>v3</td><td>填写后按 version + build 精确匹配。</td></tr>
+                                        <tr><td><code>dylib_sha256</code></td><td>string</td><td>按配置</td><td>v3</td><td>后台登记 SHA256 时必须匹配。</td></tr>
+                                        <tr><td><code>protocol_version</code></td><td>int</td><td>是</td><td>v3</td><td>固定为 3。</td></tr>
+                                        <tr><td><code>app_executable</code></td><td>string</td><td>是</td><td>v3</td><td>当前主程序可执行文件名。</td></tr>
+                                        <tr><td><code>app_macho_uuid</code></td><td>string</td><td>是</td><td>v3</td><td>当前主程序 Mach-O UUID。</td></tr>
+                                        <tr><td><code>app_version</code></td><td>string</td><td>否</td><td>v3</td><td>用于 app_update 判断。</td></tr>
+                                        <tr><td><code>app_build</code></td><td>string</td><td>否</td><td>v3</td><td>用于 app_update 判断。</td></tr>
+                                        <tr><td><code>challenge_id</code></td><td>string</td><td>是</td><td>v3</td><td>Challenge API 返回的一次性 ID。</td></tr>
+                                        <tr><td><code>challenge</code></td><td>string</td><td>是</td><td>v3</td><td>Challenge API 返回的一次性随机值。</td></tr>
+                                        <tr><td><code>device_public_key</code></td><td>PEM</td><td>是</td><td>v3</td><td>P-256 SPKI 公钥。</td></tr>
+                                        <tr><td><code>device_signature</code></td><td>Base64 DER</td><td>是</td><td>v3</td><td>设备私钥对 canonical v3 的签名。</td></tr>
+                                        <tr><td><code>license_code</code></td><td>string</td><td>首次绑定</td><td>v3</td><td>设备公钥首次登记时使用现有已激活卡密证明授权。</td></tr>
                                         </tbody>
                                     </table></div>
                                 </div>
@@ -323,24 +310,18 @@ Content-Type: application/json
                                 </div>
 
                                 <div class="tab-pane" id="api-doc-errors">
-                                    <p class="text-muted">以下是当前服务端实际使用的字符串结果码。客户端可对需要特殊行为的 code 做分支；未识别的新 code 应按 <code>action</code> 处理，并可直接显示 <code>message</code>。</p>
+                                    <p class="text-muted">以下保留原业务错误码，并新增 Challenge/Device Key 认证错误码。未知 code 仍按 <code>action</code> 处理。</p>
                                     <div class="table-responsive"><table class="table table-bordered table-condensed">
                                         <thead><tr><th>code</th><th>含义</th><th>客户端建议</th></tr></thead>
                                         <tbody>
                                         <tr><td><code>ok</code> / <code>ok_testing</code> / <code>ok_deprecated</code></td><td>验证通过</td><td>消费 permissions/token/notice/app_update。</td></tr>
-                                        <tr><td><code>bad_request</code></td><td>必填字段缺失</td><td>检查请求字段；message 可直接显示。</td></tr>
-                                        <tr><td><code>method_not_allowed</code></td><td>请求方式错误</td><td>verify 必须 POST。</td></tr>
-                                        <tr><td><code>timestamp_invalid</code></td><td>请求时间过期</td><td>校准时间后重新生成签名。</td></tr>
-                                        <tr><td><code>nonce_invalid</code></td><td>Nonce 无效</td><td>重新生成 16~128 字符随机 nonce。</td></tr>
-                                        <tr><td><code>signature_invalid</code></td><td>签名格式无效</td><td>检查是否为 64 位小写 hex。</td></tr>
-                                        <tr><td><code>signature_mismatch</code></td><td>HMAC 不一致</td><td>检查 canonical 顺序、字段值和 Verify Secret。</td></tr>
-                                        <tr><td><code>replay_detected</code></td><td>检测到重放</td><td>生成新 nonce/timestamp 后重新签名。</td></tr>
+                                        <tr><td><code>challenge_expired</code> / <code>challenge_replayed</code> / <code>challenge_mismatch</code></td><td>一次性 Challenge 无效</td><td>重新申请 Challenge 并重新签名。</td></tr>
+                                        <tr><td><code>device_signature_invalid</code> / <code>device_key_mismatch</code></td><td>设备证明或已登记公钥不匹配</td><td>检查设备 Key；需要时后台撤销旧 Key 后重新登记。</td></tr>
+                                        <tr><td><code>device_enrollment_denied</code></td><td>首次公钥登记未通过现有卡密授权</td><td>提供当前 UDID 已激活且有效的卡密。</td></tr>
                                         <tr><td><code>dylib_unknown</code></td><td>Dylib 不存在或已停用</td><td>按 action 停止受保护能力并显示 message。</td></tr>
-                                        <tr><td><code>dylib_key_unconfigured</code> / <code>dylib_key_unavailable</code></td><td>服务端 Verify Secret 配置异常</td><td>服务端问题，不要无限重试。</td></tr>
                                         <tr><td><code>blacklisted</code></td><td>设备被封禁</td><td>按 action 处理并显示 message。</td></tr>
-                                        <tr><td><code>app_identity_incomplete</code></td><td>v2 App 身份字段不完整</td><td>补齐 executable / Mach-O UUID 后重新签名。</td></tr>
+                                        <tr><td><code>app_identity_incomplete</code></td><td>App 身份字段不完整</td><td>补齐 executable / Mach-O UUID。</td></tr>
                                         <tr><td><code>app_identity_unknown</code> / <code>app_identity_unbound</code> / <code>app_identity_ambiguous</code> / <code>app_identity_inactive</code></td><td>App 身份解析失败</td><td>检查身份字段或后台解析/绑定数据。</td></tr>
-                                        <tr><td><code>app_identity_required</code></td><td>当前授权要求 v2 App 身份</td><td>使用 Protocol v2。</td></tr>
                                         <tr><td><code>app_not_authorized</code> / <code>license_invalid</code></td><td>授权不适用或无效/过期</td><td>显示 message；实际授权 UI 由客户端负责。</td></tr>
                                         <tr><td><code>version_unknown</code></td><td>Dylib 版本未登记</td><td>检查 version/build 与后台登记是否一致。</td></tr>
                                         <tr><td><code>version_blocked</code> / <code>version_revoked</code></td><td>版本被阻止/撤销</td><td>按 action 处理并显示版本 notice/message。</td></tr>
@@ -363,7 +344,13 @@ Content-Type: application/json
   ↓
 Dylib 启动 → /index/dylib_verify/config?dylib_key=...
   ↓
-准备 timestamp + nonce + canonical + HMAC
+RSA 公钥验签 Runtime Config
+  ↓
+POST /index/dylib_verify/challenge
+  ↓
+设备 P-256 Keychain 私钥签 canonical v3
+  ↓
+首次设备 Key 登记时附带已激活卡密
   ↓
 POST {$runtimeConfig.verify_path|htmlentities}
   ↓
@@ -371,11 +358,11 @@ ok → code → action → message / permissions / notice / app_update</pre>
                                     <ol>
                                         <li>客户端工程自行取得 UDID、BundleID、版本等业务输入。</li>
                                         <li>页面型入口与 JSON API 分开处理，不要把 HTML 当 JSON。</li>
-                                        <li>Verify 每次生成新的 timestamp + nonce，并按 v1/v2 canonical 固定顺序签名。</li>
+                                        <li>每次 Verify 使用新的 Challenge；设备私钥不离开 Keychain。</li>
                                         <li>先看 <code>ok</code>，再看 <code>code</code> 和 <code>action</code>；<code>message</code> 只用于提示。</li>
                                         <li>验证成功后，客户端自行决定菜单、弹窗、悬浮窗、公告显示等产品行为。</li>
                                     </ol>
-                                    <p><strong>全部下载 ZIP：</strong>包含 README、API_OVERVIEW、API_REFERENCE、ERROR_CODES、SIGNATURE、RESPONSE_MODEL、FLOW、Objective-C/Swift/cURL/Python 示例和 JSON Schema。真实 Verify Secret 不会写入 ZIP。</p>
+                                    <p><strong>全部下载 ZIP：</strong>继续包含 README、API_OVERVIEW、API_REFERENCE、ERROR_CODES、SIGNATURE、RESPONSE_MODEL、FLOW、Objective-C/Swift/cURL/Python 示例和 JSON Schema；不包含任何全局共享 Verify Secret。</p>
                                 </div>
                             </div>
                         </div>
@@ -397,7 +384,7 @@ ok → code → action → message / permissions / notice / app_update</pre>
                                         <textarea class="form-control" rows="4" name="bootstrap_urls" placeholder="https://bootstrap-a.example.com/index/dylib_verify/config">{$runtimeConfig.bootstrap_urls_text|htmlentities}</textarea>
                                     </div>
                                     <div class="form-group"><label>验证路径</label><input class="form-control" name="verify_path" value="{$runtimeConfig.verify_path|htmlentities}"></div>
-                                    <p class="help-block">配置版本：<code>v{$runtimeConfig.config_version}</code>，每次保存自动递增并重新签名。</p>
+                                    <p class="help-block">配置版本：<code>v{$runtimeConfig.config_version}</code>，每次保存自动递增并由服务器 RSA 私钥签名。</p>
                                 </div>
                                 <div class="col-md-6">
                                     <h5><strong>验证结果附加数据默认文案</strong></h5>
