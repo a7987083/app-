@@ -90,9 +90,7 @@ class DylibCenter extends Backend
         $limit = max(20, min(1000, (int)$this->request->get('limit', 1000)));
         $query = $this->buildLogQuery();
         $total = (clone $query)->count();
-        $rows = $query->field('id,udid_hash,bundle_id,dylib_key,dylib_version,result_code,action,latency_ms,created_at')->order('id desc')->limit($offset, $limit)->select();
-        foreach ($rows as &$row) if (!empty($row['udid_hash'])) $row['udid_hash'] = substr($row['udid_hash'], 0, 12) . '…';
-        unset($row);
+        $rows = $query->field('id,udid,ip,bundle_id,dylib_key,dylib_version,result_code,action,latency_ms,created_at')->order('id desc')->limit($offset, $limit)->select();
         return json(['total' => (int)$total, 'rows' => $rows]);
     }
 
@@ -133,18 +131,27 @@ class DylibCenter extends Backend
         $bundleId = trim((string)$this->request->param('bundle_id', ''));
         $resultCode = trim((string)$this->request->param('result_code', ''));
         $version = trim((string)$this->request->param('dylib_version', ''));
+        $udid = trim((string)$this->request->param('udid', ''));
+        $ip = trim((string)$this->request->param('ip', ''));
         $udidHash = trim((string)$this->request->param('udid_hash', ''));
         $from = max(0, (int)$this->request->param('created_from', 0));
         $to = max(0, (int)$this->request->param('created_to', 0));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('bundle_id', 'like', '%' . $search . '%')->whereOr('dylib_key', 'like', '%' . $search . '%')->whereOr('result_code', 'like', '%' . $search . '%')->whereOr('dylib_version', 'like', '%' . $search . '%')->whereOr('udid_hash', 'like', '%' . $search . '%');
+                $q->where('bundle_id', 'like', '%' . $search . '%')
+                    ->whereOr('dylib_key', 'like', '%' . $search . '%')
+                    ->whereOr('result_code', 'like', '%' . $search . '%')
+                    ->whereOr('dylib_version', 'like', '%' . $search . '%')
+                    ->whereOr('udid', 'like', '%' . $search . '%')
+                    ->whereOr('ip', 'like', '%' . $search . '%');
             });
         }
         if ($dylibKey !== '') $query->where('dylib_key', $dylibKey);
         if ($bundleId !== '') $query->where('bundle_id', 'like', '%' . $bundleId . '%');
         if ($resultCode !== '') $query->where('result_code', $resultCode);
         if ($version !== '') $query->where('dylib_version', 'like', '%' . $version . '%');
+        if ($udid !== '') $query->where('udid', 'like', '%' . $udid . '%');
+        if ($ip !== '') $query->where('ip', 'like', '%' . $ip . '%');
         if ($udidHash !== '') $query->where('udid_hash', 'like', $udidHash . '%');
         if ($from > 0) $query->where('created_at', '>=', $from);
         if ($to > 0) $query->where('created_at', '<=', $to);
@@ -235,6 +242,13 @@ class DylibCenter extends Backend
         $sha256 = strtolower(trim((string)$this->request->post('sha256', '')));
         $state = trim((string)$this->request->post('state', 'testing'));
         $action = trim((string)$this->request->post('fail_action', 'disable_feature'));
+        $offlineRaw = trim((string)$this->request->post('offline_grace', ''));
+        $offlineGrace = null;
+        if ($offlineRaw !== '') {
+            if (!preg_match('/^\d+$/', $offlineRaw)) $this->error('离线可用时间必须为空或 0-86400 秒');
+            $offlineGrace = (int)$offlineRaw;
+            if ($offlineGrace < 0 || $offlineGrace > 86400) $this->error('离线可用时间必须为空或 0-86400 秒');
+        }
         if (!Db::name('dylib')->where('id', $dylibId)->find()) $this->error('Dylib not found');
         if ($id > 0 && !Db::name('dylib_version')->where('id', $id)->find()) $this->error('Dylib version not found');
         if ($version === '' || strlen($version) > 64 || strlen($build) > 64) $this->error('Invalid version/build');
@@ -244,7 +258,7 @@ class DylibCenter extends Backend
         $data = [
             'dylib_id' => $dylibId, 'version' => $version, 'build' => $build, 'sha256' => $sha256,
             'file_size' => max(0, (int)$this->request->post('file_size', 0)), 'state' => $state,
-            'offline_grace' => max(0, min(86400, (int)$this->request->post('offline_grace', 900))),
+            'offline_grace' => $offlineGrace,
             'fail_action' => $action, 'notice' => mb_substr(trim((string)$this->request->post('notice', '')), 0, 1024), 'updated_at' => $now,
         ];
         try {
