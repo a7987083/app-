@@ -1,0 +1,25 @@
+name: Full 2434 Deploy Artifact
+
+on:
+  push:
+    branches:
+      - tooling/2434-full-deploy-artifact
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove tooling workflow from package
+        run: rm -f .github/workflows/full-deploy-artifact.yml
+      - name: Upload full source tree
+        uses: actions/upload-artifact@v4
+        with:
+          name: zonoe-2434-full-source
+          path: |
+            .
+            !.git/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
