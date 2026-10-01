@@ -12,11 +12,12 @@ class DylibRuntimeConfigService
         if ($dylibKey === '') {
             throw new \InvalidArgumentException('dylib_key required');
         }
+
         $dylib = Db::name('dylib')->where('dylib_key', $dylibKey)->where('enabled', 1)->find();
-        if (!$dylib || empty($dylib['verify_secret_ciphertext'])) {
+        if (!$dylib) {
             throw new \RuntimeException('Unknown dylib');
         }
-        $verifySecret = SecretBox::decrypt((string)$dylib['verify_secret_ciphertext']);
+
         $config = DylibRuntimeAccessService::runtimeConfig();
         $apiEndpoints = self::urlList(isset($config['api_endpoints_json']) ? $config['api_endpoints_json'] : '[]');
         $bootstrapUrls = self::urlList(isset($config['bootstrap_urls_json']) ? $config['bootstrap_urls_json'] : '[]');
@@ -24,9 +25,11 @@ class DylibRuntimeConfigService
         if ($verifyPath === '' || $verifyPath[0] !== '/') {
             $verifyPath = '/index/dylib_verify/verify';
         }
-        $version = max(1, (int)(isset($config['config_version']) ? $config['config_version'] : 1));
+
+        $version = max(3, (int)(isset($config['config_version']) ? $config['config_version'] : 3));
         $expiresAt = time() + 86400;
         $canonical = self::canonical($version, $apiEndpoints, $bootstrapUrls, $verifyPath, $expiresAt);
+
         return [
             'ok' => true,
             'config_version' => $version,
@@ -34,8 +37,9 @@ class DylibRuntimeConfigService
             'bootstrap_urls' => $bootstrapUrls,
             'verify_path' => $verifyPath,
             'expires_at' => $expiresAt,
-            'signature_alg' => 'hmac-sha256',
-            'signature' => hash_hmac('sha256', $canonical, $verifySecret),
+            'signature_alg' => DylibSigningKey::algorithm(),
+            'key_id' => DylibSigningKey::keyId(),
+            'signature' => DylibSigningKey::sign($canonical),
         ];
     }
 
