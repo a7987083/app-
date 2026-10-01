@@ -6,6 +6,7 @@ use app\common\controller\Frontend;
 use app\common\library\Ipa\DylibDeviceAuthService;
 use app\common\library\Ipa\DylibRuntimeConfigService;
 use app\common\library\Ipa\DylibVerificationService;
+use app\common\library\Ipa\DylibVerifyAudit;
 
 class DylibVerify extends Frontend
 {
@@ -67,8 +68,15 @@ class DylibVerify extends Frontend
             ], 405);
         }
 
+        $started = microtime(true);
+        $payload = $this->payload();
+        $ip = $this->request->ip();
         try {
-            return json(DylibVerificationService::verify($this->payload(), $this->request->ip()));
+            $result = DylibVerificationService::verify($payload, $ip);
+            if (isset($result['code']) && (string)$result['code'] === 'bad_request') {
+                DylibVerifyAudit::logBadRequest($payload, $ip, $started, 'bad_request', 'block');
+            }
+            return json($result);
         } catch (\Exception $e) {
             error_log('[DylibVerify] ' . $e->getMessage());
             return json([
