@@ -3,7 +3,6 @@
 namespace app\admin\controller;
 
 use app\common\controller\Backend;
-use app\common\library\Ipa\SecretBox;
 use think\Db;
 
 class DylibCenter extends Backend
@@ -22,7 +21,7 @@ class DylibCenter extends Backend
         $runtimeConfig = Db::name('dylib_runtime_config')->where('id', 1)->find();
         if (!$runtimeConfig) {
             $runtimeConfig = [
-                'config_version' => 1,
+                'config_version' => 3,
                 'api_endpoints_json' => '[]',
                 'bootstrap_urls_json' => '[]',
                 'verify_path' => '/index/dylib_verify/verify',
@@ -97,6 +96,35 @@ class DylibCenter extends Backend
         return json(['total' => (int)$total, 'rows' => $rows]);
     }
 
+    public function deviceKeys()
+    {
+        $dylibId = (int)$this->request->get('dylib_id', 0);
+        $offset = max(0, (int)$this->request->get('offset', 0));
+        $limit = max(20, min(1000, (int)$this->request->get('limit', 100)));
+        $query = Db::name('dylib_device_key');
+        if ($dylibId > 0) $query->where('dylib_id', $dylibId);
+        $total = (clone $query)->count();
+        $rows = $query->field('id,udid_hash,dylib_id,key_id,algorithm,public_key_hash,status,enrolled_at,last_used_at,revoked_at,created_at,updated_at')->order('id desc')->limit($offset, $limit)->select();
+        foreach ($rows as &$row) if (!empty($row['udid_hash'])) $row['udid_hash'] = substr($row['udid_hash'], 0, 12) . '…';
+        unset($row);
+        return json(['total' => (int)$total, 'rows' => $rows]);
+    }
+
+    public function revokeDeviceKey()
+    {
+        $this->requirePost();
+        $id = (int)$this->request->post('id', 0);
+        if ($id <= 0) $this->error('设备密钥 ID 无效');
+        $row = Db::name('dylib_device_key')->where('id', $id)->find();
+        if (!$row) $this->error('设备密钥不存在');
+        Db::name('dylib_device_key')->where('id', $id)->update([
+            'status' => 'revoked',
+            'revoked_at' => time(),
+            'updated_at' => time(),
+        ]);
+        $this->success('设备密钥已撤销，可重新绑定新设备密钥');
+    }
+
     protected function buildLogQuery()
     {
         $query = Db::name('dylib_verify_log');
@@ -123,26 +151,17 @@ class DylibCenter extends Backend
         return $query;
     }
 
-    public function generateVerifySecret()
-    {
-        $this->requirePost();
-        $this->success('generated', null, ['secret' => bin2hex(random_bytes(32))]);
-    }
-
     public function saveDylib()
     {
         $this->requirePost();
         $id = (int)$this->request->post('id', 0);
         $key = trim((string)$this->request->post('dylib_key', ''));
         $name = trim((string)$this->request->post('name', ''));
-        $verifySecret = trim((string)$this->request->post('verify_secret', ''));
         $grace = max(0, min(86400, (int)$this->request->post('default_offline_grace', 900)));
         $action = trim((string)$this->request->post('default_fail_action', 'disable_feature'));
         if (!preg_match('/^[A-Za-z0-9._-]{2,128}$/', $key)) $this->error('Invalid dylib key');
         if ($name === '') $this->error('Dylib name is required');
         if (!in_array($action, $this->failActions, true)) $this->error('Invalid fail action');
-        if ($id <= 0 && strlen($verifySecret) < 32) $this->error('New dylib requires a verify secret with at least 32 characters');
-        if ($verifySecret !== '' && strlen($verifySecret) < 32) $this->error('Verify secret must contain at least 32 characters');
         $existing = null;
         if ($id > 0) {
             $existing = Db::name('dylib')->where('id', $id)->find();
@@ -158,7 +177,6 @@ class DylibCenter extends Backend
             'default_fail_action' => $action,
             'updated_at' => $now,
         ];
-        if ($verifySecret !== '') $data['verify_secret_ciphertext'] = SecretBox::encrypt($verifySecret);
         try {
             if ($id > 0) Db::name('dylib')->where('id', $id)->update($data);
             else { $data['created_at'] = $now; $id = Db::name('dylib')->insertGetId($data); }
@@ -193,6 +211,8 @@ class DylibCenter extends Backend
         $logCount = (int)Db::name('dylib_verify_log')->where('dylib_key', (string)$dylib['dylib_key'])->count();
         Db::startTrans();
         try {
+            Db::name('dylib_auth_challenge')->where('dylib_id', $id)->delete();
+            Db::name('dylib_device_key')->where('dylib_id', $id)->delete();
             Db::name('dylib_version')->where('dylib_id', $id)->delete();
             Db::name('dylib_app_binding')->where('dylib_id', $id)->delete();
             Db::name('dylib_verify_log')->where('dylib_key', (string)$dylib['dylib_key'])->delete();
@@ -247,7 +267,7 @@ class DylibCenter extends Backend
         $this->success('deleted', null, ['id' => $id, 'dylib_id' => (int)$row['dylib_id'], 'version' => (string)$row['version']]);
     }
 
-    /** Legacy write endpoint retained; 2406 verification no longer reads this table. */
+    /** Legacy write endpoint retained; verification no longer reads this table. */
     public function saveBinding()
     {
         $this->requirePost();
@@ -279,8 +299,8 @@ class DylibCenter extends Backend
         if ($bootstrapUrls && !$apiEndpoints) $this->error('启用 Bootstrap 时至少需要配置一个 API Endpoint');
         $current = Db::name('dylib_runtime_config')->where('id', 1)->find();
         $data = [
-            'config_version' => max(1, (int)(isset($current['config_version']) ? $current['config_version'] : 0) + 1),
-            'api_endpoints_json' => json_encode($apiEndpoints, JSON_UNESCAPED_SLASHES),
+            'config_version' => max(3, (int)(isset($current['config_version']) ? $current['config_version'] : 2) + 1),
+            'api_endpoints_json' => json_encode($apiEndpoints, JSON_UNESCAP_SLASHES),
             'bootstrap_urls_json' => json_encode($bootstrapUrls, JSON_UNESCAPED_SLASHES),
             'verify_path' => $verifyPath,
             'update_title' => mb_substr(trim((string)$this->request->post('update_title', '发现游戏新版本')), 0, 255),
