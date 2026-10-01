@@ -7,6 +7,20 @@
 
 static void ZONVerifyImageAnchor(void) {}
 
+static BOOL ZONReadDERLength(NSData *data, NSUInteger *offset, NSUInteger *length)
+{
+    if (!data || !offset || !length || *offset >= data.length) return NO;
+    const uint8_t *bytes = data.bytes;
+    uint8_t first = bytes[(*offset)++];
+    if ((first & 0x80) == 0) { *length = first; return *offset + *length <= data.length; }
+    NSUInteger count = first & 0x7f;
+    if (count == 0 || count > sizeof(NSUInteger) || *offset + count > data.length) return NO;
+    NSUInteger value = 0;
+    for (NSUInteger i = 0; i < count; i++) value = (value << 8) | bytes[(*offset)++];
+    *length = value;
+    return *offset + *length <= data.length;
+}
+
 @implementation ZONVerifyConfiguration
 - (instancetype)init { self=[super init]; if(self){ _dylibBuild=@""; _bootstrapURLs=@[]; _serverPublicKeyPEM=@""; _serverKeyID=@""; _requestTimeout=10.0; } return self; }
 @end
@@ -144,6 +158,7 @@ static void ZONVerifyImageAnchor(void) {}
 {
     if(![config isKindOfClass:NSDictionary.class]||![config[@"ok"] boolValue]) return NO;
     if([config[@"protocol_version"] integerValue]!=3) return NO;
+    if(![[config[@"signature_alg"] description] isEqualToString:@"rsa-2048-sha256"]) return NO;
     NSString *keyID=[config[@"key_id"] isKindOfClass:NSString.class]?config[@"key_id"]:@"";
     if(self.configuration.serverKeyID.length&&![keyID isEqualToString:self.configuration.serverKeyID]) return NO;
     NSArray *apis=[config[@"api_endpoints"] isKindOfClass:NSArray.class]?config[@"api_endpoints"]:nil;
@@ -159,7 +174,7 @@ static void ZONVerifyImageAnchor(void) {}
     SecKeyRef serverKey=[self serverPublicKey];
     if(!sig||!serverKey) return NO;
     NSData *message=[canonical dataUsingEncoding:NSUTF8StringEncoding];
-    BOOL ok=SecKeyVerifySignature(serverKey,kSecKeyAlgorithmECDSASignatureMessageX962SHA256,(__bridge CFDataRef)message,(__bridge CFDataRef)sig,NULL);
+    BOOL ok=SecKeyVerifySignature(serverKey,kSecKeyAlgorithmRSASignatureMessagePKCS1v15SHA256,(__bridge CFDataRef)message,(__bridge CFDataRef)sig,NULL);
     CFRelease(serverKey);
     return ok;
 }
@@ -223,6 +238,20 @@ static void ZONVerifyImageAnchor(void) {}
     return CFBridgingRelease(sig);
 }
 
+- (NSData *)rsaPKCS1FromSPKI:(NSData *)spki
+{
+    if(spki.length<16) return nil;
+    const uint8_t *bytes=spki.bytes; NSUInteger offset=0,length=0;
+    if(bytes[offset++]!=0x30||!ZONReadDERLength(spki,&offset,&length)) return nil;
+    if(offset>=spki.length||bytes[offset++]!=0x30||!ZONReadDERLength(spki,&offset,&length)||offset+length>spki.length) return nil;
+    offset+=length;
+    if(offset>=spki.length||bytes[offset++]!=0x03||!ZONReadDERLength(spki,&offset,&length)||length<2||offset+length>spki.length) return nil;
+    if(bytes[offset]!=0x00) return nil;
+    offset++; length--;
+    if(offset+length>spki.length) return nil;
+    return [spki subdataWithRange:NSMakeRange(offset,length)];
+}
+
 - (SecKeyRef)serverPublicKey
 {
     NSString *pem=self.configuration.serverPublicKeyPEM?:@"";
@@ -230,10 +259,10 @@ static void ZONVerifyImageAnchor(void) {}
     body=[body stringByReplacingOccurrencesOfString:@"-----END PUBLIC KEY-----" withString:@""];
     body=[[body componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] componentsJoinedByString:@""];
     NSData *spki=[[NSData alloc] initWithBase64EncodedString:body options:0];
-    if(spki.length!=91) return NULL;
-    NSData *raw=[spki subdataWithRange:NSMakeRange(26,65)];
-    NSDictionary *attrs=@{(__bridge id)kSecAttrKeyType:(__bridge id)kSecAttrKeyTypeECSECPrimeRandom,(__bridge id)kSecAttrKeyClass:(__bridge id)kSecAttrKeyClassPublic,(__bridge id)kSecAttrKeySizeInBits:@256};
-    return SecKeyCreateWithData((__bridge CFDataRef)raw,(__bridge CFDictionaryRef)attrs,NULL);
+    NSData *pkcs1=[self rsaPKCS1FromSPKI:spki];
+    if(!pkcs1) return NULL;
+    NSDictionary *attrs=@{(__bridge id)kSecAttrKeyType:(__bridge id)kSecAttrKeyTypeRSA,(__bridge id)kSecAttrKeyClass:(__bridge id)kSecAttrKeyClassPublic,(__bridge id)kSecAttrKeySizeInBits:@2048};
+    return SecKeyCreateWithData((__bridge CFDataRef)pkcs1,(__bridge CFDictionaryRef)attrs,NULL);
 }
 
 - (ZONVerifyResult *)resultFromJSON:(NSDictionary *)json
