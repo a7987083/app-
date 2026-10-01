@@ -1,42 +1,47 @@
-# ZONOE 软件源 2026092428
+# ZONOE 软件源 2026092429
 
 ## 更新内容
 
-### IPA Parser：修复 PHP-FPM 下 CLI Worker 启动失败
+### Dylib 验证中心：Secretless Auth
 
-本版本以 `source-v2026092427` 为在线升级基线，仅修复 IPA Parser 的启动链，不改动 2427 已完成的 Parser V2 metadata / Range / MD5 / OpenList 解析模型。
+本版本以 `source-v2026092428` 为正式发布基线，完成 Dylib 验证中心断代式认证重构，不保留旧 Verify Secret / HMAC 客户端兼容链。
 
-2026092427 的 `IpaWorkerLauncher::ensureParseWorker()` 会在 PHP-FPM 请求里直接使用 `PHP_BINARY` 启动 `php think ipa:parse-worker --scheduled`。在宝塔等 PHP-FPM 环境中，`PHP_BINARY` 可能指向 `.../sbin/php-fpm`，而不是 `.../bin/php`，因此后台虽然能拿到一个启动 PID，但 Parser CLI 实际可能立即退出，表现为“开启解析后仍没有解析”。
+2026092429 的核心变化：
 
-2026092428 改为明确解析 CLI PHP：
+- 删除客户端嵌入式 `Verify Secret`、`verify_secret_ciphertext` 与相关后台 UI / Codegen / 文档路径；
+- 删除旧请求 HMAC 验证和旧 nonce 表依赖；
+- 新增设备密钥认证服务 `DylibDeviceAuthService`；
+- 新增一次性 Challenge 与设备公钥登记表；
+- 运行时验证切换为 Challenge + Device Key 签名；
+- Bootstrap / Runtime Config 改为服务器非对称签名，客户端内置服务器公钥验签；
+- 为 PHP 7.0 / OpenSSL 兼容，服务器配置签名使用 RSA-2048 + SHA-256；
+- iOS 13 客户端使用 Security.framework 校验 RSA PKCS#1 v1.5 SHA-256 签名；
+- 保留现有 UDID、卡密、黑名单、App Identity、Dylib version/build/SHA256、权限、公告、更新、offline grace 与短期 session token 业务模型；
+- 旧客户端不再受支持，旧 Verify Secret 客户端在 2429 服务端切换后应视为失效客户端。
 
-- 当前 PHP 安装目录的 `bin/php`；
-- `PHP_BINDIR/php`；
-- 宝塔版本化路径 `/www/server/php/<major><minor>/bin/php`；
-- `/usr/bin/php`；
-- `/usr/local/bin/php`。
+### 数据库迁移
 
-找不到 CLI PHP 时返回 `cli_php_not_found`，不再继续使用 php-fpm 二进制冒充 CLI Worker。
+新增 `release/sql/2026092429_secretless_dylib_auth.sql`：
 
-### 保持 2427 Parser V2 行为
+- 创建设备公钥表；
+- 创建一次性认证 Challenge 表；
+- 删除 `fa_dylib.verify_secret_ciphertext`；
+- 删除旧 `fa_dylib_nonce`；
+- 提升 Dylib runtime config 协议版本；
+- SQL 已按 MySQL 5.7 进行可重复执行验证。
 
-- 扫描完成后应用内触发 Parser，不要求 systemd timer 才能解析；
-- Parser 仍在独立 CLI PHP 进程执行，不占用 PHP-FPM shutdown worker；
-- systemd service/timer 仍作为可选运维入口；
-- OpenList MD5 内容指纹与相同 MD5 metadata 复用保持不变；
-- 30 分钟 OpenList 目录缓存与全量扫描强制 refresh 保持不变；
-- 256 KiB Range block cache 与单 IPA 16 MiB 网络预算保持不变；
-- Info.plist-only metadata 路径保持不变；
-- `ipa:parse-worker --scheduled` 有界批次保持不变；
-- `parse_failed` 30 分钟 cooldown 与孤立 parsing 回收保持不变；
-- “清空解析结果”仍只清解析派生数据，不删除 IPA 扫描/发现记录。
+### CI / 验证
 
-## CI / 验证
+2429 专用 CI 已覆盖：
 
-原修复提交 `a90861d3135b1c87972d0998182a9a6233b6ca76` 已通过 `IPA Parser V2 2427 Migration CI` 与 `Auto Online Release Gate`。本 2026092428 发布会重新执行完整 sibling CI、canonical Release 与真实 GitHub Release 在线升级 E2E。
+- PHP 7.0 全部 Secretless Auth 核心文件语法检查；
+- 验证客户端/服务端核心实现中不再残留 `verify_secret` / `verifySecret`；
+- RSA-2048 + SHA-256 OpenSSL 签名/验签自检；
+- MySQL 5.7 从 2428 Dylib schema fixture 执行 2429 migration 两次并验证最终 schema；
+- iOS 13 arm64 Objective-C 客户端 `clang -fsyntax-only`。
 
-CI / E2E 通过仅证明代码与升级链满足契约；生产服务器仍需验证 `discovered -> parsing -> parsed` 的真实状态变化。
+当前正式发布仍以完整 canonical release workflow、在线更新包完整性检查和 GitHub Release 结果为最终发布证据。
 
 ## 升级路径
 
-`source-v2026092427 -> source-v2026092428`
+`source-v2026092428 -> source-v2026092429`
