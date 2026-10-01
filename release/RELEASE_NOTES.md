@@ -1,50 +1,48 @@
-# ZONOE 软件源 2026092431
+# ZONOE 软件源 2026092432
 
 ## 更新内容
 
-### Dylib 验证记录可直接查看 UDID / IP
+### `/unbind` UDID 输入改为 1-128 字符
 
-- 验证日志新增原始 `UDID` 与客户端 `IP` 字段，并保留原有 `udid_hash / ip_hash` 供内部关联使用。
-- 后台验证记录列表和筛选改为直接按 UDID / IP 使用，不再把 UDID Hash 作为主要排障字段。
-- 历史记录无法反推出原始 UDID/IP，因此旧记录保持为空；升级后的新验证会写入完整原值。
+- 移除旧的 25 位 / 40 位固定长度限制。
+- 旧 UDID、新 UDID、`/unbind/query` 查询 UDID 统一只要求非空且不超过 128 个字符。
+- 不再要求固定 UUID/UDID 格式，也不限制必须为某一种字符组合。
+- 仍保留“新旧 UDID 不能相同”、卡密与旧 UDID 匹配、黑名单、换绑额度、每日限制、冷却和 IP 频率限制等原业务规则。
 
-### 版本离线时间改为“继承 Dylib 默认”
+### 数据库兼容
 
-- `Dylib 基本信息 -> 默认离线可用` 继续作为全局默认值。
-- `dylib_version.offline_grace` 允许为 `NULL`；`NULL` 表示继承 Dylib 默认值。
-- 新增版本默认不再强写 `900` 秒。
-- 编辑已有版本时可以选择继承默认值，或显式填写自定义秒数；`0` 仍表示明确禁止离线。
-- 现有数据库里已经保存的 900/其他数值不会被迁移自动改写，避免误伤历史手工配置。
+新增 `2026092432_unbind_udid_length.sql`：
 
-### 数据库迁移
+- 当 `fa_kami.udid` 长度小于 128 时自动扩到 `varchar(128)`；
+- 尽量保留原 charset、collation、nullable、default 和 comment；
+- MySQL 5.7 可重复执行；
+- 如果生产库已经大于 128（例如 255），不会降窄。
 
-新增 `2026092431_dylib_log_identity_offline_inherit.sql`：
+### 页面
 
-- `fa_dylib_verify_log` 增加 `udid`、`ip`；
-- 增加 UDID/IP 索引；
-- `fa_dylib_version.offline_grace` 改为 nullable；
-- MySQL 5.7 下可重复执行；
-- 不改写已有版本的离线值。
+`https://app3.zonoeios.xyz/unbind` 的旧 UDID、新 UDID以及查询 UDID 输入框统一标明支持 1-128 字符；前端最大长度与后端约束一致。
 
 ### 兼容性
 
-- 继续保留 2026092430 的 Secretless Auth v3、Challenge、Device Key、RSA Runtime Config 签名和原有 API。
-- 原 2428/2430 Dylib 管理、版本、通知、Codegen、API 文档、App Identity、权限、App Update、session token 等功能保持不变。
+- 基于正式 `source-v2026092431` 开发。
+- 保留 2431 的验证记录 UDID/IP、offline_grace 继承能力。
+- 保留 2430 Secretless Auth v3、Challenge、Device Key、RSA Runtime Config 签名及原有 API/后台功能。
 
 ## CI / 验证
 
-`Dylib Admin 2431 CI` 已覆盖并通过第一轮技术门禁：
+`Unbind UDID 2432 CI` 覆盖：
 
-- PHP 7.0 / JavaScript syntax；
-- 验证记录 UDID/IP 合约；
-- offline_grace 继承合约；
-- 2430 Secretless 与旧 API 表面保留断言；
-- MySQL 5.7 migration 双次执行；
-- 历史 offline_grace 值保持不变；
-- 在线更新 ZIP 构建并确认 2431 migration 入包。
+- PHP 7.0 syntax；
+- 1、25、36、40、128 字符输入必须通过；
+- 空值和 129 字符必须拒绝；
+- 不再存在 25/40 位固定长度判断；
+- MySQL 5.7 将 legacy `varchar(40)` 幂等扩到 128；
+- 扩容后 128 字符可完整写入且历史数据/列元信息保持；
+- 已经为 `varchar(255)` 的生产式 schema 不被降窄；
+- 在线更新 ZIP 包含 `CardDeviceTransfer.php`、`unbind.html` 和 2432 migration。
 
-正式发布仍需 canonical Release gate 全绿，包括完整 regression、source integrity、MySQL、HTTP gate、真实 GitHub Release 在线升级 E2E。
+正式发布继续经过 canonical Release gate：完整 PHP regression、source integrity、真实 MySQL 5.7 migration、HTTP 并发 gate 和真实 GitHub Release 在线升级 E2E。
 
 ## 升级路径
 
-`source-v2026092430 -> source-v2026092431`
+`source-v2026092431 -> source-v2026092432`
