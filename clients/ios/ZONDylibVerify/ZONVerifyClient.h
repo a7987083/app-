@@ -3,18 +3,25 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef NSString * _Nullable (^ZONUDIDProvider)(void);
+typedef NSString * _Nullable (^ZONLicenseCodeProvider)(void);
 
 @interface ZONVerifyConfiguration : NSObject
 /// Legacy/direct verification endpoint. Kept as the final fallback so existing
-/// integrations remain usable while bootstrap discovery is rolled out.
+/// endpoint fallback behavior remains available.
 @property (nonatomic, copy) NSURL *endpointURL;
 /// Independent full bootstrap config URLs. Use more than one provider/domain.
 @property (nonatomic, copy) NSArray<NSURL *> *bootstrapURLs;
 @property (nonatomic, copy) NSString *dylibKey;
 @property (nonatomic, copy) NSString *dylibVersion;
 @property (nonatomic, copy) NSString *dylibBuild;
-@property (nonatomic, copy) NSString *verifySecret;
+/// Server RSA public key embedded by Codegen. The matching private key never
+/// leaves the verification server.
+@property (nonatomic, copy) NSString *serverPublicKeyPEM;
+@property (nonatomic, copy) NSString *serverKeyID;
 @property (nonatomic, copy) ZONUDIDProvider udidProvider;
+/// Required only for first enrollment of a device key. Existing host projects
+/// may return the currently activated card/license through this callback.
+@property (nonatomic, copy, nullable) ZONLicenseCodeProvider licenseCodeProvider;
 @property (nonatomic, assign) NSTimeInterval requestTimeout;
 @end
 
@@ -40,9 +47,9 @@ typedef NSString * _Nullable (^ZONUDIDProvider)(void);
 - (instancetype)initWithConfiguration:(ZONVerifyConfiguration *)configuration NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 
-/// Executes one verification request. Protocol v2 automatically includes the
-/// host App executable, Mach-O UUID and version/build. The UDID continues to be
-/// supplied by the host/injection environment.
+/// Executes protocol v3 verification. The client first obtains a one-time
+/// challenge, signs it with the per-device P-256 private key in Keychain, then
+/// sends the signed proof together with the 2428 App identity/integrity fields.
 - (void)verifyWithCompletion:(void (^)(ZONVerifyResult *result))completion;
 
 /// SHA256 of the actual image containing this SDK code. Returns an empty string
