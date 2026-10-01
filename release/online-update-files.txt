@@ -82,6 +82,8 @@ application/admin/view/ipa_source_center/edit.html
 application/admin/view/dylib_center/index.html
 application/common/library/Ipa/DylibApiContract.php
 application/common/library/Ipa/DylibApiDocumentation.php
+application/common/library/Ipa/DylibDeviceAuthService.php
+application/common/library/Ipa/DylibSigningKey.php
 application/common/library/Ipa/DylibVerificationService.php
 application/common/library/Ipa/DylibRuntimeAccessService.php
 application/common/library/Ipa/DylibRuntimeConfigService.php
