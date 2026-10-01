@@ -1,22 +1,24 @@
-ZONOE 软件源 Release 2026092428
-版本：2026092428
-基线：source-v2026092427
-阶段：IPA 数据中心 / Parser CLI Launcher Hotfix
-发布分支：feature/2026092428-ipa-parser-cli-launch-fix
-发布状态：正式发布候选（由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
+ZONOE 软件源 Release 2026092430
+版本：2026092430
+基线：source-v2026092428
+阶段：Dylib 验证中心 Secretless Auth 重构
+发布分支：feature/2026092430-secretless-from-2428
+发布状态：正式发布候选（CI 全绿后由 Auto Online Release Gate -> ZONOE Source Release 自动完成发布）
 
 更新内容：
-1. 基于 2026092427，仅修复 IPA Parser 启动链，不改 Parser V2 的 metadata / Range / MD5 / OpenList 数据逻辑。
-2. 修复 PHP-FPM 环境下 IpaWorkerLauncher 直接使用 PHP_BINARY 的问题。PHP-FPM 下 PHP_BINARY 可能指向 php-fpm，而不是 CLI php，导致 `think ipa:parse-worker --scheduled` 被错误启动后立即退出。
-3. 新增 CLI PHP 解析逻辑：优先当前 PHP 安装目录/bin/php、PHP_BINDIR/php、宝塔 `/www/server/php/<major><minor>/bin/php`，再回退 `/usr/bin/php` 与 `/usr/local/bin/php`。
-4. 找不到可执行 CLI PHP 时返回 `cli_php_not_found`，不再把失败伪装成已正常调度。
-5. 保留 2026092427 的应用内 Parser 触发、systemd 可选入口、MD5 metadata 复用、OpenList 目录缓存、256 KiB Range block cache、16 MiB 单 IPA 预算、30 分钟 parse_failed cooldown 与有界批次。
-6. 保留 IPA 扫描、资产记录、搜索、删除、清空解析结果、OpenList 数据源、增量/全量扫描、现有后台 UI，以及其它软件源/卡密/Dylib 功能。
+1. 直接以正式版 2026092428 为基线重新开发，不继承 2429 的精简实现。
+2. 完整保留 2428 Dylib 验证中心原有 API、后台管理、版本管理、通知、验证日志、Runtime Config、Codegen、API 文档下载、Legacy API URL、App Identity、权限、App Update、offline grace、session token 与 SHA256 校验。
+3. 删除客户端 Verify Secret / verify_secret_ciphertext / HMAC 请求认证，不再把全局共享 Secret 写入生成代码。
+4. 新增 Protocol v3：一次性 Challenge + 每设备 P-256 Keychain 密钥 + ECDSA-SHA256 设备证明；首次公钥登记必须使用已激活且绑定同一 UDID 的现有卡密。
+5. Runtime Config 改为服务器 RSA-2048/SHA-256 签名；客户端仅内嵌服务器公钥和 Key ID。
+6. 服务器签名私钥改存 runtime 私有文件，不再依赖 signing_private_key_ciphertext 等数据库字段，避免生产 schema 半升级导致 fields not exists。
+7. 保留原 8 个 API 入口，并新增 POST /index/dylib_verify/challenge；/authorization、/appstore、/index/index/apiface、/index/index/dylib、/unbind、/unbind/query、Runtime Config、Verify 均继续存在。
+8. 新增 2026092430 幂等 MySQL 5.7 migration：创建 device key/challenge 表、移除旧 Verify Secret 字段和 dylib_nonce 表，不创建数据库签名私钥字段。
+9. 在线更新包加入 DylibDeviceAuthService.php、DylibSigningKey.php 与 2026092430 migration。
 
 验证：
-- 2026092427 上原修复提交 a90861d3135b1c87972d0998182a9a6233b6ca76 的 IPA Parser V2 2427 Migration CI：SUCCESS。
-- Auto Online Release Gate：SUCCESS。
-- 本版本将以 2026092428 重新执行完整 sibling CI、canonical Release 与在线升级 E2E，避免生产端已是 2026092427 时无法检测到同版本更新。
-- 在生产服务器实际出现 discovered -> parsing -> parsed 前，不声明生产解析链已验收。
+- Dylib Secretless Auth 2430 CI：PHP 7.0/JS syntax、Secretless v3 core、2428 feature surface preservation、RSA-2048 OpenSSL、iOS 13 arm64 Objective-C syntax、MySQL 5.7 双次 migration、在线更新 ZIP 构建与内容检查均已通过第一轮技术门禁。
+- 发布版本号切换到 2026092430 后将再次执行完整 sibling CI 与 canonical Release gate。
+- CI 通过不等于真机网络链已验收；Challenge -> Device Sign -> Verify 的真机注入运行仍需独立证据。
 
-在线更新目标：source-v2026092427 -> source-v2026092428。
+在线更新目标：source-v2026092428 -> source-v2026092430。
