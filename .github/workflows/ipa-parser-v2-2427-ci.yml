@@ -1,9 +1,10 @@
-name: IPA Parser V2 2427 Migration CI
+name: IPA Parser V2 2427-2428 CI
 
 on:
   push:
     branches:
       - feature/2026092427-ipa-parser-ipaxiazaizhan-migration
+      - feature/2026092428-ipa-parser-cli-launch-fix
   pull_request:
     paths:
       - 'application/admin/command/IpaParseWorker.php'
@@ -21,7 +22,7 @@ on:
       - 'VERSION'
 
 jobs:
-  parser-v2-2427-contracts:
+  parser-v2-contracts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,6 +54,9 @@ jobs:
           grep -q 'ipa:parse-worker --scheduled' application/common/library/Ipa/IpaWorkerLauncher.php
           grep -q 'self::ensureParseWorker' application/common/library/Ipa/IpaWorkerLauncher.php
           grep -q 'exec_disabled' application/common/library/Ipa/IpaWorkerLauncher.php
+          grep -q 'resolveCliPhpBinary' application/common/library/Ipa/IpaWorkerLauncher.php
+          grep -q 'cli_php_not_found' application/common/library/Ipa/IpaWorkerLauncher.php
+          grep -q '/www/server/php/' application/common/library/Ipa/IpaWorkerLauncher.php
           ! grep -q "status' => 'cli_only" application/common/library/Ipa/IpaWorkerLauncher.php
 
       - name: ipaxiazaizhan migration contracts
