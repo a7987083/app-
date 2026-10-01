@@ -1,21 +1,21 @@
-ZONOE 软件源 Release 2026092431
-版本：2026092431
-基线：source-v2026092430
-阶段：Dylib 验证记录与离线继承修复
-发布分支：feature/2026092431-verify-log-udid-ip-offline-inherit
+ZONOE 软件源 Release 2026092432
+版本：2026092432
+基线：source-v2026092431
+阶段：自助换绑 UDID 长度兼容修复
+发布分支：feature/2026092432-unbind-udid-1-128
 发布状态：正式发布候选（最终 CI / canonical Release gate 全绿后自动发布）
 
 更新内容：
-1. 验证记录新增原始 UDID 与客户端 IP，后台列表和筛选直接使用 UDID/IP；udid_hash/ip_hash 继续保留内部关联。
-2. 历史日志无法恢复原始 UDID/IP，因此旧记录原值为空；升级后的新验证开始记录完整原值。
-3. Dylib 基本信息中的 default_offline_grace 作为全局默认；版本 offline_grace 改为可 NULL，NULL 表示继承 Dylib 默认。
-4. 新增版本默认不再强写 900 秒；已有版本历史数值不被迁移自动修改。
-5. 版本编辑可以选择继承默认值，或填写自定义离线秒数；0 仍表示明确禁止离线。
-6. 新增 2026092431_dylib_log_identity_offline_inherit.sql，MySQL 5.7 下幂等执行。
-7. 保留 2026092430 Secretless Auth v3、Challenge、Device Key、RSA Runtime Config 签名以及原 2428/2430 API/后台功能。
+1. /unbind 旧 UDID、新 UDID和 /unbind/query 查询 UDID 移除 25/40 位固定长度限制。
+2. 统一改为非空且不超过 128 个字符，不再校验固定 UUID/UDID 格式。
+3. 保留新旧 UDID 不能相同、卡密匹配、黑名单、换绑额度、每日限制、冷却和 IP 限制等业务规则。
+4. 页面输入框和提示同步为 1-128 字符。
+5. 新增 2026092432_unbind_udid_length.sql；当 fa_kami.udid 小于 128 时扩容到 varchar(128)，MySQL 5.7 幂等执行。
+6. 已经大于 128 的生产 schema 不降窄，历史值保持。
+7. 保留 2431 验证记录 UDID/IP、offline_grace 继承以及 2430 Secretless/Auth/API 全部能力。
 
 验证：
-- Dylib Admin 2431 CI 第一轮已通过 PHP 7.0/JS、UDID/IP 日志合约、offline inherit 合约、2430 Secretless/API 保留断言、MySQL 5.7 双迁移以及在线更新包检查。
-- 最终候选还需再次经过 Auto Online Release Gate 和 ZONOE Source Release 的完整 regression、source integrity、MySQL、HTTP 与真实在线升级 E2E。
+- Unbind UDID 2432 CI 第一轮已通过 PHP 7.0、1/25/36/40/128 接受、空值/129 拒绝、MySQL 5.7 40->128 双迁移、255 不降窄及在线更新包检查。
+- 最终候选仍需再次经过 Auto Online Release Gate 和 ZONOE Source Release 的完整 regression、source integrity、MySQL、HTTP 与真实在线升级 E2E。
 
-在线更新目标：source-v2026092430 -> source-v2026092431。
+在线更新目标：source-v2026092431 -> source-v2026092432。
