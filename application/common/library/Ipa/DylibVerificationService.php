@@ -73,7 +73,6 @@ class DylibVerificationService
             return self::loggedResult(false, 'blacklisted', 'block', 0, '', 'UDID is blocked', $udid, $bundleId, $dylibKey, $version, $ip, $started, $secret, ['protocol_version' => 3]);
         }
 
-        // Preserve the 2428 App identity and authorization model unchanged.
         try {
             $identity = DylibRuntimeAccessService::resolveAppIdentity($payload);
         } catch (\Exception $e) {
@@ -206,6 +205,8 @@ class DylibVerificationService
     {
         $latency = (int)round((microtime(true) - $started) * 1000);
         Db::name('dylib_verify_log')->insert([
+            'udid' => $udid,
+            'ip' => $ip,
             'udid_hash' => hash_hmac('sha256', $udid, $secret),
             'bundle_id' => $bundleId,
             'dylib_key' => $dylibKey,
