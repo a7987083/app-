@@ -4,8 +4,8 @@ namespace app\common\library\Ipa;
 
 /**
  * One documentation source for the Dylib Center API guide and downloadable
- * integration bundle. Existing 2428 APIs remain documented; protocol v3 only
- * replaces the Dylib Verify authentication mechanism.
+ * integration bundle. Existing legacy APIs remain documented; Protocol v3.1
+ * uses active-UDID auth_proof + Challenge + device P-256 proof.
  */
 class DylibApiDocumentation
 {
@@ -28,9 +28,9 @@ class DylibApiDocumentation
                 'when' => '网页自助查询授权信息时使用；OC/Swift 客户端不要把它当 JSON API 解析。',
                 'params' => [
                     ['name' => 'code', 'required' => true, 'description' => '卡密'],
-                    ['name' => 'udid', 'required' => true, 'description' => '25 或 40 字符设备 UDID'],
+                    ['name' => 'udid', 'required' => true, 'description' => '设备 UDID（当前兼容 1-128 字符）'],
                 ],
-                'next' => '需要首次激活时调用 /appstore；日常 Dylib 授权校验使用 /index/index/apiface 或 Dylib Verify。',
+                'next' => '需要首次激活时调用 /appstore；Dylib 在线验证由 /index/index/apiface 签发 auth_proof 后进入 Challenge/Verify。',
             ],
             [
                 'key' => 'appstore',
@@ -43,23 +43,23 @@ class DylibApiDocumentation
                 'when' => '首次激活卡密或软件源刷新时调用。',
                 'params' => [
                     ['name' => 'udid', 'required' => true, 'description' => '设备 UDID'],
-                    ['name' => 'code', 'required' => false, 'description' => '卡密；激活时必填，仅刷新时可省略'],
+                    ['name' => 'code', 'required' => false, 'description' => '卡密；激活时必填，仅刷新可省略'],
                 ],
-                'next' => '激活成功后，日常授权检查使用 /index/index/apiface；首次 Secretless 设备密钥绑定使用同一已激活卡密。',
+                'next' => '激活成功后，Dylib 客户端只需要已授权 UDID；不再保存卡密用于 Device Key enrollment。',
             ],
             [
                 'key' => 'dylib_auth',
-                'title' => '已激活设备授权校验',
+                'title' => '已激活设备授权校验 / Auth Proof',
                 'method' => 'GET',
                 'path' => '/index/index/apiface',
                 'response_type' => 'JSON',
                 'client_recommended' => true,
-                'purpose' => '按 UDID 查询已激活且未过期授权，并返回 expire、ts、nonce、sign 等旧协议字段。',
-                'when' => '保留 2428 既有客户端/业务调用。新的 Dylib 安全验证使用 Challenge + Verify。',
+                'purpose' => '按 UDID 查询已激活且未过期授权。保留 expire、ts、nonce、sign 等旧字段，并为 Protocol v3.1 追加短时 auth_proof。',
+                'when' => '新版 Dylib 在线验证每次 Challenge 前调用；旧客户端仍可消费原字段。',
                 'params' => [
                     ['name' => 'udid', 'required' => true, 'description' => '设备 UDID'],
                 ],
-                'next' => '验证通过后可读取 /index/index/dylib 获取旧远程配置，或进入 Dylib Verify v3 流程。',
+                'next' => '取出 auth_proof，与同一 UDID、公钥一起 POST /index/dylib_verify/challenge。',
             ],
             [
                 'key' => 'dylib_config',
@@ -69,7 +69,7 @@ class DylibApiDocumentation
                 'response_type' => 'JSON',
                 'client_recommended' => true,
                 'purpose' => '返回旧协议的远程 Dylib 配置与当前 UDID 授权状态。',
-                'when' => '保留 2428 远程配置流程。Runtime Config 请优先使用 /index/dylib_verify/config。',
+                'when' => '保留旧远程配置流程。Runtime Config 请优先使用 /index/dylib_verify/config。',
                 'params' => [
                     ['name' => 'udid', 'required' => true, 'description' => '设备 UDID'],
                 ],
@@ -86,8 +86,8 @@ class DylibApiDocumentation
                 'when' => '网页自助换绑使用；OC/Swift 客户端不要按 JSON 解析该入口。',
                 'params' => [
                     ['name' => 'code', 'required' => true, 'description' => '已激活卡密'],
-                    ['name' => 'old_udid', 'required' => true, 'description' => '原设备 UDID'],
-                    ['name' => 'new_udid', 'required' => true, 'description' => '新设备 UDID'],
+                    ['name' => 'old_udid', 'required' => true, 'description' => '原设备 UDID（1-128 字符）'],
+                    ['name' => 'new_udid', 'required' => true, 'description' => '新设备 UDID（1-128 字符）'],
                 ],
                 'next' => '换绑后使用 /unbind/query?udid=新UDID 查询当前设备是否具备有效授权。',
             ],
@@ -103,7 +103,7 @@ class DylibApiDocumentation
                 'params' => [
                     ['name' => 'udid', 'required' => true, 'description' => '设备 UDID'],
                 ],
-                'next' => 'can_transfer=true 时可进入网页换绑流程；授权客户端继续做正常授权/验证。',
+                'next' => '授权客户端继续走 /apiface auth_proof → Challenge → Verify。',
             ],
             [
                 'key' => 'runtime_config',
@@ -117,7 +117,7 @@ class DylibApiDocumentation
                 'params' => [
                     ['name' => 'dylib_key', 'required' => true, 'description' => '验证中心登记的 Dylib Key'],
                 ],
-                'next' => '验证服务器 RSA 签名后，从配置得到 Endpoint/Verify Path，然后请求 Challenge。',
+                'next' => '验证服务器 RSA 签名后，从配置得到 Endpoint/Verify Path；随后用 UDID 请求 /apiface auth_proof。',
             ],
             [
                 'key' => 'challenge',
@@ -126,14 +126,15 @@ class DylibApiDocumentation
                 'path' => '/index/dylib_verify/challenge',
                 'response_type' => 'JSON',
                 'client_recommended' => true,
-                'purpose' => '为 Protocol v3 设备证明签发短期一次性 Challenge，并判断当前设备公钥是否需要首次绑定。',
+                'purpose' => '为 Protocol v3.1 设备证明签发短期一次性 Challenge。首次 Device Key enrollment 必须有 active-UDID auth_proof；已登记 active Device Key 的旧 v3 客户端保留兼容路径。',
                 'when' => '每次在线 Verify 前调用。Challenge 只能消费一次且有短 TTL。',
                 'params' => [
                     ['name' => 'udid', 'required' => true, 'description' => '设备 UDID'],
                     ['name' => 'dylib_key', 'required' => true, 'description' => 'Dylib Key'],
                     ['name' => 'device_public_key', 'required' => true, 'description' => '设备 P-256 SPKI PEM 公钥'],
+                    ['name' => 'auth_proof', 'required' => false, 'description' => '新版客户端必带；首次 Device Key enrollment 强制需要，由 /apiface 签发'],
                 ],
-                'next' => '使用设备 Keychain 私钥对 canonical v3 签名，再 POST Verify。首次绑定时同时提供已激活卡密。',
+                'next' => '使用同一 auth_proof + Challenge 构造 canonical，并由设备 Keychain 私钥做 ECDSA-SHA256 签名后 POST Verify。',
             ],
             [
                 'key' => 'verify',
@@ -142,8 +143,8 @@ class DylibApiDocumentation
                 'path' => $verifyPath,
                 'response_type' => 'JSON',
                 'client_recommended' => true,
-                'purpose' => 'Dylib 核心在线验证：校验一次性 Challenge、设备公钥证明、App 身份、Dylib Key/版本/Build/SHA256，并继续执行 2428 授权/权限/公告/更新逻辑。',
-                'when' => '取得 Challenge 并完成 P-256 签名后调用；支持 form-urlencoded 或 application/json。',
+                'purpose' => 'Dylib 核心在线验证：校验 active-UDID proof、一次性 Challenge、设备公钥证明、App 身份、Dylib Key/版本/Build/SHA256，并执行授权/权限/公告/更新逻辑。',
+                'when' => '取得 auth_proof + Challenge 并完成 P-256 签名后调用；支持 form-urlencoded 或 application/json。',
                 'params' => DylibApiContract::verifyRequestFields(),
                 'next' => '客户端先判断 ok，再按 code + action 处理；message 只用于展示，不用于业务条件判断。',
             ],
@@ -153,18 +154,21 @@ class DylibApiDocumentation
     public static function machineDocument($dylibKey, $dylibName, $verifyPath, array $runtimeConfig = [])
     {
         return [
-            'schema_version' => 2,
+            'schema_version' => 3,
             'generated_for' => [
                 'dylib_key' => (string)$dylibKey,
                 'dylib_name' => (string)$dylibName,
             ],
             'security' => [
-                'protocol' => 'secretless-v3',
+                'protocol' => 'secretless-v3.1-active-udid-proof',
+                'active_udid_proof' => 'short-lived server HMAC returned by /index/index/apiface after active-UDID check',
                 'device_signature' => 'ECDSA P-256 SHA-256; private key stays in device Keychain',
                 'runtime_config_signature' => 'RSA-2048 SHA-256; client contains only server public key',
                 'verify_secret' => false,
+                'license_code_in_device_enrollment' => false,
             ],
             'runtime' => [
+                'auth_proof_path' => '/index/index/apiface',
                 'verify_path' => (string)$verifyPath,
                 'challenge_path' => '/index/dylib_verify/challenge',
                 'config_version' => isset($runtimeConfig['config_version']) ? (int)$runtimeConfig['config_version'] : 0,
@@ -200,7 +204,7 @@ class DylibApiDocumentation
         return "# Dylib API Integration\n\n"
             . "Dylib: " . ($name !== '' ? $name : $key) . " (`" . $key . "`)\n\n"
             . "本包是验证中心 API 接入资料，不包含客户端 UI。OC/Swift 示例只用于演示请求、签名与结果处理。\n\n"
-            . "安全：客户端不包含全局 Verify Secret 或服务器私钥。每台设备使用独立 P-256 Keychain 私钥；Bootstrap 只嵌入服务器 RSA 公钥。\n";
+            . "安全：卡密只用于原始 UDID 激活，不进入 Device Key enrollment；Dylib 通过短时 active-UDID auth_proof + 一次性 Challenge + 设备 P-256 Keychain 私钥完成验证。Bootstrap 只嵌入服务器 RSA 公钥。\n";
     }
 
     protected static function overviewMarkdown(array $apis)
@@ -221,7 +225,7 @@ class DylibApiDocumentation
             $out .= "- 用途：" . $api['purpose'] . "\n- 调用时机：" . $api['when'] . "\n\n";
             $out .= "| 参数 | 必填 | 说明 |\n|---|---|---|\n";
             foreach ($api['params'] as $field) {
-                $required = !empty($field['required']) ? '是' : '否';
+                $required = !empty($field['required']) ? '是' : '否/兼容路径';
                 $description = isset($field['description']) ? $field['description'] : '';
                 $out .= '| `' . $field['name'] . '` | ' . $required . ' | ' . str_replace('|', '\\|', $description) . " |\n";
             }
@@ -232,8 +236,7 @@ class DylibApiDocumentation
 
     protected static function errorMarkdown()
     {
-        $out = "# Dylib Verify Result Codes\n\n客户端业务判断使用 `ok + code`，未知 code 按 `action` 处理。`message` 可以展示，但不要解析文字做逻辑。\n\n";
-        $out .= "| code | ok | 含义 | 客户端建议 |\n|---|---:|---|---|\n";
+        $out = "# Dylib Verify Result Codes\n\n客户端业务判断使用 `ok + code`，未知 code 按 `action` 处理。`message` 可以展示，但不要解析文字做业务逻辑。\n\n| code | ok | 含义 | 客户端处理 |\n|---|---|---|---|\n";
         foreach (DylibApiContract::errorCodes() as $row) {
             $out .= '| `' . $row['code'] . '` | ' . ($row['ok'] ? 'true' : 'false') . ' | ' . $row['meaning'] . ' | ' . $row['client'] . " |\n";
         }
@@ -242,21 +245,19 @@ class DylibApiDocumentation
 
     protected static function signatureMarkdown()
     {
-        return "# Signature Protocol v3\n\n"
-            . "## Device proof\n\n设备生成独立 P-256 私钥并保存到 Keychain；服务器只保存公钥。每次验证先申请一次性 Challenge，再签名以下 canonical：\n\n"
-            . "```text\n" . DylibApiContract::canonicalV3() . "\n```\n\n"
-            . "签名算法：ECDSA P-256 + SHA-256；iOS `SecKeyCreateSignature` 输出 DER signature，传输时 Base64。\n\n"
-            . "## Runtime Config\n\nBootstrap/Runtime Config 使用服务器 RSA-2048 + SHA-256 签名。客户端生成配置只嵌入服务器公钥和 Key ID，服务器私钥不进入数据库、仓库或客户端。\n\n"
-            . "字段之间使用真实换行符，不要使用 JSON key 排序替代 canonical。一次性 Challenge 不可复用。\n";
+        return "# Signature Contract\n\n"
+            . "## Protocol v3.1 device proof\n\n"
+            . "1. `GET /index/index/apiface?udid=...` 获取短时 `auth_proof`。\n"
+            . "2. 同一 `auth_proof` 随 Challenge 请求提交。\n"
+            . "3. 新 canonical：\n\n```text\n" . DylibApiContract::canonicalV3() . "\n```\n\n"
+            . "4. 使用设备 Keychain P-256 私钥做 ECDSA-SHA256，DER 签名 Base64 后作为 `device_signature`。\n"
+            . "5. Verify 必须提交与 Challenge 相同的 `auth_proof`。\n\n"
+            . "已登记 Device Key 的旧 v3 客户端保留旧 canonical 兼容路径；首次 Device Key enrollment 不接受 license_code 替代 auth_proof。\n";
     }
 
     protected static function responseMarkdown()
     {
-        $out = "# Verify Response Model\n\n| 字段 | 类型 | 说明 |\n|---|---|---|\n";
-        foreach (DylibApiContract::verifyResponseFields() as $field) {
-            $out .= '| `' . $field['name'] . '` | ' . $field['type'] . ' | ' . $field['description'] . " |\n";
-        }
-        $out .= "\n## action\n\n";
+        $out = "# Response Model\n\nVerify 客户端先看 `ok`，再看稳定 `code`，最后按 `action` 决定受保护功能行为；`message` 只用于展示。\n\n";
         foreach (DylibApiContract::actions() as $key => $description) {
             $out .= '- `' . $key . '`：' . $description . "\n";
         }
@@ -266,30 +267,31 @@ class DylibApiDocumentation
     protected static function flowMarkdown()
     {
         return "# Recommended Flows\n\n"
-            . "## 首次卡密激活\n\n```text\n用户输入卡密\n  ↓\n网页可用 POST /authorization 查询\n  ↓\n未激活时 GET /appstore?udid=...&code=...\n  ↓\n绑定/激活\n  ↓\nGET /index/index/apiface?udid=...（原 API 保留）\n```\n\n"
-            . "## Dylib Secretless v3 验证\n\n```text\nDylib 启动\n  ↓\nGET /index/dylib_verify/config?dylib_key=...\n  ↓\nRSA 公钥验签 Runtime Config\n  ↓\nPOST /index/dylib_verify/challenge\n  ↓\n设备 P-256 私钥签 canonical v3\n  ↓\n首次绑定：附带当前已激活卡密\n  ↓\nPOST Verify Path\n  ↓\nok → code → action → message / permissions / notice / app_update\n```\n";
+            . "## 首次卡密激活\n\n```text\n用户输入卡密\n  ↓\nGET /appstore?udid=...&code=...\n  ↓\n服务器把卡密绑定/激活到 UDID\n  ↓\n以后 Dylib 不再保存这张卡密\n```\n\n"
+            . "## Dylib Secretless v3.1 验证\n\n```text\nDylib 启动\n  ↓\nGET /index/dylib_verify/config?dylib_key=...\n  ↓\nRSA 公钥验签 Runtime Config\n  ↓\nGET /index/index/apiface?udid=...\n  ↓\n服务器确认 active UDID → auth_proof\n  ↓\nPOST /index/dylib_verify/challenge\n  (udid + dylib_key + public_key + auth_proof)\n  ↓\n设备 P-256 私钥签 canonical v3.1\n  ↓\nPOST Verify Path\n  (同一 auth_proof + challenge + signature + App Identity)\n  ↓\n首次：登记 Device Key；以后：校验已登记 Key\n  ↓\nok → code → action → permissions / notice / app_update\n```\n";
     }
 
     protected static function curlExamples($key, $verifyPath)
     {
         return "# cURL Examples\n\n"
             . "```bash\ncurl -G 'https://YOUR_HOST/index/dylib_verify/config' --data-urlencode 'dylib_key=" . $key . "'\n```\n\n"
-            . "```bash\ncurl -X POST 'https://YOUR_HOST/index/dylib_verify/challenge' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"udid\":\"<UDID>\",\"dylib_key\":\"" . $key . "\",\"device_public_key\":\"<P-256-SPKI-PEM>\"}'\n```\n\n"
-            . "```bash\ncurl -X POST 'https://YOUR_HOST" . $verifyPath . "' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"protocol_version\":3,\"udid\":\"<UDID>\",\"bundle_id\":\"com.example.app\",\"dylib_key\":\"" . $key . "\",\"dylib_version\":\"1.0.0\",\"app_executable\":\"ExampleApp\",\"app_macho_uuid\":\"<UUID>\",\"challenge_id\":\"<ID>\",\"challenge\":\"<VALUE>\",\"device_public_key\":\"<PEM>\",\"device_signature\":\"<BASE64-DER>\"}'\n```\n";
+            . "```bash\ncurl -G 'https://YOUR_HOST/index/index/apiface' --data-urlencode 'udid=<UDID>'\n# 从返回中取 auth_proof\n```\n\n"
+            . "```bash\ncurl -X POST 'https://YOUR_HOST/index/dylib_verify/challenge' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"udid\":\"<UDID>\",\"dylib_key\":\"" . $key . "\",\"device_public_key\":\"<P-256-SPKI-PEM>\",\"auth_proof\":\"<AUTH_PROOF>\"}'\n```\n\n"
+            . "```bash\ncurl -X POST 'https://YOUR_HOST" . $verifyPath . "' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"protocol_version\":3,\"udid\":\"<UDID>\",\"bundle_id\":\"com.example.app\",\"dylib_key\":\"" . $key . "\",\"dylib_version\":\"1.0.0\",\"app_executable\":\"ExampleApp\",\"app_macho_uuid\":\"<UUID>\",\"auth_proof\":\"<AUTH_PROOF>\",\"challenge_id\":\"<ID>\",\"challenge\":\"<VALUE>\",\"device_public_key\":\"<PEM>\",\"device_signature\":\"<BASE64-DER>\"}'\n```\n";
     }
 
     protected static function objectiveCExamples($key, $verifyPath)
     {
-        return "# Objective-C Reference\n\n```objc\n// 保留 2428 的 API/结果处理模型，只替换认证层。\nNSString *path = @\"" . addslashes($verifyPath) . "\";\nNSString *dylibKey = @\"" . addslashes($key) . "\";\n// 1) Keychain 创建/读取 P-256 私钥\n// 2) POST /index/dylib_verify/challenge\n// 3) 按 SIGNATURE.md 固定字段顺序构造 canonical v3\n// 4) SecKeyCreateSignature(ECDSA-SHA256) -> Base64 DER\n// 5) POST JSON 到 path；首次绑定附带已激活卡密\n// 6) 先判断 ok，再处理 code/action；message 只用于展示\n```\n";
+        return "# Objective-C Reference\n\n```objc\nNSString *path = @\"" . addslashes($verifyPath) . "\";\nNSString *dylibKey = @\"" . addslashes($key) . "\";\n// 1) 根据 UDID GET /index/index/apiface 获取 auth_proof\n// 2) Keychain 创建/读取 P-256 私钥\n// 3) POST Challenge：udid + dylib_key + public_key + auth_proof\n// 4) 按 SIGNATURE.md 构造 canonical v3.1（包含 auth_proof）\n// 5) SecKeyCreateSignature(ECDSA-SHA256) -> Base64 DER\n// 6) POST Verify；首次 enrollment 不再发送卡密\n// 7) 先判断 ok，再处理 code/action；message 只用于展示\n```\n";
     }
 
     protected static function swiftExamples($key, $verifyPath)
     {
-        return "# Swift Reference\n\n```swift\nlet dylibKey = \"" . addslashes($key) . "\"\nlet verifyPath = \"" . addslashes($verifyPath) . "\"\n// Security.framework P-256 Keychain key -> Challenge -> ECDSA-SHA256 -> POST Verify。\n// Runtime Config 使用生成配置中的服务器 RSA 公钥验签。\n// 使用 ok + code + action 做业务判断。\n```\n";
+        return "# Swift Reference\n\n```swift\nlet dylibKey = \"" . addslashes($key) . "\"\nlet verifyPath = \"" . addslashes($verifyPath) . "\"\n// /apiface auth_proof -> Challenge -> P-256 ECDSA-SHA256 -> Verify。\n// Runtime Config 使用生成配置中的服务器 RSA 公钥验签。\n// 不保存卡密；使用 ok + code + action 做业务判断。\n```\n";
     }
 
     protected static function pythonExamples($key, $verifyPath)
     {
-        return "# Python Reference\n\n```python\n# 伪代码：使用独立 P-256 私钥，不存在 Verify Secret。\n# 1. POST /index/dylib_verify/challenge\n# 2. canonical = '<按 SIGNATURE.md 拼接>'\n# 3. signature = base64(ECDSA_P256_SHA256(device_private_key, canonical))\n# 4. POST https://YOUR_HOST" . $verifyPath . "\n# dylib_key = '" . addslashes($key) . "'\n```\n";
+        return "# Python Reference\n\n```python\n# 伪代码：使用独立 P-256 私钥，不存在 Verify Secret，也不发送 license_code。\n# 1. auth_proof = GET /index/index/apiface?udid=...\n# 2. POST /index/dylib_verify/challenge with auth_proof\n# 3. canonical = '<按 SIGNATURE.md 拼接，包含 auth_proof>'\n# 4. signature = base64(ECDSA_P256_SHA256(device_private_key, canonical))\n# 5. POST https://YOUR_HOST" . $verifyPath . " with the same auth_proof\n# dylib_key = '" . addslashes($key) . "'\n```\n";
     }
 }
