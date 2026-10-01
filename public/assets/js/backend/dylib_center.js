@@ -22,13 +22,13 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             };
             var resultLabels = {
                 ok: '验证通过', ok_testing: '验证通过（测试版本）', ok_deprecated: '验证通过（已弃用版本）',
-                timestamp_invalid: '请求时间已过期', nonce_invalid: 'Nonce 格式无效', signature_invalid: '签名格式无效',
-                signature_mismatch: '签名校验失败', replay_detected: '检测到重复请求', dylib_unknown: 'Dylib 未注册或已停用',
-                dylib_key_unconfigured: 'Dylib 验证密钥未配置', dylib_key_unavailable: 'Dylib 验证密钥不可用',
+                challenge_expired: 'Challenge 已过期', challenge_replayed: 'Challenge 已使用或不存在', challenge_mismatch: 'Challenge 上下文不匹配',
+                device_auth_invalid: '设备认证参数无效', device_signature_invalid: '设备签名校验失败', device_key_mismatch: '设备公钥不匹配', device_enrollment_denied: '设备公钥首次登记被拒绝',
+                protocol_unsupported: '客户端协议版本过旧', dylib_unknown: 'Dylib 未注册或已停用',
                 license_invalid: '设备授权无效或已过期', blacklisted: '设备已被封禁', bundle_not_allowed: '旧版 BundleID 授权未命中',
                 app_identity_incomplete: 'App 身份参数不完整', app_identity_unknown: '未识别当前 App 身份',
                 app_identity_unbound: '解析 IPA 尚未绑定软件源 App', app_identity_ambiguous: 'App 身份匹配到多个软件源 App',
-                app_identity_inactive: '对应 App 已停用或不可锁定', app_identity_required: '指定 App 卡需要 v2 App 身份',
+                app_identity_inactive: '对应 App 已停用或不可锁定', app_identity_required: '指定 App 卡需要 App 身份',
                 app_not_authorized: '指定 App 卡不适用于当前 App', version_unknown: 'Dylib 版本未登记',
                 version_blocked: 'Dylib 版本已阻止', version_revoked: 'Dylib 版本已撤销', integrity_mismatch: 'Dylib 文件指纹不匹配',
                 bad_request: '请求参数不完整', server_error: '验证服务异常'
@@ -194,7 +194,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     '<div id="log-filter-bar" class="well well-sm" style="margin-bottom:10px">' +
                     '<div class="row">' +
                     '<div class="col-md-2 form-group"><label>Dylib</label><select id="log-filter-dylib" class="form-control">' + dylibOptions + '</select></div>' +
-                    '<div class="col-md-2 form-group"><label>验证结果</label><select id="log-filter-result" class="form-control"><option value="">全部结果</option><option value="ok">验证通过</option><option value="signature_mismatch">签名校验失败</option><option value="license_invalid">授权无效/过期</option><option value="version_unknown">版本未登记</option><option value="version_blocked">版本已阻止</option><option value="version_revoked">版本已撤销</option><option value="integrity_mismatch">文件指纹不匹配</option><option value="server_error">服务异常</option></select></div>' +
+                    '<div class="col-md-2 form-group"><label>验证结果</label><select id="log-filter-result" class="form-control"><option value="">全部结果</option><option value="ok">验证通过</option><option value="device_signature_invalid">设备签名失败</option><option value="license_invalid">授权无效/过期</option><option value="version_unknown">版本未登记</option><option value="version_blocked">版本已阻止</option><option value="version_revoked">版本已撤销</option><option value="integrity_mismatch">文件指纹不匹配</option><option value="server_error">服务异常</option></select></div>' +
                     '<div class="col-md-2 form-group"><label>BundleID</label><input id="log-filter-bundle" class="form-control" placeholder="com.example.app"></div>' +
                     '<div class="col-md-2 form-group"><label>Dylib 版本</label><input id="log-filter-version" class="form-control" placeholder="1.2.3"></div>' +
                     '<div class="col-md-2 form-group"><label>UDID Hash 前缀</label><input id="log-filter-udid" class="form-control" placeholder="前几位即可"></div>' +
@@ -222,7 +222,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             function refreshAll() { $('#version-table,#notice-table,#verify-log-table').each(function () { if ($(this).data('bootstrap.table')) $(this).bootstrapTable('refresh'); }); }
             function resetDylibForm() {
                 var $form = $('#dylib-form'); $form[0].reset(); $form.find('[name=id]').val('0'); $form.find('[name=enabled]').val('1');
-                $form.find('[name=dylib_key]').prop('readonly', false); $('#verify-secret').attr('type', 'password').val('');
+                $form.find('[name=dylib_key]').prop('readonly', false);
                 $('.js-dylib-submit-label').text('注册 Dylib'); $('#cancel-dylib-edit').addClass('hidden');
             }
             function resetVersionForm() {
@@ -304,7 +304,6 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             $('#log-delete-filtered').on('click',function(){var params=logFilterParams({});var hasFilter=!!(params.dylib_key||params.result_code||params.bundle_id||params.dylib_version||params.udid_hash||params.created_from||params.created_to);if(!hasFilter){Layer.alert('请至少设置一个筛选条件后再删除筛选结果，避免误清空全部验证记录。',{icon:0});return;}Layer.confirm('确定永久删除当前筛选条件命中的全部验证记录吗？此操作不可恢复。',{title:'删除筛选结果'},function(i){Layer.close(i);params.mode='filtered';Fast.api.ajax({url:'dylib_center/deleteLogs',type:'POST',data:params},function(data){Toastr.success('已删除 '+((data&&data.deleted)||0)+' 条记录');$('#verify-log-table').bootstrapTable('refresh',{pageNumber:1});return false;});});});
 
             $('#dylib-center-tabs a[data-toggle="tab"]').on('shown.bs.tab',function(){window.setTimeout(function(){$('#version-table,#notice-table,#verify-log-table').each(function(){if($(this).data('bootstrap.table'))$(this).bootstrapTable('resetView');});},30);});
-            $('#generate-secret').on('click',function(){Fast.api.ajax({url:'dylib_center/generateVerifySecret',type:'POST'},function(data){if(data&&data.secret){$('#verify-secret').attr('type','text').val(data.secret);Toastr.success('验证密钥已生成。保存后由 OC 生成器自动带入；请妥善保管。');}return false;});});
             $('#dylib-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveDylib',type:'POST',data:$(this).serialize()},function(){location.reload();return false;});});
             $('#runtime-config-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveRuntimeConfig',type:'POST',data:$(this).serialize()},function(){Toastr.success('高级运行配置已保存；配置版本已自动递增。');location.reload();return false;});});
             $('#notice-form').on('submit',function(e){e.preventDefault();Fast.api.ajax({url:'dylib_center/saveNotice',type:'POST',data:$(this).serialize()},function(){Toastr.success('远程通知已保存');resetNoticeForm();$('#notice-table').bootstrapTable('refresh');return false;});});
@@ -317,7 +316,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             });
             $('#reset-notice-form').on('click',resetNoticeForm);$('#cancel-dylib-edit').on('click',resetDylibForm);
 
-            $('#dylib-list').on('click','.js-dylib-edit',function(){var $row=$(this).closest('tr'),$form=$('#dylib-form');syncCurrentDylib($row.data('id'),'list');$form.find('[name=id]').val($row.data('id'));$form.find('[name=dylib_key]').val($row.attr('data-key')).prop('readonly',true);$form.find('[name=name]').val($row.attr('data-name'));$form.find('[name=default_offline_grace]').val($row.attr('data-grace'));$form.find('[name=default_fail_action]').val($row.attr('data-action'));$form.find('[name=enabled]').val($row.attr('data-enabled'));$('#verify-secret').attr('type','password').val('');$('.js-dylib-submit-label').text('保存修改');$('#cancel-dylib-edit').removeClass('hidden');activateTab('#tab-overview');setTimeout(function(){$('html,body').animate({scrollTop:$('#section-register').offset().top-20},150);},80);});
+            $('#dylib-list').on('click','.js-dylib-edit',function(){var $row=$(this).closest('tr'),$form=$('#dylib-form');syncCurrentDylib($row.data('id'),'list');$form.find('[name=id]').val($row.data('id'));$form.find('[name=dylib_key]').val($row.attr('data-key')).prop('readonly',true);$form.find('[name=name]').val($row.attr('data-name'));$form.find('[name=default_offline_grace]').val($row.attr('data-grace'));$form.find('[name=default_fail_action]').val($row.attr('data-action'));$form.find('[name=enabled]').val($row.attr('data-enabled'));$('.js-dylib-submit-label').text('保存修改');$('#cancel-dylib-edit').removeClass('hidden');activateTab('#tab-overview');setTimeout(function(){$('html,body').animate({scrollTop:$('#section-register').offset().top-20},150);},80);});
             $('#dylib-list').on('click','.js-dylib-toggle',function(){var $row=$(this).closest('tr'),enabled=String($(this).data('enabled')),verb=enabled==='1'?'启用':'停用';Fast.api.ajax({url:'dylib_center/setDylibEnabled',type:'POST',data:{id:$row.data('id'),enabled:enabled}},function(){Toastr.success('Dylib 已'+verb);location.reload();return false;});});
             $('#dylib-list').on('click','.js-dylib-delete',function(){var $row=$(this).closest('tr'),name=$row.attr('data-name');Layer.confirm('确定彻底删除“'+name+'”吗？该操作会同时删除此 Dylib 的版本、旧游戏授权和验证记录，且不可恢复。',{title:'彻底删除 Dylib（二次确认）'},function(i){Layer.close(i);Fast.api.ajax({url:'dylib_center/deleteDylib',type:'POST',data:{id:$row.data('id')}},function(){Toastr.success('Dylib 及其关联历史已删除');location.reload();return false;});});});
             $('#dylib-list').on('click','.js-dylib-integration',function(){var $row=$(this).closest('tr');syncCurrentDylib($row.data('id'),'list');activateTab('#tab-advanced');$('#integration-detail').collapse('show');setTimeout(function(){$('html,body').animate({scrollTop:$('#section-integration').offset().top-20},150);},100);});
