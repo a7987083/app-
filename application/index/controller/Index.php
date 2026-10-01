@@ -11,6 +11,7 @@ use app\common\library\CardDeviceTransfer;
 use app\common\library\AuthorizationLicense;
 use app\common\library\AuthorizationSchema;
 use app\common\library\SourceConfigRepository;
+use app\common\library\Ipa\DylibAuthProofService;
 use think\Db;
 
 class Index extends Frontend
@@ -260,6 +261,12 @@ class Index extends Frontend
             // is intentionally appended after sign for backward compatibility.
             $payload['authorizations'] = $authorizations;
         }
+
+        // Protocol v3 bridge: preserve every legacy /apiface field unchanged,
+        // then append a short-lived server proof for Challenge/Device Key auth.
+        $proof = DylibAuthProofService::issue($udid, $expire);
+        $payload['auth_proof'] = $proof['proof'];
+        $payload['auth_proof_expires_at'] = (int)$proof['expires_at'];
         return $payload;
     }
 
