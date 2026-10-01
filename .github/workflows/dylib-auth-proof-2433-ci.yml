@@ -1,0 +1,49 @@
+name: Dylib Auth Proof 2433 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092433-dylib-v3-api-tester
+  workflow_dispatch:
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+      - name: PHP syntax
+        run: |
+          php -l application/common/library/Ipa/DylibAuthProofService.php
+          php -l application/common/library/Ipa/DylibDeviceAuthService.php
+          php -l application/index/controller/Index.php
+          php -l application/common/library/Ipa/DylibVerificationService.php
+          php -l application/index/controller/DylibVerify.php
+      - name: Active UDID proof contract
+        run: |
+          grep -q "DylibAuthProofService::issue" application/index/controller/Index.php
+          grep -q "DylibAuthProofService::validate" application/common/library/Ipa/DylibDeviceAuthService.php
+          grep -q "auth_proof" application/common/library/Ipa/DylibDeviceAuthService.php
+          grep -q "challenge .*authProof\|challenge . .*authProof" application/common/library/Ipa/DylibDeviceAuthService.php
+          ! grep -q "AuthorizationLicense::query" application/common/library/Ipa/DylibDeviceAuthService.php
+          ! grep -q "license_code" application/common/library/Ipa/DylibDeviceAuthService.php
+      - name: Duplicate tester removed
+        run: |
+          test ! -e application/admin/controller/DylibApiTest.php
+          test ! -e application/admin/view/dylib_api_test/index.html
+          test ! -e public/assets/js/backend/dylib_api_test.js
+          ! grep -q 'DylibApiTest.php' release/online-update-files.txt
+          ! grep -q 'dylib_api_test' release/online-update-files.txt
+
+  package-shape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert online update carries auth-proof flow
+        run: |
+          grep -qx 'application/common/library/Ipa/DylibAuthProofService.php' release/online-update-files.txt
+          grep -qx 'application/common/library/Ipa/DylibDeviceAuthService.php' release/online-update-files.txt
+          grep -qx 'application/index/controller/Index.php' release/online-update-files.txt
+          grep -qx 'clients/ios/ZONDylibVerify/ZONVerifyClient.m' release/online-update-files.txt
