@@ -162,76 +162,114 @@ static BOOL ZONReadDERLength(NSData *data, NSUInteger *offset, NSUInteger *lengt
         return;
     }
 
-    NSDictionary *challengePayload = @{
-        @"udid": context[@"udid"] ?: @"",
-        @"dylib_key": context[@"dylib_key"] ?: @"",
-        @"device_public_key": context[@"device_public_key"] ?: @"",
-    };
-
+    NSString *udid = [context[@"udid"] isKindOfClass:NSString.class] ? context[@"udid"] : @"";
     __weak typeof(self) weakSelf = self;
-    [self postJSON:challengePayload URL:challengeURL completion:^(NSDictionary * _Nullable challengeJSON, NSError * _Nullable error) {
+    [self fetchAuthProofForUDID:udid verifyURL:verifyURL completion:^(NSString * _Nullable authProof, NSError * _Nullable proofError) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
-        if (error || ![challengeJSON isKindOfClass:NSDictionary.class]) {
-            [strongSelf authenticateContext:context endpoints:endpoints index:index + 1 bundleID:bundleID completion:completion];
-            return;
-        }
-        if (![challengeJSON[@"ok"] boolValue]) {
-            completion([strongSelf resultAllowed:NO
-                                            code:[challengeJSON[@"code"] isKindOfClass:NSString.class] ? challengeJSON[@"code"] : @"challenge_unavailable"
-                                          action:@"block"
-                                         message:[challengeJSON[@"message"] isKindOfClass:NSString.class] ? challengeJSON[@"message"] : @"Challenge unavailable"]);
+        if (proofError || authProof.length == 0) {
+            completion([strongSelf resultAllowed:NO code:@"auth_proof_unavailable" action:@"block" message:@"Active UDID authorization proof unavailable"]);
             return;
         }
 
-        NSString *challengeID = [challengeJSON[@"challenge_id"] isKindOfClass:NSString.class] ? challengeJSON[@"challenge_id"] : @"";
-        NSString *challenge = [challengeJSON[@"challenge"] isKindOfClass:NSString.class] ? challengeJSON[@"challenge"] : @"";
-        if (challengeID.length == 0 || challenge.length == 0) {
-            completion([strongSelf resultAllowed:NO code:@"challenge_invalid" action:@"block" message:@"Invalid challenge response"]);
-            return;
-        }
+        NSDictionary *challengePayload = @{
+            @"udid": context[@"udid"] ?: @"",
+            @"dylib_key": context[@"dylib_key"] ?: @"",
+            @"device_public_key": context[@"device_public_key"] ?: @"",
+            @"auth_proof": authProof,
+        };
 
-        NSMutableDictionary *verifyPayload = [context mutableCopy];
-        verifyPayload[@"protocol_version"] = @3;
-        verifyPayload[@"challenge_id"] = challengeID;
-        verifyPayload[@"challenge"] = challenge;
-
-        SecKeyRef privateKey = [strongSelf devicePrivateKey];
-        if (!privateKey) {
-            completion([strongSelf resultAllowed:NO code:@"device_key_unavailable" action:@"block" message:@"Device key unavailable"]);
-            return;
-        }
-        NSData *signature = [strongSelf signatureForString:[strongSelf canonicalProof:verifyPayload] privateKey:privateKey];
-        CFRelease(privateKey);
-        if (!signature) {
-            completion([strongSelf resultAllowed:NO code:@"device_signature_failed" action:@"block" message:@"Unable to sign challenge"]);
-            return;
-        }
-        verifyPayload[@"device_signature"] = [signature base64EncodedStringWithOptions:0];
-
-        if ([challengeJSON[@"enrollment_required"] boolValue]) {
-            NSString *licenseCode = strongSelf.configuration.licenseCodeProvider ? strongSelf.configuration.licenseCodeProvider() : @"";
-            if (licenseCode.length == 0) {
-                completion([strongSelf resultAllowed:NO code:@"license_required" action:@"block" message:@"First device enrollment requires the current license code"]);
-                return;
-            }
-            verifyPayload[@"license_code"] = licenseCode;
-        }
-
-        [strongSelf postJSON:verifyPayload URL:verifyURL completion:^(NSDictionary * _Nullable verifyJSON, NSError * _Nullable verifyError) {
-            if (verifyError || ![verifyJSON isKindOfClass:NSDictionary.class]) {
+        [strongSelf postJSON:challengePayload URL:challengeURL completion:^(NSDictionary * _Nullable challengeJSON, NSError * _Nullable error) {
+            if (error || ![challengeJSON isKindOfClass:NSDictionary.class]) {
                 [strongSelf authenticateContext:context endpoints:endpoints index:index + 1 bundleID:bundleID completion:completion];
                 return;
             }
-            ZONVerifyResult *result = [strongSelf resultFromJSON:verifyJSON];
-            if (result.isAllowed) {
-                [strongSelf storeOfflineCacheForResult:result bundleID:bundleID];
-            } else {
-                [strongSelf clearOfflineCacheForBundleID:bundleID];
+            if (![challengeJSON[@"ok"] boolValue]) {
+                completion([strongSelf resultAllowed:NO
+                                                code:[challengeJSON[@"code"] isKindOfClass:NSString.class] ? challengeJSON[@"code"] : @"challenge_unavailable"
+                                              action:@"block"
+                                             message:[challengeJSON[@"message"] isKindOfClass:NSString.class] ? challengeJSON[@"message"] : @"Challenge unavailable"]);
+                return;
             }
-            completion(result);
+
+            NSString *challengeID = [challengeJSON[@"challenge_id"] isKindOfClass:NSString.class] ? challengeJSON[@"challenge_id"] : @"";
+            NSString *challenge = [challengeJSON[@"challenge"] isKindOfClass:NSString.class] ? challengeJSON[@"challenge"] : @"";
+            if (challengeID.length == 0 || challenge.length == 0) {
+                completion([strongSelf resultAllowed:NO code:@"challenge_invalid" action:@"block" message:@"Invalid challenge response"]);
+                return;
+            }
+
+            NSMutableDictionary *verifyPayload = [context mutableCopy];
+            verifyPayload[@"protocol_version"] = @3;
+            verifyPayload[@"challenge_id"] = challengeID;
+            verifyPayload[@"challenge"] = challenge;
+            verifyPayload[@"auth_proof"] = authProof;
+
+            SecKeyRef privateKey = [strongSelf devicePrivateKey];
+            if (!privateKey) {
+                completion([strongSelf resultAllowed:NO code:@"device_key_unavailable" action:@"block" message:@"Device key unavailable"]);
+                return;
+            }
+            NSData *signature = [strongSelf signatureForString:[strongSelf canonicalProof:verifyPayload] privateKey:privateKey];
+            CFRelease(privateKey);
+            if (!signature) {
+                completion([strongSelf resultAllowed:NO code:@"device_signature_failed" action:@"block" message:@"Unable to sign challenge"]);
+                return;
+            }
+            verifyPayload[@"device_signature"] = [signature base64EncodedStringWithOptions:0];
+
+            [strongSelf postJSON:verifyPayload URL:verifyURL completion:^(NSDictionary * _Nullable verifyJSON, NSError * _Nullable verifyError) {
+                if (verifyError || ![verifyJSON isKindOfClass:NSDictionary.class]) {
+                    [strongSelf authenticateContext:context endpoints:endpoints index:index + 1 bundleID:bundleID completion:completion];
+                    return;
+                }
+                ZONVerifyResult *result = [strongSelf resultFromJSON:verifyJSON];
+                if (result.isAllowed) {
+                    [strongSelf storeOfflineCacheForResult:result bundleID:bundleID];
+                } else {
+                    [strongSelf clearOfflineCacheForBundleID:bundleID];
+                }
+                completion(result);
+            }];
         }];
     }];
+}
+
+- (void)fetchAuthProofForUDID:(NSString *)udid
+                    verifyURL:(NSURL *)verifyURL
+                   completion:(void (^)(NSString * _Nullable authProof, NSError * _Nullable error))completion
+{
+    if (udid.length == 0 || !verifyURL) {
+        completion(nil, [NSError errorWithDomain:@"ZONVerify" code:20 userInfo:nil]);
+        return;
+    }
+    NSURLComponents *components = [NSURLComponents componentsWithURL:verifyURL resolvingAgainstBaseURL:NO];
+    components.path = @"/index/index/apiface";
+    components.queryItems = @[[NSURLQueryItem queryItemWithName:@"udid" value:udid]];
+    NSURL *url = components.URL;
+    if (!url) {
+        completion(nil, [NSError errorWithDomain:@"ZONVerify" code:21 userInfo:nil]);
+        return;
+    }
+
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+    request.HTTPMethod = @"GET";
+    [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    NSURLSessionDataTask *task = [self.session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        NSHTTPURLResponse *http = [response isKindOfClass:NSHTTPURLResponse.class] ? (NSHTTPURLResponse *)response : nil;
+        if (error || http.statusCode >= 400 || data.length == 0) {
+            completion(nil, error ?: [NSError errorWithDomain:@"ZONVerify" code:http.statusCode ?: 22 userInfo:nil]);
+            return;
+        }
+        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        NSString *proof = [json[@"auth_proof"] isKindOfClass:NSString.class] ? json[@"auth_proof"] : @"";
+        if ([json[@"code"] integerValue] != 1 || proof.length == 0) {
+            completion(nil, [NSError errorWithDomain:@"ZONVerify" code:23 userInfo:nil]);
+            return;
+        }
+        completion(proof, nil);
+    }];
+    [task resume];
 }
 
 - (void)postJSON:(NSDictionary *)json
@@ -426,6 +464,7 @@ static BOOL ZONReadDERLength(NSData *data, NSUInteger *offset, NSUInteger *lengt
     return [@[ @"zonoe-dylib-auth-v3",
                payload[@"challenge_id"] ?: @"",
                payload[@"challenge"] ?: @"",
+               payload[@"auth_proof"] ?: @"",
                payload[@"udid"] ?: @"",
                payload[@"bundle_id"] ?: @"",
                payload[@"dylib_key"] ?: @"",
