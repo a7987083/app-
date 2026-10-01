@@ -1,0 +1,112 @@
+name: Unbind UDID 2432 CI
+
+on:
+  push:
+    branches:
+      - feature/2026092432-unbind-udid-1-128
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          php -l application/common/library/CardDeviceTransfer.php
+          php -l application/index/controller/Index.php
+      - name: Verify 1-128 UDID contract
+        run: |
+          set -euo pipefail
+          php -r '
+            require "application/common/library/CardDeviceTransfer.php";
+            $c = "\\app\\common\\library\\CardDeviceTransfer";
+            $ok = ["A", str_repeat("A",25), str_repeat("A",36), str_repeat("A",40), str_repeat("A",128)];
+            foreach ($ok as $v) { if (!$c::isSupportedUdid($v)) { fwrite(STDERR,"expected accepted length=".strlen($v)."\n"); exit(1); } }
+            $bad = ["", "   ", str_repeat("A",129)];
+            foreach ($bad as $v) { if ($c::isSupportedUdid($v)) { fwrite(STDERR,"expected rejected length=".strlen(trim($v))."\n"); exit(1); } }
+          '
+          ! grep -q 'length === 25' application/common/library/CardDeviceTransfer.php
+          ! grep -q 'length === 40' application/common/library/CardDeviceTransfer.php
+          grep -q 'length >= 1 && $length <= 128' application/common/library/CardDeviceTransfer.php
+          grep -q '旧UDID不能超过128个字符' application/common/library/CardDeviceTransfer.php
+          grep -q '新UDID不能超过128个字符' application/common/library/CardDeviceTransfer.php
+          grep -q 'maxlength="128"' application/index/view/index/unbind.html
+
+  mysql57-schema:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare legacy 40-char schema
+        run: |
+          set -euo pipefail
+          mysql -h127.0.0.1 -uroot -proot zonoe_test <<'SQL'
+          CREATE TABLE fa_kami (
+            id int unsigned NOT NULL AUTO_INCREMENT,
+            udid varchar(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '' COMMENT '设备UDID',
+            PRIMARY KEY(id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+          INSERT INTO fa_kami(udid) VALUES(REPEAT('A',40));
+          SQL
+      - name: Apply 2432 migration twice
+        run: |
+          set -euo pipefail
+          mysql -h127.0.0.1 -uroot -proot zonoe_test < release/sql/2026092432_unbind_udid_length.sql
+          mysql -h127.0.0.1 -uroot -proot zonoe_test < release/sql/2026092432_unbind_udid_length.sql
+      - name: Assert widened schema and preserved metadata
+        run: |
+          set -euo pipefail
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.columns WHERE table_schema='zonoe_test' AND table_name='fa_kami' AND column_name='udid'")" = "128"
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT IS_NULLABLE FROM information_schema.columns WHERE table_schema='zonoe_test' AND table_name='fa_kami' AND column_name='udid'")" = "NO"
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT COLUMN_DEFAULT FROM information_schema.columns WHERE table_schema='zonoe_test' AND table_name='fa_kami' AND column_name='udid'")" = ""
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT COLUMN_COMMENT FROM information_schema.columns WHERE table_schema='zonoe_test' AND table_name='fa_kami' AND column_name='udid'")" = "设备UDID"
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT LENGTH(udid) FROM fa_kami WHERE id=1")" = "40"
+          mysql -h127.0.0.1 -uroot -proot zonoe_test -e "UPDATE fa_kami SET udid=REPEAT('B',128) WHERE id=1;"
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT LENGTH(udid) FROM fa_kami WHERE id=1")" = "128"
+      - name: Do not narrow wider production schema
+        run: |
+          set -euo pipefail
+          mysql -h127.0.0.1 -uroot -proot zonoe_test -e "ALTER TABLE fa_kami MODIFY COLUMN udid varchar(255) NOT NULL DEFAULT '' COMMENT '设备UDID';"
+          mysql -h127.0.0.1 -uroot -proot zonoe_test < release/sql/2026092432_unbind_udid_length.sql
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.columns WHERE table_schema='zonoe_test' AND table_name='fa_kami' AND column_name='udid'")" = "255"
+
+  update-package-shape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+          extensions: zip
+      - name: Build and inspect package
+        run: |
+          set -euo pipefail
+          grep -Fx 'application/common/library/CardDeviceTransfer.php' release/online-update-files.txt
+          grep -Fx 'application/index/view/index/unbind.html' release/online-update-files.txt
+          php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
+          unzip -t zonoe-online-update.zip >/dev/null
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/CardDeviceTransfer.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/index/view/index/unbind.html'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026092432_unbind_udid_length.sql'
