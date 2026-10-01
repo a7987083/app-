@@ -1,42 +1,70 @@
-# ZONOE 软件源 2026092428
+# ZONOE 软件源 2026092430
 
-## 更新内容
+## Dylib 验证中心：从 2026092428 基线重做 Secretless Auth
 
-### IPA Parser：修复 PHP-FPM 下 CLI Worker 启动失败
+本版本直接以 `source-v2026092428` 为基线重新开发，不继承 2429 的精简实现。目标是：**2428 完整功能集合保持不变，只替换 Verify Secret / HMAC 认证机制。**
 
-本版本以 `source-v2026092427` 为在线升级基线，仅修复 IPA Parser 的启动链，不改动 2427 已完成的 Parser V2 metadata / Range / MD5 / OpenList 解析模型。
+### 保留 2428 完整功能
 
-2026092427 的 `IpaWorkerLauncher::ensureParseWorker()` 会在 PHP-FPM 请求里直接使用 `PHP_BINARY` 启动 `php think ipa:parse-worker --scheduled`。在宝塔等 PHP-FPM 环境中，`PHP_BINARY` 可能指向 `.../sbin/php-fpm`，而不是 `.../bin/php`，因此后台虽然能拿到一个启动 PID，但 Parser CLI 实际可能立即退出，表现为“开启解析后仍没有解析”。
+以下能力继续保留：Dylib 注册/编辑/启停/删除、版本管理与编辑、Runtime Config、远程通知、验证日志筛选/删除、Codegen Preview/ZIP、API 文档 ZIP、Legacy API URL、App Identity、卡密/UDID/黑名单、权限等级、App Update、offline grace、session token、Dylib Version/Build/SHA256/fail_action。
 
-2026092428 改为明确解析 CLI PHP：
+原有 API 继续存在：
 
-- 当前 PHP 安装目录的 `bin/php`；
-- `PHP_BINDIR/php`；
-- 宝塔版本化路径 `/www/server/php/<major><minor>/bin/php`；
-- `/usr/bin/php`；
-- `/usr/local/bin/php`。
+- `POST /authorization`
+- `GET /appstore`
+- `GET /index/index/apiface`
+- `GET /index/index/dylib`
+- `POST /unbind`
+- `GET /unbind/query`
+- `GET /index/dylib_verify/config`
+- `POST /index/dylib_verify/verify`
 
-找不到 CLI PHP 时返回 `cli_php_not_found`，不再继续使用 php-fpm 二进制冒充 CLI Worker。
+并新增：
 
-### 保持 2427 Parser V2 行为
+- `POST /index/dylib_verify/challenge`
 
-- 扫描完成后应用内触发 Parser，不要求 systemd timer 才能解析；
-- Parser 仍在独立 CLI PHP 进程执行，不占用 PHP-FPM shutdown worker；
-- systemd service/timer 仍作为可选运维入口；
-- OpenList MD5 内容指纹与相同 MD5 metadata 复用保持不变；
-- 30 分钟 OpenList 目录缓存与全量扫描强制 refresh 保持不变；
-- 256 KiB Range block cache 与单 IPA 16 MiB 网络预算保持不变；
-- Info.plist-only metadata 路径保持不变；
-- `ipa:parse-worker --scheduled` 有界批次保持不变；
-- `parse_failed` 30 分钟 cooldown 与孤立 parsing 回收保持不变；
-- “清空解析结果”仍只清解析派生数据，不删除 IPA 扫描/发现记录。
+### Secretless Protocol v3
+
+- 删除客户端 Verify Secret 和 `verify_secret_ciphertext`；
+- 删除 Dylib Verify 请求 HMAC 认证；
+- 每台设备生成独立 P-256 Keychain 密钥；
+- 服务端每次签发短期一次性 Challenge；
+- 客户端使用 ECDSA P-256 SHA-256 对固定 canonical 文本签名；
+- 首次设备公钥绑定必须提供已经激活且绑定同一 UDID 的现有卡密；
+- 后续请求使用已绑定公钥验证；
+- Challenge 一次性消费并带过期时间，防止重放。
+
+### Runtime Config 签名
+
+Runtime Config 不再使用客户端共享 Secret 验签，改为服务器 RSA-2048/SHA-256 签名。客户端只嵌入服务器公钥与 Key ID。
+
+服务器 RSA 私钥仅保存在服务器 `runtime/` 私有文件中，不写入数据库，也不再使用 `signing_private_key_ciphertext` 字段，从结构上消除生产环境因缺字段导致的 `fields not exists:[signing_private_key_ciphertext]` 问题。
+
+### 数据库迁移
+
+`2026092430_secretless_dylib_auth.sql`：
+
+- 新增 `fa_dylib_device_key`；
+- 新增 `fa_dylib_auth_challenge`；
+- 删除 `fa_dylib.verify_secret_ciphertext`；
+- 删除旧 `fa_dylib_nonce`；
+- 不新增任何服务器签名私钥数据库字段；
+- MySQL 5.7 下支持重复执行。
 
 ## CI / 验证
 
-原修复提交 `a90861d3135b1c87972d0998182a9a6233b6ca76` 已通过 `IPA Parser V2 2427 Migration CI` 与 `Auto Online Release Gate`。本 2026092428 发布会重新执行完整 sibling CI、canonical Release 与真实 GitHub Release 在线升级 E2E。
+第一轮 `Dylib Secretless Auth 2430 CI` 已通过：
 
-CI / E2E 通过仅证明代码与升级链满足契约；生产服务器仍需验证 `discovered -> parsing -> parsed` 的真实状态变化。
+- PHP 7.0 / JS syntax；
+- Secretless v3 核心断言；
+- 2428 功能保留断言；
+- RSA-2048 OpenSSL sign/verify；
+- iOS 13 arm64 Objective-C syntax；
+- MySQL 5.7 migration 双次执行；
+- 在线更新 ZIP 实际构建和关键文件检查。
+
+版本元数据切换到 2026092430 后还会再次执行完整 sibling CI 与 canonical Release gate。CI 成功仅证明代码、迁移和发布链满足契约；真机 Challenge -> Device Sign -> Verify 运行链仍需独立真机证据。
 
 ## 升级路径
 
-`source-v2026092427 -> source-v2026092428`
+`source-v2026092428 -> source-v2026092430`
