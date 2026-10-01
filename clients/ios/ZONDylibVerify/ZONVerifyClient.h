@@ -19,8 +19,9 @@ typedef NSString * _Nullable (^ZONLicenseCodeProvider)(void);
 @property (nonatomic, copy) NSString *serverPublicKeyPEM;
 @property (nonatomic, copy) NSString *serverKeyID;
 @property (nonatomic, copy) ZONUDIDProvider udidProvider;
-/// Required only for first enrollment of a device key. Existing host projects
-/// may return the currently activated card/license through this callback.
+/// Deprecated compatibility property. Protocol v3.1 no longer sends card codes
+/// for device-key enrollment; the client obtains a short-lived auth_proof from
+/// /index/index/apiface using the already-authorized UDID.
 @property (nonatomic, copy, nullable) ZONLicenseCodeProvider licenseCodeProvider;
 @property (nonatomic, assign) NSTimeInterval requestTimeout;
 @end
@@ -47,9 +48,10 @@ typedef NSString * _Nullable (^ZONLicenseCodeProvider)(void);
 - (instancetype)initWithConfiguration:(ZONVerifyConfiguration *)configuration NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 
-/// Executes protocol v3 verification. The client first obtains a one-time
-/// challenge, signs it with the per-device P-256 private key in Keychain, then
-/// sends the signed proof together with the 2428 App identity/integrity fields.
+/// Executes protocol v3.1 verification. The client first obtains a short-lived
+/// active-UDID auth_proof from /index/index/apiface, then obtains a one-time
+/// challenge, signs auth_proof + challenge + app identity with the per-device
+/// P-256 private key in Keychain, and finally verifies/enrolls the device key.
 - (void)verifyWithCompletion:(void (^)(ZONVerifyResult *result))completion;
 
 /// SHA256 of the actual image containing this SDK code. Returns an empty string
