@@ -1,0 +1,87 @@
+<div class="panel panel-default panel-intro">
+    <div class="panel-heading"><strong>Dylib Protocol v3 API 测试器</strong></div>
+    <div class="panel-body">
+        <div class="alert alert-info">
+            <strong>真实服务逻辑测试：</strong>Config / Challenge / Verify 都调用当前生产业务 Service。不会自动生成或登记“假设备私钥”。Verify 使用你提供的真实请求 JSON；失败结果也可进入“验证记录”。
+        </div>
+
+        <div class="row">
+            <div class="col-md-5">
+                <div class="panel panel-primary">
+                    <div class="panel-heading"><strong>1. Runtime Config</strong></div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label>Dylib</label>
+                            <select class="form-control" id="tester-dylib">
+                                <option value="">请选择</option>
+                                {foreach name="dylibs" item="dylib"}
+                                <option value="{$dylib.dylib_key|htmlentities}" data-enabled="{$dylib.enabled}">{$dylib.name|htmlentities} / {$dylib.dylib_key|htmlentities}</option>
+                                {/foreach}
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="btn-config-test"><i class="fa fa-play"></i> 测试 Config</button>
+                        <p class="help-block">等价测试：<code>GET /index/dylib_verify/config?dylib_key=...</code></p>
+                    </div>
+                </div>
+
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>2. Challenge</strong></div>
+                    <div class="panel-body">
+                        <p class="help-block">至少需要 <code>udid</code>、<code>dylib_key</code>、<code>device_public_key</code>。</p>
+                        <textarea class="form-control" rows="12" id="challenge-payload" spellcheck="false">{
+  "udid": "",
+  "dylib_key": "zonoe.main",
+  "device_public_key": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+}</textarea>
+                        <div style="margin-top:10px">
+                            <button class="btn btn-info" id="btn-challenge-test"><i class="fa fa-play"></i> 测试 Challenge</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-7">
+                <div class="panel panel-success">
+                    <div class="panel-heading"><strong>3. Verify</strong></div>
+                    <div class="panel-body">
+                        <p class="help-block">粘贴真实 Protocol v3 请求。Challenge 返回值可自动合并到此 JSON；签名仍必须来自对应 P-256 私钥。</p>
+                        <textarea class="form-control" rows="24" id="verify-payload" spellcheck="false">{
+  "protocol_version": 3,
+  "udid": "",
+  "bundle_id": "",
+  "dylib_key": "zonoe.main",
+  "dylib_version": "",
+  "dylib_build": "",
+  "dylib_sha256": "",
+  "app_executable": "",
+  "app_macho_uuid": "",
+  "app_version": "",
+  "app_build": "",
+  "challenge_id": "",
+  "challenge": "",
+  "device_public_key": "",
+  "device_signature": "",
+  "license_code": ""
+}</textarea>
+                        <div style="margin-top:10px">
+                            <button class="btn btn-default" id="btn-canonical-test"><i class="fa fa-code"></i> 生成签名原文</button>
+                            <button class="btn btn-success" id="btn-verify-test"><i class="fa fa-play"></i> 测试 Verify</button>
+                            <a class="btn btn-link" href="../dylib_center/index#tab-logs">查看验证记录</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>测试结果</strong> <span class="text-muted" id="tester-meta"></span></div>
+            <div class="panel-body">
+                <pre id="tester-result" style="min-height:180px;white-space:pre-wrap;word-break:break-all">尚未执行测试。</pre>
+            </div>
+        </div>
+
+        <div class="alert alert-warning">
+            <strong>注意：</strong>Challenge 是一次性的且默认 60 秒过期。不要拿一个 Challenge 重复 Verify。首次设备公钥登记需要有效 <code>license_code</code>；测试器不会绕过真实授权规则。
+        </div>
+    </div>
+</div>
