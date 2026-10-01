@@ -15,7 +15,7 @@ class CardDeviceTransfer
     public static function isSupportedUdid($udid)
     {
         $length = strlen(trim((string)$udid));
-        return $length === 25 || $length === 40;
+        return $length >= 1 && $length <= 128;
     }
 
     public static function queryStatus($udid, $now = null)
@@ -23,8 +23,11 @@ class CardDeviceTransfer
         AuthorizationSchema::ensure();
         $udid = trim((string)$udid);
         $now = $now === null ? time() : (int)$now;
+        if ($udid === '') {
+            return self::statusFail('请输入UDID');
+        }
         if (!self::isSupportedUdid($udid)) {
-            return self::statusFail('UDID格式不正确');
+            return self::statusFail('UDID不能超过128个字符');
         }
 
         $rows = Db::table('fa_kami')
@@ -73,8 +76,17 @@ class CardDeviceTransfer
         if ($code === '') {
             return self::fail('请输入卡密');
         }
-        if (!self::isSupportedUdid($oldUdid) || !self::isSupportedUdid($newUdid)) {
-            return self::fail('UDID格式不正确');
+        if ($oldUdid === '') {
+            return self::fail('请输入旧UDID');
+        }
+        if ($newUdid === '') {
+            return self::fail('请输入新UDID');
+        }
+        if (!self::isSupportedUdid($oldUdid)) {
+            return self::fail('旧UDID不能超过128个字符');
+        }
+        if (!self::isSupportedUdid($newUdid)) {
+            return self::fail('新UDID不能超过128个字符');
         }
         if ($oldUdid === $newUdid) {
             return self::fail('新旧UDID不能相同');
