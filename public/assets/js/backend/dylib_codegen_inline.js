@@ -7,9 +7,9 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
     function panelHtml() {
         return ''
             + '<div class="panel panel-success" id="section-codegen">'
-            + '  <div class="panel-heading"><strong>API 接入示例</strong> <span class="text-muted">自动读取 Dylib、版本、Bootstrap、API 和 Verify Secret；生成内容用于测试/参考，不负责业务客户端 UI</span></div>'
+            + '  <div class="panel-heading"><strong>API 接入示例</strong> <span class="text-muted">自动读取 Dylib、版本、Bootstrap、API 和服务器公钥；生成内容用于测试/参考，不负责业务客户端 UI</span></div>'
             + '  <div class="panel-body">'
-            + '    <div class="alert alert-info" style="padding:8px 12px"><strong>怎么用：</strong>实际客户端可以完全不使用这些 OC 文件，直接按“API / 高级 → API 接入说明”自行实现。这里的生成器主要用于验证签名、请求、返回解析是否接对，并附带完整 API 文档。</div>'
+            + '    <div class="alert alert-info" style="padding:8px 12px"><strong>怎么用：</strong>实际客户端可以完全不使用这些 OC 文件，直接按“API / 高级 → API 接入说明”自行实现。这里的生成器主要用于验证设备签名、请求、返回解析是否接对，并附带完整 API 文档。</div>'
             + '    <div class="row">'
             + '      <div class="col-sm-5 form-group"><label>目标 Dylib</label><select id="dcg-dylib" class="form-control"><option value="">请选择 Dylib</option></select></div>'
             + '      <div class="col-sm-5 form-group"><label>版本</label><select id="dcg-version" class="form-control"><option value="">先选择 Dylib</option></select></div>'
@@ -30,7 +30,7 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
             + '      <button type="button" id="dcg-generate" class="btn btn-success" disabled><i class="fa fa-download"></i> 生成 API 接入包</button> '
             + '      <span id="dcg-status" class="text-muted" style="margin-left:10px">尚未预览</span>'
             + '    </div>'
-            + '    <div class="alert alert-warning" style="padding:8px 12px;margin-bottom:10px"><strong>安全：</strong><code>*DylibConfig.m</code> 会包含当前 Dylib Verify Secret，仅供受控测试/接入工程；不要提交到公开仓库。正式客户端也必须自行保护该 Secret。</div>'
+            + '    <div class="alert alert-success" style="padding:8px 12px;margin-bottom:10px"><strong>安全：</strong>生成代码只包含服务器 RSA 公钥和 Key ID，不包含服务器私钥或全局共享 Secret。设备 P-256 私钥由运行设备 Keychain 独立生成并保存。</div>'
             + '    <div id="dcg-validation"></div>'
             + '    <div id="dcg-preview-area" class="hidden">'
             + '      <div class="row" style="margin:0;border:1px solid #e5e5e5;">'
@@ -86,7 +86,8 @@ define(['jquery', 'bootstrap', 'backend'], function ($, undefined, Backend) {
             + '　版本 <code>' + esc(c.dylib_version || '未登记') + (c.dylib_build ? ' (' + esc(c.dylib_build) + ')' : '') + '</code>'
             + '　Bootstrap <code>' + boot + '</code>'
             + '　API <code>' + apis + '</code>'
-            + '　Verify Secret ' + (c.verify_secret_present ? '<span class="label label-success">已配置</span>' : '<span class="label label-danger">缺失</span>')
+            + '　Secretless <span class="label label-success">v3</span>'
+            + '　Server Key <code>' + esc(String(c.server_key_id || '').substr(0, 12)) + '</code>'
             + '　Generator <code>' + esc(c.generator_version || '') + '</code>'
         );
     }
