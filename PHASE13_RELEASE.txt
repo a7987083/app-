@@ -1,21 +1,21 @@
-ZONOE 软件源 Release 2026092432
-版本：2026092432
-基线：source-v2026092431
-阶段：自助换绑 UDID 长度兼容修复
-发布分支：feature/2026092432-unbind-udid-1-128
+ZONOE 软件源 Release 2026092433
+版本：2026092433
+基线：source-v2026092432
+阶段：Dylib Protocol v3 API 测试器与验证日志补全
+发布分支：feature/2026092433-dylib-v3-api-tester
 发布状态：正式发布候选（最终 CI / canonical Release gate 全绿后自动发布）
 
 更新内容：
-1. /unbind 旧 UDID、新 UDID和 /unbind/query 查询 UDID 移除 25/40 位固定长度限制。
-2. 统一改为非空且不超过 128 个字符，不再校验固定 UUID/UDID 格式。
-3. 保留新旧 UDID 不能相同、卡密匹配、黑名单、换绑额度、每日限制、冷却和 IP 限制等业务规则。
-4. 页面输入框和提示同步为 1-128 字符。
-5. 新增 2026092432_unbind_udid_length.sql；当 fa_kami.udid 小于 128 时扩容到 varchar(128)，MySQL 5.7 幂等执行。
-6. 已经大于 128 的生产 schema 不降窄，历史值保持。
-7. 保留 2431 验证记录 UDID/IP、offline_grace 继承以及 2430 Secretless/Auth/API 全部能力。
+1. 新增后台 dylib_api_test/index，测试当前 Protocol v3 Config / Challenge / Canonical / Verify 链路。
+2. Config、Challenge、Verify 均调用当前真实业务 Service，不复用旧 /index/index/dylib、/index/index/apiface。
+3. Challenge 返回值可自动合并到 Verify JSON；设备 ECDSA P-256 私钥仍由真实客户端持有，测试器不生成假设备 Key。
+4. 新增 canonical 签名原文输出，便于核对 ECDSA-SHA256 / Base64 DER 签名。
+5. /index/dylib_verify/verify 的 bad_request 现在也写入 fa_dylib_verify_log；Config/Challenge 不作为最终验证记录。
+6. 在线更新 manifest 加入 DylibApiTest、测试页/JS、DylibVerifyAudit 和 DylibVerify 改动。
+7. 保留 2432/2431/2430 全部正式能力。
 
 验证：
-- Unbind UDID 2432 CI 第一轮已通过 PHP 7.0、1/25/36/40/128 接受、空值/129 拒绝、MySQL 5.7 40->128 双迁移、255 不降窄及在线更新包检查。
-- 最终候选仍需再次经过 Auto Online Release Gate 和 ZONOE Source Release 的完整 regression、source integrity、MySQL、HTTP 与真实在线升级 E2E。
+- Dylib API Tester 2433 CI 已覆盖 PHP 7.0 / JS syntax、真实 Service 调用契约、bad_request audit 接线和在线更新 manifest。
+- AUTO_RELEASE 在开发阶段保持关闭；最终候选再次全绿后才开启正式发布 Gate。
 
-在线更新目标：source-v2026092431 -> source-v2026092432。
+在线更新目标：source-v2026092432 -> source-v2026092433。
