@@ -11,9 +11,12 @@ function transferAssert($condition, $message)
     }
 }
 
-transferAssert(CardDeviceTransfer::isSupportedUdid('00008110-001229DE2E82802E'), '25-char UDID accepted');
-transferAssert(CardDeviceTransfer::isSupportedUdid(str_repeat('A', 40)), '40-char UDID accepted');
-transferAssert(!CardDeviceTransfer::isSupportedUdid('short'), 'invalid UDID rejected');
+foreach ([1, 25, 36, 40, 128] as $length) {
+    transferAssert(CardDeviceTransfer::isSupportedUdid(str_repeat('A', $length)), $length . '-char UDID accepted');
+}
+transferAssert(!CardDeviceTransfer::isSupportedUdid(''), 'empty UDID rejected');
+transferAssert(!CardDeviceTransfer::isSupportedUdid('   '), 'whitespace-only UDID rejected');
+transferAssert(!CardDeviceTransfer::isSupportedUdid(str_repeat('A', 129)), '129-char UDID rejected');
 
 $root = dirname(__DIR__);
 $transfer = file_get_contents($root . '/application/common/library/CardDeviceTransfer.php');
@@ -33,7 +36,7 @@ transferAssert(strpos($index, 'CardDeviceTransfer::transfer') !== false, 'Index 
 transferAssert(strpos($index, 'CardDeviceTransfer::queryStatus') !== false, 'Index unbind query missing');
 transferAssert(strpos($route, "Route::rule('unbind','index/Index/unbind');") !== false, 'unbind route missing');
 transferAssert(strpos($route, "Route::rule('unbind/query','index/Index/unbindQuery');") !== false, 'unbind query route missing');
-foreach (['name="code"', 'name="old_udid"', 'name="new_udid"', 'query-udid', 'query-btn'] as $needle) {
+foreach (['name="code"', 'name="old_udid"', 'name="new_udid"', 'query-udid', 'query-btn', 'maxlength="128"'] as $needle) {
     transferAssert(strpos($view, $needle) !== false, 'unbind form missing: ' . $needle);
 }
 
