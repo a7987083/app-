@@ -13,7 +13,7 @@ use think\Config;
  */
 class Common extends Api
 {
-    protected $noNeedLogin = ['init'];
+    protected $noNeedLogin = ['init', 'iconupload'];
     protected $noNeedRight = '*';
 
     /**
@@ -46,6 +46,80 @@ class Common extends Api
         } else {
             $this->error(__('Invalid parameters'));
         }
+    }
+
+
+    /**
+     * 服务器间 App 图标上传
+     * 仅接受 PNG/JPG/JPEG，使用独立共享令牌，不依赖后台登录态。
+     * @ApiMethod (POST)
+     * @param File $file 图片文件
+     */
+    public function iconupload()
+    {
+        $expected = trim((string)\think\Env::get('zonoe.icon_upload_token', getenv('ZONOE_ICON_UPLOAD_TOKEN') ?: ''));
+        $provided = trim((string)$this->request->server('HTTP_X_ZONOE_UPLOAD_TOKEN', ''));
+        if ($expected === '') {
+            $this->error('Icon upload is not configured', null, 503);
+        }
+        if ($provided === '' || !hash_equals($expected, $provided)) {
+            $this->error('Invalid icon upload token', null, 403);
+        }
+
+        $file = $this->request->file('file');
+        if (empty($file)) {
+            $this->error(__('No file upload or server upload limit exceeded'));
+        }
+
+        $fileInfo = $file->getInfo();
+        $suffix = strtolower(pathinfo($fileInfo['name'], PATHINFO_EXTENSION));
+        if (!in_array($suffix, ['png', 'jpg', 'jpeg'], true)) {
+            $this->error(__('Uploaded file format is limited'));
+        }
+        if ((int)$fileInfo['size'] <= 0 || (int)$fileInfo['size'] > 2 * 1024 * 1024) {
+            $this->error('Icon file is too large');
+        }
+
+        // IPA 内 AppIcon 可能是 iOS 优化 PNG；这里验证文件签名而不强制 GD 解码。
+        $head = @file_get_contents($fileInfo['tmp_name'], false, null, 0, 12);
+        $isPng = substr((string)$head, 0, 8) === "\x89PNG\r\n\x1a\n";
+        $isJpeg = substr((string)$head, 0, 3) === "\xff\xd8\xff";
+        if (($suffix === 'png' && !$isPng) || (in_array($suffix, ['jpg', 'jpeg'], true) && !$isJpeg)) {
+            $this->error(__('Uploaded file is not a valid image'));
+        }
+
+        $filemd5 = md5_file($fileInfo['tmp_name']);
+        $uploadDir = '/uploads/' . date('Ymd') . '/';
+        $fileName = $filemd5 . '.' . $suffix;
+        $splInfo = $file->validate(['size' => 2 * 1024 * 1024])->move(ROOT_PATH . '/public' . $uploadDir, $fileName);
+        if (!$splInfo) {
+            $this->error($file->getError());
+        }
+
+        $params = [
+            'admin_id'    => 0,
+            'user_id'     => 0,
+            'filesize'    => (int)$fileInfo['size'],
+            'imagewidth'  => 0,
+            'imageheight' => 0,
+            'imagetype'   => $suffix,
+            'imageframes' => 0,
+            'mimetype'    => $fileInfo['type'],
+            'url'         => $uploadDir . $splInfo->getSaveName(),
+            'uploadtime'  => time(),
+            'storage'     => 'local',
+            'sha1'        => $file->hash(),
+        ];
+        $attachment = model("attachment");
+        $attachment->data(array_filter($params, function ($value) {
+            return $value !== null && $value !== '';
+        }));
+        $attachment->save();
+        \think\Hook::listen("upload_after", $attachment);
+
+        $this->success(__('Upload successful'), [
+            'url' => $uploadDir . $splInfo->getSaveName(),
+        ]);
     }
 
     /**
