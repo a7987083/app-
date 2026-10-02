@@ -29,6 +29,7 @@
 
 ### 待完成
 
+- [x] 2436 专项 Retention CI（PHP 7.0 / MySQL 5.7 / package）通过。
 - [ ] 完整 Release Gate。
 - [ ] 正式发布 `source-v2026092436`。
 - [ ] 生产服务器确认 systemd timer 已安装并 enabled。
