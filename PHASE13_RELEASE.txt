@@ -1,27 +1,23 @@
-ZONOE 软件源 Release 2026092436
-版本：2026092436
-基线：source-v2026092435
-阶段：Long-Term Retention Hardening
-发布分支：release/2026092436-retention-hardening
+ZONOE 软件源 Release 2026092437
+版本：2026092437
+基线：source-v2026092436
+阶段：VersionDescription Newline Fix
+发布分支：release/2026092437-versiondescription-newline
 发布状态：正式候选；完整 Gate 全绿后发布
 
 更新内容：
-1. 修复 ipa:maintenance 仍访问已删除 fa_dylib_nonce 的 P0 问题。
-2. Challenge 1 天、Session 过期+1天、Verify/API Log 30 天。
-3. Device Key 365 天未使用清理，不限制 App / Key 数量。
-4. Parse Attempt 30 天，Scan Item/Job 7/30 天。
-5. Authorization/Card Transfer/Admin/SourceChange 审计日志 365 天。
-6. Runtime Log 30 天，Update status/history/backup 14/90/30 天。
-7. Missing IPA 365 天且无人工分类绑定才删除。
-8. 所有高频数据库删除使用 5000/批、最多20批的有界清理。
-9. 新增 MySQL 5.7 retention 索引迁移。
-10. maintenance systemd service/timer 加入在线更新包。
+1. 修复软件说明换行在客户端显示为 @@@。
+2. versionDescription 从源头使用真实换行。
+3. 明文和加密路径统一依赖标准 JSON 转义。
+4. 移除 Response 层 @@@ 二次替换依赖。
+5. 升级 SourceLegacyCache 映射/Body/Encrypted JSON 缓存 Key。
 
 专项验证：
-- Retention Step1 2436 CI #32：SUCCESS。
-- PHP 7.0 retention contract：SUCCESS。
-- MySQL 5.7 retention migration double-apply：SUCCESS。
-- Online update package retention content：SUCCESS。
+- VersionDescription Newline 2437 CI #1：SUCCESS。
+- PHP 7.0 syntax：SUCCESS。
+- AppStore regression：SUCCESS。
+- SourceResponse regression：SUCCESS。
+- Encrypted newline regression：SUCCESS。
 
 正式验证：
 - ZONOE Source Release Gate：待本 release branch 触发。
