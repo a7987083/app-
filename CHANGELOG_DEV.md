@@ -37,7 +37,7 @@ Development branch: `work/2026092436-retention-step1`.
 ### Verification
 
 - Source changes: completed.
-- Dedicated retention CI: running on latest HEAD.
+- Dedicated retention CI #28: SUCCESS (PHP contract, MySQL 5.7 double-apply, online-update package).
 - Full release gate: not yet run.
 - Production deployment: not verified.
 - Release: not published.
