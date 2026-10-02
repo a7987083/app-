@@ -1,0 +1,31 @@
+name: VersionDescription Newline 2437 CI
+
+on:
+  push:
+    branches:
+      - work/2026092437-versiondescription-newline
+  workflow_dispatch:
+
+jobs:
+  php70-newline-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: PHP syntax
+        run: |
+          php -l application/common/library/AppStorePayload.php
+          php -l application/common/library/SourceResponse.php
+          php -l application/common/library/SourceLegacyCache.php
+          php -l tests/phase2437_newline_contract_test.php
+      - name: Existing appstore regressions
+        run: |
+          php tests/appstore_payload_test.php
+          php tests/source_response_test.php
+          php tests/appstore_equivalence_test.php
+          php tests/appstore_semantic_equivalence_test.php
+      - name: Encrypted newline regression
+        run: php tests/phase2437_newline_contract_test.php
