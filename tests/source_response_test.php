@@ -19,12 +19,12 @@ $payload = [
     'name' => '源',
     'UDID' => 'U',
     'Time' => 'T',
-    'apps' => [['versionDescription' => 'a@@@b']],
+    'apps' => [['versionDescription' => "a\nb"]],
 ];
 $plain = SourceResponse::plainBody($payload, 320, true);
 sourceResponseAssert(strpos($plain, '"UDID"') === false, 'plain body strips UDID');
 sourceResponseAssert(strpos($plain, '"Time"') === false, 'plain body strips Time');
-sourceResponseAssert(strpos($plain, 'a\\nb') !== false, 'plain body preserves newline marker');
+sourceResponseAssert(strpos($plain, 'a\\nb') !== false, 'plain body preserves escaped JSON newline');
 sourceResponseAssert(SourceResponse::encryptedBody('appstore', 'abc', true) === '{"appstore":"abc"}', 'appstore wrapper');
 sourceResponseAssert(SourceResponse::encryptedBody('appstore_v2', 'xyz', true) === '{"appstore_v2":"xyz"}', 'appstore_v2 wrapper');
 sourceResponseAssert(SourceResponse::encryptedBody('other', false, true) === '{"appstore":false}', 'legacy transport failure envelope');
