@@ -22,6 +22,7 @@ ZONOE 软件源 Release 2026092435
 - 2406 runtime identity 契约改为读取当前 IpaParserV2Service，不再检查已退役 Parser V1。
 - 2406 runtime config 签名契约同步到当前 RSA-2048-SHA256 DylibSigningKey，不再要求旧 hmac-sha256。
 - Mach-O parser contract 同步到当前 metadata-only Parser V2，明确禁止旧同步 Mach-O enrichment 回流解析主链。
+- IPA Release Gate 同步当前 Parser V2 launcher：保留 CLI scheduled worker，移除旧 drainParseQueue / 旧禁用 PHP_BINDIR 断言。
 - canonical Release Gate：完整 regression、source integrity、MySQL 5.7 migration、HTTP load、GitHub Release 在线升级 E2E。
 
 在线更新目标：source-v2026092434 -> source-v2026092435。
