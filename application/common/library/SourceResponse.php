@@ -35,7 +35,7 @@ class SourceResponse
             $payload = SourceAnnouncementTemplate::placeholderPayload($payload);
         }
         $json = json_encode($payload, $jsonFlags);
-        $body = $replaceMarkers ? str_replace('@@@', '\\n', $json) : $json;
+        $body = $json;
 
         if (class_exists($cacheClass)) {
             try {
@@ -60,7 +60,7 @@ class SourceResponse
     {
         $key = $appType === 'appstore_v2' ? 'appstore_v2' : 'appstore';
         $json = json_encode([$key => $encryptedPayload]);
-        return $replaceMarkers ? str_replace('@@@', '\\n', $json) : $json;
+        return $json;
     }
 
     /**
