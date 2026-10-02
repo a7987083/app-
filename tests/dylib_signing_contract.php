@@ -1,75 +1,87 @@
 <?php
 
-require_once __DIR__ . '/../application/common/library/Ipa/DylibVerificationService.php';
+require_once __DIR__ . '/../application/common/library/Ipa/DylibDeviceAuthService.php';
 
-use app\common\library\Ipa\DylibVerificationService;
+use app\common\library\Ipa\DylibDeviceAuthService;
 
-$canonical = DylibVerificationService::canonicalRequest(
-    '00008120-001A55A93AF0201E',
-    'com.example.game',
-    'zonoe.main',
-    '1.2.3',
-    '45',
-    str_repeat('a', 64),
-    1780000000,
-    '0123456789abcdef0123456789abcdef'
-);
+$payload = [
+    'auth_proof' => 'proof-v1.test-signature',
+    'udid' => '00008120-001A55A93AF0201E',
+    'bundle_id' => 'com.example.game',
+    'dylib_key' => 'zonoe.main',
+    'dylib_version' => '1.2.3',
+    'dylib_build' => '45',
+    'dylib_sha256' => str_repeat('A', 64),
+    'app_executable' => 'ExampleGame',
+    'app_macho_uuid' => '12345678-90ab-cdef-1234-567890abcdef',
+    'app_version' => '9.8.7',
+    'app_build' => '987',
+];
 
+$challengeId = '0123456789abcdef0123456789abcdef';
+$challenge = 'challenge-value';
+
+$canonical = DylibDeviceAuthService::canonicalProof($payload, $challengeId, $challenge);
 $expectedCanonical = implode("\n", [
+    'zonoe-dylib-auth-v3',
+    $challengeId,
+    $challenge,
+    'proof-v1.test-signature',
     '00008120-001A55A93AF0201E',
     'com.example.game',
     'zonoe.main',
     '1.2.3',
     '45',
     str_repeat('a', 64),
-    '1780000000',
-    '0123456789abcdef0123456789abcdef',
-]);
-
-if ($canonical !== $expectedCanonical) {
-    fwrite(STDERR, "canonical request mismatch\n");
-    exit(1);
-}
-
-$secret = '0123456789abcdef0123456789abcdef';
-$signature = hash_hmac('sha256', $canonical, $secret);
-$expectedSignature = '817aed89d0ed0ea3edfe5b25679fd0b279d29dc8ba0ff9e3f9d57935833e0e93';
-if (!hash_equals($expectedSignature, $signature)) {
-    fwrite(STDERR, "signature vector mismatch: {$signature}\n");
-    exit(1);
-}
-
-$v2 = DylibVerificationService::canonicalRequestV2(
-    '00008120-001A55A93AF0201E',
-    'com.example.game',
-    'zonoe.main',
-    '1.2.3',
-    '45',
-    str_repeat('a', 64),
-    1780000000,
-    '0123456789abcdef0123456789abcdef',
-    2,
-    'ExampleGame',
-    '12345678-90AB-CDEF-1234-567890ABCDEF',
-    '9.8.7',
-    '987'
-);
-$expectedV2 = $expectedCanonical . "\n" . implode("\n", [
-    '2',
     'ExampleGame',
     '12345678-90AB-CDEF-1234-567890ABCDEF',
     '9.8.7',
     '987',
 ]);
-if ($v2 !== $expectedV2) {
-    fwrite(STDERR, "v2 canonical request mismatch\n");
+
+if ($canonical !== $expectedCanonical) {
+    fwrite(STDERR, "v3 canonical proof mismatch\n");
+    exit(1);
+}
+
+$withoutProof = $payload;
+unset($withoutProof['auth_proof']);
+$canonicalWithoutProof = DylibDeviceAuthService::canonicalProof($withoutProof, $challengeId, $challenge);
+$expectedWithoutProof = implode("\n", [
+    'zonoe-dylib-auth-v3',
+    $challengeId,
+    $challenge,
+    '00008120-001A55A93AF0201E',
+    'com.example.game',
+    'zonoe.main',
+    '1.2.3',
+    '45',
+    str_repeat('a', 64),
+    'ExampleGame',
+    '12345678-90AB-CDEF-1234-567890ABCDEF',
+    '9.8.7',
+    '987',
+]);
+
+if ($canonicalWithoutProof !== $expectedWithoutProof) {
+    fwrite(STDERR, "v3 compatibility canonical proof mismatch\n");
     exit(1);
 }
 
 $objc = file_get_contents(__DIR__ . '/../clients/ios/ZONDylibVerify/ZONVerifyClient.m');
-foreach (['bundleID', 'dylibKey', 'dylibVersion', 'dylibBuild', 'dylib_sha256', 'signature', 'protocol_version', 'app_executable', 'app_macho_uuid'] as $needle) {
+foreach ([
+    'canonicalProof',
+    'challenge_id',
+    'challenge',
+    'auth_proof',
+    'device_public_key',
+    'device_signature',
+    'protocol_version',
+    'app_executable',
+    'app_macho_uuid'
+] as $needle) {
     if (strpos($objc, $needle) === false) {
-        fwrite(STDERR, "Objective-C client contract missing {$needle}\n");
+        fwrite(STDERR, "Objective-C v3 client contract missing {$needle}\n");
         exit(1);
     }
 }
@@ -77,4 +89,4 @@ foreach (['bundleID', 'dylibKey', 'dylibVersion', 'dylibBuild', 'dylib_sha256', 
 require __DIR__ . '/phase2405_dylib_lifecycle_contract_test.php';
 require __DIR__ . '/phase2406_dylib_runtime_access_contract_test.php';
 
-echo "dylib signing contract ok\n";
+echo "dylib signing contract v3 ok\n";
