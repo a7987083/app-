@@ -170,11 +170,13 @@ class IpaMaintenance extends Command
     {
         $deleted = 0;
         $terminal = ['completed', 'completed_with_errors', 'cancelled'];
+        $jobCursor = 0;
 
         for ($batch = 0; $batch < self::DELETE_MAX_BATCHES; $batch++) {
             $jobIds = Db::name('ipa_scan_job')
                 ->where('status', 'in', $terminal)
                 ->where('updated_at', '<', (int)$before)
+                ->where('id', '>', $jobCursor)
                 ->order('id asc')
                 ->limit(500)
                 ->column('id');
@@ -183,14 +185,16 @@ class IpaMaintenance extends Command
                 break;
             }
 
+            $normalizedJobIds = array_map('intval', $jobIds);
             $ids = Db::name('ipa_scan_item')
-                ->where('job_id', 'in', array_map('intval', $jobIds))
+                ->where('job_id', 'in', $normalizedJobIds)
                 ->order('id asc')
                 ->limit(self::DELETE_BATCH_SIZE)
                 ->column('id');
 
             if (!$ids) {
-                break;
+                $jobCursor = max($normalizedJobIds);
+                continue;
             }
 
             $count = Db::name('ipa_scan_item')
@@ -198,8 +202,11 @@ class IpaMaintenance extends Command
                 ->delete();
 
             $deleted += (int)$count;
+
+            // If the item query did not hit the batch limit, all matching items
+            // for this 500-job window are gone and it is safe to advance.
             if (count($ids) < self::DELETE_BATCH_SIZE) {
-                break;
+                $jobCursor = max($normalizedJobIds);
             }
         }
 
@@ -210,27 +217,37 @@ class IpaMaintenance extends Command
     {
         $deleted = 0;
         $terminal = ['completed', 'completed_with_errors', 'cancelled'];
+        $jobCursor = 0;
 
-        $jobIds = Db::name('ipa_scan_job')
-            ->where('status', 'in', $terminal)
-            ->where('updated_at', '<', (int)$before)
-            ->order('id asc')
-            ->limit(1000)
-            ->column('id');
-
-        foreach ($jobIds ?: [] as $jobId) {
-            $jobId = (int)$jobId;
-            if ($jobId <= 0) {
-                continue;
-            }
-            $remaining = (int)Db::name('ipa_scan_item')->where('job_id', $jobId)->count();
-            if ($remaining > 0) {
-                continue;
-            }
-            $deleted += (int)Db::name('ipa_scan_job')
-                ->where('id', $jobId)
+        for ($page = 0; $page < 10; $page++) {
+            $jobIds = Db::name('ipa_scan_job')
                 ->where('status', 'in', $terminal)
-                ->delete();
+                ->where('updated_at', '<', (int)$before)
+                ->where('id', '>', $jobCursor)
+                ->order('id asc')
+                ->limit(500)
+                ->column('id');
+
+            if (!$jobIds) {
+                break;
+            }
+
+            foreach ($jobIds as $jobId) {
+                $jobId = (int)$jobId;
+                if ($jobId <= 0) {
+                    continue;
+                }
+                $remaining = (int)Db::name('ipa_scan_item')->where('job_id', $jobId)->count();
+                if ($remaining > 0) {
+                    continue;
+                }
+                $deleted += (int)Db::name('ipa_scan_job')
+                    ->where('id', $jobId)
+                    ->where('status', 'in', $terminal)
+                    ->delete();
+            }
+
+            $jobCursor = max(array_map('intval', $jobIds));
         }
 
         return $deleted;
