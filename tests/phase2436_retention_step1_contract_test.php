@@ -31,6 +31,11 @@ $required = [
     'cleanupRuntimeLogs',
     'RUNTIME_LOG_RETENTION_SECONDS = 2592000',
     'new UpdateOps(ROOT_PATH)',
+    "'authorization_event'",
+    "'card_transfer_log'",
+    "'admin_log'",
+    "'source_change'",
+    'deleteExpiredByPrimaryKey',
     'cleanup(false)',
     'deleteExpiredById',
     "->order('id asc')",
@@ -54,7 +59,7 @@ if (strpos($timer, 'OnCalendar=*-*-* 04:20:00') === false) {
 }
 
 $config = file_get_contents($root . '/application/extra/ipa_data_center.php');
-if ($config === false || strpos($config, "'api_request_log_retention_days'") === false || strpos($config, "'scan_item_retention_days'") === false || strpos($config, "'scan_job_retention_days'") === false || strpos($config, "'parse_attempt_retention_days'") === false) {
+if ($config === false || strpos($config, "'api_request_log_retention_days'") === false || strpos($config, "'scan_item_retention_days'") === false || strpos($config, "'scan_job_retention_days'") === false || strpos($config, "'parse_attempt_retention_days'") === false || strpos($config, "'audit_log_retention_days'") === false) {
     fwrite(STDERR, "retention config missing\n");
     exit(1);
 }
