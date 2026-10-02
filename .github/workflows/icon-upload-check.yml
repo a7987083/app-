@@ -1,0 +1,29 @@
+name: IPA Icon Upload Check
+
+on:
+  push:
+    branches:
+      - feature/ipa-icon-upload-api-20261002
+    paths:
+      - 'application/api/controller/Common.php'
+      - '.github/workflows/icon-upload-check.yml'
+
+jobs:
+  php70-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP 7.0 syntax
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/work" -w /work php:7.0-cli             php -l application/api/controller/Common.php
+      - name: Upload contract
+        run: |
+          set -euo pipefail
+          grep -Fq "iconupload" application/api/controller/Common.php
+          grep -Fq "HTTP_X_ZONOE_UPLOAD_TOKEN" application/api/controller/Common.php
+          grep -Fq "hash_equals" application/api/controller/Common.php
+          grep -Fq "/uploads/" application/api/controller/Common.php
+          grep -Fq "md5_file" application/api/controller/Common.php
+          ! grep -Fq "ZONOE_ICON_UPLOAD_TOKEN=" application/api/controller/Common.php
