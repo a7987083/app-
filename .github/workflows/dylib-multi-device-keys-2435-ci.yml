@@ -1,0 +1,97 @@
+name: Dylib Multi Device Keys 2435 CI
+
+on:
+  push:
+    branches:
+      - work/2026092435-multi-device-keys
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+      - name: PHP syntax
+        run: php -l application/common/library/Ipa/DylibDeviceAuthService.php
+      - name: Multi-key contract
+        run: |
+          grep -q "public_key_hash', \$publicKeyHash" application/common/library/Ipa/DylibDeviceAuthService.php
+          grep -q 'DEVICE_KEY_RETENTION = 31536000' application/common/library/Ipa/DylibDeviceAuthService.php
+          grep -q 'cleanupStaleKeys' application/common/library/Ipa/DylibDeviceAuthService.php
+          ! grep -q "code' => 'device_key_mismatch'" application/common/library/Ipa/DylibDeviceAuthService.php
+          grep -q 'uk_device_dylib_pubkey' release/sql/2026092435_multi_device_keys.sql
+          grep -q 'idx_key_last_used' release/sql/2026092435_multi_device_keys.sql
+
+  mysql57:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: zonoe_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create 2430 device-key schema
+        run: |
+          mysql -h127.0.0.1 -uroot -proot zonoe_test <<'SQL'
+          CREATE TABLE fa_dylib_device_key (
+            id bigint unsigned NOT NULL AUTO_INCREMENT,
+            udid_hash char(64) NOT NULL,
+            dylib_id bigint unsigned NOT NULL,
+            key_id varchar(64) NOT NULL,
+            algorithm varchar(32) NOT NULL DEFAULT 'ecdsa-p256-sha256',
+            public_key_pem text NOT NULL,
+            public_key_hash char(64) NOT NULL,
+            status varchar(16) NOT NULL DEFAULT 'active',
+            enrolled_at int unsigned NOT NULL DEFAULT '0',
+            last_used_at int unsigned NOT NULL DEFAULT '0',
+            revoked_at int unsigned NOT NULL DEFAULT '0',
+            created_at int unsigned NOT NULL DEFAULT '0',
+            updated_at int unsigned NOT NULL DEFAULT '0',
+            PRIMARY KEY (id),
+            UNIQUE KEY uk_dylib_device (udid_hash,dylib_id),
+            UNIQUE KEY uk_key_id (key_id),
+            KEY idx_key_status (dylib_id,status)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+          SQL
+      - name: Apply 2435 migration twice
+        run: |
+          mysql -h127.0.0.1 -uroot -proot zonoe_test < release/sql/2026092435_multi_device_keys.sql
+          mysql -h127.0.0.1 -uroot -proot zonoe_test < release/sql/2026092435_multi_device_keys.sql
+      - name: Verify same UDID and Dylib accept multiple keys
+        run: |
+          mysql -h127.0.0.1 -uroot -proot zonoe_test <<'SQL'
+          INSERT INTO fa_dylib_device_key
+            (udid_hash,dylib_id,key_id,public_key_pem,public_key_hash,status,last_used_at)
+          VALUES
+            (REPEAT('a',64),1,'key-a','pem-a',REPEAT('1',64),'active',1),
+            (REPEAT('a',64),1,'key-b','pem-b',REPEAT('2',64),'active',1),
+            (REPEAT('a',64),1,'key-c','pem-c',REPEAT('3',64),'active',1);
+          SQL
+          test "$(mysql -N -h127.0.0.1 -uroot -proot zonoe_test -e "SELECT COUNT(*) FROM fa_dylib_device_key WHERE udid_hash=REPEAT('a',64) AND dylib_id=1")" = "3"
+          if mysql -h127.0.0.1 -uroot -proot zonoe_test -e "INSERT INTO fa_dylib_device_key (udid_hash,dylib_id,key_id,public_key_pem,public_key_hash,status,last_used_at) VALUES (REPEAT('a',64),1,'key-dup','pem-dup',REPEAT('1',64),'active',1)"; then
+            echo "duplicate public key unexpectedly accepted" >&2
+            exit 1
+          fi
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build online update and assert migration packaged
+        run: |
+          php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
+          unzip -t zonoe-online-update.zip >/dev/null
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026092435_multi_device_keys.sql'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/common/library/Ipa/DylibDeviceAuthService.php'
