@@ -3,22 +3,23 @@
 ## 当前稳定基线
 
 - Repository: `a7987083/app-`
-- Stable release: `source-v2026092434`
-- Stable target: `982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da`
-- Current development: `2026092435`
-- Development branch: `work/2026092435-multi-device-keys`
+- Stable release: `source-v2026092435`
+- Stable target: `bda2656a699e93162ea38514f21e5027fc92ece9`
+- Release branch: `release/2026092435-multi-device-keys`
 
 ## 2026092435 — Multi Device Keys
 
-### 目标
+### 已完成
 
-- [x] Device Key 授权作用域保持 `UDID + Dylib Key`，不引入 BundleID 绑定。
-- [x] 同一作用域允许多个独立 PublicKey 并存，支持不同 App、不同 Keychain、重签实例。
-- [x] 新 PublicKey 仍要求 active UDID auth proof、一次性 Challenge、P-256 ECDSA 签名。
-- [x] Device Key 不设置数量上限，不做第 11 个淘汰。
-- [x] 365 天未使用的 Device Key 自动清理。
-- [x] 数据库唯一键改为 `udid_hash + dylib_id + public_key_hash`。
-- [x] 增加 MySQL 5.7 / PHP 7.0 / 在线更新包专项 CI 定义。
-- [ ] CI 实际运行验证。
-- [ ] 正式发布 `source-v2026092435`。
-- [ ] 生产环境真实客户端回归。
+- [x] Device Key 授权作用域保持 `UDID + Dylib Key`。
+- [x] 同一授权作用域允许多个独立 PublicKey 并存。
+- [x] 不限制 App / Keychain 数量，不使用固定 10 槽位。
+- [x] 新 PublicKey 必须通过 active UDID auth proof、一次性 Challenge、P-256 ECDSA。
+- [x] 数据库唯一键调整为 `udid_hash + dylib_id + public_key_hash`。
+- [x] 365 天未使用 Device Key 清理策略。
+- [x] MySQL 5.7 migration 幂等验证。
+- [x] Protocol v3 / Parser V2 / RSA runtime config 旧测试契约同步完成。
+- [x] Dylib Multi Device Keys 2435 CI 通过。
+- [x] IPA Online Update Release Gate 通过。
+- [x] ZONOE Source Release / 在线升级 E2E 通过。
+- [x] 正式 Release `source-v2026092435` 已发布。
