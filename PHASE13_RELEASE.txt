@@ -1,28 +1,29 @@
-ZONOE 软件源 Release 2026092435
-版本：2026092435
-基线：source-v2026092434
-阶段：Dylib Multi Device Keys / unlimited App-Keychain enrollment
-发布分支：release/2026092435-multi-device-keys
+ZONOE 软件源 Release 2026092436
+版本：2026092436
+基线：source-v2026092435
+阶段：Long-Term Retention Hardening
+发布分支：release/2026092436-retention-hardening
 发布状态：正式候选；完整 Gate 全绿后发布
 
 更新内容：
-1. Device Key 授权作用域继续保持 UDID + Dylib Key。
-2. 同一授权作用域允许多个独立 PublicKey 并存，不限制 App / Keychain 数量。
-3. 数据库唯一约束改为 udid_hash + dylib_id + public_key_hash。
-4. 新 PublicKey 继续要求 active UDID auth_proof + one-time Challenge + P-256 ECDSA signature。
-5. 移除旧单 Key device_key_mismatch 冲突逻辑。
-6. 已登记 Key 成功验证时刷新 last_used_at；新 enrollment 时清理 365 天未使用旧 Key。
-7. 保留 2434 active-UDID proof、2432/2431/2430 正式能力。
+1. 修复 ipa:maintenance 仍访问已删除 fa_dylib_nonce 的 P0 问题。
+2. Challenge 1 天、Session 过期+1天、Verify/API Log 30 天。
+3. Device Key 365 天未使用清理，不限制 App / Key 数量。
+4. Parse Attempt 30 天，Scan Item/Job 7/30 天。
+5. Authorization/Card Transfer/Admin/SourceChange 审计日志 365 天。
+6. Runtime Log 30 天，Update status/history/backup 14/90/30 天。
+7. Missing IPA 365 天且无人工分类绑定才删除。
+8. 所有高频数据库删除使用 5000/批、最多20批的有界清理。
+9. 新增 MySQL 5.7 retention 索引迁移。
+10. maintenance systemd service/timer 加入在线更新包。
 
-验证：
-- Dylib Multi Device Keys 2435 CI：PHP 7.0 syntax、MySQL 5.7 migration 双执行幂等、多 PublicKey 共存、重复 Key 拒绝、在线更新包检查。
-- Dylib signing contract 已同步到当前 Protocol v3 canonicalProof，移除失效的 v1/v2 canonicalRequest 测试依赖。
-- 2405/2406 lifecycle/runtime access 契约同步到当前 v3 DeviceAuth 调用链，移除已废弃 v1/v2 静态断言。
-- 2405 文档契约移除已失效 Protocol v1 canonical 要求，改为校验 Protocol v3 / zonoe-dylib-auth-v3 / device signature。
-- 2406 runtime identity 契约改为读取当前 IpaParserV2Service，不再检查已退役 Parser V1。
-- 2406 runtime config 签名契约同步到当前 RSA-2048-SHA256 DylibSigningKey，不再要求旧 hmac-sha256。
-- Mach-O parser contract 同步到当前 metadata-only Parser V2，明确禁止旧同步 Mach-O enrichment 回流解析主链。
-- IPA Release Gate 同步当前 Parser V2 launcher：保留 CLI scheduled worker，移除旧 drainParseQueue / 旧禁用 PHP_BINDIR 断言。
-- canonical Release Gate：完整 regression、source integrity、MySQL 5.7 migration、HTTP load、GitHub Release 在线升级 E2E。
+专项验证：
+- Retention Step1 2436 CI #32：SUCCESS。
+- PHP 7.0 retention contract：SUCCESS。
+- MySQL 5.7 retention migration double-apply：SUCCESS。
+- Online update package retention content：SUCCESS。
 
-在线更新目标：source-v2026092434 -> source-v2026092435。
+正式验证：
+- ZONOE Source Release Gate：待本 release branch 触发。
+- IPA Online Update Release Gate：待本 release branch 触发。
+- HTTP load / source integrity / online-upgrade E2E：待完整 Gate。
