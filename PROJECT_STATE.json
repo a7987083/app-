@@ -1,14 +1,15 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "version": "2026092434",
-    "release": "source-v2026092434",
-    "tag_target": "982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da"
+    "version": "2026092435",
+    "release": "source-v2026092435",
+    "release_id": 401576538,
+    "branch": "release/2026092435-multi-device-keys",
+    "tag_target": "bda2656a699e93162ea38514f21e5027fc92ece9"
   },
   "development": {
     "version": "2026092435",
-    "branch": "work/2026092435-multi-device-keys",
-    "status": "development",
+    "status": "released",
     "focus": "Unlimited multi-App / multi-Keychain device public keys per UDID + Dylib"
   },
   "implementation": {
@@ -20,14 +21,27 @@
     "new_key_requires_active_udid_auth_proof": true,
     "new_key_requires_challenge_ecdsa": true
   },
+  "ci": {
+    "dylib_multi_device_keys_run": 36973103510,
+    "dylib_multi_device_keys_conclusion": "success",
+    "ipa_online_update_gate_run": 36973103536,
+    "ipa_online_update_gate_conclusion": "success",
+    "source_release_run": 36973103572,
+    "source_release_conclusion": "success",
+    "php70_regression": "passed",
+    "mysql57_migration": "passed",
+    "http_load_gate": "passed",
+    "real_github_release_online_update_e2e": "passed"
+  },
+  "release_asset": {
+    "name": "zonoe-online-update.zip",
+    "size": 298749,
+    "sha256": "d0d00573669de71e41dc4d8fe1aec71a3af3127b8eccce055f4fd04376a0c82a"
+  },
   "verification": {
-    "source_modified": true,
-    "migration_added": true,
-    "ci_definition_added": true,
-    "ci_run": "pending",
+    "release_published": true,
     "production_deploy": "not_verified",
-    "real_device": "not_verified",
-    "release_published": false
+    "real_device_multi_app": "not_verified"
   },
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
