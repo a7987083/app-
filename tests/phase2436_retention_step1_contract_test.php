@@ -22,6 +22,12 @@ $required = [
     "'dylib_device_key'",
     "'last_used_at'",
     'deleteStaleDeviceKeys',
+    'deleteTerminalScanItems',
+    'deleteTerminalScanJobs',
+    "'ipa_parse_attempt'",
+    "'ipa_scan_item'",
+    "'ipa_scan_job'",
+    "['completed', 'completed_with_errors', 'cancelled']",
     'deleteExpiredById',
     "->order('id asc')",
     '->limit(self::DELETE_BATCH_SIZE)',
@@ -44,8 +50,8 @@ if (strpos($timer, 'OnCalendar=*-*-* 04:20:00') === false) {
 }
 
 $config = file_get_contents($root . '/application/extra/ipa_data_center.php');
-if ($config === false || strpos($config, "'api_request_log_retention_days'") === false) {
-    fwrite(STDERR, "API request log retention config missing\n");
+if ($config === false || strpos($config, "'api_request_log_retention_days'") === false || strpos($config, "'scan_item_retention_days'") === false || strpos($config, "'scan_job_retention_days'") === false || strpos($config, "'parse_attempt_retention_days'") === false) {
+    fwrite(STDERR, "retention config missing\n");
     exit(1);
 }
 
