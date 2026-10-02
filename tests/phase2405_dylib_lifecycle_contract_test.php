@@ -33,13 +33,14 @@ function requireOrdered($content, array $needles, $label)
 
 $controller = file_get_contents($root . '/application/admin/controller/DylibCenter.php');
 $service = file_get_contents($root . '/application/common/library/Ipa/DylibVerificationService.php');
+$deviceAuth = file_get_contents($root . '/application/common/library/Ipa/DylibDeviceAuthService.php');
 $publicController = file_get_contents($root . '/application/index/controller/DylibVerify.php');
 $view = file_get_contents($root . '/application/admin/view/dylib_center/index.html');
 $js = file_get_contents($root . '/public/assets/js/backend/dylib_center.js');
 $client = file_get_contents($root . '/clients/ios/ZONDylibVerify/ZONVerifyClient.m');
 $readme = file_get_contents($root . '/clients/ios/ZONDylibVerify/README.md');
 
-foreach ([$controller, $service, $publicController, $view, $js, $client, $readme] as $index => $content) {
+foreach ([$controller, $service, $deviceAuth, $publicController, $view, $js, $client, $readme] as $index => $content) {
     if ($content === false) {
         fwrite(STDERR, "unable to load contract source {$index}\n");
         exit(1);
@@ -48,8 +49,9 @@ foreach ([$controller, $service, $publicController, $view, $js, $client, $readme
 $jsCompact = preg_replace('/\s+/', '', $js);
 
 // 2405 lifecycle invariants that remain valid after later authorization changes.
-requireContains($service, "->where('enabled', 1)->find()", 'verification rejects disabled dylib');
-requireContains($service, "'dylib_unknown', 'block'", 'disabled/unknown response remains fail-closed');
+requireContains($service, 'DylibDeviceAuthService::authenticate', 'verification delegates device authentication');
+requireContains($deviceAuth, "->where('enabled', 1)->find()", 'device authentication rejects disabled dylib');
+requireContains($deviceAuth, "'code' => 'dylib_unknown'", 'disabled/unknown device authentication remains fail-closed');
 requireContains($controller, 'public function setDylibEnabled()', 'admin toggle endpoint');
 requireContains($controller, "'enabled' => \$enabled", 'toggle persists enabled flag');
 
