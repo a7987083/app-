@@ -63,7 +63,7 @@ function legacyApps(array $rows, $mode, $allowLocked)
             'type' => $type,
             'version' => $val['nickname'],
             'versionDate' => date('Y-m-d\TH:i:s\+08:00', $val['updatetime']),
-            'versionDescription' => str_replace('\\n', '@@@', $val['keywords']),
+            'versionDescription' => str_replace('\\n', "\n", $val['keywords']),
             'lock' => $val['bt2b'],
             'downloadURL' => $downloadURL,
             'isLanZouCloud' => $val['flag'],
@@ -139,7 +139,7 @@ foreach ([['guest', false], ['licensed', false], ['licensed', true]] as $case) {
     $currentPlain = AppStorePayload::withoutRuntimeFields($currentPayload);
     assertSameValue("plain {$mode}/" . ($allow ? 'allow' : 'deny'), $legacyPlain, $currentPlain);
 
-    $legacyJson = str_replace('@@@', '\\n', json_encode($legacyPlain, 320));
+    $legacyJson = json_encode($legacyPlain, 320);
     $currentJson = AppStorePayload::encodeSourceJson($currentPlain, 320);
     assertSameValue("json {$mode}/" . ($allow ? 'allow' : 'deny'), $legacyJson, $currentJson);
 }
