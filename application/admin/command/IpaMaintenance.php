@@ -33,6 +33,7 @@ class IpaMaintenance extends Command
         $scanJobRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.scan_job_retention_days')));
         $parseAttemptRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.parse_attempt_retention_days')));
         $auditLogRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.audit_log_retention_days')));
+        $missingAssetRetentionDays = max(30, min(3650, (int)Config::get('ipa_data_center.missing_asset_retention_days')));
         $logBefore = $now - ($retentionDays * 86400);
         $apiLogBefore = $now - ($apiLogRetentionDays * 86400);
         $sessionBefore = $now - 86400;
@@ -42,6 +43,7 @@ class IpaMaintenance extends Command
         $scanJobBefore = $now - ($scanJobRetentionDays * 86400);
         $parseAttemptBefore = $now - ($parseAttemptRetentionDays * 86400);
         $auditLogBefore = $now - ($auditLogRetentionDays * 86400);
+        $missingAssetBefore = $now - ($missingAssetRetentionDays * 86400);
 
         // 2430 removed fa_dylib_nonce. Challenge rows are the v3 replay-protection
         // state and must be cleaned explicitly; never query the retired nonce table.
@@ -77,6 +79,7 @@ class IpaMaintenance extends Command
         $cardTransferDeleted = self::deleteExpiredById('card_transfer_log', 'addtime', $auditLogBefore);
         $adminLogDeleted = self::deleteExpiredById('admin_log', 'createtime', $auditLogBefore);
         $sourceChangeDeleted = self::deleteExpiredByPrimaryKey('source_change', 'revision', 'changed_at', $auditLogBefore);
+        $missingAssetDeleted = self::deleteStaleMissingAssets($missingAssetBefore);
         $runtimeLogDeleted = self::cleanupRuntimeLogs($now - self::RUNTIME_LOG_RETENTION_SECONDS);
 
         $updateCleanup = ['status' => 0, 'history' => 0, 'backups' => 0, 'bytes' => 0];
@@ -93,7 +96,7 @@ class IpaMaintenance extends Command
         }
 
         $output->info(sprintf(
-            'maintenance complete challenge=%d session=%d verify_log=%d api_log=%d device_key=%d parse_attempt=%d scan_item=%d scan_job=%d authorization_event=%d card_transfer=%d admin_log=%d source_change=%d runtime_log=%d update_status=%d update_history=%d update_backup=%d retention_days=%d api_log_retention_days=%d audit_log_retention_days=%d',
+            'maintenance complete challenge=%d session=%d verify_log=%d api_log=%d device_key=%d parse_attempt=%d scan_item=%d scan_job=%d authorization_event=%d card_transfer=%d admin_log=%d source_change=%d missing_asset=%d runtime_log=%d update_status=%d update_history=%d update_backup=%d retention_days=%d api_log_retention_days=%d audit_log_retention_days=%d missing_asset_retention_days=%d',
             (int)$challengeDeleted,
             (int)$sessionDeleted,
             (int)$logDeleted,
@@ -106,13 +109,15 @@ class IpaMaintenance extends Command
             (int)$cardTransferDeleted,
             (int)$adminLogDeleted,
             (int)$sourceChangeDeleted,
+            (int)$missingAssetDeleted,
             (int)$runtimeLogDeleted,
             isset($updateCleanup['status']) ? (int)$updateCleanup['status'] : 0,
             isset($updateCleanup['history']) ? (int)$updateCleanup['history'] : 0,
             isset($updateCleanup['backups']) ? (int)$updateCleanup['backups'] : 0,
             $retentionDays,
             $apiLogRetentionDays,
-            $auditLogRetentionDays
+            $auditLogRetentionDays,
+            $missingAssetRetentionDays
         ));
         return 0;
     }
@@ -124,6 +129,63 @@ class IpaMaintenance extends Command
      * rows. Batching avoids one huge DELETE transaction, limits undo/redo growth,
      * and caps the amount of cleanup work performed by one daily invocation.
      */
+    protected static function deleteStaleMissingAssets($before)
+    {
+        $deleted = 0;
+        $cursor = 0;
+
+        for ($page = 0; $page < 10; $page++) {
+            $assetIds = Db::name('ipa_asset')
+                ->where('status', 'missing')
+                ->where('updated_at', '<', (int)$before)
+                ->where('id', '>', $cursor)
+                ->order('id asc')
+                ->limit(500)
+                ->column('id');
+
+            if (!$assetIds) {
+                break;
+            }
+
+            foreach ($assetIds as $assetId) {
+                $assetId = (int)$assetId;
+                if ($assetId <= 0) {
+                    continue;
+                }
+
+                // Manual category bindings are operator-owned state and must win
+                // over automatic retention.
+                $bound = (int)Db::name('ipa_category_binding')
+                    ->where('asset_id', $assetId)
+                    ->count();
+                if ($bound > 0) {
+                    continue;
+                }
+
+                Db::startTrans();
+                try {
+                    Db::name('ipa_binary')->where('asset_id', $assetId)->delete();
+                    Db::name('ipa_app_identity')->where('asset_id', $assetId)->delete();
+                    Db::name('ipa_compare_result')->where('asset_id', $assetId)->delete();
+                    Db::name('ipa_parse_attempt')->where('asset_id', $assetId)->delete();
+                    $count = Db::name('ipa_asset')
+                        ->where('id', $assetId)
+                        ->where('status', 'missing')
+                        ->where('updated_at', '<', (int)$before)
+                        ->delete();
+                    Db::commit();
+                    $deleted += (int)$count;
+                } catch (\Throwable $e) {
+                    Db::rollback();
+                }
+            }
+
+            $cursor = max(array_map('intval', $assetIds));
+        }
+
+        return $deleted;
+    }
+
     protected static function cleanupRuntimeLogs($before)
     {
         if (!defined('LOG_PATH') || !is_dir(LOG_PATH)) {
