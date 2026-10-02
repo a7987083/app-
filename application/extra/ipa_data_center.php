@@ -14,4 +14,5 @@ return [
     'scan_job_retention_days' => (int)Env::get('ipa.scan_job_retention_days', 30),
     'parse_attempt_retention_days' => (int)Env::get('ipa.parse_attempt_retention_days', 30),
     'audit_log_retention_days' => (int)Env::get('ipa.audit_log_retention_days', 365),
+    'missing_asset_retention_days' => (int)Env::get('ipa.missing_asset_retention_days', 365),
 ];
