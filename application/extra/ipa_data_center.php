@@ -10,4 +10,7 @@ return [
     'default_offline_grace' => (int)Env::get('ipa.offline_grace', 900),
     'verify_log_retention_days' => (int)Env::get('ipa.verify_log_retention_days', 30),
     'api_request_log_retention_days' => (int)Env::get('ipa.api_request_log_retention_days', 30),
+    'scan_item_retention_days' => (int)Env::get('ipa.scan_item_retention_days', 7),
+    'scan_job_retention_days' => (int)Env::get('ipa.scan_job_retention_days', 30),
+    'parse_attempt_retention_days' => (int)Env::get('ipa.parse_attempt_retention_days', 30),
 ];
