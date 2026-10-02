@@ -1,0 +1,23 @@
+name: Retention Step1 2436 CI
+
+on:
+  push:
+    branches:
+      - work/2026092436-retention-step1
+  workflow_dispatch:
+
+jobs:
+  retention-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.0'
+          coverage: none
+      - name: PHP syntax
+        run: |
+          php -l application/admin/command/IpaMaintenance.php
+          php -l tests/phase2436_retention_step1_contract_test.php
+      - name: Retention contract
+        run: php tests/phase2436_retention_step1_contract_test.php
