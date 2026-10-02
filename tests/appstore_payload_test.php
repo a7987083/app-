@@ -46,7 +46,7 @@ $row = [
 $guest = AppStorePayload::apps([$row], 'guest', false)[0];
 same(0, $guest['type'], 'default type maps to zero');
 same('', $guest['downloadURL'], 'guest cannot download locked app');
-same('line1@@@line2', $guest['versionDescription'], 'newline marker mapping');
+same("line1\nline2", $guest['versionDescription'], 'newline mapping');
 
 $expired = AppStorePayload::apps([$row], 'licensed', false)[0];
 same('', $expired['downloadURL'], 'expired license cannot download lock=1');
