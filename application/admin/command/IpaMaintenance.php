@@ -2,6 +2,7 @@
 
 namespace app\admin\command;
 
+use app\common\library\update\UpdateOps;
 use think\Config;
 use think\Db;
 use think\console\Command;
@@ -14,6 +15,8 @@ class IpaMaintenance extends Command
     const DELETE_BATCH_SIZE = 5000;
     const DELETE_MAX_BATCHES = 20;
     const DEVICE_KEY_RETENTION_SECONDS = 31536000; // 365 days
+    const RUNTIME_LOG_RETENTION_SECONDS = 2592000; // 30 days
+    const RUNTIME_LOG_DELETE_LIMIT = 1000;
 
     protected function configure()
     {
@@ -68,9 +71,23 @@ class IpaMaintenance extends Command
         );
         $scanItemDeleted = self::deleteTerminalScanItems($scanItemBefore);
         $scanJobDeleted = self::deleteTerminalScanJobs($scanJobBefore);
+        $runtimeLogDeleted = self::cleanupRuntimeLogs($now - self::RUNTIME_LOG_RETENTION_SECONDS);
+
+        $updateCleanup = ['status' => 0, 'history' => 0, 'backups' => 0, 'bytes' => 0];
+        try {
+            if (defined('ROOT_PATH')) {
+                $updateOps = new UpdateOps(ROOT_PATH);
+                $result = $updateOps->cleanup(false);
+                if (is_array($result) && isset($result['deleted']) && is_array($result['deleted'])) {
+                    $updateCleanup = array_merge($updateCleanup, $result['deleted']);
+                }
+            }
+        } catch (\Exception $e) {
+            $output->warning('update retention cleanup failed: ' . $e->getMessage());
+        }
 
         $output->info(sprintf(
-            'maintenance complete challenge=%d session=%d verify_log=%d api_log=%d device_key=%d parse_attempt=%d scan_item=%d scan_job=%d retention_days=%d api_log_retention_days=%d',
+            'maintenance complete challenge=%d session=%d verify_log=%d api_log=%d device_key=%d parse_attempt=%d scan_item=%d scan_job=%d runtime_log=%d update_status=%d update_history=%d update_backup=%d retention_days=%d api_log_retention_days=%d',
             (int)$challengeDeleted,
             (int)$sessionDeleted,
             (int)$logDeleted,
@@ -79,6 +96,10 @@ class IpaMaintenance extends Command
             (int)$parseAttemptDeleted,
             (int)$scanItemDeleted,
             (int)$scanJobDeleted,
+            (int)$runtimeLogDeleted,
+            isset($updateCleanup['status']) ? (int)$updateCleanup['status'] : 0,
+            isset($updateCleanup['history']) ? (int)$updateCleanup['history'] : 0,
+            isset($updateCleanup['backups']) ? (int)$updateCleanup['backups'] : 0,
             $retentionDays,
             $apiLogRetentionDays
         ));
@@ -92,6 +113,48 @@ class IpaMaintenance extends Command
      * rows. Batching avoids one huge DELETE transaction, limits undo/redo growth,
      * and caps the amount of cleanup work performed by one daily invocation.
      */
+    protected static function cleanupRuntimeLogs($before)
+    {
+        if (!defined('LOG_PATH') || !is_dir(LOG_PATH)) {
+            return 0;
+        }
+
+        $deleted = 0;
+        try {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator(LOG_PATH, \FilesystemIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::CHILD_FIRST
+            );
+
+            foreach ($iterator as $item) {
+                if ($deleted >= self::RUNTIME_LOG_DELETE_LIMIT) {
+                    break;
+                }
+                if ($item->isLink()) {
+                    continue;
+                }
+                if ($item->isFile()) {
+                    $path = $item->getPathname();
+                    $mtime = (int)$item->getMTime();
+                    if (substr(strtolower($item->getFilename()), -4) === '.log'
+                        && $mtime > 0
+                        && $mtime < (int)$before
+                        && @unlink($path)) {
+                        $deleted++;
+                    }
+                    continue;
+                }
+                if ($item->isDir()) {
+                    @rmdir($item->getPathname());
+                }
+            }
+        } catch (\UnexpectedValueException $e) {
+            return $deleted;
+        }
+
+        return $deleted;
+    }
+
     protected static function deleteTerminalScanItems($before)
     {
         $deleted = 0;
