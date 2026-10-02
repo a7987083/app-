@@ -9,6 +9,7 @@ class DylibDeviceAuthService
 {
     const ALGORITHM = 'ecdsa-p256-sha256';
     const CHALLENGE_TTL = 60;
+    const DEVICE_KEY_RETENTION = 31536000; // 365 days
 
     public static function issueChallenge(array $payload)
     {
@@ -31,12 +32,13 @@ class DylibDeviceAuthService
         $bound = Db::name('dylib_device_key')
             ->where('udid_hash', $udidHash)
             ->where('dylib_id', (int)$dylib['id'])
+            ->where('public_key_hash', $publicKeyHash)
             ->where('status', 'active')
             ->find();
 
-        // Compatibility: an already-enrolled key may continue the pre-2433
-        // v3 challenge flow. First enrollment never falls back to card codes;
-        // it must prove that the UDID is currently active through auth_proof.
+        // Each UDID + Dylib may enroll multiple independent device keys.
+        // A key that is not enrolled yet must prove that the UDID is currently
+        // authorized. Existing keys continue through the normal challenge flow.
         if (!$bound) {
             if ($authProof === '') {
                 return ['ok' => false, 'code' => 'auth_proof_missing', 'message' => 'First device enrollment requires active UDID auth proof'];
@@ -112,6 +114,7 @@ class DylibDeviceAuthService
         $bound = Db::name('dylib_device_key')
             ->where('udid_hash', $udidHash)
             ->where('dylib_id', (int)$dylib['id'])
+            ->where('public_key_hash', $publicKeyHash)
             ->where('status', 'active')
             ->find();
 
@@ -151,14 +154,11 @@ class DylibDeviceAuthService
             return ['ok' => false, 'code' => 'device_signature_invalid', 'message' => 'Device signature verification failed'];
         }
 
-        if ($bound && !hash_equals((string)$bound['public_key_hash'], $publicKeyHash)) {
-            return ['ok' => false, 'code' => 'device_key_mismatch', 'message' => 'Device key does not match enrolled key'];
-        }
-
         if (!$bound) {
             // First enrollment is authorized by the active-UDID auth_proof that
             // was bound to this challenge. No card/license code is accepted here.
-            $keyId = substr($publicKeyHash, 0, 32);
+            self::cleanupStaleKeys(time());
+            $keyId = substr(hash('sha256', $udidHash . "\n" . (int)$dylib['id'] . "\n" . $publicKeyHash), 0, 32);
             Db::name('dylib_device_key')->insert([
                 'udid_hash' => $udidHash,
                 'dylib_id' => (int)$dylib['id'],
@@ -173,7 +173,12 @@ class DylibDeviceAuthService
                 'created_at' => time(),
                 'updated_at' => time(),
             ]);
-            $bound = Db::name('dylib_device_key')->where('key_id', $keyId)->find();
+            $bound = Db::name('dylib_device_key')
+                ->where('udid_hash', $udidHash)
+                ->where('dylib_id', (int)$dylib['id'])
+                ->where('public_key_hash', $publicKeyHash)
+                ->where('status', 'active')
+                ->find();
         }
 
         $consumed = Db::name('dylib_auth_challenge')
@@ -219,6 +224,15 @@ class DylibDeviceAuthService
         $fields[] = trim((string)(isset($payload['app_version']) ? $payload['app_version'] : ''));
         $fields[] = trim((string)(isset($payload['app_build']) ? $payload['app_build'] : ''));
         return implode("\n", $fields);
+    }
+
+    protected static function cleanupStaleKeys($now)
+    {
+        $cutoff = max(0, (int)$now - self::DEVICE_KEY_RETENTION);
+        Db::name('dylib_device_key')
+            ->where('last_used_at', '>', 0)
+            ->where('last_used_at', '<', $cutoff)
+            ->delete();
     }
 
     protected static function hasActiveAuthorization($udid)
