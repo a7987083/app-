@@ -1,55 +1,42 @@
 # Software Source Development Handoff
 
-## Current stable state
+## Stable baseline
 
 - Repository: `a7987083/app-`
-- Stable release: `source-v2026092413`
-- Release branch: `release/2026092413-api-doc-full-catalog`
-- Release target / tested release head: `acfe570bef7113ae3dcf94b33ce8258f75ad33d7`
-- OC Codegen CI #17 / Run `36250685197`: SUCCESS
-- ZONOE Source Release #254 / Run `36251418295`: SUCCESS
-- IPA Online Update Release Gate #153 / Run `36251418307`: SUCCESS
-- Real GitHub Release online-update E2E: SUCCESS
+- Stable release: `source-v2026092434`
+- Stable target: `982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da`
 
-## Product boundary
+## Current development
 
-The Dylib verification center is an API provider. It owns server-side API contracts, verification, signing rules, runtime configuration, returned permission/notice/update data, logs, and integration documentation. Client-side UDID acquisition, card/license input UI, popups, floating menus and product UX remain outside this center.
+- Version target: `2026092435`
+- Branch: `work/2026092435-multi-device-keys`
+- Focus: multi-Keychain / multi-App Device Key enrollment without BundleID coupling.
 
-## 2413 implementation
+## Authentication model
 
-1. Admin API guide lists 8 existing entries and distinguishes JSON, HTML compatibility, and Legacy entry types.
-2. `/authorization` and `/unbind` are not documented as pure JSON APIs.
-3. Protocol v1/v2 HMAC-SHA256 canonical remains unchanged and has a dedicated documentation section.
-4. `DylibApiDocumentation` generates the downloadable documentation package.
-5. `DylibApiDocs` exposes the authenticated admin ZIP download.
-6. ZIP export contains exactly 13 integration files and uses current Dylib/runtime `verify_path` context.
-7. Export never includes the real Verify Secret; examples use `<VERIFY_SECRET>`.
-8. New contract tests execute the document generator and validate endpoint count, file count, JSON schemas, dynamic verify path and secret hygiene.
+Authorization scope remains:
 
-## Formal online-update asset
+`UDID + Dylib Key`
 
-- Release: `source-v2026092413`
-- Release ID: `397283396`
-- Asset: `zonoe-online-update.zip`
-- Size: 266878 bytes
-- SHA256: `eec0cb86dcf5143c0b272f2a143d1a38a2b685c62b76a4bb9d308ff4990a96a8`
+Credential rows are:
 
-## Verified
+`UDID hash + dylib_id + public_key_hash`
 
-- Feature CI #17: passed.
-- PHP 7.0 regression: passed.
-- MySQL 5.7 migration: passed.
-- HTTP concurrency/load gate: passed.
-- Online-update package: passed.
-- Source Release packaging/publication: passed.
-- Real GitHub Release online-update E2E: passed.
-- IPA Online Update Release Gate #153: passed.
+A new PublicKey is accepted only when the UDID is currently authorized, the short-lived server `auth_proof` validates, and the one-time Challenge is signed by the matching P-256 private key.
 
-## Not claimed
+There is no hard key-count limit. Existing enrolled keys update `last_used_at`. Keys unused for 365 days are deleted during a new enrollment, preventing permanent accumulation without limiting App count.
 
-- A separate production OC/Swift client has not been manually accepted against the APIs.
-- Browser/manual admin UI click-through is not claimed by CI alone.
+## Changed files
 
-## Next work
+- `application/common/library/Ipa/DylibDeviceAuthService.php`
+- `release/sql/2026092435_multi_device_keys.sql`
+- `.github/workflows/dylib-multi-device-keys-2435-ci.yml`
 
-Use `source-v2026092413` as the stable baseline. Preserve the existing wire protocols and keep client UX outside the Dylib verification center. If API documentation is changed again, update the generated documentation model and the admin presentation together.
+## Verification status
+
+- Modified: yes.
+- Committed: yes, development branch.
+- PHP/MySQL CI: pending actual run.
+- Released: no.
+- Production deployed: no.
+- Real-device regression: no.
