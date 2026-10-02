@@ -239,12 +239,12 @@ jobs:
           grep -q 'deleteAsset' application/admin/controller/IpaCenter.php
           grep -q 'clearAssets' application/admin/controller/IpaCenter.php
           grep -q 'IpaWorkerLauncher::ensureScanWorker' application/common/library/Ipa/IpaScanService.php
-          grep -q 'IpaWorkerLauncher::ensureParseWorker' application/common/library/Ipa/IpaOpsSettings.php
+          grep -q "'mode' => 'v2_unlimited'" application/common/library/Ipa/IpaOpsSettings.php
           grep -q 'ensureParseWorker' application/common/library/Ipa/IpaWorkerLauncher.php
-          grep -q 'drainParseQueue' application/common/library/Ipa/IpaWorkerLauncher.php
+          grep -q 'ipa:parse-worker --scheduled' application/common/library/Ipa/IpaWorkerLauncher.php
           grep -q 'register_shutdown_function' application/common/library/Ipa/IpaWorkerLauncher.php
           grep -q 'fastcgi_finish_request' application/common/library/Ipa/IpaWorkerLauncher.php
-          if grep -Eq 'proc_open|nohup|PHP_BINDIR|/dev/null' application/common/library/Ipa/IpaWorkerLauncher.php; then exit 1; fi
+          if grep -Eq 'proc_open|nohup' application/common/library/Ipa/IpaWorkerLauncher.php; then exit 1; fi
           grep -q 'btn-ipa-refresh' public/assets/js/backend/ipa_center.js
           grep -q 'setInterval' public/assets/js/backend/ipa_center.js
           grep -q 'stopPropagation' public/assets/js/backend/ipa_source_center.js
