@@ -6,6 +6,7 @@ $service = file_get_contents($root . '/application/common/library/Ipa/DylibVerif
 $deviceAuth = file_get_contents($root . '/application/common/library/Ipa/DylibDeviceAuthService.php');
 $runtime = file_get_contents($root . '/application/common/library/Ipa/DylibRuntimeAccessService.php');
 $configService = file_get_contents($root . '/application/common/library/Ipa/DylibRuntimeConfigService.php');
+$signingKey = file_get_contents($root . '/application/common/library/Ipa/DylibSigningKey.php');
 $parser = file_get_contents($root . '/application/common/library/Ipa/IpaParserV2Service.php');
 $inspector = file_get_contents($root . '/application/common/library/Ipa/MachOInspector.php');
 $publicController = file_get_contents($root . '/application/index/controller/DylibVerify.php');
@@ -19,7 +20,7 @@ $sql = file_get_contents($root . '/release/sql/2026092406_dylib_runtime_access.s
 $cleanSql = file_get_contents($root . '/database/ipa_data_center_v1_3_dylib_runtime_access.sql');
 $manifest = file_get_contents($root . '/release/online-update-files.txt');
 
-foreach ([$service,$deviceAuth,$runtime,$configService,$parser,$inspector,$publicController,$adminController,$view,$js,$clientH,$clientM,$readme,$sql,$cleanSql,$manifest] as $index => $content) {
+foreach ([$service,$deviceAuth,$runtime,$configService,$signingKey,$parser,$inspector,$publicController,$adminController,$view,$js,$clientH,$clientM,$readme,$sql,$cleanSql,$manifest] as $index => $content) {
     if ($content === false) {
         fwrite(STDERR, "unable to load 2406 contract source {$index}\n");
         exit(1);
@@ -82,7 +83,8 @@ requireContains($adminController, 'if ($bootstrapUrls && !$apiEndpoints)', 'boot
 
 // Server/domain migration uses signed discovery + multiple endpoints + Last-Known-Good cache.
 requireContains($publicController, 'DylibRuntimeConfigService::bootstrap', 'public config discovery endpoint');
-requireContains($configService, "'signature_alg' => 'hmac-sha256'", 'bootstrap config signing algorithm');
+requireContains($configService, "'signature_alg' => DylibSigningKey::algorithm()", 'bootstrap config delegates signing algorithm');
+requireContains($signingKey, "const ALGORITHM = 'rsa-2048-sha256'", 'bootstrap config uses RSA-2048 SHA-256 signing');
 requireContains($clientH, 'bootstrapURLs', 'client supports multiple bootstrap URLs');
 requireContains($clientM, 'cachedRuntimeConfigAllowStale', 'client Last-Known-Good runtime config');
 requireContains($clientM, 'verificationEndpointsFromRuntimeConfig', 'client runtime endpoint failover');
