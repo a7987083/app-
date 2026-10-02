@@ -17,6 +17,7 @@ ZONOE 软件源 Release 2026092435
 验证：
 - Dylib Multi Device Keys 2435 CI：PHP 7.0 syntax、MySQL 5.7 migration 双执行幂等、多 PublicKey 共存、重复 Key 拒绝、在线更新包检查。
 - Dylib signing contract 已同步到当前 Protocol v3 canonicalProof，移除失效的 v1/v2 canonicalRequest 测试依赖。
+- 2405/2406 lifecycle/runtime access 契约同步到当前 v3 DeviceAuth 调用链，移除已废弃 v1/v2 静态断言。
 - canonical Release Gate：完整 regression、source integrity、MySQL 5.7 migration、HTTP load、GitHub Release 在线升级 E2E。
 
 在线更新目标：source-v2026092434 -> source-v2026092435。
