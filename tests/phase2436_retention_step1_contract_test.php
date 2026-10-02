@@ -34,7 +34,7 @@ $required = [
     'deleteStaleMissingAssets',
     "'ipa_category_binding'",
     "->where('status', 'missing')",
-    "'missing_asset_retention_days'",
+    'ipa_data_center.missing_asset_retention_days',
     'RUNTIME_LOG_RETENTION_SECONDS = 2592000',
     'new UpdateOps(ROOT_PATH)',
     "'authorization_event'",
