@@ -25,7 +25,9 @@ class IpaMaintenance extends Command
     {
         $now = time();
         $retentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.verify_log_retention_days')));
+        $apiLogRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.api_request_log_retention_days')));
         $logBefore = $now - ($retentionDays * 86400);
+        $apiLogBefore = $now - ($apiLogRetentionDays * 86400);
         $sessionBefore = $now - 86400;
         $challengeBefore = $now - self::CHALLENGE_RETENTION_SECONDS;
         $deviceKeyBefore = $now - self::DEVICE_KEY_RETENTION_SECONDS;
@@ -48,14 +50,21 @@ class IpaMaintenance extends Command
             $logBefore
         );
         $deviceKeyDeleted = self::deleteStaleDeviceKeys($deviceKeyBefore);
+        $apiLogDeleted = self::deleteExpiredById(
+            'api_request_log',
+            'addtime',
+            $apiLogBefore
+        );
 
         $output->info(sprintf(
-            'maintenance complete challenge=%d session=%d verify_log=%d device_key=%d retention_days=%d',
+            'maintenance complete challenge=%d session=%d verify_log=%d api_log=%d device_key=%d retention_days=%d api_log_retention_days=%d',
             (int)$challengeDeleted,
             (int)$sessionDeleted,
             (int)$logDeleted,
+            (int)$apiLogDeleted,
             (int)$deviceKeyDeleted,
-            $retentionDays
+            $retentionDays,
+            $apiLogRetentionDays
         ));
         return 0;
     }
