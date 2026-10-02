@@ -115,3 +115,5 @@ clients/ios/ZONDylibVerify/ZONVerifyClient.h
 clients/ios/ZONDylibVerify/ZONVerifyClient.m
 deploy/systemd/zonoe-ipa-parse-worker.service
 deploy/systemd/zonoe-ipa-parse-worker.timer
+deploy/systemd/zonoe-ipa-maintenance.service
+deploy/systemd/zonoe-ipa-maintenance.timer
