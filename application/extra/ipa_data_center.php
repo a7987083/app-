@@ -9,4 +9,5 @@ return [
     'session_ttl' => (int)Env::get('ipa.session_ttl', 900),
     'default_offline_grace' => (int)Env::get('ipa.offline_grace', 900),
     'verify_log_retention_days' => (int)Env::get('ipa.verify_log_retention_days', 30),
+    'api_request_log_retention_days' => (int)Env::get('ipa.api_request_log_retention_days', 30),
 ];
