@@ -21,3 +21,57 @@ jobs:
           php -l tests/phase2436_retention_step1_contract_test.php
       - name: Retention contract
         run: php tests/phase2436_retention_step1_contract_test.php
+
+  mysql57-retention-indexes:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: retention_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create retention index fixtures
+        run: |
+          mysql -h127.0.0.1 -uroot -proot retention_test <<'SQL'
+          CREATE TABLE fa_ipa_scan_job (
+            id bigint unsigned NOT NULL AUTO_INCREMENT,
+            status varchar(24) NOT NULL DEFAULT 'pending',
+            updated_at int unsigned NOT NULL DEFAULT '0',
+            PRIMARY KEY (id)
+          ) ENGINE=InnoDB;
+          CREATE TABLE fa_authorization_event (
+            id int unsigned NOT NULL AUTO_INCREMENT,
+            addtime int NOT NULL DEFAULT '0',
+            PRIMARY KEY (id)
+          ) ENGINE=InnoDB;
+          CREATE TABLE fa_admin_log (
+            id int unsigned NOT NULL AUTO_INCREMENT,
+            createtime int DEFAULT NULL,
+            PRIMARY KEY (id)
+          ) ENGINE=InnoDB;
+          CREATE TABLE fa_ipa_asset (
+            id bigint unsigned NOT NULL AUTO_INCREMENT,
+            status varchar(32) NOT NULL DEFAULT 'discovered',
+            updated_at int unsigned NOT NULL DEFAULT '0',
+            PRIMARY KEY (id)
+          ) ENGINE=InnoDB;
+          SQL
+      - name: Apply retention indexes twice
+        run: |
+          mysql -h127.0.0.1 -uroot -proot retention_test < release/sql/2026092436_retention_indexes.sql
+          mysql -h127.0.0.1 -uroot -proot retention_test < release/sql/2026092436_retention_indexes.sql
+      - name: Verify retention indexes
+        run: |
+          test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_ipa_scan_job' AND index_name='idx_retention_status_updated'")" -gt 0
+          test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_authorization_event' AND index_name='idx_addtime'")" -gt 0
+          test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_admin_log' AND index_name='idx_createtime'")" -gt 0
+          test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_ipa_asset' AND index_name='idx_asset_retention'")" -gt 0
