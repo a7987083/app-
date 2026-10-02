@@ -42,7 +42,7 @@
 
 - Modified: yes.
 - Committed: yes.
-- Dedicated PHP/MySQL/package CI: pending latest run completion.
+- Dedicated PHP/MySQL/package CI #28: SUCCESS.
 - Full Release Gate: not run.
 - Released: no.
 - Production timer status: not verified.
