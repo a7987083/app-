@@ -3,6 +3,7 @@
 $root = dirname(__DIR__);
 
 $service = file_get_contents($root . '/application/common/library/Ipa/DylibVerificationService.php');
+$deviceAuth = file_get_contents($root . '/application/common/library/Ipa/DylibDeviceAuthService.php');
 $runtime = file_get_contents($root . '/application/common/library/Ipa/DylibRuntimeAccessService.php');
 $configService = file_get_contents($root . '/application/common/library/Ipa/DylibRuntimeConfigService.php');
 $parser = file_get_contents($root . '/application/common/library/Ipa/IpaParserService.php');
@@ -18,7 +19,7 @@ $sql = file_get_contents($root . '/release/sql/2026092406_dylib_runtime_access.s
 $cleanSql = file_get_contents($root . '/database/ipa_data_center_v1_3_dylib_runtime_access.sql');
 $manifest = file_get_contents($root . '/release/online-update-files.txt');
 
-foreach ([$service,$runtime,$configService,$parser,$inspector,$publicController,$adminController,$view,$js,$clientH,$clientM,$readme,$sql,$cleanSql,$manifest] as $index => $content) {
+foreach ([$service,$deviceAuth,$runtime,$configService,$parser,$inspector,$publicController,$adminController,$view,$js,$clientH,$clientM,$readme,$sql,$cleanSql,$manifest] as $index => $content) {
     if ($content === false) {
         fwrite(STDERR, "unable to load 2406 contract source {$index}\n");
         exit(1);
@@ -53,12 +54,13 @@ requireContains($runtime, "->where('macho_uuid', \$uuid)", 'Mach-O UUID is ident
 requireContains($runtime, "Db::name('ipa_category_binding')", 'identity resolves through IPA to fa_category binding');
 requireNotContains($clientM, '@"app_id"', 'client never asserts authoritative app_id');
 
-// v1 signing remains immutable; v2 app identity fields are appended.
-requireContains($service, 'public static function canonicalRequestV2', 'server v2 canonical signing method');
-foreach (['protocol_version', 'app_executable', 'app_macho_uuid', 'app_version', 'app_build'] as $field) {
-    requireContains($clientM, '@"' . $field . '"', "client v2 payload {$field}");
+// Protocol v3 signs a one-time device challenge and binds App identity fields.
+requireContains($service, 'DylibDeviceAuthService::authenticate', 'verification uses protocol v3 device authentication');
+requireContains($deviceAuth, 'public static function canonicalProof', 'server v3 canonical proof method');
+foreach (['protocol_version', 'challenge_id', 'challenge', 'auth_proof', 'device_public_key', 'device_signature', 'app_executable', 'app_macho_uuid', 'app_version', 'app_build'] as $field) {
+    requireContains($clientM, '@"' . $field . '"', "client v3 payload {$field}");
 }
-requireContains($clientM, 'canonicalV2UDID', 'client v2 canonical signing method');
+requireContains($clientM, 'canonicalProof:', 'client v3 canonical signing method');
 requireContains($clientM, 'currentAppMachOUUID', 'client reads running main Mach-O UUID');
 
 // scope=3 app_plus offline grace must keep the same identity strength as online verification.
