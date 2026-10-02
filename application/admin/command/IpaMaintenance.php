@@ -26,11 +26,17 @@ class IpaMaintenance extends Command
         $now = time();
         $retentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.verify_log_retention_days')));
         $apiLogRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.api_request_log_retention_days')));
+        $scanItemRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.scan_item_retention_days')));
+        $scanJobRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.scan_job_retention_days')));
+        $parseAttemptRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.parse_attempt_retention_days')));
         $logBefore = $now - ($retentionDays * 86400);
         $apiLogBefore = $now - ($apiLogRetentionDays * 86400);
         $sessionBefore = $now - 86400;
         $challengeBefore = $now - self::CHALLENGE_RETENTION_SECONDS;
         $deviceKeyBefore = $now - self::DEVICE_KEY_RETENTION_SECONDS;
+        $scanItemBefore = $now - ($scanItemRetentionDays * 86400);
+        $scanJobBefore = $now - ($scanJobRetentionDays * 86400);
+        $parseAttemptBefore = $now - ($parseAttemptRetentionDays * 86400);
 
         // 2430 removed fa_dylib_nonce. Challenge rows are the v3 replay-protection
         // state and must be cleaned explicitly; never query the retired nonce table.
@@ -55,14 +61,24 @@ class IpaMaintenance extends Command
             'addtime',
             $apiLogBefore
         );
+        $parseAttemptDeleted = self::deleteExpiredById(
+            'ipa_parse_attempt',
+            'created_at',
+            $parseAttemptBefore
+        );
+        $scanItemDeleted = self::deleteTerminalScanItems($scanItemBefore);
+        $scanJobDeleted = self::deleteTerminalScanJobs($scanJobBefore);
 
         $output->info(sprintf(
-            'maintenance complete challenge=%d session=%d verify_log=%d api_log=%d device_key=%d retention_days=%d api_log_retention_days=%d',
+            'maintenance complete challenge=%d session=%d verify_log=%d api_log=%d device_key=%d parse_attempt=%d scan_item=%d scan_job=%d retention_days=%d api_log_retention_days=%d',
             (int)$challengeDeleted,
             (int)$sessionDeleted,
             (int)$logDeleted,
             (int)$apiLogDeleted,
             (int)$deviceKeyDeleted,
+            (int)$parseAttemptDeleted,
+            (int)$scanItemDeleted,
+            (int)$scanJobDeleted,
             $retentionDays,
             $apiLogRetentionDays
         ));
@@ -76,6 +92,76 @@ class IpaMaintenance extends Command
      * rows. Batching avoids one huge DELETE transaction, limits undo/redo growth,
      * and caps the amount of cleanup work performed by one daily invocation.
      */
+    protected static function deleteTerminalScanItems($before)
+    {
+        $deleted = 0;
+        $terminal = ['completed', 'completed_with_errors', 'cancelled'];
+
+        for ($batch = 0; $batch < self::DELETE_MAX_BATCHES; $batch++) {
+            $jobIds = Db::name('ipa_scan_job')
+                ->where('status', 'in', $terminal)
+                ->where('updated_at', '<', (int)$before)
+                ->order('id asc')
+                ->limit(500)
+                ->column('id');
+
+            if (!$jobIds) {
+                break;
+            }
+
+            $ids = Db::name('ipa_scan_item')
+                ->where('job_id', 'in', array_map('intval', $jobIds))
+                ->order('id asc')
+                ->limit(self::DELETE_BATCH_SIZE)
+                ->column('id');
+
+            if (!$ids) {
+                break;
+            }
+
+            $count = Db::name('ipa_scan_item')
+                ->where('id', 'in', array_map('intval', $ids))
+                ->delete();
+
+            $deleted += (int)$count;
+            if (count($ids) < self::DELETE_BATCH_SIZE) {
+                break;
+            }
+        }
+
+        return $deleted;
+    }
+
+    protected static function deleteTerminalScanJobs($before)
+    {
+        $deleted = 0;
+        $terminal = ['completed', 'completed_with_errors', 'cancelled'];
+
+        $jobIds = Db::name('ipa_scan_job')
+            ->where('status', 'in', $terminal)
+            ->where('updated_at', '<', (int)$before)
+            ->order('id asc')
+            ->limit(1000)
+            ->column('id');
+
+        foreach ($jobIds ?: [] as $jobId) {
+            $jobId = (int)$jobId;
+            if ($jobId <= 0) {
+                continue;
+            }
+            $remaining = (int)Db::name('ipa_scan_item')->where('job_id', $jobId)->count();
+            if ($remaining > 0) {
+                continue;
+            }
+            $deleted += (int)Db::name('ipa_scan_job')
+                ->where('id', $jobId)
+                ->where('status', 'in', $terminal)
+                ->delete();
+        }
+
+        return $deleted;
+    }
+
     protected static function deleteStaleDeviceKeys($before)
     {
         $deleted = 0;
