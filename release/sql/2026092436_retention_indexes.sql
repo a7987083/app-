@@ -52,3 +52,16 @@ SET @q := IF(
   'SELECT 1'
 );
 PREPARE s FROM @q; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @idx := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA=DATABASE()
+    AND TABLE_NAME='fa_card_transfer_log'
+    AND INDEX_NAME='idx_addtime'
+);
+SET @q := IF(
+  @idx=0,
+  'ALTER TABLE `fa_card_transfer_log` ADD KEY `idx_addtime` (`addtime`,`id`)',
+  'SELECT 1'
+);
+PREPARE s FROM @q; EXECUTE s; DEALLOCATE PREPARE s;
