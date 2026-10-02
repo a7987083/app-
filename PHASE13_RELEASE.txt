@@ -1,21 +1,21 @@
-ZONOE 软件源 Release 2026092434
-版本：2026092434
-基线：source-v2026092433
-阶段：Dylib active-UDID auth proof / Device Key enrollment
-发布分支：release/2026092434-auth-proof-enrollment
+ZONOE 软件源 Release 2026092435
+版本：2026092435
+基线：source-v2026092434
+阶段：Dylib Multi Device Keys / unlimited App-Keychain enrollment
+发布分支：release/2026092435-multi-device-keys
 发布状态：正式候选；完整 Gate 全绿后发布
 
 更新内容：
-1. /index/index/apiface 为当前有效 UDID 签发短时 auth_proof。
-2. 首次 Device Key enrollment 改为 active UDID + auth_proof + one-time Challenge + P-256 device signature，不再要求 license_code。
-3. Challenge 与 auth_proof/public_key/UDID/Dylib 绑定；Verify canonical 同步绑定 auth_proof。
-4. 新 iOS ZONVerifyClient 自动获取 proof 再执行 Challenge/Verify。
-5. 已登记 active Device Key 的旧 v3 客户端保留兼容；首次新 Key 不回退 license_code enrollment。
-6. 删除重复 dylib_api_test/index；API 调试统一使用系统配置现有 API 接口测试。
-7. 保留 verify bad_request 审计、验证记录 UDID/IP、2432/2431/2430 正式能力。
+1. Device Key 授权作用域继续保持 UDID + Dylib Key。
+2. 同一授权作用域允许多个独立 PublicKey 并存，不限制 App / Keychain 数量。
+3. 数据库唯一约束改为 udid_hash + dylib_id + public_key_hash。
+4. 新 PublicKey 继续要求 active UDID auth_proof + one-time Challenge + P-256 ECDSA signature。
+5. 移除旧单 Key device_key_mismatch 冲突逻辑。
+6. 已登记 Key 成功验证时刷新 last_used_at；新 enrollment 时清理 365 天未使用旧 Key。
+7. 保留 2434 active-UDID proof、2432/2431/2430 正式能力。
 
 验证：
-- Dylib Auth Proof 2434 CI：PHP 7.0 syntax、服务端 proof 契约、iOS proof 自动获取、canonical 绑定、首次 enrollment 去 license_code、重复测试页清理、在线更新 manifest。
+- Dylib Multi Device Keys 2435 CI：PHP 7.0 syntax、MySQL 5.7 migration 双执行幂等、多 PublicKey 共存、重复 Key 拒绝、在线更新包检查。
 - canonical Release Gate：完整 regression、source integrity、MySQL 5.7 migration、HTTP load、GitHub Release 在线升级 E2E。
 
-在线更新目标：source-v2026092433 -> source-v2026092434。
+在线更新目标：source-v2026092434 -> source-v2026092435。
