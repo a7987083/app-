@@ -17,6 +17,8 @@ $required = [
     "'dylib_auth_challenge'",
     "'dylib_device_session'",
     "'dylib_verify_log'",
+    "'api_request_log'",
+    "'addtime'",
     "'dylib_device_key'",
     "'last_used_at'",
     'deleteStaleDeviceKeys',
@@ -38,6 +40,12 @@ if (strpos($maintenance, "Db::name('dylib_nonce')") !== false) {
 
 if (strpos($timer, 'OnCalendar=*-*-* 04:20:00') === false) {
     fwrite(STDERR, "daily maintenance timer contract missing\n");
+    exit(1);
+}
+
+$config = file_get_contents($root . '/application/extra/ipa_data_center.php');
+if ($config === false || strpos($config, "'api_request_log_retention_days'") === false) {
+    fwrite(STDERR, "API request log retention config missing\n");
     exit(1);
 }
 
