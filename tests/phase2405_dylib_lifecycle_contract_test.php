@@ -80,14 +80,13 @@ requireContains($jsCompact, "url:'dylib_center/deleteVersion'", 'version delete 
 requireContains($controller, 'Dylib key cannot be changed after registration', 'immutable dylib key');
 requireContains($jsCompact, ".prop('readonly',true)", 'edit UI keeps dylib key read-only');
 
-// Legacy v1 signing contract and endpoint remain present for already shipped clients.
-// 2412 replaces the old one-line compatibility sentence with a detailed API guide,
-// so assert protocol semantics rather than exact Chinese copy.
-requireContains($readme, 'Protocol v1', 'legacy protocol documented');
-requireContains($view, 'Protocol v1 canonical', 'legacy protocol visible in API integration guide');
-requireContains($view, 'udid\\nbundle_id\\ndylib_key\\ndylib_version\\ndylib_build\\ndylib_sha256\\ntimestamp\\nnonce', 'v1 canonical ordering visible in API integration guide');
-requireContains($view, '<code>ok</code> + <code>code</code>', '2412 result-code handling visible in API integration guide');
-requireContains($view, '<code>message</code>', '2412 message field visible in API integration guide');
+// Protocol v3 is the active signing/authentication contract.
+requireContains($readme, 'Protocol v3', 'protocol v3 documented');
+requireContains($readme, 'zonoe-dylib-auth-v3', 'protocol v3 canonical prefix documented');
+requireContains($view, 'Protocol v3', 'protocol v3 visible in API integration guide');
+requireContains($view, 'zonoe-dylib-auth-v3', 'v3 canonical prefix visible in API integration guide');
+requireContains($view, 'device_public_key', 'v3 public key field visible in API integration guide');
+requireContains($view, 'device_signature', 'v3 device signature field visible in API integration guide');
 requireContains($client, '@"dylib_key": self.configuration.dylibKey', 'client dylib_key payload');
 requireContains($client, '@"bundle_id": bundleID', 'client BundleID payload');
 requireContains($publicController, 'if (!$this->request->isPost())', 'verification POST-only contract');
