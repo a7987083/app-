@@ -1,42 +1,35 @@
 # Software Source Development Handoff
 
-## Stable baseline
+## Current stable state
 
 - Repository: `a7987083/app-`
-- Stable release: `source-v2026092434`
-- Stable target: `982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da`
+- Stable release: `source-v2026092435`
+- Release branch: `release/2026092435-multi-device-keys`
+- Release target: `bda2656a699e93162ea38514f21e5027fc92ece9`
+- ZONOE Source Release #348 / Run `36973103572`: SUCCESS
+- IPA Online Update Release Gate #169 / Run `36973103536`: SUCCESS
+- Dylib Multi Device Keys 2435 CI #22 / Run `36973103510`: SUCCESS
 
-## Current development
+## 2435 authentication model
 
-- Version target: `2026092435`
-- Branch: `work/2026092435-multi-device-keys`
-- Focus: multi-Keychain / multi-App Device Key enrollment without BundleID coupling.
-
-## Authentication model
-
-Authorization scope remains:
+Authorization scope:
 
 `UDID + Dylib Key`
 
-Credential rows are:
+Credential identity:
 
-`UDID hash + dylib_id + public_key_hash`
+`udid_hash + dylib_id + public_key_hash`
 
-A new PublicKey is accepted only when the UDID is currently authorized, the short-lived server `auth_proof` validates, and the one-time Challenge is signed by the matching P-256 private key.
+Multiple independent device keys may coexist without BundleID coupling. A new key requires active UDID proof plus one-time Challenge/ECDSA verification. Existing keys refresh `last_used_at`. Keys unused for 365 days are cleaned opportunistically during enrollment.
 
-There is no hard key-count limit. Existing enrolled keys update `last_used_at`. Keys unused for 365 days are deleted during a new enrollment, preventing permanent accumulation without limiting App count.
+## Release asset
 
-## Changed files
+- Asset: `zonoe-online-update.zip`
+- Size: 298749 bytes
+- SHA256: `d0d00573669de71e41dc4d8fe1aec71a3af3127b8eccce055f4fd04376a0c82a`
 
-- `application/common/library/Ipa/DylibDeviceAuthService.php`
-- `release/sql/2026092435_multi_device_keys.sql`
-- `.github/workflows/dylib-multi-device-keys-2435-ci.yml`
+## Verification boundary
 
-## Verification status
-
-- Modified: yes.
-- Committed: yes, development branch.
-- PHP/MySQL CI: pending actual run.
-- Released: no.
-- Production deployed: no.
-- Real-device regression: no.
+- Repository/CI/release/online-update E2E: verified.
+- Production database deployment: not asserted from GitHub CI alone.
+- Real iOS multi-App / same-BundleID-different-Keychain acceptance: not yet independently verified.
