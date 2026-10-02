@@ -1,40 +1,55 @@
 <?php
 
-// Structural contract: IPA metadata parsing must use bounded Mach-O prefix inspection for large
-// binaries, while full SHA256 hashing remains restricted to small members so PHP 7/128M workers
-// cannot be killed by one large executable.
-$parser = file_get_contents(__DIR__ . '/../application/common/library/Ipa/IpaParserService.php');
+// Current Parser V2 contract: IPA metadata parsing is intentionally limited to
+// Payload/*.app/Info.plist. Mach-O enrichment/hashing from the retired parser
+// must not re-enter the synchronous metadata parse path.
+$parser = file_get_contents(__DIR__ . '/../application/common/library/Ipa/IpaParserV2Service.php');
 $zip = file_get_contents(__DIR__ . '/../application/common/library/Ipa/RemoteZipReader.php');
 
-$parserNeedles = [
-    'extractPrefix($entry, $headerLimit)',
-    "hash('sha256', \$bytes)",
-    'binaryHeaderLimit',
-    '2 * 1024 * 1024',
-    'binaryHashLimit',
-    '8 * 1024 * 1024',
-    'architectures',
-    'install_name',
-    'best effort',
+if ($parser === false || $zip === false) {
+    fwrite(STDERR, "unable to load parser v2 contract sources\n");
+    exit(1);
+}
+
+$required = [
+    'const PLIST_MAX_BYTES = 4194304',
+    'const RANGE_MAX_BYTES = 16777216',
+    "findFirst('#^Payload/[^/]+\\\\.app/Info\\\\.plist$#i')",
+    'CFBundleIdentifier',
+    'CFBundleExecutable',
+    "'parser' => 'v2-fast-plist'",
+    "Db::name('ipa_binary')->where('asset_id'",
+    "Db::name('ipa_app_identity')->where('asset_id'",
+    "Db::name('ipa_compare_result')->where('asset_id'",
 ];
-foreach ($parserNeedles as $needle) {
+foreach ($required as $needle) {
     if (strpos($parser, $needle) === false) {
-        fwrite(STDERR, "missing parser enrichment contract: {$needle}\n");
+        fwrite(STDERR, "missing parser v2 contract: {$needle}\n");
         exit(1);
     }
 }
 
-$zipNeedles = [
-    'function extractPrefix',
-    'inflate_init',
-    'inflate_add',
-    'ZLIB_ENCODING_RAW',
+$forbidden = [
+    'MachOInspector',
+    'extractPrefix($entry',
+    "hash('sha256',",
+    'binaryHeaderLimit',
+    'binaryHashLimit',
 ];
-foreach ($zipNeedles as $needle) {
-    if (strpos($zip, $needle) === false) {
-        fwrite(STDERR, "missing streaming ZIP prefix contract: {$needle}\n");
+foreach ($forbidden as $needle) {
+    if (strpos($parser, $needle) !== false) {
+        fwrite(STDERR, "retired parser enrichment leaked into parser v2: {$needle}\n");
         exit(1);
     }
 }
 
-echo "IPA parser bounded Mach-O enrichment contract ok\n";
+// RemoteZipReader may retain bounded prefix extraction as a reusable primitive;
+// Parser V2 simply must not call it during metadata parsing.
+foreach (['function extractPrefix', 'inflate_init', 'inflate_add', 'ZLIB_ENCODING_RAW'] as $needle) {
+    if (strpos($zip, $needle) === false) {
+        fwrite(STDERR, "missing streaming ZIP primitive: {$needle}\n");
+        exit(1);
+    }
+}
+
+echo "IPA parser v2 metadata-only contract ok\n";
