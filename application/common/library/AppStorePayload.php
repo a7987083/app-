@@ -110,7 +110,7 @@ class AppStorePayload
                 'type' => $type,
                 'version' => SourceAppRecord::value($row, 'version'),
                 'versionDate' => date('Y-m-d\TH:i:s\+08:00', (int)SourceAppRecord::value($row, 'updated_at', 0)),
-                'versionDescription' => str_replace('\\n', '@@@', (string)SourceAppRecord::value($row, 'description', '')),
+                'versionDescription' => str_replace('\\n', "\n", (string)SourceAppRecord::value($row, 'description', '')),
                 'lock' => $lock,
                 'downloadURL' => $download,
                 'isLanZouCloud' => SourceAppRecord::value($row, 'cloud_flag'),
@@ -195,6 +195,6 @@ class AppStorePayload
 
     public static function encodeSourceJson(array $payload, $flags = 320)
     {
-        return str_replace('@@@', '\\n', json_encode($payload, $flags));
+        return json_encode($payload, $flags);
     }
 }
