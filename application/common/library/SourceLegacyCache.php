@@ -270,14 +270,14 @@ class SourceLegacyCache
             $site[$key] = array_key_exists($key, $payload) ? $payload[$key] : null;
         }
         $siteFingerprint = sha1(json_encode($site, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        return 'zonoe_legacy_encrypted_json_v2_' . sha1(
+        return 'zonoe_legacy_encrypted_json_v3_' . sha1(
             self::appsKey($context) . '|' . $siteFingerprint . '|' . (int)$jsonFlags
         );
     }
 
     protected static function appsKey(array $context)
     {
-        return 'zonoe_legacy_apps_v1_' . sha1(
+        return 'zonoe_legacy_apps_v2_' . sha1(
             (isset($context['revision']) ? (int)$context['revision'] : 0) . '|' .
             (isset($context['generation']) ? (string)$context['generation'] : '0') . '|' .
             (isset($context['mode']) ? (string)$context['mode'] : 'guest') . '|' .
@@ -292,7 +292,7 @@ class SourceLegacyCache
             $site[$key] = array_key_exists($key, $payload) ? $payload[$key] : null;
         }
         $siteFingerprint = sha1(json_encode($site, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        return 'zonoe_legacy_body_v2_' . sha1(
+        return 'zonoe_legacy_body_v3_' . sha1(
             self::appsKey($context) . '|' . $siteFingerprint . '|' .
             (int)$jsonFlags . '|' . ($replaceMarkers ? '1' : '0')
         );
