@@ -32,6 +32,7 @@ class IpaMaintenance extends Command
         $scanItemRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.scan_item_retention_days')));
         $scanJobRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.scan_job_retention_days')));
         $parseAttemptRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.parse_attempt_retention_days')));
+        $auditLogRetentionDays = max(1, min(3650, (int)Config::get('ipa_data_center.audit_log_retention_days')));
         $logBefore = $now - ($retentionDays * 86400);
         $apiLogBefore = $now - ($apiLogRetentionDays * 86400);
         $sessionBefore = $now - 86400;
@@ -40,6 +41,7 @@ class IpaMaintenance extends Command
         $scanItemBefore = $now - ($scanItemRetentionDays * 86400);
         $scanJobBefore = $now - ($scanJobRetentionDays * 86400);
         $parseAttemptBefore = $now - ($parseAttemptRetentionDays * 86400);
+        $auditLogBefore = $now - ($auditLogRetentionDays * 86400);
 
         // 2430 removed fa_dylib_nonce. Challenge rows are the v3 replay-protection
         // state and must be cleaned explicitly; never query the retired nonce table.
@@ -71,6 +73,10 @@ class IpaMaintenance extends Command
         );
         $scanItemDeleted = self::deleteTerminalScanItems($scanItemBefore);
         $scanJobDeleted = self::deleteTerminalScanJobs($scanJobBefore);
+        $authorizationEventDeleted = self::deleteExpiredById('authorization_event', 'addtime', $auditLogBefore);
+        $cardTransferDeleted = self::deleteExpiredById('card_transfer_log', 'addtime', $auditLogBefore);
+        $adminLogDeleted = self::deleteExpiredById('admin_log', 'createtime', $auditLogBefore);
+        $sourceChangeDeleted = self::deleteExpiredByPrimaryKey('source_change', 'revision', 'changed_at', $auditLogBefore);
         $runtimeLogDeleted = self::cleanupRuntimeLogs($now - self::RUNTIME_LOG_RETENTION_SECONDS);
 
         $updateCleanup = ['status' => 0, 'history' => 0, 'backups' => 0, 'bytes' => 0];
@@ -87,7 +93,7 @@ class IpaMaintenance extends Command
         }
 
         $output->info(sprintf(
-            'maintenance complete challenge=%d session=%d verify_log=%d api_log=%d device_key=%d parse_attempt=%d scan_item=%d scan_job=%d runtime_log=%d update_status=%d update_history=%d update_backup=%d retention_days=%d api_log_retention_days=%d',
+            'maintenance complete challenge=%d session=%d verify_log=%d api_log=%d device_key=%d parse_attempt=%d scan_item=%d scan_job=%d authorization_event=%d card_transfer=%d admin_log=%d source_change=%d runtime_log=%d update_status=%d update_history=%d update_backup=%d retention_days=%d api_log_retention_days=%d audit_log_retention_days=%d',
             (int)$challengeDeleted,
             (int)$sessionDeleted,
             (int)$logDeleted,
@@ -96,12 +102,17 @@ class IpaMaintenance extends Command
             (int)$parseAttemptDeleted,
             (int)$scanItemDeleted,
             (int)$scanJobDeleted,
+            (int)$authorizationEventDeleted,
+            (int)$cardTransferDeleted,
+            (int)$adminLogDeleted,
+            (int)$sourceChangeDeleted,
             (int)$runtimeLogDeleted,
             isset($updateCleanup['status']) ? (int)$updateCleanup['status'] : 0,
             isset($updateCleanup['history']) ? (int)$updateCleanup['history'] : 0,
             isset($updateCleanup['backups']) ? (int)$updateCleanup['backups'] : 0,
             $retentionDays,
-            $apiLogRetentionDays
+            $apiLogRetentionDays,
+            $auditLogRetentionDays
         ));
         return 0;
     }
@@ -256,27 +267,36 @@ class IpaMaintenance extends Command
 
     protected static function deleteExpiredById($table, $timeColumn, $before)
     {
+        return self::deleteExpiredByPrimaryKey($table, 'id', $timeColumn, $before);
+    }
+
+    protected static function deleteExpiredByPrimaryKey($table, $primaryKey, $timeColumn, $before)
+    {
         $deleted = 0;
 
-        for ($batch = 0; $batch < self::DELETE_MAX_BATCHES; $batch++) {
-            $ids = Db::name($table)
-                ->where($timeColumn, '<', (int)$before)
-                ->order('id asc')
-                ->limit(self::DELETE_BATCH_SIZE)
-                ->column('id');
+        try {
+            for ($batch = 0; $batch < self::DELETE_MAX_BATCHES; $batch++) {
+                $ids = Db::name($table)
+                    ->where($timeColumn, '<', (int)$before)
+                    ->order($primaryKey . ' asc')
+                    ->limit(self::DELETE_BATCH_SIZE)
+                    ->column($primaryKey);
 
-            if (!$ids) {
-                break;
+                if (!$ids) {
+                    break;
+                }
+
+                $count = Db::name($table)
+                    ->where($primaryKey, 'in', array_map('intval', $ids))
+                    ->delete();
+
+                $deleted += (int)$count;
+                if (count($ids) < self::DELETE_BATCH_SIZE) {
+                    break;
+                }
             }
-
-            $count = Db::name($table)
-                ->where('id', 'in', array_map('intval', $ids))
-                ->delete();
-
-            $deleted += (int)$count;
-            if (count($ids) < self::DELETE_BATCH_SIZE) {
-                break;
-            }
+        } catch (\Throwable $e) {
+            return $deleted;
         }
 
         return $deleted;
