@@ -64,6 +64,11 @@ jobs:
             updated_at int unsigned NOT NULL DEFAULT '0',
             PRIMARY KEY (id)
           ) ENGINE=InnoDB;
+          CREATE TABLE fa_card_transfer_log (
+            id int unsigned NOT NULL AUTO_INCREMENT,
+            addtime int NOT NULL DEFAULT '0',
+            PRIMARY KEY (id)
+          ) ENGINE=InnoDB;
           SQL
       - name: Apply retention indexes twice
         run: |
@@ -75,3 +80,4 @@ jobs:
           test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_authorization_event' AND index_name='idx_addtime'")" -gt 0
           test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_admin_log' AND index_name='idx_createtime'")" -gt 0
           test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_ipa_asset' AND index_name='idx_asset_retention'")" -gt 0
+          test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_card_transfer_log' AND index_name='idx_addtime'")" -gt 0
