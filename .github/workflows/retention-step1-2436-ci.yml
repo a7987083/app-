@@ -81,3 +81,19 @@ jobs:
           test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_admin_log' AND index_name='idx_createtime'")" -gt 0
           test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_ipa_asset' AND index_name='idx_asset_retention'")" -gt 0
           test "$(mysql -N -h127.0.0.1 -uroot -proot retention_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='retention_test' AND table_name='fa_card_transfer_log' AND index_name='idx_addtime'")" -gt 0
+
+  package-retention:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build online update package
+        run: |
+          php tools/build_online_update.php "$PWD/zonoe-online-update.zip"
+          unzip -t zonoe-online-update.zip >/dev/null
+      - name: Verify maintenance files are packaged
+        run: |
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/admin/command/IpaMaintenance.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/application/extra/ipa_data_center.php'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/deploy/systemd/zonoe-ipa-maintenance.service'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'program/deploy/systemd/zonoe-ipa-maintenance.timer'
+          unzip -Z1 zonoe-online-update.zip | grep -Fx 'mysql/2026092436_retention_indexes.sql'
