@@ -1,53 +1,34 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "version": "2026092413",
-    "release": "source-v2026092413",
-    "release_id": 397283396,
-    "branch": "release/2026092413-api-doc-full-catalog",
-    "tag_target": "acfe570bef7113ae3dcf94b33ce8258f75ad33d7",
-    "latest_tested_release_branch_head": "acfe570bef7113ae3dcf94b33ce8258f75ad33d7"
+    "version": "2026092434",
+    "release": "source-v2026092434",
+    "tag_target": "982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da"
   },
   "development": {
-    "version": "2026092413",
-    "feature_branch": "feature/2026092413-api-doc-full-catalog",
-    "release_branch": "release/2026092413-api-doc-full-catalog",
-    "status": "released",
-    "focus": "Dylib API full catalog and downloadable integration documentation",
-    "generator_version": "2.2.0"
+    "version": "2026092435",
+    "branch": "work/2026092435-multi-device-keys",
+    "status": "development",
+    "focus": "Unlimited multi-App / multi-Keychain device public keys per UDID + Dylib"
   },
-  "ci": {
-    "feature_ci_run": 36250685197,
-    "feature_ci_run_number": 17,
-    "feature_ci_conclusion": "success",
-    "source_release_run": 36251418295,
-    "source_release_run_number": 254,
-    "source_release_conclusion": "success",
-    "online_update_gate_run": 36251418307,
-    "online_update_gate_run_number": 153,
-    "online_update_gate_conclusion": "success",
-    "real_github_release_online_update_e2e": "passed",
-    "mysql57_migration": "passed",
-    "php70_runtime_contracts": "passed",
-    "http_load_gate": "passed",
-    "api_documentation_contract": "passed"
-  },
-  "release_asset": {
-    "name": "zonoe-online-update.zip",
-    "size": 266878,
-    "sha256": "eec0cb86dcf5143c0b272f2a143d1a38a2b685c62b76a4bb9d308ff4990a96a8"
+  "implementation": {
+    "authorization_scope": "UDID + Dylib Key",
+    "device_key_unique_scope": "udid_hash + dylib_id + public_key_hash",
+    "key_count_limit": null,
+    "stale_key_retention_days": 365,
+    "bundle_id_in_device_key_scope": false,
+    "new_key_requires_active_udid_auth_proof": true,
+    "new_key_requires_challenge_ecdsa": true
   },
   "verification": {
-    "formal_2413_release_gate": "passed",
-    "formal_2413_release": "published",
-    "online_update_e2e": "passed",
-    "api_catalog_entries": 8,
-    "api_docs_export_files": 13,
-    "verify_secret_export": "blocked",
-    "real_client_manual_api_integration": "not_verified",
-    "manual_admin_ui_acceptance": "not_verified"
+    "source_modified": true,
+    "migration_added": true,
+    "ci_definition_added": true,
+    "ci_run": "pending",
+    "production_deploy": "not_verified",
+    "real_device": "not_verified",
+    "release_published": false
   },
-  "next_task": "Use 2026092413 as the stable baseline; preserve wire compatibility and continue reducing static admin-documentation drift.",
   "roadmap": "ROADMAP.md",
   "changelog": "CHANGELOG_DEV.md",
   "handoff": "HANDOFF.md",
