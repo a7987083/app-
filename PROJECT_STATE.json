@@ -37,7 +37,7 @@
     "systemd_units_packaged": true
   },
   "verification": {
-    "dedicated_ci": "pending_latest_run",
+    "dedicated_ci": "success_run_28",
     "mysql57_double_apply": true,
     "package_contract": true,
     "full_release_gate": false,
