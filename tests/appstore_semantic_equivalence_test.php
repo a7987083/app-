@@ -28,7 +28,7 @@ $row = [
 $guest = AppStorePayload::apps([$row], 'guest', false)[0];
 semanticEqAssert($guest['type'] === 0, 'type mapping');
 semanticEqAssert($guest['downloadURL'] === '', 'guest locked download');
-semanticEqAssert($guest['versionDescription'] === 'line1@@@line2', 'description marker');
+semanticEqAssert($guest['versionDescription'] === "line1\nline2", 'description newline');
 $licensed = AppStorePayload::apps([$row], 'licensed', true)[0];
 semanticEqAssert($licensed['downloadURL'] === $row['bt1a'], 'licensed download');
 semanticEqAssert($licensed['version'] === $row['nickname'], 'version alias');
