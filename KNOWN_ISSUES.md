@@ -1,11 +1,10 @@
 # Known Issues and Refactor Backlog
 
-## 2026092435 — pending verification
+## 2026092435
 
-- Multi-Device-Key implementation is committed on `work/2026092435-multi-device-keys` but CI has not yet produced a verified run result.
-- The MySQL 5.7 migration has not yet been applied to production.
-- Real iOS multi-App / same-BundleID-different-Keychain behavior remains unverified on device.
-- 365-day cleanup is intentionally opportunistic: it runs when a new Device Key is enrolled. This avoids a new scheduler and keeps the implementation simple. If no new keys are ever enrolled, stale rows may remain, but the table is not growing from that condition.
+- Real iOS production acceptance for many App/Keychain combinations remains an independent verification item; GitHub CI cannot substitute for device testing.
+- 365-day Device Key cleanup is opportunistic during new enrollment. This keeps the implementation simple and prevents normal verification traffic from creating cleanup write load.
+- `Auto Online Release Gate` remains disabled by repository policy (`AUTO_RELEASE=0`); canonical `ZONOE Source Release` is the authoritative release path and completed successfully.
 
 ## Compatibility boundaries
 
@@ -14,3 +13,5 @@
 - Existing 2434 enrolled keys remain valid after migration.
 - New independent keys require active UDID proof and valid P-256 Challenge signature.
 - Protocol v3 canonical signing fields remain unchanged.
+- Runtime config signing is RSA-2048-SHA256.
+- IPA metadata parser is Parser V2; synchronous Mach-O enrichment is not part of that parse path.
