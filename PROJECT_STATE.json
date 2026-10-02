@@ -1,32 +1,48 @@
 {
   "repository": "a7987083/app-",
   "stable_release": {
-    "version": "2026092434",
-    "release": "source-v2026092434",
-    "tag_target": "982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da"
+    "version": "2026092435",
+    "release": "source-v2026092435",
+    "tag_target": "bda2656a699e93162ea38514f21e5027fc92ece9"
   },
   "development": {
-    "version": "2026092435",
-    "branch": "work/2026092435-multi-device-keys",
+    "version": "2026092436",
+    "branch": "work/2026092436-retention-step1",
     "status": "development",
-    "focus": "Unlimited multi-App / multi-Keychain device public keys per UDID + Dylib"
+    "focus": "Long-term database and disk retention hardening"
   },
-  "implementation": {
-    "authorization_scope": "UDID + Dylib Key",
-    "device_key_unique_scope": "udid_hash + dylib_id + public_key_hash",
-    "key_count_limit": null,
-    "stale_key_retention_days": 365,
-    "bundle_id_in_device_key_scope": false,
-    "new_key_requires_active_udid_auth_proof": true,
-    "new_key_requires_challenge_ecdsa": true
+  "retention": {
+    "dylib_auth_challenge_days": 1,
+    "dylib_session_after_expiry_days": 1,
+    "dylib_verify_log_days": 30,
+    "api_request_log_days": 30,
+    "dylib_device_key_unused_days": 365,
+    "ipa_parse_attempt_days": 30,
+    "ipa_scan_item_terminal_days": 7,
+    "ipa_scan_job_terminal_days": 30,
+    "audit_log_days": 365,
+    "runtime_log_days": 30,
+    "update_status_days": 14,
+    "update_history_days": 90,
+    "update_backup_days": 30,
+    "missing_ipa_asset_days": 365,
+    "missing_asset_requires_no_manual_category_binding": true,
+    "delete_batch_size": 5000,
+    "delete_max_batches_per_run": 20
+  },
+  "maintenance": {
+    "retired_dylib_nonce_removed": true,
+    "challenge_cleanup_added": true,
+    "systemd_schedule": "04:20 daily",
+    "systemd_units_packaged": true
   },
   "verification": {
-    "source_modified": true,
-    "migration_added": true,
-    "ci_definition_added": true,
-    "ci_run": "pending",
+    "dedicated_ci": "pending_latest_run",
+    "mysql57_double_apply": true,
+    "package_contract": true,
+    "full_release_gate": false,
     "production_deploy": "not_verified",
-    "real_device": "not_verified",
+    "production_systemd_timer": "not_verified",
     "release_published": false
   },
   "roadmap": "ROADMAP.md",

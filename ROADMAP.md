@@ -3,22 +3,32 @@
 ## 当前稳定基线
 
 - Repository: `a7987083/app-`
-- Stable release: `source-v2026092434`
-- Stable target: `982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da`
-- Current development: `2026092435`
-- Development branch: `work/2026092435-multi-device-keys`
+- Stable release: `source-v2026092435`
+- Stable target: `bda2656a699e93162ea38514f21e5027fc92ece9`
+- Current development: `2026092436`
+- Development branch: `work/2026092436-retention-step1`
 
-## 2026092435 — Multi Device Keys
+## 2026092436 — Long-Term Retention Hardening
 
-### 目标
+### 已完成
 
-- [x] Device Key 授权作用域保持 `UDID + Dylib Key`，不引入 BundleID 绑定。
-- [x] 同一作用域允许多个独立 PublicKey 并存，支持不同 App、不同 Keychain、重签实例。
-- [x] 新 PublicKey 仍要求 active UDID auth proof、一次性 Challenge、P-256 ECDSA 签名。
-- [x] Device Key 不设置数量上限，不做第 11 个淘汰。
-- [x] 365 天未使用的 Device Key 自动清理。
-- [x] 数据库唯一键改为 `udid_hash + dylib_id + public_key_hash`。
-- [x] 增加 MySQL 5.7 / PHP 7.0 / 在线更新包专项 CI 定义。
-- [ ] CI 实际运行验证。
-- [ ] 正式发布 `source-v2026092435`。
-- [ ] 生产环境真实客户端回归。
+- [x] 修复 `ipa:maintenance` 仍访问已删除 `fa_dylib_nonce` 的 P0 问题。
+- [x] `fa_dylib_auth_challenge` 保留 1 天并自动清理。
+- [x] Session / Verify Log / API Request Log 改为有界批量清理。
+- [x] Device Key 每日主动清理 365 天未使用记录。
+- [x] Scan Item 终态保留 7 天，Scan Job 终态保留 30 天。
+- [x] Parse Attempt 保留 30 天。
+- [x] Authorization / Card Transfer / Admin / Source Change 审计日志默认保留 365 天。
+- [x] Update status/history/backup 自动复用 14/90/30 天 retention。
+- [x] runtime/log 自动保留 30 天。
+- [x] missing IPA 超过 365 天且无人工分类绑定时才允许清理主资产及派生数据。
+- [x] 所有大表删除使用有界批次，避免单次超大 DELETE。
+- [x] 增加 MySQL 5.7 retention 索引迁移。
+- [x] maintenance systemd service/timer 纳入在线更新包。
+- [x] 增加 PHP 7.0 / MySQL 5.7 / package 专项 CI。
+
+### 待完成
+
+- [ ] 完整 Release Gate。
+- [ ] 正式发布 `source-v2026092436`。
+- [ ] 生产服务器确认 systemd timer 已安装并 enabled。

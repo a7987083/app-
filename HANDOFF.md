@@ -3,40 +3,46 @@
 ## Stable baseline
 
 - Repository: `a7987083/app-`
-- Stable release: `source-v2026092434`
-- Stable target: `982a8ea6bdb1eca78a4fc9c3d12ca0069653b5da`
+- Stable release: `source-v2026092435`
+- Stable target: `bda2656a699e93162ea38514f21e5027fc92ece9`
 
 ## Current development
 
-- Version target: `2026092435`
-- Branch: `work/2026092435-multi-device-keys`
-- Focus: multi-Keychain / multi-App Device Key enrollment without BundleID coupling.
+- Version target: `2026092436`
+- Branch: `work/2026092436-retention-step1`
+- Focus: long-term database and disk retention hardening.
 
-## Authentication model
+## Retention policy
 
-Authorization scope remains:
+- Dylib challenge: 1 day.
+- Dylib session: expired + 1 day.
+- Dylib verify log: 30 days default.
+- API request log: 30 days default.
+- Device Key: 365 days since last use.
+- IPA parse attempt: 30 days.
+- Terminal scan item: 7 days.
+- Terminal scan job: 30 days.
+- Authorization / transfer / admin / source-change audit logs: 365 days.
+- Runtime logs: 30 days.
+- Update status/history/backup: 14/90/30 days.
+- Missing IPA asset: 365 days, only if no manual category binding.
 
-`UDID + Dylib Key`
+## Critical fix
 
-Credential rows are:
+2430 dropped `fa_dylib_nonce`, while the old maintenance command still attempted to delete from it before every other cleanup. 2436 removes that call and cleans `fa_dylib_auth_challenge` instead. This restores the maintenance path after 2430+ migrations.
 
-`UDID hash + dylib_id + public_key_hash`
+## Safety
 
-A new PublicKey is accepted only when the UDID is currently authorized, the short-lived server `auth_proof` validates, and the one-time Challenge is signed by the matching P-256 private key.
-
-There is no hard key-count limit. Existing enrolled keys update `last_used_at`. Keys unused for 365 days are deleted during a new enrollment, preventing permanent accumulation without limiting App count.
-
-## Changed files
-
-- `application/common/library/Ipa/DylibDeviceAuthService.php`
-- `release/sql/2026092435_multi_device_keys.sql`
-- `.github/workflows/dylib-multi-device-keys-2435-ci.yml`
+- Database deletion is bounded to avoid huge transactions.
+- Scan cleanup is cursor-safe.
+- Missing assets with operator-owned category bindings are never auto-deleted.
+- Online update contains the maintenance service/timer files, but production still requires the systemd unit to be installed and enabled with host privileges.
 
 ## Verification status
 
 - Modified: yes.
-- Committed: yes, development branch.
-- PHP/MySQL CI: pending actual run.
+- Committed: yes.
+- Dedicated PHP/MySQL/package CI: pending latest run completion.
+- Full Release Gate: not run.
 - Released: no.
-- Production deployed: no.
-- Real-device regression: no.
+- Production timer status: not verified.
