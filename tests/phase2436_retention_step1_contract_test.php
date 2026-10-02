@@ -25,7 +25,7 @@ $required = [
     'deleteTerminalScanItems',
     'deleteTerminalScanJobs',
     '$jobCursor',
-    "->where('id', '>', $jobCursor)",
+    '->where(\'id\', \'>\', $jobCursor)',
     "'ipa_parse_attempt'",
     "'ipa_scan_item'",
     "'ipa_scan_job'",
